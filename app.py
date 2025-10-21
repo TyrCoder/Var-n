@@ -26,7 +26,6 @@ def init_db():
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
         conn.database = DB_CONFIG['database']
         
-        # Users table (customers, sellers, admins, riders)
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             first_name VARCHAR(100) NOT NULL,
@@ -40,7 +39,6 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Categories table for men's apparel
         cursor.execute('''CREATE TABLE IF NOT EXISTS categories (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
@@ -53,7 +51,6 @@ def init_db():
             FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Sellers profile table
         cursor.execute('''CREATE TABLE IF NOT EXISTS sellers (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL UNIQUE,
@@ -76,7 +73,6 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Products table for men's apparel
         cursor.execute('''CREATE TABLE IF NOT EXISTS products (
             id INT AUTO_INCREMENT PRIMARY KEY,
             seller_id INT NOT NULL,
@@ -109,7 +105,6 @@ def init_db():
             INDEX idx_active (is_active)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Product images table
         cursor.execute('''CREATE TABLE IF NOT EXISTS product_images (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -120,7 +115,6 @@ def init_db():
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Product variants (size, color combinations)
         cursor.execute('''CREATE TABLE IF NOT EXISTS product_variants (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -136,7 +130,6 @@ def init_db():
             INDEX idx_product (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Inventory/Stock tracking
         cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -153,7 +146,6 @@ def init_db():
             UNIQUE KEY unique_inventory (product_id, variant_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Customer addresses
         cursor.execute('''CREATE TABLE IF NOT EXISTS addresses (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
@@ -171,7 +163,6 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Orders table
         cursor.execute('''CREATE TABLE IF NOT EXISTS orders (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_number VARCHAR(50) UNIQUE NOT NULL,
@@ -199,7 +190,6 @@ def init_db():
             INDEX idx_status (order_status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Order items table
         cursor.execute('''CREATE TABLE IF NOT EXISTS order_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_id INT NOT NULL,
@@ -218,7 +208,6 @@ def init_db():
             FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE RESTRICT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Riders table
         cursor.execute('''CREATE TABLE IF NOT EXISTS riders (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL UNIQUE,
@@ -238,7 +227,6 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Shipments/Deliveries table
         cursor.execute('''CREATE TABLE IF NOT EXISTS shipments (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_id INT NOT NULL UNIQUE,
@@ -257,7 +245,6 @@ def init_db():
             FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Shopping cart
         cursor.execute('''CREATE TABLE IF NOT EXISTS cart (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
@@ -272,7 +259,6 @@ def init_db():
             UNIQUE KEY unique_cart_item (user_id, product_id, variant_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Reviews table
         cursor.execute('''CREATE TABLE IF NOT EXISTS reviews (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -291,7 +277,6 @@ def init_db():
             INDEX idx_product (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Transactions/Payments table
         cursor.execute('''CREATE TABLE IF NOT EXISTS transactions (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_id INT NOT NULL,
@@ -306,7 +291,6 @@ def init_db():
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Activity log
         cursor.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT,
@@ -322,7 +306,6 @@ def init_db():
             INDEX idx_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
-        # Coupons/Discounts
         cursor.execute('''CREATE TABLE IF NOT EXISTS coupons (
             id INT AUTO_INCREMENT PRIMARY KEY,
             code VARCHAR(50) UNIQUE NOT NULL,

@@ -2,9 +2,6 @@
 CREATE DATABASE IF NOT EXISTS varon CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE varon;
 
--- =============================================
--- Users Table (Customers, Sellers, Admins, Riders)
--- =============================================
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
@@ -21,9 +18,6 @@ CREATE TABLE IF NOT EXISTS users (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Categories Table (Hierarchical)
--- =============================================
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -38,9 +32,6 @@ CREATE TABLE IF NOT EXISTS categories (
     INDEX idx_parent (parent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Sellers Profile Table
--- =============================================
 CREATE TABLE IF NOT EXISTS sellers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
@@ -66,9 +57,6 @@ CREATE TABLE IF NOT EXISTS sellers (
     INDEX idx_slug (store_slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Products Table (Men's Apparel)
--- =============================================
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     seller_id INT NOT NULL,
@@ -103,9 +91,6 @@ CREATE TABLE IF NOT EXISTS products (
     INDEX idx_slug (slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Product Images Table
--- =============================================
 CREATE TABLE IF NOT EXISTS product_images (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -117,9 +102,6 @@ CREATE TABLE IF NOT EXISTS product_images (
     INDEX idx_product (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Product Variants (Size, Color)
--- =============================================
 CREATE TABLE IF NOT EXISTS product_variants (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -136,9 +118,6 @@ CREATE TABLE IF NOT EXISTS product_variants (
     INDEX idx_sku (sku)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Inventory Table
--- =============================================
 CREATE TABLE IF NOT EXISTS inventory (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -155,9 +134,6 @@ CREATE TABLE IF NOT EXISTS inventory (
     UNIQUE KEY unique_inventory (product_id, variant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Customer Addresses Table
--- =============================================
 CREATE TABLE IF NOT EXISTS addresses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -176,9 +152,6 @@ CREATE TABLE IF NOT EXISTS addresses (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Orders Table
--- =============================================
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_number VARCHAR(50) UNIQUE NOT NULL,
@@ -207,9 +180,6 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_order_number (order_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Order Items Table
--- =============================================
 CREATE TABLE IF NOT EXISTS order_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
@@ -230,9 +200,6 @@ CREATE TABLE IF NOT EXISTS order_items (
     INDEX idx_product (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Riders Table
--- =============================================
 CREATE TABLE IF NOT EXISTS riders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
@@ -255,9 +222,6 @@ CREATE TABLE IF NOT EXISTS riders (
     INDEX idx_available (is_available)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Shipments/Deliveries Table
--- =============================================
 CREATE TABLE IF NOT EXISTS shipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL UNIQUE,
@@ -279,9 +243,6 @@ CREATE TABLE IF NOT EXISTS shipments (
     INDEX idx_tracking (tracking_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Shopping Cart Table
--- =============================================
 CREATE TABLE IF NOT EXISTS cart (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -297,9 +258,6 @@ CREATE TABLE IF NOT EXISTS cart (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Reviews Table
--- =============================================
 CREATE TABLE IF NOT EXISTS reviews (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -319,9 +277,6 @@ CREATE TABLE IF NOT EXISTS reviews (
     INDEX idx_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Transactions/Payments Table
--- =============================================
 CREATE TABLE IF NOT EXISTS transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
@@ -338,9 +293,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     INDEX idx_transaction (transaction_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Activity Logs Table
--- =============================================
 CREATE TABLE IF NOT EXISTS activity_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
@@ -357,9 +309,6 @@ CREATE TABLE IF NOT EXISTS activity_logs (
     INDEX idx_action (action)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- Coupons/Discounts Table
--- =============================================
 CREATE TABLE IF NOT EXISTS coupons (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(50) UNIQUE NOT NULL,
@@ -378,16 +327,10 @@ CREATE TABLE IF NOT EXISTS coupons (
     INDEX idx_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- =============================================
--- INSERT SAMPLE DATA
--- =============================================
-
--- Sample Admin User
 INSERT INTO users (first_name, last_name, email, password, role, status) 
 VALUES ('Admin', 'User', 'admin@varon.com', 'admin123', 'admin', 'active')
 ON DUPLICATE KEY UPDATE first_name=first_name;
 
--- Sample Categories
 INSERT INTO categories (name, slug, description, parent_id, is_active) VALUES
 ('Tops', 'tops', 'All types of tops for men', NULL, TRUE),
 ('T-Shirts', 't-shirts', 'Casual and formal t-shirts', 1, TRUE),
@@ -409,12 +352,10 @@ INSERT INTO categories (name, slug, description, parent_id, is_active) VALUES
 ('Bags', 'bags', 'Backpacks and messenger bags', 15, TRUE)
 ON DUPLICATE KEY UPDATE name=name;
 
--- Sample Buyer Users
 INSERT INTO users (first_name, last_name, email, password, role, phone, status) VALUES
 ('Maria', 'Santos', 'maria.santos@email.com', 'password123', 'buyer', '+63-912-345-6789', 'active'),
 ('Juan', 'Reyes', 'juan.reyes@email.com', 'password123', 'buyer', '+63-923-456-7890', 'active'),
 ('Ana', 'Cruz', 'ana.cruz@email.com', 'password123', 'buyer', '+63-934-567-8901', 'active')
 ON DUPLICATE KEY UPDATE first_name=first_name;
 
--- Success Message
 SELECT 'Database schema created successfully! 🔥' AS Message;

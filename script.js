@@ -235,7 +235,6 @@ const sideLinks = document.querySelectorAll('.side-link');
 // Content templates for each page
 const pageContent = {
   overview: `
-    <!-- Stat cards -->
     <div class="grid stats">
       <div class="card"><div class="inner"><div class="metric">Total Revenue (PHP)</div><div class="value">₱1,250 <span class="delta">↑ 1%</span></div></div></div>
       <div class="card"><div class="inner"><div class="metric">Total Customers</div><div class="value">9 <span class="delta" style="color:#ef4444">↓ 0.2%</span></div></div></div>
@@ -243,7 +242,6 @@ const pageContent = {
       <div class="card"><div class="inner"><div class="metric">Total Products</div><div class="value">6 <span class="delta">↑ 1%</span></div></div></div>
     </div>
 
-    <!-- Charts row -->
     <div class="grid two" style="margin-top:14px">
       <div class="card">
         <div class="inner">
@@ -287,7 +285,6 @@ const pageContent = {
       </div>
     </div>
 
-    <!-- Data row -->
     <div class="grid two" style="margin-top:14px">
       <div class="card">
         <div class="inner">
