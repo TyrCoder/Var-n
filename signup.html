@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sign up — Varón</title>
+  <style>
+/* Minimalist black & white theme for Varón */
+:root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.site-header{display:flex;align-items:center;gap:16px;padding:18px 28px;position:sticky;top:0;background:#000;color:#fff;z-index:50}
+.brand{margin:0;font-weight:700;letter-spacing:1px;font-size:20px;color:#fff}
+.menu-toggle{background:none;border:none;font-size:20px;cursor:pointer;padding:6px;color:#fff}
+.top-nav{margin-left:auto;display:flex;gap:18px;align-items:center}
+.top-nav a{color:#fff;text-decoration:none;font-size:14px}
+.top-nav a.account{border:1px solid #fff;padding:6px 10px;border-radius:6px;color:#fff}
+.container{max-width:1200px;margin:28px auto;padding:0 20px}
+.track-hero{display:flex;align-items:center;justify-content:center;padding:60px 0;background:#fff}
+.track-card{max-width:760px;width:100%;background:#000;color:#fff;padding:36px;border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.12);text-align:left}
+.track-card h2{color:#fff;font-size:28px;margin:0 0 6px}
+.track-card .muted{color:#d0d0d0}
+.track-card .btn-cta{background:#fff;color:#000}
+.track-card .secondary{background:#222;color:#fff}
+.track-form{margin-top:14px}
+.track-form label{display:block;font-size:13px;color:#e6e6e6;margin-bottom:8px}
+.track-form input{width:100%;padding:12px;border-radius:8px;border:1px solid #222;background:#111;color:#fff}
+.password-wrapper{position:relative}
+.password-wrapper input{padding-right:45px}
+.toggle-password{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#999;cursor:pointer;font-size:18px;padding:4px 8px;transition:color .2s}
+.toggle-password:hover{color:#fff}
+.form-actions{display:flex;gap:10px;margin-top:16px}
+.form-actions button,.form-actions a{flex:1;padding:12px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:14px;text-align:center;text-decoration:none;transition:all .2s}
+.form-actions .btn-cta{background:#fff;color:#000}
+.form-actions .btn-cta:hover{background:#f0f0f0}
+.form-actions .secondary{background:#222;color:#fff}
+.form-actions .secondary:hover{background:#333}
+.site-footer{background:#000;color:#ddd;padding:44px 12px 24px;margin-top:40px}
+.footer-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;max-width:1100px;margin:0 auto;padding:18px 20px 8px;align-items:start}
+.footer-grid h5,.footer-grid h4{margin:0 0 10px 0;color:#fff;font-weight:600}
+.footer-grid ul{list-style:none;padding:0;margin:0}
+.footer-grid li{margin-bottom:8px}
+.footer-grid a{color:#d9d9d9;text-decoration:none;opacity:.95;transition:opacity .14s ease,color .14s ease}
+.footer-grid a:hover,.footer-grid a:focus{color:#fff;opacity:1}
+.footer-grid .muted{color:#bfbfbf}
+.footer-bottom{border-top:1px solid rgba(255,255,255,0.04);padding:16px 20px 6px;max-width:1100px;margin:10px auto 0;display:flex;justify-content:space-between;gap:12px;align-items:center;color:#bfbfbf;font-size:13px}
+.footer-brand{font-weight:700;color:#fff}
+@media (max-width:640px){.top-nav{display:none}.footer-grid{grid-template-columns:1fr;row-gap:20px;text-align:center}.footer-bottom{flex-direction:column;align-items:center}}
+@media (max-width:480px){.brand{font-size:18px}.menu-toggle{font-size:22px}.btn-cta{padding:10px 14px}}
+  </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <button id="menuToggle" class="menu-toggle" aria-label="Open menu">☰</button>
+      <h1 class="brand">Varón</h1>
+      <nav class="top-nav" id="topNav">
+        <a href="/track-order">Track Your Order</a>
+        <a href="/browse">Browse</a>
+        <a href="#">Journal</a>
+        <a href="#">About</a>
+        <a href="/login" id="accountLink" class="account">Login</a>
+        <a href="/shop" id="cartToggle" class="account">Cart <span id="cartCount">0</span></a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section class="track-hero">
+        <div class="track-card" style="max-width:520px">
+          <h2>Create your account</h2>
+          <p class="muted">Join Varón to save your details and track orders.</p>
+          <form id="signupForm" class="track-form" action="/signup" method="POST">
+            <label>Full name
+              <input name="name" required placeholder="John Doe" />
+            </label>
+            <label>Email
+              <input name="email" type="email" required placeholder="you@example.com" />
+            </label>
+            <label>Role
+              <select name="role" required style="width:100%;padding:12px;border-radius:8px;border:1px solid #222;background:#111;color:#fff">
+                <option value="buyer" selected>Buyer</option>
+                <option value="seller">Seller</option>
+                <option value="rider">Rider</option>
+              </select>
+            </label>
+            <label>Password
+              <div class="password-wrapper">
+                  <input id="signupPassword" name="password" type="password" required />
+                <button type="button" class="toggle-password" onclick="togglePassword('signupPassword', this)" aria-label="Toggle password visibility">👁️</button>
+              </div>
+            </label>
+            <div class="form-actions">
+              <button type="submit" class="btn-cta">Create account</button>
+              <a href="login.html" class="secondary">Login</a>
+            </div>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <div id="authError" class="muted" style="color:#ffdddd;margin-top:6px">
+                  {% for category, message in messages %}
+                    {{ message }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-grid">
+        <div>
+          <h4>Varón</h4>
+          <p class="muted">Minimal, responsibly-made apparel. Clean silhouettes and timeless staples.</p>
+        </div>
+        <div>
+          <h5>Shop</h5>
+          <ul>
+            <li><a href="index.html">All Products</a></li>
+            <li><a href="#">New Arrivals</a></li>
+            <li><a href="#">Best Sellers</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Genres</h5>
+          <ul>
+            <li><a href="#">Tops</a></li>
+            <li><a href="#">Bottoms</a></li>
+            <li><a href="#">Outerwear</a></li>
+            <li><a href="#">Accessories</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Partners</h5>
+          <ul>
+            <li><a href="#" id="footerSeller">Register as a seller</a></li>
+            <li><a href="#" id="footerRider">Register as a rider</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-brand">Varón — Minimal Apparel</div>
+        <small>© <span class="muted">2025</span></small>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+  </html>

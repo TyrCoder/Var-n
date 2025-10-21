@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin Dashboard — Varón</title>
+    <style>
+      :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef}
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:#f3f4f6;color:var(--fg)}
+      a{text-decoration:none;color:inherit}
+      /* Layout */
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px}
+      .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px}
+      .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
+      .side-group{margin-top:8px}
+      .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
+      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea}
+      .side-link.active,.side-link:hover{background:#141414;color:#fff}
+
+      .content{display:flex;flex-direction:column}
+      .topbar{display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;position:sticky;top:0;z-index:5}
+      .search{flex:1}
+      .search input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+      .avatar{display:flex;align-items:center;gap:8px;margin-left:auto}
+      .tag{background:#0a0a0a;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
+
+      .main{padding:18px 18px 26px}
+      .page-title{font-size:22px;margin:8px 0 14px}
+
+      /* Cards */
+      .grid{display:grid;gap:14px}
+      .grid.stats{grid-template-columns:repeat(4, minmax(180px,1fr))}
+      .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 10px rgba(10,10,10,.03)}
+      .card .inner{padding:14px}
+      .metric{font-size:12px;color:var(--muted);margin-bottom:6px}
+      .value{font-size:22px;font-weight:700}
+      .delta{font-size:12px;color:#10b981;margin-left:8px}
+
+      /* Chart placeholders */
+      .grid.two{grid-template-columns:1.4fr 1fr}
+      .chart{height:260px;padding:12px 14px}
+      .bars{display:flex;align-items:flex-end;gap:10px;height:160px;margin-top:8px}
+      .bar{flex:1;background:#0a0a0a;border-radius:6px}
+      .legend{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:8px}
+
+      /* Table */
+      table{width:100%;border-collapse:separate;border-spacing:0}
+      thead th{font-size:12px;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);padding:10px 12px}
+      tbody td{padding:12px;border-bottom:1px solid var(--line)}
+
+      /* Right column widget */
+      .promo{background:#0a0a0a;color:#fff;border-radius:10px;padding:16px;text-align:left}
+
+      @media (max-width:1000px){
+        .app{grid-template-columns:1fr}
+        .sidebar{display:none}
+        .grid.stats{grid-template-columns:repeat(2,1fr)}
+        .grid.two{grid-template-columns:1fr}
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="logo">
+          <div class="dot"></div>
+          <strong>Varón Admin</strong>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Menu</div>
+          <a class="side-link active" href="#" data-page="overview">Overview</a>
+          <a class="side-link" href="#" data-page="product">Product</a>
+          <a class="side-link" href="#" data-page="customer">Customer</a>
+          <a class="side-link" href="#" data-page="transactions">Transactions</a>
+          <a class="side-link" href="#" data-page="statistics">Statistics</a>
+          <a class="side-link" href="#" data-page="riders">Riders</a>
+          <a class="side-link" href="#" data-page="sellers">Sellers</a>
+          <a class="side-link" href="#" data-page="log">Log Activity</a>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Support</div>
+          <a class="side-link" href="#" data-page="setting">Setting</a>
+          <a class="side-link" href="#" data-page="help">Help</a>
+          <a class="side-link" href="#" data-page="darkmode">Dark Mode</a>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <section class="content">
+        <div class="topbar">
+          <div class="page-title">Dashboard</div>
+          <div class="search"><input placeholder="Search anything..."/></div>
+          <div class="avatar">
+            {% if session.logged_in %}
+              <span class="tag">{{ session.email }}</span>
+              <a href="/login" class="tag" style="background:#efefef;color:#0a0a0a">Logout</a>
+            {% else %}
+              <a href="/login" class="tag">Login</a>
+            {% endif %}
+          </div>
+        </div>
+
+        <main class="main" id="dashboardContent">
+          <!-- Stat cards -->
+          <div class="grid stats">
+            <div class="card"><div class="inner"><div class="metric">Total Revenue (PHP)</div><div class="value">₱1,250 <span class="delta">↑ 1%</span></div></div></div>
+            <div class="card"><div class="inner"><div class="metric">Total Customers</div><div class="value">9 <span class="delta" style="color:#ef4444">↓ 0.2%</span></div></div></div>
+            <div class="card"><div class="inner"><div class="metric">Total Transactions</div><div class="value">17 <span class="delta">↑ 1%</span></div></div></div>
+            <div class="card"><div class="inner"><div class="metric">Total Products</div><div class="value">6 <span class="delta">↑ 1%</span></div></div></div>
+          </div>
+
+          <!-- Charts row -->
+          <div class="grid two" style="margin-top:14px">
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Revenue Growth (USD)</div>
+                <div class="chart">
+                  <div class="bars">
+                    <div class="bar" style="height:30%"></div>
+                    <div class="bar" style="height:42%"></div>
+                    <div class="bar" style="height:25%"></div>
+                    <div class="bar" style="height:48%"></div>
+                    <div class="bar" style="height:33%"></div>
+                    <div class="bar" style="height:55%"></div>
+                    <div class="bar" style="height:38%"></div>
+                  </div>
+                  <div class="legend"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Customer Growth (Philippines)</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+                  <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:6px 0"><span>NCR (Metro Manila)</span><span>28%</span></div>
+                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:28%;background:#0a0a0a;border-radius:999px"></div></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 6px"><span>CALABARZON</span><span>22%</span></div>
+                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:22%;background:#0a0a0a;border-radius:999px"></div></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 6px"><span>Central Visayas</span><span>18%</span></div>
+                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:18%;background:#0a0a0a;border-radius:999px"></div></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 0"><span>Central Luzon</span><span>12%</span></div>
+                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:12%;background:#0a0a0a;border-radius:999px"></div></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 0"><span>Davao Region</span><span>8%</span></div>
+                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:8%;background:#0a0a0a;border-radius:999px"></div></div>
+                  </div>
+                  <div class="promo">
+                    <div style="font-weight:700;margin-bottom:8px">See more detail statistic to analyze your decision</div>
+                    <a href="#" class="tag" style="display:inline-block;background:#fff;color:#0a0a0a;margin-top:8px">See more</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data row -->
+          <div class="grid two" style="margin-top:14px">
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Top Transactions</div>
+                  <a href="#" style="font-size:12px;color:var(--muted)">View detail</a>
+                </div>
+                <div style="overflow:auto">
+                  <table>
+                    <thead><tr><th>Customer ID</th><th>Item</th><th>Date</th><th>Amount</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td>#23432</td><td>Leather crop top</td><td>12 Jan</td><td>$2,349</td><td><a class="tag" style="background:#efefef;color:#0a0a0a">See detail</a></td></tr>
+                      <tr><td>#25466</td><td>Female Tote Bag</td><td>3 Jan</td><td>$1,640</td><td><a class="tag" style="background:#efefef;color:#0a0a0a">See detail</a></td></tr>
+                      <tr><td>#25467</td><td>Luxury Necklace</td><td>4 Jan</td><td>$2,047</td><td><a class="tag" style="background:#efefef;color:#0a0a0a">See detail</a></td></tr>
+                      <tr><td>#25468</td><td>Men's Shoes</td><td>2 Jan</td><td>$1,939</td><td><a class="tag" style="background:#efefef;color:#0a0a0a">See detail</a></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Top Product</div>
+                  <a href="#" style="font-size:12px;color:var(--muted)">View more</a>
+                </div>
+                <div style="display:flex;gap:14px;align-items:center;margin-top:10px">
+                  <div style="width:120px;height:140px;border-radius:8px;background:#eaeaea;background-image:url('https://images.unsplash.com/photo-1610963876305-c8e7cb43a09b?q=80&w=600&auto=format&fit=crop');background-size:cover;background-position:center"></div>
+                  <div>
+                    <div style="font-weight:700">Denim Jacket with White Feathers</div>
+                    <div class="muted" style="margin-top:4px">240+ items sold out</div>
+                    <a href="#" class="tag" style="display:inline-block;margin-top:10px">Manage</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </section>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
