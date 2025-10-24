@@ -99,6 +99,42 @@ if(riderForm) riderForm.addEventListener('submit', (e)=>{
 const cartCountEl = document.getElementById('cartCount');
 const snackbar = document.getElementById('snackbar');
 
+// -------------------- Auth gate helpers --------------------
+const AUTH_FLAG = 'varon_logged_in';
+
+function isLoggedIn(){
+  try { return localStorage.getItem(AUTH_FLAG) === 'true'; } catch(e){ return false; }
+}
+function setLoggedIn(val){
+  try { localStorage.setItem(AUTH_FLAG, val ? 'true' : 'false'); } catch(e){}
+}
+function saveIntendedAction(action){
+  try { sessionStorage.setItem('varon_post_login', JSON.stringify(action)); } catch(e){}
+}
+function consumeIntendedAction(){
+  try {
+    const raw = sessionStorage.getItem('varon_post_login');
+    if(!raw) return null;
+    sessionStorage.removeItem('varon_post_login');
+    return JSON.parse(raw);
+  } catch(e){ return null; }
+}
+function goToLogin(reason){
+  const next = window.location.href;
+  // Use relative path to support static deployments
+  let urlStr = 'login.html';
+  try{
+    const url = new URL(urlStr, window.location.href);
+    url.searchParams.set('next', next);
+    if(reason) url.searchParams.set('reason', reason);
+    urlStr = url.toString();
+  }catch(e){
+    // Fallback to manual query string
+    urlStr = `login.html?next=${encodeURIComponent(next)}${reason?`&reason=${encodeURIComponent(reason)}`:''}`;
+  }
+  window.location.href = urlStr;
+}
+
 function readCart(){
   try{ return JSON.parse(localStorage.getItem('varon_cart')||'{}'); }catch(e){ return {}; }
 }
@@ -114,25 +150,66 @@ function updateCartBadge(){
   if(cartCountEl) cartCountEl.textContent = n;
 }
 
-document.querySelectorAll('.add-cart').forEach(btn=>{
-  btn.addEventListener('click', (e)=>{
-    const card = btn.closest('.product');
-    const title = card?.querySelector('.title')?.textContent || 'Item';
-    const priceText = card?.querySelector('.price')?.textContent || '£0';
-    const price = parseFloat(priceText.replace(/[^0-9\.]/g,'')) || 0;
-    const id = title.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
-    const cart = readCart();
-    if(!cart[id]) cart[id] = {title, price, qty:0};
-    cart[id].qty += 1;
-    writeCart(cart);
-    updateCartBadge();
-    if(snackbar){
-      snackbar.textContent = `${title} added to cart`;
-      snackbar.classList.add('show');
-      setTimeout(()=> snackbar.classList.remove('show'), 2200);
-    }
+// Cart helpers used by add-to-cart and post-login apply
+function addItemToCart(data){
+  if(!data) return;
+  const title = data.title || 'Item';
+  const price = typeof data.price === 'number' ? data.price : (parseFloat((data.priceText||'').replace(/[^0-9\.]/g,'')) || 0);
+  const id = (data.id) || title.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const cart = readCart();
+  if(!cart[id]) cart[id] = {title, price, qty:0};
+  cart[id].qty += (data.qty || 1);
+  writeCart(cart);
+  updateCartBadge();
+  if(snackbar){
+    snackbar.textContent = `${title} added to cart`;
+    snackbar.classList.add('show');
+    setTimeout(()=> snackbar.classList.remove('show'), 2200);
+  }
+}
+
+function handleAddCartClick(e, btn){
+  const card = btn.closest('.product');
+  const title = card?.querySelector('.title')?.textContent || 'Item';
+  const priceText = card?.querySelector('.price')?.textContent || '£0';
+  const price = parseFloat(priceText.replace(/[^0-9\.]/g,'')) || 0;
+  const id = title.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+
+  if(!isLoggedIn()){
+    e.preventDefault();
+    // Remember intended action and redirect to login
+    saveIntendedAction({ type:'addToCart', payload:{ id, title, price, qty:1 }, next: window.location.href });
+    goToLogin('add_to_cart');
+    return;
+  }
+  addItemToCart({id,title,price,qty:1});
+}
+
+function applyAuthGate(){
+  // Attach/reattach to add-to-cart buttons
+  document.querySelectorAll('.add-cart').forEach(btn=>{
+    // Remove previous listener by cloning to avoid duplicate bindings
+    const newBtn = btn.cloneNode(true);
+    btn.replaceWith(newBtn);
+    newBtn.addEventListener('click', (e)=> handleAddCartClick(e, newBtn));
   });
-});
+
+  // Optional: gate any explicit view product buttons if present
+  document.querySelectorAll('.view-product, [data-view-product]')?.forEach(el=>{
+    const act = (e)=>{
+      if(isLoggedIn()) return; // allow default if logged in
+      e.preventDefault();
+      const href = el.getAttribute('href') || el.dataset.href || '#';
+      saveIntendedAction({ type:'viewProduct', payload:{ href }, next: window.location.href });
+      goToLogin('view_product');
+    };
+    const cloned = el.cloneNode(true);
+    el.replaceWith(cloned);
+    cloned.addEventListener('click', act);
+  });
+}
+// Expose for manual re-application after dynamic DOM updates
+try{ window.applyAuthGate = applyAuthGate; }catch(e){}
 
 function renderCartPage(){
   const cartList = document.getElementById('cartList');
@@ -201,17 +278,346 @@ if(proceedCheckout) proceedCheckout.addEventListener('click', ()=>{
 });
 
 updateCartBadge();
-document.addEventListener('DOMContentLoaded', ()=>{ renderCartPage(); });
+document.addEventListener('DOMContentLoaded', ()=>{ 
+  // If server rendered a logged-in indicator (e.g., accountLink is not an anchor), mark logged in
+  try{
+    const accountLink = document.getElementById('accountLink');
+    if(accountLink && accountLink.tagName !== 'A'){ setLoggedIn(true); }
+  }catch(e){}
+  // Update nav bar based on login status
+  updateNavBar();
+  // Apply auth gate behaviors and render cart
+  applyAuthGate();
+  renderCartPage(); 
+  
+  // If just logged in, apply any remembered action
+  const intended = consumeIntendedAction();
+  if(intended && isLoggedIn()){
+    if(intended.type === 'addToCart'){
+      addItemToCart(intended.payload);
+    } else if(intended.type === 'viewProduct'){
+      if(intended.payload?.href){ window.location.href = intended.payload.href; }
+    }
+  }
+});
+
+// -------------------- Dynamic Nav Bar --------------------
+function getUserEmail(){
+  try{ return localStorage.getItem('varon_user_email') || ''; }catch(e){ return ''; }
+}
+function setUserEmail(email){
+  try{ localStorage.setItem('varon_user_email', email || ''); }catch(e){}
+}
+function getUserFirstName(){
+  try{ return localStorage.getItem('varon_user_first_name') || ''; }catch(e){ return ''; }
+}
+function setUserFirstName(firstName){
+  try{ localStorage.setItem('varon_user_first_name', firstName || ''); }catch(e){}
+}
+function getUserRole(){
+  try{ return localStorage.getItem('varon_user_role') || 'buyer'; }catch(e){ return 'buyer'; }
+}
+function setUserRole(role){
+  try{ localStorage.setItem('varon_user_role', role || 'buyer'); }catch(e){}
+}
+function logout(){
+  setLoggedIn(false);
+  setUserEmail('');
+  setUserFirstName('');
+  setUserRole('buyer');
+  window.location.href = 'index.html';
+}
+
+// -------------------- Seller Request System --------------------
+function getSellerRequests(){
+  try{ return JSON.parse(localStorage.getItem('varon_seller_requests') || '[]'); }catch(e){ return []; }
+}
+function saveSellerRequests(requests){
+  try{ localStorage.setItem('varon_seller_requests', JSON.stringify(requests)); }catch(e){}
+}
+function submitSellerRequest(data){
+  const requests = getSellerRequests();
+  const userEmail = getUserEmail();
+  
+  // Check if user already has a pending request
+  const existingRequest = requests.find(r => r.userEmail === userEmail && r.status === 'pending');
+  if(existingRequest){
+    return { success: false, message: 'You already have a pending seller request.' };
+  }
+  
+  // Check if user is already a seller
+  if(getUserRole() === 'seller'){
+    return { success: false, message: 'You are already a seller!' };
+  }
+  
+  const request = {
+    id: Date.now(),
+    userEmail: userEmail,
+    firstName: getUserFirstName(),
+    storeName: data.storeName,
+    description: data.description,
+    address: data.address,
+    status: 'pending', // pending, approved, rejected
+    createdAt: new Date().toISOString()
+  };
+  
+  requests.push(request);
+  saveSellerRequests(requests);
+  return { success: true, message: 'Your request to become a seller has been submitted for review!' };
+}
+function approveSellerRequest(requestId){
+  const requests = getSellerRequests();
+  const request = requests.find(r => r.id === requestId);
+  if(!request) return false;
+  
+  request.status = 'approved';
+  request.approvedAt = new Date().toISOString();
+  saveSellerRequests(requests);
+  
+  // Note: In real implementation, you'd update the user's role in database
+  // For demo, we show how it would work
+  return true;
+}
+function rejectSellerRequest(requestId){
+  const requests = getSellerRequests();
+  const request = requests.find(r => r.id === requestId);
+  if(!request) return false;
+  
+  request.status = 'rejected';
+  request.rejectedAt = new Date().toISOString();
+  saveSellerRequests(requests);
+  return true;
+}
+
+// Show seller request modal
+function showSellerRequestModal(){
+  // Create modal dynamically
+  const modalHTML = `
+    <div id="sellerRequestModal" class="modal" aria-hidden="false" style="display:flex">
+      <div class="modal-panel" style="max-width:600px">
+        <button data-close class="modal-close" aria-label="Close">×</button>
+        <h2 style="margin:0 0 8px">Request to Become a Seller</h2>
+        <p class="muted" style="margin:0 0 18px;font-size:14px">Fill out the form below and our admin team will review your application.</p>
+        <form id="sellerRequestForm">
+          <label style="display:flex;flex-direction:column;margin-bottom:12px">
+            <span style="font-weight:600;margin-bottom:4px">Store Name *</span>
+            <input name="storeName" type="text" placeholder="e.g., Fashion Hub" required style="padding:10px;border:1px solid #eee;border-radius:6px" />
+          </label>
+          <label style="display:flex;flex-direction:column;margin-bottom:12px">
+            <span style="font-weight:600;margin-bottom:4px">Description *</span>
+            <textarea name="description" rows="4" placeholder="Tell us about your store and what you plan to sell..." required style="padding:10px;border:1px solid #eee;border-radius:6px;resize:vertical"></textarea>
+          </label>
+          <label style="display:flex;flex-direction:column;margin-bottom:12px">
+            <span style="font-weight:600;margin-bottom:4px">Business Address *</span>
+            <input name="address" type="text" placeholder="e.g., Manila, Philippines" required style="padding:10px;border:1px solid #eee;border-radius:6px" />
+          </label>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+            <button type="button" data-close class="secondary" style="padding:10px 18px;border-radius:6px;border:none;cursor:pointer;background:#f6f6f6">Cancel</button>
+            <button type="submit" class="btn-cta" style="padding:10px 18px;border-radius:6px;border:none;cursor:pointer;background:#000;color:#fff">Submit Request</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  
+  // Append to body
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Attach handlers
+  const modal = document.getElementById('sellerRequestModal');
+  const form = document.getElementById('sellerRequestForm');
+  const closeButtons = modal.querySelectorAll('[data-close]');
+  
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modal.remove();
+    });
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if(e.target === modal) modal.remove();
+  });
+  
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = {
+      storeName: form.querySelector('[name="storeName"]').value.trim(),
+      description: form.querySelector('[name="description"]').value.trim(),
+      address: form.querySelector('[name="address"]').value.trim()
+    };
+    
+    const result = submitSellerRequest(formData);
+    alert(result.message);
+    
+    if(result.success){
+      modal.remove();
+    }
+  });
+}
+
+// Detect user role based on email (simple client-side logic)
+function detectRole(email){
+  if(!email) return 'buyer';
+  const lowerEmail = email.toLowerCase();
+  // Admin emails (customize this list)
+  const adminEmails = ['admin@varon.com', 'admin@example.com'];
+  if(adminEmails.includes(lowerEmail) || lowerEmail.includes('admin')){
+    return 'admin';
+  }
+  // Seller detection (optional)
+  if(lowerEmail.includes('seller')){
+    return 'seller';
+  }
+  return 'buyer';
+}
+
+// Get role-based redirect URL
+function getRoleBasedRedirect(role){
+  switch(role){
+    case 'admin': return 'dashboard.html';
+    case 'seller': return 'indexLoggedIn.html'; // or create seller dashboard later
+    case 'rider': return 'indexLoggedIn.html'; // or create rider dashboard later
+    case 'buyer': return 'indexLoggedIn.html';
+    default: return 'indexLoggedIn.html';
+  }
+}
+
+function updateNavBar(){
+  const accountLink = document.getElementById('accountLink');
+  if(!accountLink) return;
+
+  if(isLoggedIn()){
+    const firstName = getUserFirstName();
+    const email = getUserEmail();
+    const role = getUserRole();
+    const displayName = firstName || email.split('@')[0] || 'User';
+    
+    // Build nav HTML based on role
+    let navHTML = `<span class="account" style="cursor:default">Welcome, ${displayName}</span>`;
+    
+    // Show "Request to be Seller" button only for buyers
+    if(role === 'buyer'){
+      navHTML += `<a href="#" id="requestSellerBtn" class="account" style="background:#4ade80;color:#000;border:1px solid #4ade80">Become a Seller</a>`;
+    }
+    
+    navHTML += `<a href="#" id="logoutBtn" class="account" style="background:#fff;color:#000;border:1px solid #fff">Logout</a>`;
+    
+    // Replace Login link with Welcome + Buttons
+    accountLink.outerHTML = navHTML;
+    
+    // Attach logout handler
+    const logoutBtn = document.getElementById('logoutBtn');
+    if(logoutBtn){
+      logoutBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        logout();
+      });
+    }
+    
+    // Attach request seller handler
+    const requestSellerBtn = document.getElementById('requestSellerBtn');
+    if(requestSellerBtn){
+      requestSellerBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        showSellerRequestModal();
+      });
+    }
+  } else {
+    // Show only Login link (signup is now integrated in login page)
+    accountLink.outerHTML = `
+      <a href="login.html" id="accountLink" class="account">Login</a>
+    `;
+  }
+}
 
 const loginForm = document.getElementById('loginForm');
 if(loginForm){
   loginForm.addEventListener('submit', function(e){
+    // Front-end only fallback: prevent real submit if no backend is present
+    // This satisfies "no PHP" requirement by simulating a login in the client.
+    e.preventDefault();
+    const email = loginForm.querySelector('input[name="email"]')?.value?.trim();
+    const pwd = loginForm.querySelector('input[name="password"]')?.value;
+    if(!email || !pwd){
+      alert('Please enter email and password.');
+      return;
+    }
+    // Detect role and store it
+    const role = detectRole(email);
+    setLoggedIn(true);
+    setUserEmail(email);
+    // Keep existing first name if already stored, otherwise use email username
+    if(!getUserFirstName()){
+      const firstName = email.split('@')[0];
+      setUserFirstName(firstName);
+    }
+    setUserRole(role);
+    
+    // Apply any pending action after login
+    const intended = consumeIntendedAction();
+    if(intended){
+      if(intended.type === 'addToCart'){
+        addItemToCart(intended.payload);
+      }
+      if(intended.type === 'viewProduct' && intended.payload?.href){
+        window.location.href = intended.payload.href;
+        return;
+      }
+    }
+    // Navigate based on role or 'next' param
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    if(next){
+      window.location.href = next;
+    } else {
+      window.location.href = getRoleBasedRedirect(role);
+    }
   });
 }
 
 const signupForm = document.getElementById('signupForm');
 if(signupForm){
   signupForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    const firstName = signupForm.querySelector('input[name="firstName"]')?.value?.trim();
+    const lastName = signupForm.querySelector('input[name="lastName"]')?.value?.trim();
+    const email = signupForm.querySelector('input[name="email"]')?.value?.trim();
+    const pwd = signupForm.querySelector('input[name="password"]')?.value;
+    const confirmPwd = signupForm.querySelector('input[name="confirmPassword"]')?.value;
+    
+    if(!email || !pwd || !firstName || !lastName){
+      alert('Please fill in all required fields.');
+      return;
+    }
+    
+    if(pwd !== confirmPwd){
+      alert('Passwords do not match!');
+      return;
+    }
+    
+    if(pwd.length < 6){
+      alert('Password must be at least 6 characters long.');
+      return;
+    }
+    
+    // All new signups default to 'buyer' role
+    const role = 'buyer';
+    setLoggedIn(true);
+    setUserEmail(email);
+    setUserFirstName(firstName);
+    setUserRole(role);
+    
+    // Show success message
+    alert(`Welcome to Varón, ${firstName}! Your account has been created. You can request to become a seller from your dashboard.`);
+    
+    // Redirect based on role or next param
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    if(next){
+      window.location.href = next;
+    } else {
+      window.location.href = getRoleBasedRedirect(role);
+    }
   });
 }
 
@@ -227,6 +633,31 @@ function togglePassword(inputId, button) {
     button.textContent = '👁️';
   }
 }
+
+// Tab switching for combined login/signup page
+document.addEventListener('DOMContentLoaded', function() {
+  const authTabs = document.querySelectorAll('.auth-tab');
+  const authForms = document.querySelectorAll('.auth-form');
+  
+  authTabs.forEach(tab => {
+    tab.addEventListener('click', function() {
+      const targetTab = this.getAttribute('data-tab');
+      
+      // Update active tab
+      authTabs.forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      
+      // Update active form
+      authForms.forEach(form => {
+        if (form.id === targetTab + 'Form') {
+          form.classList.add('active');
+        } else {
+          form.classList.remove('active');
+        }
+      });
+    });
+  });
+});
 
 // Dashboard sidebar navigation
 const dashboardContent = document.getElementById('dashboardContent');
@@ -461,29 +892,19 @@ const pageContent = {
     </div>
   `,
   sellers: `
-    <h2 style="margin-bottom:16px">Sellers Management</h2>
+    <h2 style="margin-bottom:16px">Seller Requests Management</h2>
     <div class="grid stats">
-      <div class="card"><div class="inner"><div class="metric">Total Sellers</div><div class="value">8</div></div></div>
-      <div class="card"><div class="inner"><div class="metric">Active Sellers</div><div class="value">6</div></div></div>
-      <div class="card"><div class="inner"><div class="metric">Pending Approval</div><div class="value">2</div></div></div>
-      <div class="card"><div class="inner"><div class="metric">Total Products</div><div class="value">45</div></div></div>
+      <div class="card"><div class="inner"><div class="metric">Total Requests</div><div class="value" id="totalRequests">0</div></div></div>
+      <div class="card"><div class="inner"><div class="metric">Pending</div><div class="value" id="pendingRequests">0</div></div></div>
+      <div class="card"><div class="inner"><div class="metric">Approved</div><div class="value" id="approvedRequests">0</div></div></div>
+      <div class="card"><div class="inner"><div class="metric">Rejected</div><div class="value" id="rejectedRequests">0</div></div></div>
     </div>
     <div class="card" style="margin-top:14px">
       <div class="inner">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <div class="metric">Seller List</div>
-          <button class="tag" style="cursor:pointer">+ Approve Pending</button>
+          <div class="metric">Seller Requests</div>
         </div>
-        <table>
-          <thead><tr><th>Seller Name</th><th>Store Name</th><th>Products</th><th>Sales</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td>Fashion Hub</td><td>@fashionhub</td><td>12</td><td>₱45,230</td><td><span style="color:#10b981">Active</span></td></tr>
-            <tr><td>Style Central</td><td>@stylecentral</td><td>8</td><td>₱32,100</td><td><span style="color:#10b981">Active</span></td></tr>
-            <tr><td>Trend Shop</td><td>@trendshop</td><td>15</td><td>₱67,450</td><td><span style="color:#10b981">Active</span></td></tr>
-            <tr><td>New Boutique</td><td>@newboutique</td><td>5</td><td>₱0</td><td><span style="color:#f59e0b">Pending</span></td></tr>
-            <tr><td>Luxe Store</td><td>@luxestore</td><td>10</td><td>₱28,900</td><td><span style="color:#10b981">Active</span></td></tr>
-          </tbody>
-        </table>
+        <div id="sellerRequestsList"></div>
       </div>
     </div>
   `,
@@ -596,9 +1017,94 @@ if (sideLinks && dashboardContent) {
       // Load content
       if (pageContent[page]) {
         dashboardContent.innerHTML = pageContent[page];
+        
+        // If sellers page, load seller requests
+        if(page === 'sellers'){
+          loadSellerRequests();
+        }
       } else {
         dashboardContent.innerHTML = `<div class="card"><div class="inner"><h3>Page not found</h3><p>This section is under development.</p></div></div>`;
       }
     });
   });
 }
+
+// Load and render seller requests in admin dashboard
+function loadSellerRequests(){
+  const requests = getSellerRequests();
+  const listContainer = document.getElementById('sellerRequestsList');
+  
+  if(!listContainer) return;
+  
+  // Update stats
+  const totalEl = document.getElementById('totalRequests');
+  const pendingEl = document.getElementById('pendingRequests');
+  const approvedEl = document.getElementById('approvedRequests');
+  const rejectedEl = document.getElementById('rejectedRequests');
+  
+  if(totalEl) totalEl.textContent = requests.length;
+  if(pendingEl) pendingEl.textContent = requests.filter(r => r.status === 'pending').length;
+  if(approvedEl) approvedEl.textContent = requests.filter(r => r.status === 'approved').length;
+  if(rejectedEl) rejectedEl.textContent = requests.filter(r => r.status === 'rejected').length;
+  
+  // Render requests
+  if(requests.length === 0){
+    listContainer.innerHTML = '<p class="muted" style="text-align:center;padding:20px">No seller requests yet.</p>';
+    return;
+  }
+  
+  let html = '<table><thead><tr><th>Applicant</th><th>Store Name</th><th>Description</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+  
+  requests.reverse().forEach(req => {
+    const date = new Date(req.createdAt).toLocaleDateString();
+    const statusColor = req.status === 'approved' ? '#10b981' : req.status === 'rejected' ? '#ef4444' : '#f59e0b';
+    const statusText = req.status.charAt(0).toUpperCase() + req.status.slice(1);
+    
+    html += `<tr>
+      <td><strong>${req.firstName}</strong><br/><small style="color:#777">${req.userEmail}</small></td>
+      <td>${req.storeName}</td>
+      <td style="max-width:200px">${req.description.substring(0, 60)}${req.description.length > 60 ? '...' : ''}</td>
+      <td>${date}</td>
+      <td><span style="color:${statusColor}">${statusText}</span></td>
+      <td>`;
+    
+    if(req.status === 'pending'){
+      html += `<button class="tag" onclick="handleApproveRequest(${req.id})" style="background:#10b981;color:#fff;cursor:pointer;margin-right:4px">Approve</button>
+               <button class="tag" onclick="handleRejectRequest(${req.id})" style="background:#ef4444;color:#fff;cursor:pointer">Reject</button>`;
+    } else {
+      html += `<button class="tag" onclick="viewRequestDetails(${req.id})" style="background:#efefef;color:#0a0a0a;cursor:pointer">View</button>`;
+    }
+    
+    html += `</td></tr>`;
+  });
+  
+  html += '</tbody></table>';
+  listContainer.innerHTML = html;
+}
+
+// Global handlers for admin actions
+window.handleApproveRequest = function(requestId){
+  if(!confirm('Are you sure you want to approve this seller request?')) return;
+  
+  if(approveSellerRequest(requestId)){
+    alert('Seller request approved! Note: In production, the user\'s role would be updated in the database.');
+    loadSellerRequests();
+  }
+};
+
+window.handleRejectRequest = function(requestId){
+  if(!confirm('Are you sure you want to reject this seller request?')) return;
+  
+  if(rejectSellerRequest(requestId)){
+    alert('Seller request rejected.');
+    loadSellerRequests();
+  }
+};
+
+window.viewRequestDetails = function(requestId){
+  const requests = getSellerRequests();
+  const request = requests.find(r => r.id === requestId);
+  if(!request) return;
+  
+  alert(`Request Details:\n\nApplicant: ${request.firstName}\nEmail: ${request.userEmail}\nStore Name: ${request.storeName}\nDescription: ${request.description}\nAddress: ${request.address}\nStatus: ${request.status}\nSubmitted: ${new Date(request.createdAt).toLocaleString()}`);
+};

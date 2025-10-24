@@ -236,11 +236,7 @@ body{
         <a href="/browse">Browse</a>
         <a href="#">Journal</a>
         <a href="#">About</a>
-        {% if session.logged_in %}
-          <span class="account" id="accountLink">{{ session.email }}</span>
-        {% else %}
-          <a href="/login" id="accountLink" class="account">Login</a>
-        {% endif %}
+        <a href="/login" id="accountLink" class="account">Login</a>
         <a href="/shop" id="cartToggle" class="account">Cart <span id="cartCount">0</span></a>
       </nav>
     </header>

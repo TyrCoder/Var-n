@@ -93,15 +93,6 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helve
               <button type="submit" class="btn-cta">Create account</button>
               <a href="login.html" class="secondary">Login</a>
             </div>
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                <div id="authError" class="muted" style="color:#ffdddd;margin-top:6px">
-                  {% for category, message in messages %}
-                    {{ message }}
-                  {% endfor %}
-                </div>
-              {% endif %}
-            {% endwith %}
           </form>
         </div>
       </section>
