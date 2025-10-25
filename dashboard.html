@@ -92,13 +92,8 @@
         <div class="topbar">
           <div class="page-title">Dashboard</div>
           <div class="search"><input placeholder="Search anything..."/></div>
-          <div class="avatar">
-            {% if session.logged_in %}
-              <span class="tag">{{ session.email }}</span>
-              <a href="/login" class="tag" style="background:#efefef;color:#0a0a0a">Logout</a>
-            {% else %}
-              <a href="/login" class="tag">Login</a>
-            {% endif %}
+          <div class="avatar" id="accountLink">
+            <a href="/login" class="tag">Login</a>
           </div>
         </div>
 
