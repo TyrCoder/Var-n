@@ -325,8 +325,8 @@ body{
         <div>
           <h5>Partners</h5>
           <ul>
-            <li><a href="#" id="footerSeller">Register as a seller</a></li>
-            <li><a href="#" id="footerRider">Register as a rider</a></li>
+            <li><a href="signupSeller.html" id="footerSeller">Register as a seller</a></li>
+            <li><a href="signupRider.html" id="footerRider">Register as a rider</a></li>
           </ul>
         </div>
       </div>
@@ -336,39 +336,9 @@ body{
       </div>
     </footer>
 
-    <div class="modal" id="sellerModal" aria-hidden="true">
-      <div class="modal-panel">
-        <button class="modal-close" data-close>&times;</button>
-        <h3>Register as a seller</h3>
-        <p class="muted">Create a seller account to list your products on Varón.</p>
-        <form id="sellerForm">
-          <label>Business name<input name="business" required></label>
-          <label>Email<input type="email" name="email" required></label>
-          <label>Phone<input name="phone"></label>
-          <div class="row">
-            <button type="submit">Register</button>
-            <button type="button" data-close class="secondary">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    
 
-    <div class="modal" id="riderModal" aria-hidden="true">
-      <div class="modal-panel">
-        <button class="modal-close" data-close>&times;</button>
-        <h3>Register as a rider</h3>
-        <p class="muted">Join Varón deliveries — flexible pay and schedules.</p>
-        <form id="riderForm">
-          <label>Full name<input name="name" required></label>
-          <label>Email<input type="email" name="email" required></label>
-          <label>Vehicle type<select name="vehicle"><option>Bike</option><option>Scooter</option><option>Car</option></select></label>
-          <div class="row">
-            <button type="submit">Register</button>
-            <button type="button" data-close class="secondary">Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
+
 
     <script src="script.js"></script>
     <div id="snackbar" class="snackbar" role="status" aria-live="polite">Added to cart</div>

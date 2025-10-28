@@ -67,9 +67,15 @@ function closeModal(modal){
 [sellerBtn, riderBtn, footerSeller, footerRider].forEach(el=>{
   if(!el) return;
   el.addEventListener('click', (e)=>{
-    e.preventDefault();
-    if(el===sellerBtn || el===footerSeller) openModal(sellerModal);
-    if(el===riderBtn || el===footerRider) openModal(riderModal);
+    // Keep modal behavior for the header buttons only. Footer links should
+    // perform their default navigation (they now point to dedicated pages).
+    if(el === sellerBtn || el === riderBtn){
+      e.preventDefault();
+      if(el === sellerBtn) openModal(sellerModal);
+      if(el === riderBtn) openModal(riderModal);
+    }
+    // If this is a footer link (footerSeller/footerRider), allow default
+    // behavior so the anchor navigates to the new signup page.
   });
 });
 
@@ -89,12 +95,7 @@ if(sellerForm) sellerForm.addEventListener('submit', (e)=>{
   closeModal(sellerModal);
 });
 
-const riderForm = document.getElementById('riderForm');
-if(riderForm) riderForm.addEventListener('submit', (e)=>{
-  e.preventDefault();
-  alert('Rider registration received. We will contact you.');
-  closeModal(riderModal);
-});
+// Rider registration is now handled in signupRider.html
 
 const cartCountEl = document.getElementById('cartCount');
 const snackbar = document.getElementById('snackbar');
