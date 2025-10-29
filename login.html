@@ -49,17 +49,6 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helve
 .form-group input:focus{outline:none;border-color:#000;box-shadow:0 0 0 3px rgba(0,0,0,0.1)}
 .form-group input::placeholder{color:#adb5bd}
 
-/* Checkbox override: remove large input padding applied by .form-group input */
-.form-group input[type="checkbox"], input.tnc-checkbox{
-  width: auto;
-  padding: 0;
-  margin: 0;
-  height: 18px;
-  min-width: 18px;
-  border: 0;
-  accent-color: #000;
-}
-
 .form-group select{width:100%;padding:12px 14px;border:2px solid #e9ecef;border-radius:8px;font-size:14px;transition:all .2s;background:#fff;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23495057' d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .form-group select:focus{outline:none;border-color:#000;box-shadow:0 0 0 3px rgba(0,0,0,0.1)}
 .form-group select option{padding:10px}
@@ -185,15 +174,10 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helve
                 </div>
               </div>
 
-              <div class="form-group" style="display:flex;align-items:center;gap:8px">
-                <input id="signupTnc" class="tnc-checkbox" name="tnc" type="checkbox" required />
-                <label for="signupTnc" style="margin:0;font-size:13px;color:#495057">I agree to the <a href="#" target="_blank">Terms &amp; Conditions</a></label>
-              </div>
-
               <button type="submit" class="btn-submit">Create Your Account</button>
 
               <div class="form-footer">
-                By signing up, you agree to our <a href="#">Terms &amp; Conditions</a>
+                By signing up, you agree to our <a href="#">Terms & Conditions</a>
               </div>
             </form>
           </div>
@@ -227,8 +211,8 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helve
         <div>
           <h5>Partners</h5>
           <ul>
-            <li><a href="signupSeller.html" id="footerSeller">Register as a seller</a></li>
-            <li><a href="signupRider.html" id="footerRider">Register as a rider</a></li>
+            <li><a href="#" id="footerSeller">Register as a seller</a></li>
+            <li><a href="#" id="footerRider">Register as a rider</a></li>
           </ul>
         </div>
       </div>

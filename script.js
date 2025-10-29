@@ -1,17 +1,168 @@
-const menuToggle = document.getElementById('menuToggle');
-const topNav = document.getElementById('topNav');
-if(menuToggle && topNav){
-  menuToggle.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    topNav.classList.toggle('open');
-  });
-
-  document.addEventListener('click', (e)=>{
-    if(!topNav.contains(e.target) && topNav.classList.contains('open')){
-      topNav.classList.remove('open');
-    }
-  });
+function hideAllSections() {
+    const contentSections = document.querySelectorAll('.content-section');
+    const mainContent = document.getElementById('mainContent');
+    contentSections.forEach(section => section.style.display = 'none');
+    if (mainContent) mainContent.style.display = 'block';
 }
+
+function showSection(sectionId) {
+    const contentSections = document.querySelectorAll('.content-section');
+    const mainContent = document.getElementById('mainContent');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    const menuToggle = document.querySelector('.menu-toggle');
+    const hero = document.querySelector('.hero');
+
+    hideAllSections();
+    
+    if (sectionId === 'loginSection') {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    if (sectionId !== 'home') {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.style.display = 'block';
+            if (mainContent) mainContent.style.display = 'none';
+            if (hero) hero.style.display = 'none';
+        }
+    } else {
+        if (hero) hero.style.display = 'block';
+        if (mainContent) mainContent.style.display = 'block';
+    }
+
+    if (sidebar && sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('open');
+        if (menuToggle) {
+            menuToggle.classList.remove('open');
+            menuToggle.setAttribute('aria-expanded', 'false');
+        }
+        document.body.style.overflow = '';
+    }
+}
+
+window.showSection = showSection;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const menuToggle = document.querySelector('.menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.querySelector('.overlay');
+    const cartCount = document.getElementById('cartCount');
+    const cartCountSidebar = document.getElementById('cartCountSidebar');
+
+    function toggleMenu(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+        menuToggle.classList.toggle('open');
+        menuToggle.setAttribute('aria-expanded', sidebar.classList.contains('open'));
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
+
+    function closeMenu() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+        menuToggle.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    if (menuToggle) {
+        menuToggle.addEventListener('click', toggleMenu);
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeMenu);
+    }
+
+    document.addEventListener('click', function(e) {
+        if (sidebar.classList.contains('open') && 
+            !sidebar.contains(e.target) && 
+            !menuToggle.contains(e.target)) {
+            closeMenu();
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+            closeMenu();
+        }
+    });
+
+    function hideAllSections() {
+        contentSections.forEach(section => section.style.display = 'none');
+        mainContent.style.display = 'block';
+    }
+    function showSection(sectionId) {
+        hideAllSections();
+        if (sectionId !== 'home') {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.style.display = 'block';
+                mainContent.style.display = 'none';
+            }
+        }
+        if (sidebar) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            menuToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+    }
+
+    hideAllSections();
+
+    function toggleMenu() {
+        const isOpen = sidebar.classList.contains('open');
+        menuToggle.classList.toggle('open');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+        menuToggle.setAttribute('aria-expanded', !isOpen);
+        document.body.style.overflow = !isOpen ? 'hidden' : '';
+    }
+
+    function closeMenu() {
+        menuToggle.classList.remove('open');
+        sidebar.classList.remove('open');
+        overlay.classList.remove('open');
+        menuToggle.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+    }
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleMenu();
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeMenu);
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sidebar?.classList.contains('open')) {
+            closeMenu();
+        }
+    });
+
+    if (cartCount && cartCountSidebar) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'characterData' || mutation.type === 'childList') {
+                    cartCountSidebar.textContent = cartCount.textContent;
+                }
+            });
+        });
+
+        observer.observe(cartCount, { 
+            characterData: true, 
+            childList: true, 
+            subtree: true 
+        });
+    }
+});
 
 const filters = document.querySelectorAll('.filters button');
 const products = document.querySelectorAll('.product');
@@ -55,27 +206,27 @@ const footerRider = document.getElementById('footerRider');
 const sellerModal = document.getElementById('sellerModal');
 const riderModal = document.getElementById('riderModal');
 
-function openModal(modal){
+function openModal(modalId){
+  const modal = document.getElementById(modalId);
   if(!modal) return;
   modal.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
 }
-function closeModal(modal){
+function closeModal(modalId){
+  const modal = document.getElementById(modalId);
   if(!modal) return;
   modal.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
 }
 
 [sellerBtn, riderBtn, footerSeller, footerRider].forEach(el=>{
   if(!el) return;
   el.addEventListener('click', (e)=>{
-    // Keep modal behavior for the header buttons only. Footer links should
-    // perform their default navigation (they now point to dedicated pages).
-    if(el === sellerBtn || el === riderBtn){
+        if(el === sellerBtn || el === riderBtn){
       e.preventDefault();
       if(el === sellerBtn) openModal(sellerModal);
       if(el === riderBtn) openModal(riderModal);
     }
-    // If this is a footer link (footerSeller/footerRider), allow default
-    // behavior so the anchor navigates to the new signup page.
   });
 });
 
@@ -95,12 +246,8 @@ if(sellerForm) sellerForm.addEventListener('submit', (e)=>{
   closeModal(sellerModal);
 });
 
-// Rider registration is now handled in signupRider.html
-
 const cartCountEl = document.getElementById('cartCount');
 const snackbar = document.getElementById('snackbar');
-
-// -------------------- Auth gate helpers --------------------
 const AUTH_FLAG = 'varon_logged_in';
 
 function isLoggedIn(){
@@ -151,7 +298,6 @@ function updateCartBadge(){
   if(cartCountEl) cartCountEl.textContent = n;
 }
 
-// Cart helpers used by add-to-cart and post-login apply
 function addItemToCart(data){
   if(!data) return;
   const title = data.title || 'Item';
@@ -178,7 +324,6 @@ function handleAddCartClick(e, btn){
 
   if(!isLoggedIn()){
     e.preventDefault();
-    // Remember intended action and redirect to login
     saveIntendedAction({ type:'addToCart', payload:{ id, title, price, qty:1 }, next: window.location.href });
     goToLogin('add_to_cart');
     return;
@@ -195,8 +340,7 @@ function applyAuthGate(){
     newBtn.addEventListener('click', (e)=> handleAddCartClick(e, newBtn));
   });
 
-  // Optional: gate any explicit view product buttons if present
-  document.querySelectorAll('.view-product, [data-view-product]')?.forEach(el=>{
+    document.querySelectorAll('.view-product, [data-view-product]')?.forEach(el=>{
     const act = (e)=>{
       if(isLoggedIn()) return; // allow default if logged in
       e.preventDefault();
@@ -302,7 +446,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
 });
 
-// -------------------- Dynamic Nav Bar --------------------
 function getUserEmail(){
   try{ return localStorage.getItem('varon_user_email') || ''; }catch(e){ return ''; }
 }
@@ -329,7 +472,6 @@ function logout(){
   window.location.href = 'index.html';
 }
 
-// -------------------- Seller Request System --------------------
 function getSellerRequests(){
   try{ return JSON.parse(localStorage.getItem('varon_seller_requests') || '[]'); }catch(e){ return []; }
 }
@@ -340,13 +482,11 @@ function submitSellerRequest(data){
   const requests = getSellerRequests();
   const userEmail = getUserEmail();
   
-  // Check if user already has a pending request
   const existingRequest = requests.find(r => r.userEmail === userEmail && r.status === 'pending');
   if(existingRequest){
     return { success: false, message: 'You already have a pending seller request.' };
   }
   
-  // Check if user is already a seller
   if(getUserRole() === 'seller'){
     return { success: false, message: 'You are already a seller!' };
   }
@@ -375,8 +515,6 @@ function approveSellerRequest(requestId){
   request.approvedAt = new Date().toISOString();
   saveSellerRequests(requests);
   
-  // Note: In real implementation, you'd update the user's role in database
-  // For demo, we show how it would work
   return true;
 }
 function rejectSellerRequest(requestId){
@@ -531,14 +669,12 @@ function updateNavBar(){
   }
 }
 
-const loginForm = document.getElementById('loginForm');
+  const loginForm = document.getElementById('loginForm');
 if(loginForm){
   loginForm.addEventListener('submit', function(e){
-    // Front-end only fallback: prevent real submit if no backend is present
-    // This satisfies "no PHP" requirement by simulating a login in the client.
     e.preventDefault();
-    const email = loginForm.querySelector('input[name="email"]')?.value?.trim();
-    const pwd = loginForm.querySelector('input[name="password"]')?.value;
+    const email = loginForm.querySelector('#loginEmail')?.value?.trim();
+    const pwd = loginForm.querySelector('#loginPassword')?.value;
     if(!email || !pwd){
       alert('Please enter email and password.');
       return;
@@ -574,9 +710,7 @@ if(loginForm){
       window.location.href = getRoleBasedRedirect(role);
     }
   });
-}
-
-const signupForm = document.getElementById('signupForm');
+}const signupForm = document.getElementById('signupForm');
 if(signupForm){
   signupForm.addEventListener('submit', function(e){
     e.preventDefault();
@@ -635,7 +769,6 @@ function togglePassword(inputId, button) {
   }
 }
 
-// Tab switching for combined login/signup page
 document.addEventListener('DOMContentLoaded', function() {
   const authTabs = document.querySelectorAll('.auth-tab');
   const authForms = document.querySelectorAll('.auth-form');
@@ -644,11 +777,8 @@ document.addEventListener('DOMContentLoaded', function() {
     tab.addEventListener('click', function() {
       const targetTab = this.getAttribute('data-tab');
       
-      // Update active tab
       authTabs.forEach(t => t.classList.remove('active'));
       this.classList.add('active');
-      
-      // Update active form
       authForms.forEach(form => {
         if (form.id === targetTab + 'Form') {
           form.classList.add('active');
@@ -660,7 +790,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-// Dashboard sidebar navigation
 const dashboardContent = document.getElementById('dashboardContent');
 const sideLinks = document.querySelectorAll('.side-link');
 
@@ -995,18 +1124,14 @@ const pageContent = {
   `
 };
 
-// Handle sidebar link clicks
 if (sideLinks && dashboardContent) {
   sideLinks.forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const page = link.dataset.page;
       
-      // Update active state
       sideLinks.forEach(l => l.classList.remove('active'));
       link.classList.add('active');
-      
-      // Update page title
       const pageTitle = document.querySelector('.topbar .page-title');
       if (pageTitle) {
         pageTitle.textContent = link.textContent.trim();

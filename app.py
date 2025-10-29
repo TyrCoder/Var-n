@@ -26,6 +26,7 @@ def init_db():
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
         conn.database = DB_CONFIG['database']
         
+        # Users table (customers, sellers, admins, riders)
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             first_name VARCHAR(100) NOT NULL,
@@ -39,6 +40,7 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Categories table for men's apparel
         cursor.execute('''CREATE TABLE IF NOT EXISTS categories (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
@@ -51,6 +53,7 @@ def init_db():
             FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Sellers profile table
         cursor.execute('''CREATE TABLE IF NOT EXISTS sellers (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL UNIQUE,
@@ -73,6 +76,7 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Products table for men's apparel
         cursor.execute('''CREATE TABLE IF NOT EXISTS products (
             id INT AUTO_INCREMENT PRIMARY KEY,
             seller_id INT NOT NULL,
@@ -105,6 +109,7 @@ def init_db():
             INDEX idx_active (is_active)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Product images table
         cursor.execute('''CREATE TABLE IF NOT EXISTS product_images (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -115,6 +120,7 @@ def init_db():
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Product variants (size, color combinations)
         cursor.execute('''CREATE TABLE IF NOT EXISTS product_variants (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -130,6 +136,7 @@ def init_db():
             INDEX idx_product (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Inventory/Stock tracking
         cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -146,6 +153,7 @@ def init_db():
             UNIQUE KEY unique_inventory (product_id, variant_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Customer addresses
         cursor.execute('''CREATE TABLE IF NOT EXISTS addresses (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
@@ -163,6 +171,7 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Orders table
         cursor.execute('''CREATE TABLE IF NOT EXISTS orders (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_number VARCHAR(50) UNIQUE NOT NULL,
@@ -190,6 +199,7 @@ def init_db():
             INDEX idx_status (order_status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Order items table
         cursor.execute('''CREATE TABLE IF NOT EXISTS order_items (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_id INT NOT NULL,
@@ -208,6 +218,7 @@ def init_db():
             FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE RESTRICT
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Riders table
         cursor.execute('''CREATE TABLE IF NOT EXISTS riders (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL UNIQUE,
@@ -227,6 +238,7 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Shipments/Deliveries table
         cursor.execute('''CREATE TABLE IF NOT EXISTS shipments (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_id INT NOT NULL UNIQUE,
@@ -245,6 +257,7 @@ def init_db():
             FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Shopping cart
         cursor.execute('''CREATE TABLE IF NOT EXISTS cart (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
@@ -259,6 +272,7 @@ def init_db():
             UNIQUE KEY unique_cart_item (user_id, product_id, variant_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Reviews table
         cursor.execute('''CREATE TABLE IF NOT EXISTS reviews (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
@@ -277,6 +291,7 @@ def init_db():
             INDEX idx_product (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Transactions/Payments table
         cursor.execute('''CREATE TABLE IF NOT EXISTS transactions (
             id INT AUTO_INCREMENT PRIMARY KEY,
             order_id INT NOT NULL,
@@ -291,6 +306,7 @@ def init_db():
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Activity log
         cursor.execute('''CREATE TABLE IF NOT EXISTS activity_logs (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT,
@@ -306,6 +322,7 @@ def init_db():
             INDEX idx_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Coupons/Discounts
         cursor.execute('''CREATE TABLE IF NOT EXISTS coupons (
             id INT AUTO_INCREMENT PRIMARY KEY,
             code VARCHAR(50) UNIQUE NOT NULL,
@@ -408,105 +425,6 @@ def signup():
             flash(f'Registration failed: {err}', 'error')
             return redirect(url_for('signup'))
     return render_template('signup.html')
-
-@app.route('/signup/rider', methods=['GET', 'POST'])
-def signup_rider():
-    if request.method == 'POST':
-        try:
-            # Extract user information
-            first_name = request.form.get('first_name')
-            last_name = request.form.get('last_name')
-            email = request.form.get('email')
-            password = request.form.get('password')
-            phone = request.form.get('phone')
-            
-            # Extract rider specific information
-            vehicle_type = request.form.get('vehicle_type')
-            license_number = request.form.get('license_number')  # Updated to match form field
-            vehicle_plate = request.form.get('vehicle_plate')    # Updated to match form field
-            service_area = request.form.get('service_area')      # Added service area
-
-            # Validate required fields
-            required_fields = {
-                'First Name': first_name,
-                'Last Name': last_name,
-                'Email': email,
-                'Password': password,
-                'Vehicle Type': vehicle_type
-            }
-            
-            missing_fields = [field for field, value in required_fields.items() if not value]
-            if missing_fields:
-                flash(f"Required fields missing: {', '.join(missing_fields)}", 'error')
-                return redirect(url_for('signup_rider'))
-
-            conn = get_db()
-            if not conn:
-                flash('Database connection failed', 'error')
-                return redirect(url_for('signup_rider'))
-
-            cursor = conn.cursor(dictionary=True)
-            
-            # Check if email already exists
-            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
-            if cursor.fetchone():
-                flash('Email already registered', 'error')
-                return redirect(url_for('signup_rider'))
-            
-            # Begin transaction
-            cursor.execute('START TRANSACTION')
-            
-            # Create user with rider role
-            cursor.execute('''
-                INSERT INTO users (first_name, last_name, email, password, phone, role, status)
-                VALUES (%s, %s, %s, %s, %s, 'rider', 'pending')
-            ''', (first_name, last_name, email, password, phone))
-            
-            # Get the new user's ID
-            user_id = cursor.lastrowid
-            
-            # Create rider record
-            cursor.execute('''
-                INSERT INTO riders (user_id, vehicle_type, license_number, vehicle_plate, service_area, status)
-                VALUES (%s, %s, %s, %s, %s, 'pending')
-            ''', (user_id, vehicle_type, license_number, vehicle_plate, service_area))
-            
-            # Commit transaction
-            conn.commit()
-            
-            # Log the registration
-            cursor.execute('''
-                INSERT INTO activity_logs (user_id, action, entity_type, entity_id, description)
-                VALUES (%s, 'REGISTER', 'rider', %s, 'New rider registration')
-            ''', (user_id, cursor.lastrowid))
-            
-            conn.commit()
-            cursor.close()
-            conn.close()
-            
-            flash('Rider registration successful! Your account is pending approval.', 'success')
-            return redirect(url_for('login'))
-            
-        except mysql.connector.Error as err:
-            if conn:
-                conn.rollback()
-            if err.errno == 1062:  # Duplicate entry error
-                flash('This email is already registered', 'error')
-            else:
-                flash(f'Registration failed: {err}', 'error')
-            return redirect(url_for('signup_rider'))
-        except Exception as err:
-            if conn:
-                conn.rollback()
-            flash(f'Registration failed: {err}', 'error')
-            return redirect(url_for('signup_rider'))
-        finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'conn' in locals() and conn.is_connected():
-                conn.close()
-            
-    return render_template('signupRider.html')
 
 @app.route('/dashboard')
 def dashboard():
