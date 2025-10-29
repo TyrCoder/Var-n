@@ -681,7 +681,7 @@ button, .btn-cta, .menu-toggle, input, select {
           <div class="media" style="background-image:url('https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=9b9b7c9d9c4b4b8b8a8d7d7d')"></div>
           <div class="meta">
             <h3 class="title">Classic White T‑shirt</h3>
-            <div class="price">£75</div>
+            <div class="price">₱1,250.00</div>
           </div>
               <button class="add-cart" aria-label="Add Classic White T-shirt to cart">＋</button>
         </article>
@@ -691,7 +691,7 @@ button, .btn-cta, .menu-toggle, input, select {
           <div class="media" style="background-image:url('https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=5f5f6f7f8f9f0f1f2f')"></div>
           <div class="meta">
             <h3 class="title">Half Sleeve T‑shirts</h3>
-            <div class="price">£55</div>
+            <div class="price">₱950.00</div>
           </div>
           <button class="add-cart" aria-label="Add Half Sleeve T-shirts to cart">＋</button>
         </article>
@@ -700,7 +700,7 @@ button, .btn-cta, .menu-toggle, input, select {
           <div class="media" style="background-image:url('https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=4e4e5e6e7e8e9e0e1e')"></div>
           <div class="meta">
             <h3 class="title">Modern T‑shirts</h3>
-            <div class="price">£117</div>
+            <div class="price">₱1,450.00</div>
           </div>
           <button class="add-cart" aria-label="Add Modern T-shirts to cart">＋</button>
         </article>
@@ -814,14 +814,14 @@ button, .btn-cta, .menu-toggle, input, select {
 
     <!-- Cart Modal -->
     <div id="cartModal" class="modal" aria-hidden="true">
-      <div class="cart-card" style="margin:20px">
-        <button class="modal-close" onclick="closeModal('cartModal')">×</button>
-        <h2>Your Cart</h2>
+      <div class="cart-card" style="margin:20px; position: relative;">
+        <button onclick="closeModal('cartModal')" style="position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; font-size: 20px; color: #fff; background: #000; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
+        <h2 style="margin: 0 0 16px;">Your Cart</h2>
         <div id="cartList" class="cart-list">
           <!-- Cart items will be inserted here -->
         </div>
         <div class="cart-actions">
-          <div class="cart-total">Total: <strong id="cartTotal">£0.00</strong></div>
+          <div class="cart-total">Total: <strong id="cartTotal">₱0.00</strong></div>
           <div style="display:flex;gap:8px">
             <button onclick="clearCart()" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a">Clear Cart</button>
             <button id="checkoutBtn" class="btn-cta">Checkout</button>

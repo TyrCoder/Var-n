@@ -377,7 +377,7 @@ function renderCartPage(){
     cartList.appendChild(line);
     total += item.price * item.qty;
   });
-  cartTotal.textContent = `£${total.toFixed(2)}`;
+  cartTotal.textContent = `₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
   cartList.querySelectorAll('[data-op]').forEach(btn=>btn.addEventListener('click', (e)=>{
     const id = btn.dataset.id; const op = btn.dataset.op;
@@ -402,8 +402,8 @@ document.addEventListener('click', (e)=>{
     const cart = readCart();
     if(sumEl){
       let html = '<ul style="list-style:none;padding:0;margin:0">'; let total=0;
-      Object.values(cart).forEach(it=>{ html += `<li style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><strong style="color:#fff">${it.title}</strong> <div class="muted">${it.qty} × £${it.price.toFixed(2)}</div></li>`; total += it.qty*it.price });
-      html += `</ul><div style="margin-top:10px;color:#fff">Total: <strong>£${total.toFixed(2)}</strong></div>`;
+      Object.values(cart).forEach(it=>{ html += `<li style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><strong style="color:#fff">${it.title}</strong> <div class="muted">${it.qty} × ₱${it.price.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div></li>`; total += it.qty*it.price });
+      html += `</ul><div style="margin-top:10px;color:#fff">Total: <strong>₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>`;
       sumEl.innerHTML = html;
     }
     if(checkoutModal) checkoutModal.setAttribute('aria-hidden','false');

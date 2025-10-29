@@ -370,8 +370,8 @@ CREATE TABLE IF NOT EXISTS coupons (
     max_discount DECIMAL(10,2),
     usage_limit INT,
     used_count INT DEFAULT 0,
-    start_date TIMESTAMP NOT NULL,
-    end_date TIMESTAMP NOT NULL,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_code (code),
@@ -387,34 +387,3 @@ INSERT INTO users (first_name, last_name, email, password, role, status)
 VALUES ('Admin', 'User', 'admin@varon.com', 'admin123', 'admin', 'active')
 ON DUPLICATE KEY UPDATE first_name=first_name;
 
--- Sample Categories
-INSERT INTO categories (name, slug, description, parent_id, is_active) VALUES
-('Tops', 'tops', 'All types of tops for men', NULL, TRUE),
-('T-Shirts', 't-shirts', 'Casual and formal t-shirts', 1, TRUE),
-('Polo Shirts', 'polo-shirts', 'Classic polo shirts', 1, TRUE),
-('Dress Shirts', 'dress-shirts', 'Formal dress shirts', 1, TRUE),
-('Bottoms', 'bottoms', 'Pants, shorts and more', NULL, TRUE),
-('Jeans', 'jeans', 'Denim jeans', 5, TRUE),
-('Chinos', 'chinos', 'Chino pants', 5, TRUE),
-('Shorts', 'shorts', 'Casual shorts', 5, TRUE),
-('Outerwear', 'outerwear', 'Jackets and coats', NULL, TRUE),
-('Jackets', 'jackets', 'All types of jackets', 9, TRUE),
-('Hoodies', 'hoodies', 'Hooded sweatshirts', 9, TRUE),
-('Footwear', 'footwear', 'Shoes and sandals', NULL, TRUE),
-('Sneakers', 'sneakers', 'Casual sneakers', 12, TRUE),
-('Formal Shoes', 'formal-shoes', 'Dress shoes', 12, TRUE),
-('Accessories', 'accessories', 'Belts, watches, bags', NULL, TRUE),
-('Belts', 'belts', 'Leather and fabric belts', 15, TRUE),
-('Watches', 'watches', 'Wrist watches', 15, TRUE),
-('Bags', 'bags', 'Backpacks and messenger bags', 15, TRUE)
-ON DUPLICATE KEY UPDATE name=name;
-
--- Sample Buyer Users
-INSERT INTO users (first_name, last_name, email, password, role, phone, status) VALUES
-('Maria', 'Santos', 'maria.santos@email.com', 'password123', 'buyer', '+63-912-345-6789', 'active'),
-('Juan', 'Reyes', 'juan.reyes@email.com', 'password123', 'buyer', '+63-923-456-7890', 'active'),
-('Ana', 'Cruz', 'ana.cruz@email.com', 'password123', 'buyer', '+63-934-567-8901', 'active')
-ON DUPLICATE KEY UPDATE first_name=first_name;
-
--- Success Message
-SELECT 'Database schema created successfully! 🔥' AS Message;

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Seller Dashboard — Varón</title>
+    <style>
+      :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef}
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:#f3f4f6;color:var(--fg)}
+      a{text-decoration:none;color:inherit}
+      /* Layout */
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px}
+      .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px}
+      .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
+      .side-group{margin-top:8px}
+      .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
+      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea}
+      .side-link.active,.side-link:hover{background:#141414;color:#fff}
+
+      .content{display:flex;flex-direction:column}
+      .topbar{display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;position:sticky;top:0;z-index:5}
+      .search{flex:1}
+      .search input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+      .avatar{display:flex;align-items:center;gap:8px;margin-left:auto}
+      .tag{background:#0a0a0a;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
+
+      .main{padding:18px 18px 26px}
+      .page-title{font-size:22px;margin:8px 0 14px}
+
+      /* Cards */
+      .grid{display:grid;gap:14px}
+      .grid.stats{grid-template-columns:repeat(4, minmax(180px,1fr))}
+      .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 10px rgba(10,10,10,.03)}
+      .card .inner{padding:14px}
+      .metric{font-size:12px;color:var(--muted);margin-bottom:6px}
+      .value{font-size:22px;font-weight:700}
+      .delta{font-size:12px;color:#10b981;margin-left:8px}
+
+      /* Chart placeholders */
+      .grid.two{grid-template-columns:1.4fr 1fr}
+      .chart{height:260px;padding:12px 14px}
+      .bars{display:flex;align-items:flex-end;gap:10px;height:160px;margin-top:8px}
+      .bar{flex:1;background:#0a0a0a;border-radius:6px}
+      .legend{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:8px}
+
+      /* Table */
+      table{width:100%;border-collapse:separate;border-spacing:0}
+      thead th{font-size:12px;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);padding:10px 12px}
+      tbody td{padding:12px;border-bottom:1px solid var(--line)}
+
+      /* Product Management */
+      .action-btn {
+        background: #0a0a0a;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .action-btn:hover {
+        background: #2d2d2d;
+      }
+      .status-badge {
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .status-active {
+        background: #dcfce7;
+        color: #15803d;
+      }
+      .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .status-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      @media (max-width:1000px){
+        .app{grid-template-columns:1fr}
+        .sidebar{display:none}
+        .grid.stats{grid-template-columns:repeat(2,1fr)}
+        .grid.two{grid-template-columns:1fr}
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="logo">
+          <div class="dot"></div>
+          <strong>Seller Dashboard</strong>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Store Management</div>
+          <a class="side-link active" href="#" data-page="overview">Overview</a>
+          <a class="side-link" href="#" data-page="products">Products</a>
+          <a class="side-link" href="#" data-page="orders">Orders</a>
+          <a class="side-link" href="#" data-page="inventory">Inventory</a>
+          <a class="side-link" href="#" data-page="reviews">Customer Reviews</a>
+          <a class="side-link" href="#" data-page="promotions">Promotions</a>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Analytics</div>
+          <a class="side-link" href="#" data-page="sales">Sales Analytics</a>
+          <a class="side-link" href="#" data-page="performance">Performance</a>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Settings</div>
+          <a class="side-link" href="#" data-page="store-settings">Store Settings</a>
+          <a class="side-link" href="#" data-page="account">Account</a>
+          <a class="side-link" href="/logout">Logout</a>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <section class="content">
+        <div class="topbar">
+          <div class="page-title">Store Dashboard</div>
+          <div class="search"><input placeholder="Search products, orders..."/></div>
+          <div class="avatar">
+            <span class="tag store-name">Your Store Name</span>
+            <span class="tag status-badge status-active">Active</span>
+          </div>
+        </div>
+
+        <main class="main" id="dashboardContent">
+          <!-- Stat cards -->
+          <div class="grid stats">
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Today's Sales</div>
+                <div class="value">₱8,250 <span class="delta">↑ 12%</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Pending Orders</div>
+                <div class="value">5 <span class="delta" style="color:#ef4444">↑ 2</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Products Stock</div>
+                <div class="value">48 <span class="delta">↓ 3</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Customer Rating</div>
+                <div class="value">4.8 <span class="delta">↑ 0.2</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts row -->
+          <div class="grid two" style="margin-top:14px">
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Weekly Sales Overview</div>
+                <div class="chart">
+                  <div class="bars">
+                    <div class="bar" style="height:45%"></div>
+                    <div class="bar" style="height:65%"></div>
+                    <div class="bar" style="height:35%"></div>
+                    <div class="bar" style="height:78%"></div>
+                    <div class="bar" style="height:55%"></div>
+                    <div class="bar" style="height:48%"></div>
+                    <div class="bar" style="height:60%"></div>
+                  </div>
+                  <div class="legend">
+                    <span>Sun</span>
+                    <span>Mon</span>
+                    <span>Tue</span>
+                    <span>Wed</span>
+                    <span>Thu</span>
+                    <span>Fri</span>
+                    <span>Sat</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Top Performing Products</div>
+                <div style="margin-top:10px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <div>Classic Denim Jacket</div>
+                    <div class="tag" style="background:#efefef;color:#0a0a0a">28 sold</div>
+                  </div>
+                  <div style="height:6px;background:#efefef;border-radius:999px">
+                    <div style="height:6px;width:85%;background:#0a0a0a;border-radius:999px"></div>
+                  </div>
+
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 12px">
+                    <div>Leather Boots</div>
+                    <div class="tag" style="background:#efefef;color:#0a0a0a">22 sold</div>
+                  </div>
+                  <div style="height:6px;background:#efefef;border-radius:999px">
+                    <div style="height:6px;width:65%;background:#0a0a0a;border-radius:999px"></div>
+                  </div>
+
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 12px">
+                    <div>Casual T-Shirt</div>
+                    <div class="tag" style="background:#efefef;color:#0a0a0a">15 sold</div>
+                  </div>
+                  <div style="height:6px;background:#efefef;border-radius:999px">
+                    <div style="height:6px;width:45%;background:#0a0a0a;border-radius:999px"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Orders and Low Stock -->
+          <div class="grid two" style="margin-top:14px">
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Recent Orders</div>
+                  <a href="#" class="action-btn">Process Orders</a>
+                </div>
+                <div style="overflow:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Product</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>#ORD-2349</td>
+                        <td>John Doe</td>
+                        <td>Denim Jacket</td>
+                        <td>₱2,349</td>
+                        <td><span class="status-badge status-pending">Pending</span></td>
+                      </tr>
+                      <tr>
+                        <td>#ORD-2348</td>
+                        <td>Maria Santos</td>
+                        <td>Leather Boots</td>
+                        <td>₱3,499</td>
+                        <td><span class="status-badge status-active">Shipped</span></td>
+                      </tr>
+                      <tr>
+                        <td>#ORD-2347</td>
+                        <td>James Lee</td>
+                        <td>T-Shirt Bundle</td>
+                        <td>₱1,299</td>
+                        <td><span class="status-badge status-active">Delivered</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Low Stock Alert</div>
+                  <a href="#" class="action-btn">Restock Now</a>
+                </div>
+                <div style="margin-top:10px">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Product</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Classic Denim - L</td>
+                        <td>3 pcs</td>
+                        <td><span class="status-badge status-inactive">Critical</span></td>
+                      </tr>
+                      <tr>
+                        <td>Leather Boots - 42</td>
+                        <td>5 pcs</td>
+                        <td><span class="status-badge status-pending">Low</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </section>
+    </div>
+    <script>
+      // Update store name from session if available
+      if (sessionStorage.getItem('storeName')) {
+        document.querySelector('.store-name').textContent = sessionStorage.getItem('storeName');
+      }
+
+      // Add click handlers for sidebar navigation
+      document.querySelectorAll('.side-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          if (e.currentTarget.getAttribute('href') === '#') {
+            e.preventDefault();
+            // Remove active class from all links
+            document.querySelectorAll('.side-link').forEach(l => l.classList.remove('active'));
+            // Add active class to clicked link
+            e.currentTarget.classList.add('active');
+            // Update page title
+            document.querySelector('.page-title').textContent = 
+              e.currentTarget.textContent + ' - Seller Dashboard';
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

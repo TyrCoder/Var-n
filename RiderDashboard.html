@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Rider Dashboard — Varón</title>
+    <style>
+      :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef;--success:#10b981;--warning:#f59e0b;--error:#ef4444}
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:#f3f4f6;color:var(--fg)}
+      a{text-decoration:none;color:inherit}
+      /* Layout */
+      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px}
+      .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px}
+      .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
+      .side-group{margin-top:8px}
+      .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
+      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea}
+      .side-link.active,.side-link:hover{background:#141414;color:#fff}
+
+      .content{display:flex;flex-direction:column}
+      .topbar{display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;position:sticky;top:0;z-index:5}
+      .search{flex:1}
+      .search input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
+      .avatar{display:flex;align-items:center;gap:8px;margin-left:auto}
+      .tag{background:#0a0a0a;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
+
+      .main{padding:18px 18px 26px}
+      .page-title{font-size:22px;margin:8px 0 14px}
+
+      /* Cards */
+      .grid{display:grid;gap:14px}
+      .grid.stats{grid-template-columns:repeat(4, minmax(180px,1fr))}
+      .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 10px rgba(10,10,10,.03)}
+      .card .inner{padding:14px}
+      .metric{font-size:12px;color:var(--muted);margin-bottom:6px}
+      .value{font-size:22px;font-weight:700}
+      .delta{font-size:12px;color:var(--success);margin-left:8px}
+      .delta.down{color:var(--error)}
+
+      /* Table */
+      table{width:100%;border-collapse:separate;border-spacing:0}
+      thead th{font-size:12px;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);padding:10px 12px}
+      tbody td{padding:12px;border-bottom:1px solid var(--line)}
+
+      /* Status tags */
+      .status{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:999px;font-size:12px}
+      .status.pending{background:#fef3c7;color:#92400e}
+      .status.in-transit{background:#dbeafe;color:#1e40af}
+      .status.delivered{background:#dcfce7;color:#15803d}
+      .status.cancelled{background:#fee2e2;color:#991b1b}
+
+      /* Map placeholder */
+      .map-container{height:300px;background:#f3f4f6;border-radius:8px;position:relative;overflow:hidden}
+      .map-placeholder{position:absolute;inset:0;background:url('https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/121.4147,14.2691,13,0/800x300@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw');background-size:cover}
+
+      /* Area coverage section */
+      .coverage-area{margin-top:14px;padding:14px;background:#f8fafc;border-radius:8px}
+      .coverage-title{font-weight:600;margin-bottom:8px}
+      .coverage-details{color:var(--muted);font-size:14px}
+      .coverage-map{height:200px;margin-top:10px;border-radius:8px;background:#eee;overflow:hidden}
+
+      @media (max-width:1000px){
+        .app{grid-template-columns:1fr}
+        .sidebar{display:none}
+        .grid.stats{grid-template-columns:repeat(2,1fr)}
+        .grid.two{grid-template-columns:1fr}
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="logo">
+          <div class="dot"></div>
+          <strong>Varón Rider</strong>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Menu</div>
+          <a class="side-link active" href="#" onclick="switchSection('overview'); return false;">Overview</a>
+          <a class="side-link" href="#" onclick="switchSection('deliveries'); return false;">Active Deliveries</a>
+          <a class="side-link" href="#" onclick="switchSection('history'); return false;">Delivery History</a>
+          <a class="side-link" href="#" onclick="switchSection('earnings'); return false;">Earnings</a>
+          <a class="side-link" href="#" onclick="switchSection('schedule'); return false;">Schedule</a>
+          <a class="side-link" href="#" onclick="switchSection('ratings'); return false;">Ratings & Reviews</a>
+        </div>
+        <div class="side-group">
+          <div class="side-title">Account</div>
+          <a class="side-link" href="#" onclick="switchSection('profile'); return false;">Profile</a>
+          <a class="side-link" href="#" onclick="switchSection('settings'); return false;">Settings</a>
+          <a class="side-link" href="#" onclick="switchSection('support'); return false;">Support</a>
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <section class="content">
+        <div class="topbar">
+          <div class="page-title">Welcome back, <span id="riderName">{{ rider_name }}</span>!</div>
+          <div class="avatar">
+            <div class="status in-transit">
+              <span class="dot" style="width:6px;height:6px;background:currentColor;border-radius:999px"></span>
+              Online
+            </div>
+            {% if session.logged_in %}
+              <span class="tag">{{ session.email }}</span>
+              <a href="/logout" class="tag" style="background:#efefef;color:#0a0a0a">Logout</a>
+            {% else %}
+              <a href="/login" class="tag">Login</a>
+            {% endif %}
+          </div>
+        </div>
+
+        <main class="main" id="mainContent">
+          <!-- Overview Section -->
+          <div id="overview-section">
+            <!-- Coverage Area -->
+            <div class="coverage-area">
+              <div class="coverage-title">Your Service Area: Sta Cruz, Laguna</div>
+              <div class="coverage-details">
+                Covering: Sta Cruz proper, Patimbao, Santissima, Poblacion I-V, and surrounding barangays
+              </div>
+              <div class="coverage-map">
+                <!-- Map placeholder for Sta Cruz, Laguna -->
+                <div class="map-placeholder" style="background-image:url('https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/121.4147,14.2691,13,0/800x200@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw')"></div>
+              </div>
+            </div>
+
+            <!-- Stat cards -->
+            <div class="grid stats" style="margin-top:14px">
+              <div class="card">
+                <div class="inner">
+                  <div class="metric">Today's Earnings</div>
+                  <div class="value">₱850 <span class="delta">↑ 12%</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="inner">
+                  <div class="metric">Deliveries Today</div>
+                  <div class="value">6 <span class="delta">↑ 2</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="inner">
+                  <div class="metric">Rating</div>
+                  <div class="value">4.9 <span class="delta">↑ 0.1</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="inner">
+                  <div class="metric">Acceptance Rate</div>
+                  <div class="value">95% <span class="delta down">↓ 2%</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card" style="margin-top:14px">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Recent Deliveries</div>
+                  <a href="#" class="show-section" data-section="history" style="font-size:12px;color:var(--muted)">View History</a>
+                </div>
+                <div style="overflow:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Route</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Earnings</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>#SC2530</td>
+                        <td>Poblacion I → Poblacion IV</td>
+                        <td>10:45 AM</td>
+                        <td><span class="status delivered">Delivered</span></td>
+                        <td>₱85</td>
+                      </tr>
+                      <tr>
+                        <td>#SC2529</td>
+                        <td>Market Area → Patimbao</td>
+                        <td>9:30 AM</td>
+                        <td><span class="status delivered">Delivered</span></td>
+                        <td>₱65</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deliveries Section -->
+          <div id="deliveries-section" style="display: none;">
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Active Deliveries</div>
+                  <div class="tag" style="background:#10b981;color:#fff">2 Active Orders</div>
+                </div>
+                <div style="overflow:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Pickup</th>
+                        <th>Delivery</th>
+                        <th>Status</th>
+                        <th>Amount</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>#SC2531</td>
+                        <td>Jollibee Sta Cruz</td>
+                        <td>Patimbao, Sta Cruz</td>
+                        <td><span class="status in-transit">In Transit</span></td>
+                        <td>₱75</td>
+                        <td><a class="tag" style="background:#efefef;color:#0a0a0a">Navigate</a></td>
+                      </tr>
+                      <tr>
+                        <td>#SC2532</td>
+                        <td>Mercury Drug Sta Cruz</td>
+                        <td>Santissima, Sta Cruz</td>
+                        <td><span class="status pending">Pending Pickup</span></td>
+                        <td>₱60</td>
+                        <td><a class="tag" style="background:#efefef;color:#0a0a0a">Start</a></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Section -->
+          <div id="history-section" style="display: none;">
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Delivery History</div>
+                  <div class="tag" style="background:#efefef;color:#0a0a0a">This Week</div>
+                </div>
+                <div style="overflow:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Orders</th>
+                        <th>Distance</th>
+                        <th>Earnings</th>
+                        <th>Rating</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Oct 29, 2025</td>
+                        <td>6 deliveries</td>
+                        <td>15.2 km</td>
+                        <td>₱450</td>
+                        <td>4.9 ⭐</td>
+                      </tr>
+                      <tr>
+                        <td>Oct 28, 2025</td>
+                        <td>8 deliveries</td>
+                        <td>18.5 km</td>
+                        <td>₱520</td>
+                        <td>5.0 ⭐</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Earnings Section -->
+          <div id="earnings-section" style="display: none;">
+            <div class="grid stats">
+              <div class="card">
+                <div class="inner">
+                  <div class="metric">Weekly Earnings</div>
+                  <div class="value">₱3,250</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="inner">
+                  <div class="metric">Monthly Earnings</div>
+                  <div class="value">₱12,800</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="margin-top:14px">
+              <div class="inner">
+                <div class="metric">Earnings Breakdown</div>
+                <div style="overflow:auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Share</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Base Fare</td>
+                        <td>₱8,960</td>
+                        <td>70%</td>
+                      </tr>
+                      <tr>
+                        <td>Tips</td>
+                        <td>₱2,560</td>
+                        <td>20%</td>
+                      </tr>
+                      <tr>
+                        <td>Bonuses</td>
+                        <td>₱1,280</td>
+                        <td>10%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Schedule Section -->
+          <div id="schedule-section" style="display: none;">
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <div class="metric">Your Schedule</div>
+                  <div class="tag" style="background:#10b981;color:#fff">Online</div>
+                </div>
+                <div style="margin-top:20px">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+                    <div>Today's Hours</div>
+                    <div>8:00 AM - 5:00 PM</div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+                    <div>Break Time</div>
+                    <div>12:00 PM - 1:00 PM</div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+                    <div>Area Coverage</div>
+                    <div>Sta Cruz, Laguna</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ratings Section -->
+          <div id="ratings-section" style="display: none;">
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Customer Feedback</div>
+                <div style="margin-top:20px">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+                    <div style="font-size:32px;font-weight:bold">4.9</div>
+                    <div>⭐⭐⭐⭐⭐</div>
+                    <div style="color:var(--muted)">(124 ratings)</div>
+                  </div>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Rating</th>
+                        <th>Comment</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Oct 29</td>
+                        <td>Juan D.</td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                        <td>Very prompt delivery and polite rider</td>
+                      </tr>
+                      <tr>
+                        <td>Oct 28</td>
+                        <td>Maria S.</td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                        <td>Always on time and professional</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile Section -->
+          <div id="profile-section" style="display: none;">
+            <div class="card">
+              <div class="inner">
+                <div class="metric">Profile Information</div>
+                <div style="margin-top:20px">
+                  <div style="display:flex;gap:20px;margin-bottom:20px">
+                    <div style="width:100px;height:100px;background:#efefef;border-radius:50%"></div>
+                    <div>
+                      <div style="font-size:20px;font-weight:bold">{{ rider_name }}</div>
+                      <div style="color:var(--muted)">Sta Cruz, Laguna Rider</div>
+                      <div style="margin-top:10px">
+                        <span class="tag" style="background:#efefef;color:#0a0a0a">Motorcycle</span>
+                        <span class="tag" style="background:#efefef;color:#0a0a0a">2+ Years</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="display:grid;gap:10px">
+                    <div style="display:flex;justify-content:space-between">
+                      <div>Vehicle Type</div>
+                      <div>Motorcycle</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between">
+                      <div>License Number</div>
+                      <div>N01-XX-XXXXX</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between">
+                      <div>Contact Number</div>
+                      <div>+63 XXX XXX XXXX</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </main>
+      </section>
+    </div>
+    <style>
+      /* Hide all sections by default */
+      [id$="-section"] {
+        display: none;
+      }
+      /* Show overview section by default */
+      #overview-section {
+        display: block;
+      }
+    </style>
+
+    <script>
+      // Simple function to switch between sections
+      function switchSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('[id$="-section"]').forEach(section => {
+          section.style.display = 'none';
+        });
+        
+        // Show selected section
+        const selectedSection = document.getElementById(sectionId + '-section');
+        if (selectedSection) {
+          selectedSection.style.display = 'block';
+        }
+        
+        // Update active state in sidebar
+        document.querySelectorAll('.side-link').forEach(link => {
+          link.classList.remove('active');
+        });
+        
+        // Find and activate the clicked link
+        const activeLink = Array.from(document.querySelectorAll('.side-link')).find(
+          link => link.textContent.toLowerCase().includes(sectionId.toLowerCase())
+        );
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
+      }
+
+      // Initialize the dashboard
+      document.addEventListener('DOMContentLoaded', function() {
+        // Show overview section by default
+        document.getElementById('overview-section').style.display = 'block';
+        
+        // Add click handler for "View History" link
+        document.querySelectorAll('.show-section').forEach(link => {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const section = this.getAttribute('data-section');
+            if (section) {
+              switchSection(section);
+            }
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

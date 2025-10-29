@@ -5,6 +5,21 @@ import mysql.connector
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, template_folder=BASE_DIR, static_folder=BASE_DIR, static_url_path='')
 app.secret_key = 'your-secret-key'
+
+# Set locale for Philippine Peso formatting
+import locale
+try:
+    locale.setlocale(locale.LC_ALL, 'en_PH.UTF-8')
+except:
+    # Fallback if Philippine locale is not available
+    locale.setlocale(locale.LC_ALL, '')
+
+def format_peso(amount):
+    """Format amount to Philippine Peso"""
+    try:
+        return locale.currency(float(amount), symbol='₱', grouping=True)
+    except:
+        return f"₱{float(amount):,.2f}"
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
@@ -33,8 +48,8 @@ def init_db():
             last_name VARCHAR(100) NOT NULL,
             email VARCHAR(190) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
+            phone VARCHAR(20) NOT NULL,
             role ENUM('buyer', 'seller', 'admin', 'rider') NOT NULL DEFAULT 'buyer',
-            phone VARCHAR(20),
             status ENUM('active', 'inactive', 'pending', 'suspended') DEFAULT 'active',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -369,34 +384,49 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        
         if not email or not password:
             flash('Email and password are required', 'error')
-            return redirect(url_for('login'))
+            return render_template('login.html')
+            
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return redirect(url_for('login'))
+            return render_template('login.html')
+            
         try:
             cursor = conn.cursor(dictionary=True)
             cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
             user = cursor.fetchone()
             cursor.close()
             conn.close()
+
             if user and password == user['password']:
                 session.clear()
                 session['logged_in'] = True
                 session['user_id'] = user['id']
                 session['email'] = user['email']
                 session['role'] = user['role']
+                
+                # Redirect based on role
                 if user['role'] == 'admin':
-                    return redirect('/dashboard')
+                    return redirect(url_for('dashboard'))
+                elif user['role'] == 'seller':
+                    return redirect(url_for('seller_dashboard'))
+                elif user['role'] == 'rider':
+                    return redirect(url_for('rider_dashboard'))
+                elif user['role'] == 'buyer':
+                    return redirect(url_for('buyer_dashboard'))
                 else:
                     return redirect(url_for('index'))
+            
             flash('Invalid email or password', 'error')
-            return redirect(url_for('login'))
+            return render_template('login.html')
+            
         except Exception as err:
-            flash(f'Login error: {err}', 'error')
-            return redirect(url_for('login'))
+            flash(f'Login error: {str(err)}', 'error')
+            return render_template('login.html')
+            
     return render_template('login.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -404,31 +434,266 @@ def signup():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        first_name = request.form.get('firstName')
+        last_name = request.form.get('lastName')
+        phone = request.form.get('phone')
         role = request.form.get('role', 'buyer')
-        if not email or not password:
-            flash('Email and password are required', 'error')
-            return redirect(url_for('signup'))
+        terms = request.form.get('terms')
+        
+        if not all([email, password, first_name, last_name, phone, terms]):
+            flash('All fields are required, including terms acceptance', 'error')
+            return render_template('signup.html')
+            
+        # Validate email format
+        if '@' not in email or '.' not in email:
+            flash('Please enter a valid email address', 'error')
+            return render_template('signup.html')
+            
+        # Validate phone number format
+        if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
+            flash('Please enter a valid phone number', 'error')
+            return render_template('signup.html')
+            
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return redirect(url_for('signup'))
+            return render_template('signup.html')
+            
         try:
             cursor = conn.cursor()
-            cursor.execute('INSERT INTO users (email, password, role) VALUES (%s, %s, %s)',
-                           (email, password, role))
+            
+            # Check if email already exists
+            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
+            if cursor.fetchone():
+                flash('Email already registered', 'error')
+                return render_template('signup.html')
+                
+            cursor.execute('INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
+                           (email, password, first_name, last_name, phone, role))
             conn.commit()
             cursor.close()
             conn.close()
+            
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
+            
         except Exception as err:
-            flash(f'Registration failed: {err}', 'error')
-            return redirect(url_for('signup'))
+            flash(f'Registration failed: {str(err)}', 'error')
+            return render_template('signup.html')
+            
     return render_template('signup.html')
+
+@app.route('/signup/rider', methods=['GET', 'POST'])
+def signup_rider():
+    if request.method == 'POST':
+        # Get form data
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        password = request.form.get('password')
+        vehicle_type = request.form.get('vehicle_type')
+        vehicle_plate = request.form.get('vehicle_plate')
+        license_number = request.form.get('license_number')
+        service_area = request.form.get('service_area')
+        tnc = request.form.get('tnc')
+
+        # Validate required fields
+        required_fields = {
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': email,
+            'phone': phone,
+            'password': password,
+            'vehicle_type': vehicle_type,
+            'service_area': service_area,
+            'tnc': tnc
+        }
+
+        # Only require plate and license if not bicycle
+        if vehicle_type != 'bicycle':
+            required_fields['vehicle_plate'] = vehicle_plate
+            required_fields['license_number'] = license_number
+
+        # Check required fields
+        missing_fields = [field for field, value in required_fields.items() if not value]
+        if missing_fields:
+            flash(f'Missing required fields: {", ".join(missing_fields)}', 'error')
+            return render_template('signupRider.html')
+
+        # Validate email format
+        if '@' not in email or '.' not in email:
+            flash('Please enter a valid email address', 'error')
+            return render_template('signupRider.html')
+
+        # Validate phone number format
+        if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
+            flash('Please enter a valid phone number', 'error')
+            return render_template('signupRider.html')
+
+        conn = get_db()
+        if not conn:
+            flash('Database connection failed', 'error')
+            return render_template('signupRider.html')
+
+        try:
+            cursor = conn.cursor(dictionary=True)
+
+            # Check if email already exists
+            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
+            if cursor.fetchone():
+                flash('Email already registered', 'error')
+                return render_template('signupRider.html')
+
+            # Create user account
+            cursor.execute('''
+                INSERT INTO users (first_name, last_name, email, password, phone, role) 
+                VALUES (%s, %s, %s, %s, %s, 'rider')
+            ''', (first_name, last_name, email, password, phone))
+            user_id = cursor.lastrowid
+
+            # Create rider profile
+            cursor.execute('''
+                INSERT INTO riders (user_id, vehicle_type, license_number, vehicle_plate, service_area) 
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, vehicle_type, license_number, vehicle_plate, service_area))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
+
+        except Exception as err:
+            flash(f'Registration failed: {str(err)}', 'error')
+            return render_template('signupRider.html')
+
+    return render_template('signupRider.html')
+
+@app.route('/signupSeller', methods=['GET', 'POST'])
+def signup_seller():
+    if request.method == 'POST':
+        # Get form data
+        email = request.form.get('email')
+        password = request.form.get('password')
+        phone = request.form.get('phone')
+        shop_name = request.form.get('shop_name')
+        tnc = request.form.get('tnc')
+
+        # Validate required fields
+        if not all([email, password, phone, shop_name, tnc]):
+            flash('All fields are required, including terms acceptance', 'error')
+            return render_template('signupSeller.html')
+
+        # Validate email format
+        if '@' not in email or '.' not in email:
+            flash('Please enter a valid email address', 'error')
+            return render_template('signupSeller.html')
+
+        # Validate phone number
+        if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
+            flash('Please enter a valid phone number', 'error')
+            return render_template('signupSeller.html')
+
+        conn = get_db()
+        if not conn:
+            flash('Database connection failed', 'error')
+            return render_template('signupSeller.html')
+
+        try:
+            cursor = conn.cursor(dictionary=True)
+
+            # Check if email already exists
+            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
+            if cursor.fetchone():
+                flash('Email already registered', 'error')
+                return render_template('signupSeller.html')
+
+            # Check if shop name exists
+            cursor.execute('SELECT id FROM sellers WHERE store_name = %s', (shop_name,))
+            if cursor.fetchone():
+                flash('Shop name already taken', 'error')
+                return render_template('signupSeller.html')
+
+            # Create user account
+            cursor.execute('INSERT INTO users (email, password, phone, role) VALUES (%s, %s, %s, %s)',
+                         (email, password, phone, 'seller'))
+            user_id = cursor.lastrowid
+
+            # Create store slug from shop name
+            store_slug = shop_name.lower().replace(' ', '-')
+
+            # Create seller profile
+            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug) VALUES (%s, %s, %s)',
+                         (user_id, shop_name, store_slug))
+
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            flash('Seller account created successfully! Please log in.', 'success')
+            return redirect(url_for('login'))
+
+        except Exception as err:
+            flash(f'Registration failed: {str(err)}', 'error')
+            return render_template('signupSeller.html')
+
+    return render_template('signupSeller.html')
 
 @app.route('/dashboard')
 def dashboard():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        flash('Access denied. Please log in as admin.', 'error')
+        return redirect(url_for('login'))
     return render_template('dashboard.html')
+
+@app.route('/seller-dashboard')
+def seller_dashboard():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        flash('Access denied. Please log in as a seller.', 'error')
+        return redirect(url_for('login'))
+    return render_template('SellerDashboard.html')
+
+@app.route('/rider-dashboard')
+def rider_dashboard():
+    if not session.get('logged_in') or session.get('role') != 'rider':
+        flash('Access denied. Please log in as a rider.', 'error')
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT first_name FROM users WHERE id = %s', (session.get('user_id'),))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if user:
+            return render_template('RiderDashboard.html', rider_name=user['first_name'])
+        
+        return redirect(url_for('login'))
+        
+    except Exception as err:
+        flash(f'Error: {str(err)}', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/buyer-dashboard')
+def buyer_dashboard():
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        flash('Access denied. Please log in first.', 'error')
+        return redirect(url_for('login'))
+    return render_template('indexLoggedIn.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out successfully', 'success')
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
