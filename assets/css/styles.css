@@ -1,0 +1,92 @@
+:root{
+  --bg:#fff;
+  --fg:#0a0a0a;
+  --muted:#777;
+  --accent:#000;
+}
+
+/* Base Styles */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: 'Playfair Display', Georgia, serif;
+  background:var(--bg);
+  color:var(--fg);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.6;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight:400;
+}
+button, .btn-cta, .menu-toggle, input, select {
+  font-family: 'Commissioner', sans-serif;
+}
+
+/* Header & Navigation */
+.site-header{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:18px 28px;
+  position:sticky;
+  top:0;
+  background:#000;
+  color:#fff;
+  z-index:100;
+}
+
+.brand{
+  margin:0;
+  font-weight:700;
+  letter-spacing:1px;
+  font-size:20px;
+  color:#fff;
+}
+
+.menu-toggle{
+  background:none;
+  border:none;
+  font-size:24px;
+  cursor:pointer;
+  padding:6px;
+  color:#fff;
+  position:relative;
+  z-index:150;
+  transition:transform 0.3s ease;
+}
+
+.menu-toggle.open{
+  transform:rotate(90deg);
+}
+
+.top-nav{
+  margin-left:auto;
+  display:flex;
+  gap:18px;
+  align-items:center
+}
+
+.top-nav a{
+  color:#fff;
+  text-decoration:none;
+  font-size:14px
+}
+
+.top-nav a.account{
+  border:1px solid #fff;
+  padding:6px 10px;
+  border-radius:6px;
+  color:#fff
+}
+
+.welcome-msg {
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Rest of your CSS */

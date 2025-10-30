@@ -1,13 +1,5 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Varón — Elegant Men's Fashion</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
-    <style>
+{% extends "layout.html" %}
+{% block content %}
 :root{
   --bg:#fff;
   --fg:#0a0a0a;
@@ -560,7 +552,7 @@ button, .btn-cta, .menu-toggle, input, select {
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
         <a href="javascript:void(0)" onclick="showSection('about')">About</a>
-        <a href="javascript:void(0)" onclick="showSection('loginSection')" id="accountLink" class="account">Login</a>
+        <a href="{{ url_for('login') }}" id="accountLink" class="account">Login</a>
         <a href="#" onclick="openModal('cartModal')" id="cartToggle" class="account">Cart <span id="cartCount">0</span></a>
       </nav>
     </header>
@@ -735,8 +727,8 @@ button, .btn-cta, .menu-toggle, input, select {
         <div>
           <h5>Partners</h5>
           <ul>
-            <li><a href="signupSeller.html" id="footerSeller">Register as a seller</a></li>
-            <li><a href="signupRider.html" id="footerRider">Register as a rider</a></li>
+            <li><a href="{{ url_for('signup_seller') }}" id="footerSeller">Register as a seller</a></li>
+            <li><a href="{{ url_for('signup_rider') }}" id="footerRider">Register as a rider</a></li>
           </ul>
         </div>
       </div>
@@ -749,7 +741,7 @@ button, .btn-cta, .menu-toggle, input, select {
     
 
 
-    <script src="script.js"></script>
+    <script src="/static/js/script.js"></script>
     <div id="snackbar" class="snackbar" role="status" aria-live="polite">Added to cart</div>
     
     <div class="overlay" id="overlay"></div>
@@ -857,6 +849,4 @@ button, .btn-cta, .menu-toggle, input, select {
       </div>
     </div>
 
-    <script src="script.js"></script>
-  </body>
-</html>
+{% endblock %}

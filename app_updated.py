@@ -20,6 +20,7 @@ def format_peso(amount):
         return locale.currency(float(amount), symbol='₱', grouping=True)
     except:
         return f"₱{float(amount):,.2f}"
+
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
@@ -367,8 +368,6 @@ init_db()
 def index():
     return render_template('pages/index.html')
 
-# Remove static route as Flask will handle static files automatically
-
 @app.route('/shop')
 def shop():
     return render_template('pages/shop.html')
@@ -450,12 +449,12 @@ def signup():
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             flash('Please enter a valid phone number', 'error')
-            return render_template('signup.html')
+            return render_template('auth/signup.html')
             
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return render_template('signup.html')
+            return render_template('auth/signup.html')
             
         try:
             cursor = conn.cursor()
@@ -465,7 +464,7 @@ def signup():
             if cursor.fetchone():
                 flash('Email already registered', 'error')
                 return render_template('auth/signup.html')
-            
+                
             cursor.execute('INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
                            (email, password, first_name, last_name, phone, role))
             conn.commit()
@@ -476,7 +475,7 @@ def signup():
             return redirect(url_for('login'))
             
         except Exception as err:
-            flash('Registration failed: {str(err)}', 'error')
+            flash(f'Registration failed: {str(err)}', 'error')
             return render_template('auth/signup.html')
             
     return render_template('auth/signup.html')
@@ -527,12 +526,12 @@ def signup_rider():
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             flash('Please enter a valid phone number', 'error')
-            return render_template('signupRider.html')
+            return render_template('auth/signupRider.html')
 
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return render_template('signupRider.html')
+            return render_template('auth/signupRider.html')
 
         try:
             cursor = conn.cursor(dictionary=True)
@@ -569,35 +568,37 @@ def signup_rider():
 
     return render_template('auth/signupRider.html')
 
-@app.route('/signupSeller', methods=['GET', 'POST'])
+@app.route('/signup/seller', methods=['GET', 'POST'])
 def signup_seller():
     if request.method == 'POST':
         # Get form data
         email = request.form.get('email')
         password = request.form.get('password')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
         phone = request.form.get('phone')
         shop_name = request.form.get('shop_name')
         tnc = request.form.get('tnc')
 
         # Validate required fields
-        if not all([email, password, phone, shop_name, tnc]):
+        if not all([email, password, first_name, last_name, phone, shop_name, tnc]):
             flash('All fields are required, including terms acceptance', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         # Validate email format
         if '@' not in email or '.' not in email:
             flash('Please enter a valid email address', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         # Validate phone number
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             flash('Please enter a valid phone number', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         try:
             cursor = conn.cursor(dictionary=True)
@@ -606,7 +607,7 @@ def signup_seller():
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
                 flash('Email already registered', 'error')
-                return render_template('signupSeller.html')
+                return render_template('auth/signupSeller.html')
 
             # Check if shop name exists
             cursor.execute('SELECT id FROM sellers WHERE store_name = %s', (shop_name,))
@@ -615,8 +616,10 @@ def signup_seller():
                 return render_template('auth/signupSeller.html')
 
             # Create user account
-            cursor.execute('INSERT INTO users (email, password, phone, role) VALUES (%s, %s, %s, %s)',
-                         (email, password, phone, 'seller'))
+            cursor.execute('''
+                INSERT INTO users (email, password, first_name, last_name, phone, role) 
+                VALUES (%s, %s, %s, %s, %s, 'seller')
+            ''', (email, password, first_name, last_name, phone))
             user_id = cursor.lastrowid
 
             # Create store slug from shop name

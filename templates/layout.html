@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{% block title %}Varón — Elegant Men's Fashion{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <header class="site-header">
+      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+      <h1 class="brand"><a href="{{ url_for('index') }}" style="color:#fff;text-decoration:none">Varón</a></h1>
+      <nav class="top-nav" id="topNav">
+        <a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Your Order</a>
+        <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
+        <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
+        <a href="javascript:void(0)" onclick="showSection('about')">About</a>
+        <a href="{{ url_for('login') }}" id="accountLink" class="account">Login</a>
+        <a href="#" onclick="openModal('cartModal')" id="cartToggle" class="account">Cart <span id="cartCount">0</span></a>
+      </nav>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    <footer class="site-footer">
+      <div class="footer-grid">
+        <div>
+          <h4>Varón</h4>
+          <p class="muted">Minimal, responsibly-made apparel. Clean silhouettes and timeless staples.</p>
+        </div>
+        <div>
+          <h5>Shop</h5>
+          <ul>
+            <li><a href="#">All Products</a></li>
+            <li><a href="#">New Arrivals</a></li>
+            <li><a href="#">Best Sellers</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Genres</h5>
+          <ul>
+            <li><a href="#">Tops</a></li>
+            <li><a href="#">Bottoms</a></li>
+            <li><a href="#">Outerwear</a></li>
+            <li><a href="#">Accessories</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Partners</h5>
+          <ul>
+            <li><a href="{{ url_for('signup_seller') }}" id="footerSeller">Register as a seller</a></li>
+            <li><a href="{{ url_for('signup_rider') }}" id="footerRider">Register as a rider</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-brand">Varón — Minimal Apparel</div>
+        <small>© <span class="muted">2025</span></small>
+      </div>
+    </footer>
+
+    <div id="snackbar" class="snackbar" role="status" aria-live="polite">Added to cart</div>
+    <div class="overlay" id="overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <nav class="sidebar-nav">
+        <a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Your Order</a>
+        <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
+        <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
+        <a href="javascript:void(0)" onclick="showSection('about')">About</a>
+        <a href="{{ url_for('login') }}" class="account">Login</a>
+        <a href="#" onclick="openModal('cartModal')" class="account">Cart <span id="cartCountSidebar">0</span></a>
+      </nav>
+    </aside>
+
+    {% block modals %}{% endblock %}
+    
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
