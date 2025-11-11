@@ -16,7 +16,7 @@ function showSection(sectionId) {
     hideAllSections();
     
     if (sectionId === 'loginSection') {
-        window.location.href = 'login.html';
+        window.location.href = '/login';
         return;
     }
 
@@ -270,7 +270,7 @@ function consumeIntendedAction(){
 function goToLogin(reason){
   const next = window.location.href;
   // Use relative path to support static deployments
-  let urlStr = 'login.html';
+  let urlStr = '/login';
   try{
     const url = new URL(urlStr, window.location.href);
     url.searchParams.set('next', next);
@@ -278,7 +278,7 @@ function goToLogin(reason){
     urlStr = url.toString();
   }catch(e){
     // Fallback to manual query string
-    urlStr = `login.html?next=${encodeURIComponent(next)}${reason?`&reason=${encodeURIComponent(reason)}`:''}`;
+    urlStr = `/login?next=${encodeURIComponent(next)}${reason?`&reason=${encodeURIComponent(reason)}`:''}`;
   }
   window.location.href = urlStr;
 }
@@ -469,7 +469,7 @@ function logout(){
   setUserEmail('');
   setUserFirstName('');
   setUserRole('buyer');
-  window.location.href = 'index.html';
+  window.location.href = '/';
 }
 
 function getSellerRequests(){
@@ -613,11 +613,11 @@ function detectRole(email){
 // Get role-based redirect URL
 function getRoleBasedRedirect(role){
   switch(role){
-    case 'admin': return 'dashboard.html';
-    case 'seller': return 'indexLoggedIn.html'; // or create seller dashboard later
-    case 'rider': return 'indexLoggedIn.html'; // or create rider dashboard later
-    case 'buyer': return 'indexLoggedIn.html';
-    default: return 'indexLoggedIn.html';
+    case 'admin': return '/dashboard';
+    case 'seller': return '/seller-dashboard';
+    case 'rider': return '/rider-dashboard';
+    case 'buyer': return '/buyer-dashboard';
+    default: return '/buyer-dashboard';
   }
 }
 
@@ -664,7 +664,7 @@ function updateNavBar(){
   } else {
     // Show only Login link (signup is now integrated in login page)
     accountLink.outerHTML = `
-      <a href="login.html" id="accountLink" class="account">Login</a>
+      <a href="/login" id="accountLink" class="account">Login</a>
     `;
   }
 }

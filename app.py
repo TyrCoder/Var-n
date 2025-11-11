@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 import os
 import mysql.connector
 
@@ -365,7 +365,167 @@ init_db()
 
 @app.route('/')
 def index():
-    return render_template('pages/index.html')
+    conn = get_db()
+    products = []
+    
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            # Fetch approved products with their images
+            cursor.execute('''
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.price,
+                    p.slug,
+                    c.name as category_name,
+                    c.slug as category_slug,
+                    pi.image_url
+                FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                WHERE p.is_active = 1
+                ORDER BY p.created_at DESC
+                LIMIT 20
+            ''')
+            products = cursor.fetchall()
+            cursor.close()
+            conn.close()
+        except Exception as err:
+            print(f"Error fetching products: {err}")
+            if conn:
+                conn.close()
+    
+    return render_template('pages/index.html', products=products)
+
+@app.route('/product/<int:product_id>')
+def product_page(product_id):
+    conn = get_db()
+    product = None
+    sizes = []
+    colors = []
+    images = []
+    
+    if conn:
+        try:
+            cursor = conn.cursor(dictionary=True)
+            
+            # Get product details with primary image
+            cursor.execute('''
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.description,
+                    p.price,
+                    p.brand,
+                    p.sku,
+                    c.name as category_name,
+                    pi.image_url
+                FROM products p
+                LEFT JOIN categories c ON p.category_id = c.id
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                WHERE p.id = %s AND p.is_active = 1
+            ''', (product_id,))
+            
+            product = cursor.fetchone()
+            
+            if product:
+                # Get ALL product images (primary first, then others)
+                cursor.execute('''
+                    SELECT image_url, is_primary
+                    FROM product_images
+                    WHERE product_id = %s
+                    ORDER BY is_primary DESC, id ASC
+                ''', (product_id,))
+                
+                images = cursor.fetchall()
+                
+                # Get available sizes and colors from variants
+                cursor.execute('''
+                    SELECT DISTINCT size, color
+                    FROM product_variants
+                    WHERE product_id = %s AND stock_quantity > 0
+                    ORDER BY size, color
+                ''', (product_id,))
+                
+                variants = cursor.fetchall()
+                
+                # Extract unique sizes and colors
+                sizes = sorted(list(set([v['size'] for v in variants if v['size']])))
+                colors = sorted(list(set([v['color'] for v in variants if v['color']])))
+            
+            cursor.close()
+            conn.close()
+        except Exception as err:
+            print(f"Error fetching product: {err}")
+            if conn:
+                conn.close()
+    
+    if not product:
+        flash('Product not found', 'error')
+        return redirect(url_for('index'))
+    
+    return render_template('pages/product.html', product=product, sizes=sizes, colors=colors, images=images)
+
+@app.route('/api/product/<int:product_id>')
+def get_product_detail(product_id):
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get product details
+        cursor.execute('''
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.brand,
+                p.sku,
+                c.name as category_name,
+                pi.image_url
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE p.id = %s AND p.is_active = 1
+        ''', (product_id,))
+        
+        product = cursor.fetchone()
+        
+        if not product:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Product not found'})
+        
+        # Get available sizes and colors from variants
+        cursor.execute('''
+            SELECT DISTINCT size, color
+            FROM product_variants
+            WHERE product_id = %s AND stock_quantity > 0
+        ''', (product_id,))
+        
+        variants = cursor.fetchall()
+        
+        # Extract unique sizes and colors
+        sizes = sorted(list(set([v['size'] for v in variants if v['size']])))
+        colors = sorted(list(set([v['color'] for v in variants if v['color']])))
+        
+        product['sizes'] = sizes
+        product['colors'] = colors
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'product': product})
+        
+    except Exception as err:
+        print(f"Error fetching product detail: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
 
 # Remove static route as Flask will handle static files automatically
 
@@ -450,12 +610,12 @@ def signup():
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             flash('Please enter a valid phone number', 'error')
-            return render_template('signup.html')
+            return render_template('auth/signup.html')
             
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return render_template('signup.html')
+            return render_template('auth/signup.html')
             
         try:
             cursor = conn.cursor()
@@ -527,12 +687,12 @@ def signup_rider():
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             flash('Please enter a valid phone number', 'error')
-            return render_template('signupRider.html')
+            return render_template('auth/signupRider.html')
 
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return render_template('signupRider.html')
+            return render_template('auth/signupRider.html')
 
         try:
             cursor = conn.cursor(dictionary=True)
@@ -569,6 +729,7 @@ def signup_rider():
 
     return render_template('auth/signupRider.html')
 
+@app.route('/signup/seller', methods=['GET', 'POST'])
 @app.route('/signupSeller', methods=['GET', 'POST'])
 def signup_seller():
     if request.method == 'POST':
@@ -582,22 +743,22 @@ def signup_seller():
         # Validate required fields
         if not all([email, password, phone, shop_name, tnc]):
             flash('All fields are required, including terms acceptance', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         # Validate email format
         if '@' not in email or '.' not in email:
             flash('Please enter a valid email address', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         # Validate phone number
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             flash('Please enter a valid phone number', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         conn = get_db()
         if not conn:
             flash('Database connection failed', 'error')
-            return render_template('signupSeller.html')
+            return render_template('auth/signupSeller.html')
 
         try:
             cursor = conn.cursor(dictionary=True)
@@ -606,7 +767,7 @@ def signup_seller():
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
                 flash('Email already registered', 'error')
-                return render_template('signupSeller.html')
+                return render_template('auth/signupSeller.html')
 
             # Check if shop name exists
             cursor.execute('SELECT id FROM sellers WHERE store_name = %s', (shop_name,))
@@ -614,17 +775,22 @@ def signup_seller():
                 flash('Shop name already taken', 'error')
                 return render_template('auth/signupSeller.html')
 
-            # Create user account
-            cursor.execute('INSERT INTO users (email, password, phone, role) VALUES (%s, %s, %s, %s)',
-                         (email, password, phone, 'seller'))
+            # Create user account (use shop name as first/last name for sellers)
+            # Split shop name into first and last name parts
+            name_parts = shop_name.split(' ', 1)
+            first_name = name_parts[0] if len(name_parts) > 0 else shop_name
+            last_name = name_parts[1] if len(name_parts) > 1 else 'Shop'
+            
+            cursor.execute('INSERT INTO users (first_name, last_name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
+                         (first_name, last_name, email, password, phone, 'seller'))
             user_id = cursor.lastrowid
 
             # Create store slug from shop name
-            store_slug = shop_name.lower().replace(' ', '-')
+            store_slug = shop_name.lower().replace(' ', '-').replace("'", '')
 
-            # Create seller profile
-            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug) VALUES (%s, %s, %s)',
-                         (user_id, shop_name, store_slug))
+            # Create seller profile with pending status
+            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, status) VALUES (%s, %s, %s, %s)',
+                         (user_id, shop_name, store_slug, 'pending'))
 
             conn.commit()
             cursor.close()
@@ -644,14 +810,804 @@ def dashboard():
     if not session.get('logged_in') or session.get('role') != 'admin':
         flash('Access denied. Please log in as admin.', 'error')
         return redirect(url_for('login'))
-    return render_template('pages/dashboard.html')
+    
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get pending products count
+        cursor.execute('SELECT COUNT(*) as count FROM products WHERE is_active = 0')
+        pending_products = cursor.fetchone()['count']
+        
+        # Get pending sellers count
+        cursor.execute("SELECT COUNT(*) as count FROM sellers WHERE status = 'pending'")
+        pending_sellers = cursor.fetchone()['count']
+        
+        # Get pending riders count
+        cursor.execute("SELECT COUNT(*) as count FROM riders WHERE status = 'pending'")
+        pending_riders = cursor.fetchone()['count']
+        
+        # Get total orders
+        cursor.execute('SELECT COUNT(*) as count FROM orders')
+        total_orders = cursor.fetchone()['count']
+        
+        # Get total users
+        cursor.execute('SELECT COUNT(*) as count FROM users')
+        total_users = cursor.fetchone()['count']
+        
+        # Get weekly revenue (last 7 days)
+        cursor.execute('''
+            SELECT 
+                DAYNAME(created_at) as day_name,
+                DAYOFWEEK(created_at) as day_num,
+                COALESCE(SUM(total_amount), 0) as daily_revenue
+            FROM orders
+            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+            AND payment_status = 'paid'
+            GROUP BY DATE(created_at), DAYNAME(created_at), DAYOFWEEK(created_at)
+            ORDER BY DATE(created_at)
+        ''')
+        weekly_revenue_raw = cursor.fetchall()
+        
+        # Create a dictionary for all days of the week with default 0
+        days_order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        weekly_revenue = {day: 0 for day in days_order}
+        
+        # Fill in actual revenue data
+        for row in weekly_revenue_raw:
+            weekly_revenue[row['day_name']] = float(row['daily_revenue'])
+        
+        # Get max revenue for percentage calculation
+        max_weekly_revenue = max(weekly_revenue.values()) if max(weekly_revenue.values()) > 0 else 1
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('pages/dashboard.html',
+                             pending_products=pending_products,
+                             pending_sellers=pending_sellers,
+                             pending_riders=pending_riders,
+                             total_orders=total_orders,
+                             total_users=total_users,
+                             weekly_revenue=weekly_revenue,
+                             max_weekly_revenue=max_weekly_revenue)
+        
+    except Exception as err:
+        flash(f'Error loading dashboard: {str(err)}', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/admin/pending-products', methods=['GET'])
+def admin_pending_products():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get all pending products
+        cursor.execute('''
+            SELECT p.*, s.store_name, u.email as seller_email,
+                   COALESCE(i.stock_quantity, 0) as stock
+            FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN inventory i ON p.id = i.product_id
+            WHERE p.is_active = 0
+            ORDER BY p.created_at DESC
+        ''')
+        pending_products = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'products': pending_products}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/approve-product/<int:product_id>', methods=['POST'])
+def admin_approve_product(product_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Approve product
+        cursor.execute('UPDATE products SET is_active = 1 WHERE id = %s', (product_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Product approved successfully'}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/reject-product/<int:product_id>', methods=['POST'])
+def admin_reject_product(product_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Delete product and related inventory
+        cursor.execute('DELETE FROM inventory WHERE product_id = %s', (product_id,))
+        cursor.execute('DELETE FROM products WHERE id = %s', (product_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Product rejected and removed'}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/pending-sellers', methods=['GET'])
+def admin_pending_sellers():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get all pending sellers
+        cursor.execute('''
+            SELECT s.*, u.first_name, u.last_name, u.email, u.phone
+            FROM sellers s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.status = 'pending'
+            ORDER BY s.created_at DESC
+        ''')
+        pending_sellers = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'sellers': pending_sellers}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/approve-seller/<int:seller_id>', methods=['POST'])
+def admin_approve_seller(seller_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Approve seller
+        cursor.execute("UPDATE sellers SET status = 'approved' WHERE id = %s", (seller_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Seller approved successfully'}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/reject-seller/<int:seller_id>', methods=['POST'])
+def admin_reject_seller(seller_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get user_id before deleting seller
+        cursor.execute('SELECT user_id FROM sellers WHERE id = %s', (seller_id,))
+        seller = cursor.fetchone()
+        
+        if seller:
+            user_id = seller['user_id']
+            # Delete seller record
+            cursor.execute('DELETE FROM sellers WHERE id = %s', (seller_id,))
+            # Optionally update user role back to buyer or delete user
+            cursor.execute("UPDATE users SET role = 'buyer' WHERE id = %s", (user_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Seller rejected'}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/pending-riders', methods=['GET'])
+def admin_pending_riders():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get all pending riders from riders table
+        cursor.execute('''
+            SELECT r.*, u.first_name, u.last_name, u.email, u.phone
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.status = 'pending'
+            ORDER BY r.created_at DESC
+        ''')
+        pending_riders = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'riders': pending_riders}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/approve-rider/<int:rider_id>', methods=['POST'])
+def admin_approve_rider(rider_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Approve rider by updating status
+        cursor.execute("UPDATE riders SET status = 'approved' WHERE id = %s", (rider_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Rider approved successfully'}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/reject-rider/<int:rider_id>', methods=['POST'])
+def admin_reject_rider(rider_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get user_id before deleting rider
+        cursor.execute('SELECT user_id FROM riders WHERE id = %s', (rider_id,))
+        rider = cursor.fetchone()
+        
+        if rider:
+            user_id = rider['user_id']
+            # Delete rider record
+            cursor.execute('DELETE FROM riders WHERE id = %s', (rider_id,))
+            # Update user role back to buyer
+            cursor.execute("UPDATE users SET role = 'buyer' WHERE id = %s", (user_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Rider application rejected'}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/pending-edits', methods=['GET'])
+def admin_pending_edits():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get all pending product edits grouped by product
+        cursor.execute('''
+            SELECT 
+                pe.product_id,
+                p.name as product_name,
+                p.seller_id,
+                s.store_name,
+                COUNT(pe.id) as edit_count,
+                MIN(pe.requested_at) as first_request
+            FROM product_edits pe
+            JOIN products p ON pe.product_id = p.id
+            JOIN sellers s ON p.seller_id = s.id
+            WHERE pe.status = 'pending'
+            GROUP BY pe.product_id, p.name, p.seller_id, s.store_name
+            ORDER BY first_request ASC
+        ''')
+        pending_products = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'pending_edits': pending_products}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/product-edit-details/<int:product_id>', methods=['GET'])
+def admin_product_edit_details(product_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get product details
+        cursor.execute('''
+            SELECT p.*, s.store_name, c.name as category_name
+            FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = %s
+        ''', (product_id,))
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Get all pending edits for this product
+        cursor.execute('''
+            SELECT * FROM product_edits
+            WHERE product_id = %s AND status = 'pending'
+            ORDER BY requested_at ASC
+        ''', (product_id,))
+        edits = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'product': product,
+            'edits': edits
+        }), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/approve-edit/<int:edit_id>', methods=['POST'])
+def admin_approve_edit(edit_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get edit details
+        cursor.execute('SELECT * FROM product_edits WHERE id = %s', (edit_id,))
+        edit = cursor.fetchone()
+        
+        if not edit:
+            return jsonify({'error': 'Edit not found'}), 404
+        
+        # Apply the edit to the product
+        field_name = edit['field_name']
+        new_value = edit['new_value']
+        product_id = edit['product_id']
+        
+        # Update the product
+        update_query = f"UPDATE products SET {field_name} = %s WHERE id = %s"
+        cursor.execute(update_query, (new_value, product_id))
+        
+        # Mark edit as approved
+        cursor.execute('''
+            UPDATE product_edits 
+            SET status = 'approved', reviewed_at = NOW(), reviewed_by = %s
+            WHERE id = %s
+        ''', (user_id, edit_id))
+        
+        # Check if there are any more pending edits for this product
+        cursor.execute('''
+            SELECT COUNT(*) as count 
+            FROM product_edits 
+            WHERE product_id = %s AND status = 'pending'
+        ''', (product_id,))
+        
+        pending_count = cursor.fetchone()['count']
+        
+        # If no more pending edits, update product edit_status
+        if pending_count == 0:
+            cursor.execute('''
+                UPDATE products 
+                SET edit_status = 'approved'
+                WHERE id = %s
+            ''', (product_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Edit approved successfully'}), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/reject-edit/<int:edit_id>', methods=['POST'])
+def admin_reject_edit(edit_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        admin_notes = request.form.get('notes', '')
+        
+        # Get edit details
+        cursor.execute('SELECT product_id FROM product_edits WHERE id = %s', (edit_id,))
+        edit = cursor.fetchone()
+        
+        if not edit:
+            return jsonify({'error': 'Edit not found'}), 404
+        
+        product_id = edit['product_id']
+        
+        # Mark edit as rejected
+        cursor.execute('''
+            UPDATE product_edits 
+            SET status = 'rejected', reviewed_at = NOW(), reviewed_by = %s, admin_notes = %s
+            WHERE id = %s
+        ''', (user_id, admin_notes, edit_id))
+        
+        # Check if there are any more pending edits for this product
+        cursor.execute('''
+            SELECT COUNT(*) as count 
+            FROM product_edits 
+            WHERE product_id = %s AND status = 'pending'
+        ''', (product_id,))
+        
+        pending_count = cursor.fetchone()['count']
+        
+        # If no more pending edits, update product edit_status
+        if pending_count == 0:
+            cursor.execute('''
+                UPDATE products 
+                SET edit_status = 'rejected'
+                WHERE id = %s
+            ''', (product_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Edit rejected'}), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/pending-recoveries', methods=['GET'])
+def admin_pending_recoveries():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get all pending recovery requests
+        cursor.execute('''
+            SELECT 
+                par.id as request_id,
+                par.product_id,
+                p.name as product_name,
+                p.sku,
+                p.price,
+                s.store_name,
+                par.reason,
+                par.requested_at,
+                u.email as seller_email
+            FROM product_archive_requests par
+            JOIN products p ON par.product_id = p.id
+            JOIN sellers s ON par.seller_id = s.id
+            JOIN users u ON s.user_id = u.id
+            WHERE par.request_type = 'recover' AND par.status = 'pending'
+            ORDER BY par.requested_at ASC
+        ''')
+        pending_recoveries = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'pending_recoveries': pending_recoveries}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/approve-recovery/<int:request_id>', methods=['POST'])
+def admin_approve_recovery(request_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get request details
+        cursor.execute('''
+            SELECT product_id FROM product_archive_requests 
+            WHERE id = %s AND request_type = 'recover'
+        ''', (request_id,))
+        request_data = cursor.fetchone()
+        
+        if not request_data:
+            return jsonify({'error': 'Request not found'}), 404
+        
+        product_id = request_data['product_id']
+        
+        # Recover the product (set status back to active)
+        cursor.execute('''
+            UPDATE products 
+            SET archive_status = 'active', archived_at = NULL, archived_by = NULL
+            WHERE id = %s
+        ''', (product_id,))
+        
+        # Mark request as approved
+        cursor.execute('''
+            UPDATE product_archive_requests 
+            SET status = 'approved', reviewed_at = NOW(), reviewed_by = %s
+            WHERE id = %s
+        ''', (user_id, request_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Recovery approved'}), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/reject-recovery/<int:request_id>', methods=['POST'])
+def admin_reject_recovery(request_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        admin_notes = request.form.get('notes', '')
+        
+        # Get request details
+        cursor.execute('''
+            SELECT product_id FROM product_archive_requests 
+            WHERE id = %s AND request_type = 'recover'
+        ''', (request_id,))
+        request_data = cursor.fetchone()
+        
+        if not request_data:
+            return jsonify({'error': 'Request not found'}), 404
+        
+        product_id = request_data['product_id']
+        
+        # Set product back to archived status
+        cursor.execute('''
+            UPDATE products 
+            SET archive_status = 'archived'
+            WHERE id = %s
+        ''', (product_id,))
+        
+        # Mark request as rejected
+        cursor.execute('''
+            UPDATE product_archive_requests 
+            SET status = 'rejected', reviewed_at = NOW(), reviewed_by = %s, admin_notes = %s
+            WHERE id = %s
+        ''', (user_id, admin_notes, request_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Recovery rejected'}), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
 
 @app.route('/seller-dashboard')
 def seller_dashboard():
     if not session.get('logged_in') or session.get('role') != 'seller':
         flash('Access denied. Please log in as a seller.', 'error')
         return redirect(url_for('login'))
-    return render_template('pages/SellerDashboard.html')
+    
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller info
+        cursor.execute('''
+            SELECT s.*, u.first_name, u.last_name, u.email 
+            FROM sellers s 
+            JOIN users u ON s.user_id = u.id 
+            WHERE s.user_id = %s
+        ''', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            flash('Seller profile not found', 'error')
+            return redirect(url_for('login'))
+        
+        # Get product count
+        cursor.execute('SELECT COUNT(*) as count FROM products WHERE seller_id = %s', (seller['id'],))
+        product_count = cursor.fetchone()['count']
+        
+        # Get low stock products
+        cursor.execute('''
+            SELECT p.name, p.id, i.stock_quantity, i.low_stock_threshold
+            FROM products p
+            LEFT JOIN inventory i ON p.id = i.product_id
+            WHERE p.seller_id = %s AND i.stock_quantity <= i.low_stock_threshold
+            ORDER BY i.stock_quantity ASC
+            LIMIT 5
+        ''', (seller['id'],))
+        low_stock = cursor.fetchall()
+        
+        # Get recent orders
+        cursor.execute('''
+            SELECT o.order_number, o.total_amount, o.order_status, o.created_at,
+                   u.first_name, u.last_name,
+                   (SELECT GROUP_CONCAT(oi.product_name SEPARATOR ', ')
+                    FROM order_items oi WHERE oi.order_id = o.id) as products
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.seller_id = %s
+            ORDER BY o.created_at DESC
+            LIMIT 5
+        ''', (seller['id'],))
+        recent_orders = cursor.fetchall()
+        
+        # Get today's sales
+        cursor.execute('''
+            SELECT COALESCE(SUM(total_amount), 0) as today_sales
+            FROM orders
+            WHERE seller_id = %s AND DATE(created_at) = CURDATE()
+            AND order_status != 'cancelled'
+        ''', (seller['id'],))
+        today_sales = cursor.fetchone()['today_sales']
+        
+        # Get pending orders count
+        cursor.execute('''
+            SELECT COUNT(*) as pending_count
+            FROM orders
+            WHERE seller_id = %s AND order_status = 'pending'
+        ''', (seller['id'],))
+        pending_orders = cursor.fetchone()['pending_count']
+        
+        # Get top performing products
+        cursor.execute('''
+            SELECT p.id, p.name, p.sales_count
+            FROM products p
+            WHERE p.seller_id = %s AND p.is_active = 1
+            ORDER BY p.sales_count DESC
+            LIMIT 3
+        ''', (seller['id'],))
+        top_products = cursor.fetchall()
+        
+        # Get weekly sales (last 7 days)
+        cursor.execute('''
+            SELECT 
+                DAYNAME(created_at) as day_name,
+                DAYOFWEEK(created_at) as day_num,
+                COALESCE(SUM(total_amount), 0) as daily_sales
+            FROM orders
+            WHERE seller_id = %s 
+            AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+            AND order_status != 'cancelled'
+            GROUP BY DATE(created_at), DAYNAME(created_at), DAYOFWEEK(created_at)
+            ORDER BY DATE(created_at)
+        ''', (seller['id'],))
+        weekly_sales_raw = cursor.fetchall()
+        
+        # Create a dictionary for all days of the week with default 0
+        days_order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        weekly_sales = {day: 0 for day in days_order}
+        
+        # Fill in actual sales data
+        for row in weekly_sales_raw:
+            weekly_sales[row['day_name']] = float(row['daily_sales'])
+        
+        # Get max sales for percentage calculation (ensure it's never 0 to prevent division by zero)
+        max_value = max(weekly_sales.values()) if weekly_sales.values() else 0
+        max_weekly_sales = max_value if max_value > 0 else 1
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('pages/SellerDashboard.html',
+                             seller=seller,
+                             product_count=product_count,
+                             low_stock=low_stock,
+                             recent_orders=recent_orders,
+                             today_sales=today_sales,
+                             pending_orders=pending_orders,
+                             top_products=top_products,
+                             weekly_sales=weekly_sales,
+                             max_weekly_sales=max_weekly_sales)
+        
+    except Exception as err:
+        flash(f'Error loading dashboard: {str(err)}', 'error')
+        return redirect(url_for('login'))
 
 @app.route('/rider-dashboard')
 def rider_dashboard():
@@ -666,19 +1622,641 @@ def rider_dashboard():
     
     try:
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT first_name FROM users WHERE id = %s', (session.get('user_id'),))
+        user_id = session.get('user_id')
+        
+        # Get user and rider info
+        cursor.execute('SELECT first_name, last_name, email, phone FROM users WHERE id = %s', (user_id,))
         user = cursor.fetchone()
+        
+        if not user:
+            return redirect(url_for('login'))
+        
+        # Get rider profile
+        cursor.execute('SELECT * FROM riders WHERE user_id = %s', (user_id,))
+        rider = cursor.fetchone()
+        
+        # Get today's earnings (from shipments where rider delivered)
+        cursor.execute('''
+            SELECT COALESCE(COUNT(*), 0) as deliveries_today,
+                   COALESCE(SUM(o.total_amount * 0.15), 0) as earnings_today
+            FROM shipments s
+            JOIN orders o ON s.order_id = o.id
+            WHERE s.rider_id = %s 
+            AND s.status = 'delivered'
+            AND DATE(s.delivered_at) = CURDATE()
+        ''', (rider['id'] if rider else None,))
+        today_stats = cursor.fetchone()
+        
+        # Get rider rating
+        rating = rider['rating'] if rider and rider['rating'] else 4.5
+        total_deliveries = rider['total_deliveries'] if rider and rider['total_deliveries'] else 0
+        
+        # Calculate acceptance rate (mock for now)
+        acceptance_rate = 95
+        
+        # Get recent deliveries (last 5)
+        cursor.execute('''
+            SELECT s.*, o.order_number, o.total_amount,
+                   CONCAT(a1.city, ', ', a1.barangay) as pickup_location,
+                   CONCAT(a2.city, ', ', a2.barangay) as delivery_location
+            FROM shipments s
+            JOIN orders o ON s.order_id = o.id
+            LEFT JOIN addresses a1 ON o.billing_address_id = a1.id
+            LEFT JOIN addresses a2 ON o.shipping_address_id = a2.id
+            WHERE s.rider_id = %s
+            ORDER BY s.created_at DESC
+            LIMIT 5
+        ''', (rider['id'] if rider else None,))
+        recent_deliveries = cursor.fetchall()
+        
+        # Get active deliveries
+        cursor.execute('''
+            SELECT s.*, o.order_number, o.total_amount,
+                   CONCAT(a1.city, ', ', a1.barangay) as pickup_location,
+                   CONCAT(a2.city, ', ', a2.barangay) as delivery_location
+            FROM shipments s
+            JOIN orders o ON s.order_id = o.id
+            LEFT JOIN addresses a1 ON o.billing_address_id = a1.id
+            LEFT JOIN addresses a2 ON o.shipping_address_id = a2.id
+            WHERE s.rider_id = %s
+            AND s.status IN ('picked_up', 'in_transit', 'out_for_delivery')
+            ORDER BY s.created_at DESC
+        ''', (rider['id'] if rider else None,))
+        active_deliveries = cursor.fetchall()
+        
         cursor.close()
         conn.close()
         
-        if user:
-            return render_template('pages/RiderDashboard.html', rider_name=user['first_name'])
-        
-        return redirect(url_for('login'))
+        return render_template('pages/RiderDashboard.html',
+                             rider_name=user['first_name'],
+                             rider=rider,
+                             user=user,
+                             deliveries_today=today_stats['deliveries_today'],
+                             earnings_today=today_stats['earnings_today'],
+                             rating=rating,
+                             acceptance_rate=acceptance_rate,
+                             total_deliveries=total_deliveries,
+                             recent_deliveries=recent_deliveries,
+                             active_deliveries=active_deliveries)
         
     except Exception as err:
         flash(f'Error: {str(err)}', 'error')
         return redirect(url_for('login'))
+
+@app.route('/seller/products', methods=['GET'])
+def seller_products():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        # Get all products for this seller with edit status (excluding archived)
+        cursor.execute('''
+            SELECT p.*, c.name as category_name,
+                   COALESCE(i.stock_quantity, 0) as stock,
+                   COALESCE(i.low_stock_threshold, 10) as threshold,
+                   COALESCE(p.edit_status, 'none') as edit_status,
+                   COALESCE(p.archive_status, 'active') as archive_status,
+                   (SELECT COUNT(*) FROM product_edits 
+                    WHERE product_id = p.id AND status = 'pending') as pending_edits
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN inventory i ON p.id = i.product_id
+            WHERE p.seller_id = %s AND COALESCE(p.archive_status, 'active') = 'active'
+            ORDER BY p.created_at DESC
+        ''', (seller['id'],))
+        products = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'products': products}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/seller/add-product', methods=['POST'])
+def seller_add_product():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        flash('Access denied', 'error')
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('seller_dashboard'))
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            flash('Seller profile not found', 'error')
+            return redirect(url_for('login'))
+        
+        # Get form data
+        name = request.form.get('name')
+        description = request.form.get('description')
+        price = request.form.get('price')
+        category_name = request.form.get('category', 'casual')  # Get category name
+        brand = request.form.get('brand')
+        sku = request.form.get('sku')
+        
+        # Get sizes and colors
+        sizes = request.form.getlist('sizes')
+        colors = request.form.getlist('colors')
+        
+        # Add custom sizes if provided
+        custom_sizes = request.form.get('custom-sizes', '').strip()
+        if custom_sizes:
+            custom_size_list = [s.strip() for s in custom_sizes.split(',') if s.strip()]
+            sizes.extend(custom_size_list)
+        
+        # Add custom colors if provided
+        custom_colors = request.form.get('custom-colors', '').strip()
+        if custom_colors:
+            custom_color_list = [c.strip() for c in custom_colors.split(',') if c.strip()]
+            colors.extend(custom_color_list)
+        
+        # Get or create category
+        cursor.execute('SELECT id FROM categories WHERE slug = %s', (category_name,))
+        category = cursor.fetchone()
+        
+        if not category:
+            # Create category if it doesn't exist
+            cursor.execute('INSERT INTO categories (name, slug) VALUES (%s, %s)', 
+                         (category_name.replace('-', ' ').title(), category_name))
+            category_id = cursor.lastrowid
+        else:
+            category_id = category['id']
+        
+        # Handle multiple image uploads
+        uploaded_images = []
+        if 'product_images' in request.files:
+            files = request.files.getlist('product_images')
+            
+            if files and len(files) > 0:
+                import os
+                from werkzeug.utils import secure_filename
+                import time
+                
+                # Create uploads directory if it doesn't exist
+                upload_folder = os.path.join('static', 'images', 'products')
+                os.makedirs(upload_folder, exist_ok=True)
+                
+                for file in files:
+                    if file and file.filename:
+                        # Generate unique filename with timestamp
+                        filename = secure_filename(file.filename)
+                        timestamp = int(time.time() * 1000)  # milliseconds for uniqueness
+                        unique_filename = f"{seller['id']}_{timestamp}_{filename}"
+                        filepath = os.path.join(upload_folder, unique_filename)
+                        file.save(filepath)
+                        
+                        # Store relative URL
+                        image_url = f"/static/images/products/{unique_filename}"
+                        uploaded_images.append(image_url)
+        
+        # Create slug from name
+        slug = name.lower().replace(' ', '-').replace('&', 'and').replace("'", '')
+        
+        # Insert product with is_active = 0 (pending approval)
+        cursor.execute('''
+            INSERT INTO products (seller_id, category_id, name, slug, description, brand, 
+                                price, sku, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0)
+        ''', (seller['id'], category_id, name, slug, description, brand, price, sku))
+        
+        product_id = cursor.lastrowid
+        
+        # Add product images if uploaded
+        if uploaded_images:
+            for idx, image_url in enumerate(uploaded_images):
+                # First image is primary
+                is_primary = 1 if idx == 0 else 0
+                cursor.execute('''
+                    INSERT INTO product_images (product_id, image_url, is_primary)
+                    VALUES (%s, %s, %s)
+                ''', (product_id, image_url, is_primary))
+        
+        # Calculate total stock from size-color combinations
+        total_stock = 0
+        
+        # Add size and color variants with individual stock
+        for size in sizes:
+            for color in colors:
+                stock_key = f'stock_{size}_{color}'
+                variant_stock = int(request.form.get(stock_key, 0))
+                total_stock += variant_stock
+                
+                # Insert product variant
+                cursor.execute('''
+                    INSERT INTO product_variants (product_id, size, color, stock_quantity)
+                    VALUES (%s, %s, %s, %s)
+                ''', (product_id, size, color, variant_stock))
+        
+        # Add total inventory
+        cursor.execute('''
+            INSERT INTO inventory (product_id, stock_quantity, low_stock_threshold)
+            VALUES (%s, %s, 10)
+        ''', (product_id, total_stock))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash('Product submitted for admin approval!', 'success')
+        return redirect(url_for('seller_dashboard'))
+        
+    except Exception as err:
+        flash(f'Error adding product: {str(err)}', 'error')
+        return redirect(url_for('seller_dashboard'))
+
+@app.route('/seller/update-stock', methods=['POST'])
+def seller_update_stock():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        product_id = request.form.get('product_id')
+        stock_quantity = request.form.get('stock_quantity')
+        
+        # Verify product belongs to seller
+        cursor.execute('SELECT id FROM products WHERE id = %s AND seller_id = %s', 
+                      (product_id, seller['id']))
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Update inventory
+        cursor.execute('''
+            UPDATE inventory 
+            SET stock_quantity = %s, last_restocked_at = NOW()
+            WHERE product_id = %s
+        ''', (stock_quantity, product_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Stock updated successfully'}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/seller/archive-product', methods=['POST'])
+def seller_archive_product():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        product_id = request.form.get('product_id')
+        reason = request.form.get('reason', '')
+        
+        # Verify product belongs to seller
+        cursor.execute('SELECT id FROM products WHERE id = %s AND seller_id = %s', 
+                      (product_id, seller['id']))
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Update product archive status
+        cursor.execute('''
+            UPDATE products 
+            SET archive_status = 'archived', archived_at = NOW(), archived_by = %s
+            WHERE id = %s
+        ''', (user_id, product_id))
+        
+        # Log the archive request
+        cursor.execute('''
+            INSERT INTO product_archive_requests 
+            (product_id, seller_id, request_type, reason, status)
+            VALUES (%s, %s, 'archive', %s, 'approved')
+        ''', (product_id, seller['id'], reason))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Product archived successfully'}), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/seller/archived-products', methods=['GET'])
+def seller_archived_products():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        # Get archived products
+        cursor.execute('''
+            SELECT p.*, COALESCE(p.archive_status, 'active') as archive_status
+            FROM products p
+            WHERE p.seller_id = %s AND p.archive_status IN ('archived', 'pending_recovery')
+            ORDER BY p.archived_at DESC
+        ''', (seller['id'],))
+        products = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'products': products}), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/seller/request-recovery', methods=['POST'])
+def seller_request_recovery():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        product_id = request.form.get('product_id')
+        reason = request.form.get('reason', '')
+        
+        # Verify product belongs to seller and is archived
+        cursor.execute('''
+            SELECT id FROM products 
+            WHERE id = %s AND seller_id = %s AND archive_status = 'archived'
+        ''', (product_id, seller['id']))
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found or not archived'}), 404
+        
+        # Update product status to pending recovery
+        cursor.execute('''
+            UPDATE products 
+            SET archive_status = 'pending_recovery'
+            WHERE id = %s
+        ''', (product_id,))
+        
+        # Create recovery request
+        cursor.execute('''
+            INSERT INTO product_archive_requests 
+            (product_id, seller_id, request_type, reason, status)
+            VALUES (%s, %s, 'recover', %s, 'pending')
+        ''', (product_id, seller['id'], reason))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Recovery request submitted'}), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/seller/product/<int:product_id>', methods=['GET'])
+def seller_get_product(product_id):
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        # Get product details
+        cursor.execute('''
+            SELECT p.*, c.name as category_name
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = %s AND p.seller_id = %s
+        ''', (product_id, seller['id']))
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Get all categories for the dropdown
+        cursor.execute('SELECT id, name FROM categories WHERE is_active = TRUE ORDER BY name')
+        categories = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'product': product,
+            'categories': categories
+        }), 200
+        
+    except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/seller/edit-product', methods=['POST'])
+def seller_edit_product():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        product_id = request.form.get('product_id')
+        
+        # Verify product belongs to seller
+        cursor.execute('''
+            SELECT * FROM products 
+            WHERE id = %s AND seller_id = %s
+        ''', (product_id, seller['id']))
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # First, ensure product_edits table exists
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS product_edits (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                product_id INT NOT NULL,
+                seller_id INT NOT NULL,
+                field_name VARCHAR(100) NOT NULL,
+                old_value TEXT,
+                new_value TEXT,
+                status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+                admin_notes TEXT,
+                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TIMESTAMP NULL,
+                reviewed_by INT NULL,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+                FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+                INDEX idx_product (product_id),
+                INDEX idx_status (status),
+                INDEX idx_seller (seller_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ''')
+        
+        # Check if edit_status column exists, if not add it
+        cursor.execute('''
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = %s 
+            AND TABLE_NAME = 'products' 
+            AND COLUMN_NAME = 'edit_status'
+        ''', (DB_CONFIG['database'],))
+        
+        result = cursor.fetchone()
+        if result['count'] == 0:
+            cursor.execute('''
+                ALTER TABLE products 
+                ADD COLUMN edit_status ENUM('none', 'pending', 'approved', 'rejected') DEFAULT 'none'
+            ''')
+        
+        # Track changes
+        fields_to_check = {
+            'name': 'Product Name',
+            'description': 'Description',
+            'price': 'Price',
+            'brand': 'Brand',
+            'category_id': 'Category'
+        }
+        
+        changes_made = False
+        
+        for field, label in fields_to_check.items():
+            new_value = request.form.get(field)
+            old_value = str(product[field]) if product[field] is not None else ''
+            
+            if new_value and new_value != old_value:
+                # Insert edit request
+                cursor.execute('''
+                    INSERT INTO product_edits 
+                    (product_id, seller_id, field_name, old_value, new_value, status)
+                    VALUES (%s, %s, %s, %s, %s, 'pending')
+                ''', (product_id, seller['id'], field, old_value, new_value))
+                changes_made = True
+        
+        if changes_made:
+            # Update product edit_status
+            cursor.execute('''
+                UPDATE products 
+                SET edit_status = 'pending'
+                WHERE id = %s
+            ''', (product_id,))
+            
+            conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        if not changes_made:
+            return jsonify({'success': False, 'error': 'No changes detected'}), 400
+        
+        return jsonify({
+            'success': True,
+            'message': 'Product edit submitted for admin approval'
+        }), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 @app.route('/buyer-dashboard')
 def buyer_dashboard():

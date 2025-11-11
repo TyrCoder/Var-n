@@ -92,6 +92,10 @@ CREATE TABLE IF NOT EXISTS products (
     sales_count INT DEFAULT 0,
     rating DECIMAL(3,2) DEFAULT 0.00,
     review_count INT DEFAULT 0,
+    edit_status ENUM('none', 'pending', 'approved', 'rejected') DEFAULT 'none',
+    archive_status ENUM('active', 'archived', 'pending_recovery') DEFAULT 'active',
+    archived_at TIMESTAMP NULL,
+    archived_by INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
@@ -100,7 +104,9 @@ CREATE TABLE IF NOT EXISTS products (
     INDEX idx_category (category_id),
     INDEX idx_active (is_active),
     INDEX idx_featured (is_featured),
-    INDEX idx_slug (slug)
+    INDEX idx_slug (slug),
+    INDEX idx_edit_status (edit_status),
+    INDEX idx_archive_status (archive_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
@@ -153,6 +159,52 @@ CREATE TABLE IF NOT EXISTS inventory (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
     UNIQUE KEY unique_inventory (product_id, variant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- Product Edits Table (for tracking product changes that need admin approval)
+-- =============================================
+CREATE TABLE IF NOT EXISTS product_edits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    seller_id INT NOT NULL,
+    field_name VARCHAR(100) NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    admin_notes TEXT,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
+    reviewed_by INT NULL,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_product (product_id),
+    INDEX idx_status (status),
+    INDEX idx_seller (seller_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- Product Archive Requests Table (for tracking archive/recovery requests)
+-- =============================================
+CREATE TABLE IF NOT EXISTS product_archive_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    seller_id INT NOT NULL,
+    request_type ENUM('archive', 'recover') NOT NULL,
+    reason TEXT,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    admin_notes TEXT,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
+    reviewed_by INT NULL,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_product (product_id),
+    INDEX idx_status (status),
+    INDEX idx_seller (seller_id),
+    INDEX idx_type (request_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================

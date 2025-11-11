@@ -17,7 +17,7 @@
       .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
       .side-group{margin-top:8px}
       .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
-      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea}
+      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea;cursor:pointer}
       .side-link.active,.side-link:hover{background:#141414;color:#fff}
 
       .content{display:flex;flex-direction:column}
@@ -102,6 +102,8 @@
           <div class="side-title">Store Management</div>
           <a class="side-link active" href="#" data-page="overview">Overview</a>
           <a class="side-link" href="#" data-page="products">Products</a>
+          <a class="side-link" href="#" data-page="add-product" style="padding-left: 24px; font-size: 14px;">+ Add Product</a>
+          <a class="side-link" href="#" data-page="archived-products">Archived Products</a>
           <a class="side-link" href="#" data-page="orders">Orders</a>
           <a class="side-link" href="#" data-page="inventory">Inventory</a>
           <a class="side-link" href="#" data-page="reviews">Customer Reviews</a>
@@ -126,8 +128,10 @@
           <div class="page-title">Store Dashboard</div>
           <div class="search"><input placeholder="Search products, orders..."/></div>
           <div class="avatar">
-            <span class="tag store-name">Your Store Name</span>
-            <span class="tag status-badge status-active">Active</span>
+            <span class="tag store-name">{{ seller.store_name if seller else 'Your Store Name' }}</span>
+            <span class="tag status-badge {% if seller and seller.status == 'approved' %}status-active{% else %}status-pending{% endif %}">
+              {{ seller.status.title() if seller else 'Pending' }}
+            </span>
           </div>
         </div>
 
@@ -137,25 +141,25 @@
             <div class="card">
               <div class="inner">
                 <div class="metric">Today's Sales</div>
-                <div class="value">₱8,250 <span class="delta">↑ 12%</span></div>
+                <div class="value">₱{{ "{:,.2f}".format(today_sales if today_sales else 0) }}</div>
               </div>
             </div>
             <div class="card">
               <div class="inner">
                 <div class="metric">Pending Orders</div>
-                <div class="value">5 <span class="delta" style="color:#ef4444">↑ 2</span></div>
+                <div class="value">{{ pending_orders if pending_orders else 0 }}</div>
               </div>
             </div>
             <div class="card">
               <div class="inner">
-                <div class="metric">Products Stock</div>
-                <div class="value">48 <span class="delta">↓ 3</span></div>
+                <div class="metric">Products</div>
+                <div class="value">{{ product_count if product_count else 0 }}</div>
               </div>
             </div>
             <div class="card">
               <div class="inner">
                 <div class="metric">Customer Rating</div>
-                <div class="value">4.8 <span class="delta">↑ 0.2</span></div>
+                <div class="value">{{ "{:.1f}".format(seller.rating if seller and seller.rating else 0) }}</div>
               </div>
             </div>
           </div>
@@ -167,13 +171,9 @@
                 <div class="metric">Weekly Sales Overview</div>
                 <div class="chart">
                   <div class="bars">
-                    <div class="bar" style="height:45%"></div>
-                    <div class="bar" style="height:65%"></div>
-                    <div class="bar" style="height:35%"></div>
-                    <div class="bar" style="height:78%"></div>
-                    <div class="bar" style="height:55%"></div>
-                    <div class="bar" style="height:48%"></div>
-                    <div class="bar" style="height:60%"></div>
+                    {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                    <div class="bar" style="height:{{ ((weekly_sales[day] / max_weekly_sales) * 100)|int if weekly_sales[day] > 0 else 5 }}%"></div>
+                    {% endfor %}
                   </div>
                   <div class="legend">
                     <span>Sun</span>
@@ -189,31 +189,28 @@
             </div>
             <div class="card">
               <div class="inner">
-                <div class="metric">Top Performing Products</div>
-                <div style="margin-top:10px">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                    <div>Classic Denim Jacket</div>
-                    <div class="tag" style="background:#efefef;color:#0a0a0a">28 sold</div>
-                  </div>
-                  <div style="height:6px;background:#efefef;border-radius:999px">
-                    <div style="height:6px;width:85%;background:#0a0a0a;border-radius:999px"></div>
-                  </div>
-
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 12px">
-                    <div>Leather Boots</div>
-                    <div class="tag" style="background:#efefef;color:#0a0a0a">22 sold</div>
-                  </div>
-                  <div style="height:6px;background:#efefef;border-radius:999px">
-                    <div style="height:6px;width:65%;background:#0a0a0a;border-radius:999px"></div>
-                  </div>
-
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 12px">
-                    <div>Casual T-Shirt</div>
-                    <div class="tag" style="background:#efefef;color:#0a0a0a">15 sold</div>
-                  </div>
-                  <div style="height:6px;background:#efefef;border-radius:999px">
-                    <div style="height:6px;width:45%;background:#0a0a0a;border-radius:999px"></div>
-                  </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div class="metric">Top Performing Products</div>
+                  <button class="action-btn" onclick="loadPage('add-product')" style="padding: 6px 12px; font-size: 12px;">+ Add Product</button>
+                </div>
+                <div style="margin-top:10px" id="topProducts">
+                  {% if top_products and top_products|length > 0 %}
+                    {% set max_sales = (top_products[0].sales_count if (top_products and top_products[0].sales_count) else 1) %}
+                    {% for product in top_products[:3] %}
+                      {% if not loop.first %}
+                      <div style="height:16px"></div>
+                      {% endif %}
+                      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                        <div>{{ product.name }}</div>
+                        <div class="tag" style="background:#efefef;color:#0a0a0a">{{ product.sales_count or 0 }} sold</div>
+                      </div>
+                      <div style="height:6px;background:#efefef;border-radius:999px;overflow:hidden">
+                        <div style="height:6px;background:#0a0a0a;border-radius:999px;width:{{ ((product.sales_count / max_sales if max_sales > 0 else 0) * 100)|int ~ '%' }};"></div>
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <p style="text-align:center;color:#999;padding:20px;">No sales data yet. <a href="#" onclick="loadPage('add-product')" style="color:#0a0a0a;text-decoration:underline;">Add your first product</a></p>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -239,27 +236,21 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>#ORD-2349</td>
-                        <td>John Doe</td>
-                        <td>Denim Jacket</td>
-                        <td>₱2,349</td>
-                        <td><span class="status-badge status-pending">Pending</span></td>
-                      </tr>
-                      <tr>
-                        <td>#ORD-2348</td>
-                        <td>Maria Santos</td>
-                        <td>Leather Boots</td>
-                        <td>₱3,499</td>
-                        <td><span class="status-badge status-active">Shipped</span></td>
-                      </tr>
-                      <tr>
-                        <td>#ORD-2347</td>
-                        <td>James Lee</td>
-                        <td>T-Shirt Bundle</td>
-                        <td>₱1,299</td>
-                        <td><span class="status-badge status-active">Delivered</span></td>
-                      </tr>
+                      {% if recent_orders %}
+                        {% for order in recent_orders %}
+                        <tr>
+                          <td>{{ order.order_number }}</td>
+                          <td>{{ order.first_name }} {{ order.last_name }}</td>
+                          <td>{{ order.products[:30] }}...</td>
+                          <td>₱{{ "{:,.2f}".format(order.total_amount) }}</td>
+                          <td><span class="status-badge status-{{ 'active' if order.order_status == 'delivered' else 'pending' }}">{{ order.order_status.title() }}</span></td>
+                        </tr>
+                        {% endfor %}
+                      {% else %}
+                        <tr>
+                          <td colspan="5" style="text-align:center;color:#999">No recent orders</td>
+                        </tr>
+                      {% endif %}
                     </tbody>
                   </table>
                 </div>
@@ -281,16 +272,21 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>Classic Denim - L</td>
-                        <td>3 pcs</td>
-                        <td><span class="status-badge status-inactive">Critical</span></td>
-                      </tr>
-                      <tr>
-                        <td>Leather Boots - 42</td>
-                        <td>5 pcs</td>
-                        <td><span class="status-badge status-pending">Low</span></td>
-                      </tr>
+                      {% if low_stock %}
+                        {% for product in low_stock %}
+                        <tr>
+                          <td>{{ product.name }}</td>
+                          <td>{{ product.stock_quantity }} pcs</td>
+                          <td><span class="status-badge {% if product.stock_quantity <= 3 %}status-inactive{% else %}status-pending{% endif %}">
+                            {% if product.stock_quantity <= 3 %}Critical{% else %}Low{% endif %}
+                          </span></td>
+                        </tr>
+                        {% endfor %}
+                      {% else %}
+                        <tr>
+                          <td colspan="3" style="text-align:center;color:#999">All products in stock</td>
+                        </tr>
+                      {% endif %}
                     </tbody>
                   </table>
                 </div>
@@ -301,25 +297,854 @@
       </section>
     </div>
     <script>
-      // Update store name from session if available
-      if (sessionStorage.getItem('storeName')) {
-        document.querySelector('.store-name').textContent = sessionStorage.getItem('storeName');
+      // Page content templates
+      const pageTemplates = {
+        'add-product': `
+          <div class="card">
+            <div class="inner" style="max-width: 800px; margin: 0 auto;">
+              <h2 style="margin: 0 0 20px;">Add New Product</h2>
+              <form id="addProductForm" action="/seller/add-product" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Product Name *</label>
+                  <input type="text" name="name" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="Enter product name">
+                </div>
+                
+                <div>
+                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Description</label>
+                  <textarea name="description" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="Product description"></textarea>
+                </div>
+                
+                <div>
+                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Category/Genre *</label>
+                  <select name="category" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
+                    <option value="">Select a category</option>
+                    <option value="shirts">Shirts & T-Shirts</option>
+                    <option value="pants">Pants & Jeans</option>
+                    <option value="shorts">Shorts</option>
+                    <option value="jackets">Jackets & Coats</option>
+                    <option value="shoes">Shoes & Footwear</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="underwear">Underwear & Socks</option>
+                    <option value="activewear">Activewear & Sports</option>
+                    <option value="formal">Formal Wear</option>
+                    <option value="casual">Casual Wear</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Product Images *</label>
+                  <input type="file" id="productImages" name="product_images" accept="image/*" multiple required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
+                  <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Upload multiple product images (JPG, PNG, max 5MB each). First image will be the primary image.</small>
+                  
+                  <!-- Image Preview Area -->
+                  <div id="imagePreviewContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 12px;">
+                    <!-- Previews will be inserted here -->
+                  </div>
+                </div>
+                
+                <div>
+                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Price (₱) *</label>
+                  <input type="number" name="price" step="0.01" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="0.00">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">Brand Name</label>
+                    <input type="text" name="brand" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="e.g. Nike, Adidas, Uniqlo">
+                    <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">The manufacturer/brand of the product</small>
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">SKU</label>
+                    <input type="text" name="sku" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="Product SKU (optional)">
+                    <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Stock Keeping Unit for inventory tracking</small>
+                  </div>
+                </div>
+                
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;">
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Available Sizes *</h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all sizes available for this product</small>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="XS" style="margin-right: 6px;">
+                      <span>XS</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="S" style="margin-right: 6px;">
+                      <span>S</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="M" style="margin-right: 6px;">
+                      <span>M</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="L" style="margin-right: 6px;">
+                      <span>L</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="XL" style="margin-right: 6px;">
+                      <span>XL</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="2XL" style="margin-right: 6px;">
+                      <span>2XL</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="3XL" style="margin-right: 6px;">
+                      <span>3XL</span>
+                    </label>
+                  </div>
+                  <div style="margin-top: 12px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s)</label>
+                    <input type="text" id="custom-sizes" placeholder="e.g. 4XL, 5XL, 28W, 32W (comma-separated)" 
+                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;">
+                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom sizes separated by commas if not listed above</small>
+                  </div>
+                </div>
+                
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;">
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Available Colors *</h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all colors available for this product</small>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Black" style="margin-right: 6px;">
+                      <span>Black</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="White" style="margin-right: 6px;">
+                      <span>White</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Gray" style="margin-right: 6px;">
+                      <span>Gray</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Navy" style="margin-right: 6px;">
+                      <span>Navy</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Blue" style="margin-right: 6px;">
+                      <span>Blue</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Red" style="margin-right: 6px;">
+                      <span>Red</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Green" style="margin-right: 6px;">
+                      <span>Green</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Brown" style="margin-right: 6px;">
+                      <span>Brown</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Beige" style="margin-right: 6px;">
+                      <span>Beige</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="colors" value="Khaki" style="margin-right: 6px;">
+                      <span>Khaki</span>
+                    </label>
+                  </div>
+                  <div style="margin-top: 12px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Color(s)</label>
+                    <input type="text" id="custom-colors" placeholder="e.g. Burgundy, Olive, Charcoal (comma-separated)" 
+                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;">
+                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom colors separated by commas if not listed above</small>
+                  </div>
+                </div>
+                
+                <div id="size-color-stocks" style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #f0f9ff;">
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Stock per Size & Color</h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Enter stock quantity for each size-color combination</small>
+                  <div id="stock-inputs" style="display: grid; gap: 8px;">
+                    <p style="color: var(--muted); font-style: italic;">Select sizes and colors above to set stock quantities</p>
+                  </div>
+                </div>
+                
+                <input type="hidden" name="custom-sizes" id="custom-sizes-hidden">
+                <input type="hidden" name="custom-colors" id="custom-colors-hidden">
+                
+                <div style="display: flex; gap: 12px; margin-top: 10px;">
+                  <button type="submit" class="action-btn" style="padding: 12px 24px;" onclick="submitCustomValues()">Add Product</button>
+                  <button type="button" class="action-btn" onclick="loadPage('products')" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        `,
+        
+        'products': `
+          <div class="card">
+            <div class="inner">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0;">All Products</h2>
+                <button class="action-btn" onclick="loadPage('add-product')">+ Add Product</button>
+              </div>
+              <div id="products-list">Loading products...</div>
+            </div>
+          </div>
+        `,
+        
+        'edit-product': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Edit Product</h2>
+              <div id="edit-product-form">Loading product...</div>
+            </div>
+          </div>
+        `,
+        
+        'archived-products': `
+          <div class="card">
+            <div class="inner">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0;">🗄️ Archived Products</h2>
+              </div>
+              <div id="archived-products-list">Loading archived products...</div>
+            </div>
+          </div>
+        `,
+        
+        'inventory': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Inventory Management</h2>
+              <div id="inventory-list">Loading inventory...</div>
+            </div>
+          </div>
+        `,
+        
+        'orders': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Orders</h2>
+              <p style="color: var(--muted); padding: 40px; text-align: center;">Order management coming soon...</p>
+            </div>
+          </div>
+        `,
+        
+        'reviews': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Customer Reviews</h2>
+              <p style="color: var(--muted); padding: 40px; text-align: center;">Customer reviews coming soon...</p>
+            </div>
+          </div>
+        `,
+        
+        'promotions': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Promotions</h2>
+              <p style="color: var(--muted); padding: 40px; text-align: center;">Promotions management coming soon...</p>
+            </div>
+          </div>
+        `,
+        
+        'sales': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Sales Analytics</h2>
+              <p style="color: var(--muted); padding: 40px; text-align: center;">Sales analytics coming soon...</p>
+            </div>
+          </div>
+        `,
+        
+        'performance': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Performance</h2>
+              <p style="color: var(--muted); padding: 40px; text-align: center;">Performance metrics coming soon...</p>
+            </div>
+          </div>
+        `,
+        
+        'store-settings': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Store Settings</h2>
+              <p style="color: var(--muted); padding: 40px; text-align: center;">Store settings coming soon...</p>
+            </div>
+          </div>
+        `,
+        
+        'account': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Account Settings</h2>
+              <p style="color: var(--muted); padding: 40px; text-align: center;">Account settings coming soon...</p>
+            </div>
+          </div>
+        `,
+        
+        'overview': null  // Special case - will reload page
+      };
+
+      // Function to copy custom values to hidden inputs before form submission
+      function submitCustomValues() {
+        const customSizes = document.getElementById('custom-sizes');
+        const customColors = document.getElementById('custom-colors');
+        const customSizesHidden = document.getElementById('custom-sizes-hidden');
+        const customColorsHidden = document.getElementById('custom-colors-hidden');
+        
+        if (customSizes && customSizesHidden) {
+          customSizesHidden.value = customSizes.value;
+        }
+        if (customColors && customColorsHidden) {
+          customColorsHidden.value = customColors.value;
+        }
+        
+        return true;
+      }
+      
+      // Function to update stock inputs based on selected sizes and colors
+      function updateStockInputs() {
+        const sizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value);
+        const colors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
+        
+        // Add custom sizes if provided
+        const customSizesInput = document.getElementById('custom-sizes');
+        if (customSizesInput && customSizesInput.value.trim()) {
+          const customSizes = customSizesInput.value.split(',').map(s => s.trim()).filter(s => s);
+          sizes.push(...customSizes);
+        }
+        
+        // Add custom colors if provided
+        const customColorsInput = document.getElementById('custom-colors');
+        if (customColorsInput && customColorsInput.value.trim()) {
+          const customColors = customColorsInput.value.split(',').map(c => c.trim()).filter(c => c);
+          colors.push(...customColors);
+        }
+        
+        const stockInputsDiv = document.getElementById('stock-inputs');
+        
+        if (!stockInputsDiv) return;
+        
+        if (sizes.length === 0 || colors.length === 0) {
+          stockInputsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">Select sizes and colors above to set stock quantities</p>';
+          return;
+        }
+        
+        let html = '<div style="max-height: 300px; overflow-y: auto;">';
+        html += '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead><tr style="background: #e5e7eb; position: sticky; top: 0;"><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Size</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Color</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Stock Qty</th></tr></thead>';
+        html += '<tbody>';
+        
+        sizes.forEach(size => {
+          colors.forEach(color => {
+            html += `<tr>
+              <td style="padding: 8px; border: 1px solid var(--line);">${size}</td>
+              <td style="padding: 8px; border: 1px solid var(--line);">${color}</td>
+              <td style="padding: 8px; border: 1px solid var(--line);">
+                <input type="number" name="stock_${size}_${color}" min="0" value="0" required 
+                  style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+              </td>
+            </tr>`;
+          });
+        });
+        
+        html += '</tbody></table></div>';
+        stockInputsDiv.innerHTML = html;
       }
 
-      // Add click handlers for sidebar navigation
-      document.querySelectorAll('.side-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-          if (e.currentTarget.getAttribute('href') === '#') {
-            e.preventDefault();
-            // Remove active class from all links
-            document.querySelectorAll('.side-link').forEach(l => l.classList.remove('active'));
-            // Add active class to clicked link
-            e.currentTarget.classList.add('active');
-            // Update page title
-            document.querySelector('.page-title').textContent = 
-              e.currentTarget.textContent + ' - Seller Dashboard';
+      function loadPage(page) {
+        const content = document.getElementById('dashboardContent');
+        
+        // Immediate UI updates first
+        const links = document.querySelectorAll('.side-link');
+        links.forEach(l => l.classList.remove('active'));
+        const activeLink = document.querySelector(`[data-page="${page}"]`);
+        if (activeLink) activeLink.classList.add('active');
+        
+        // Update page title immediately
+        const pageNames = {
+          'overview': 'Store Dashboard',
+          'add-product': 'Add New Product',
+          'products': 'Products',
+          'archived-products': 'Archived Products',
+          'inventory': 'Inventory',
+          'orders': 'Orders',
+          'reviews': 'Customer Reviews',
+          'promotions': 'Promotions',
+          'sales': 'Sales Analytics',
+          'performance': 'Performance',
+          'store-settings': 'Store Settings',
+          'account': 'Account'
+        };
+        const titleEl = document.querySelector('.page-title');
+        if (titleEl) titleEl.textContent = pageNames[page] || 'Seller Dashboard';
+        
+        // Special handling for overview page - reload the page to get server-side data
+        if (page === 'overview') {
+          window.location.href = '/seller-dashboard';
+          return;
+        }
+        
+        // Load content instantly
+        if (pageTemplates[page]) {
+          content.innerHTML = pageTemplates[page];
+          
+          // Use requestAnimationFrame for non-blocking event listener setup
+          requestAnimationFrame(() => {
+            if (page === 'products') {
+              loadProducts();
+            } else if (page === 'archived-products') {
+              loadArchivedProducts();
+            } else if (page === 'inventory') {
+              loadInventory();
+            } else if (page === 'add-product') {
+              // Attach event listeners for size/color checkboxes
+              const sizeColorInputs = document.querySelectorAll('input[name="sizes"], input[name="colors"]');
+              sizeColorInputs.forEach(checkbox => {
+                checkbox.addEventListener('change', updateStockInputs);
+              });
+              
+              // Attach event listeners for custom size/color inputs
+              const customSizesInput = document.getElementById('custom-sizes');
+              const customColorsInput = document.getElementById('custom-colors');
+              
+              if (customSizesInput) {
+                customSizesInput.addEventListener('input', updateStockInputs);
+                customSizesInput.addEventListener('blur', updateStockInputs);
+              }
+              
+              if (customColorsInput) {
+                customColorsInput.addEventListener('input', updateStockInputs);
+                customColorsInput.addEventListener('blur', updateStockInputs);
+              }
+            }
+          });
+        }
+      }
+
+      function loadProducts() {
+        fetch('/seller/products')
+          .then(response => response.json())
+          .then(data => {
+            if (data.products && data.products.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>SKU</th>
+                      <th>Price</th>
+                      <th>Stock</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.products.forEach(product => {
+                let statusText = product.is_active ? 'Approved' : 'Pending Approval';
+                let statusClass = product.is_active ? 'status-active' : 'status-pending';
+                
+                // Check for pending edits
+                if (product.edit_status === 'pending' && product.pending_edits > 0) {
+                  statusText = `Edit Pending (${product.pending_edits})`;
+                  statusClass = 'status-pending';
+                }
+                
+                html += `
+                  <tr>
+                    <td>
+                      ${product.name}
+                      ${product.pending_edits > 0 ? '<span style="color: #f59e0b; font-size: 11px; margin-left: 6px;">⏳ Edit review</span>' : ''}
+                    </td>
+                    <td>${product.sku || 'N/A'}</td>
+                    <td>₱${parseFloat(product.price).toFixed(2)}</td>
+                    <td>${product.stock} pcs</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>
+                      ${product.is_active ? `
+                        <button class="action-btn" onclick="editProduct(${product.id})" style="padding: 6px 12px; font-size: 12px; margin-right: 4px;">Edit</button>
+                        <button class="action-btn" onclick="updateStock(${product.id}, ${product.stock})" style="padding: 6px 12px; font-size: 12px; margin-right: 4px;">Update Stock</button>
+                        <button class="action-btn" onclick="archiveProduct(${product.id}, '${product.name}')" style="padding: 6px 12px; font-size: 12px; background: #ef4444;">Archive</button>
+                      ` : '<span style="color: #999; font-size: 12px;">Awaiting approval</span>'}
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              document.getElementById('products-list').innerHTML = html;
+            } else {
+              document.getElementById('products-list').innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No products yet. <a href="#" onclick="loadPage(\'add-product\')">Add your first product</a></p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('products-list').innerHTML = '<p style="color:#ef4444;">Error loading products</p>';
+          });
+      }
+
+      function loadInventory() {
+        fetch('/seller/products')
+          .then(response => response.json())
+          .then(data => {
+            if (data.products && data.products.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Current Stock</th>
+                      <th>Low Stock Alert</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.products.forEach(product => {
+                const isLow = product.stock <= product.threshold;
+                html += `
+                  <tr>
+                    <td>${product.name}</td>
+                    <td>${product.stock} pcs</td>
+                    <td>${product.threshold} pcs</td>
+                    <td><span class="status-badge ${isLow ? 'status-pending' : 'status-active'}">${isLow ? 'Low Stock' : 'In Stock'}</span></td>
+                    <td>
+                      <button class="action-btn" onclick="updateStock(${product.id}, ${product.stock})" style="padding: 6px 12px; font-size: 12px;">Restock</button>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              document.getElementById('inventory-list').innerHTML = html;
+            } else {
+              document.getElementById('inventory-list').innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No products in inventory</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('inventory-list').innerHTML = '<p style="color:#ef4444;">Error loading inventory</p>';
+          });
+      }
+
+      // Global variable to store original product data for comparison
+      let originalProductData = {};
+
+      function editProduct(productId) {
+        loadPage('edit-product');
+        
+        fetch('/seller/product/' + productId)
+          .then(response => response.json())
+          .then(data => {
+            if (data.product) {
+              const product = data.product;
+              originalProductData = JSON.parse(JSON.stringify(product)); // Deep copy
+              
+              const formHtml = `
+                <form id="editProductForm" style="display: flex; flex-direction: column; gap: 16px;">
+                  <input type="hidden" name="product_id" value="${product.id}">
+                  
+                  <div style="background: #fffbeb; border: 1px solid #fbbf24; padding: 12px; border-radius: 8px; font-size: 14px;">
+                    ℹ️ <strong>Note:</strong> Changes require admin approval before they appear on your store.
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600;">Product Name</label>
+                    <input type="text" id="edit_name" name="name" value="${product.name}" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" required>
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600;">Description</label>
+                    <textarea id="edit_description" name="description" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" required>${product.description || ''}</textarea>
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 600;">Price (₱)</label>
+                      <input type="number" id="edit_price" name="price" value="${product.price}" step="0.01" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" required>
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 600;">Brand</label>
+                      <input type="text" id="edit_brand" name="brand" value="${product.brand || ''}" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600;">Category</label>
+                    <select id="edit_category_id" name="category_id" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" required>
+                      <option value="">Select Category</option>
+                      ${data.categories ? data.categories.map(cat => `<option value="${cat.id}" ${cat.id == product.category_id ? 'selected' : ''}>${cat.name}</option>`).join('') : ''}
+                    </select>
+                  </div>
+                  
+                  <div style="display: flex; gap: 12px; margin-top: 10px;">
+                    <button type="button" class="action-btn" onclick="submitProductEdit()" style="padding: 12px 24px;">Submit for Approval</button>
+                    <button type="button" class="action-btn" onclick="loadPage('products')" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
+                  </div>
+                </form>
+              `;
+              
+              document.getElementById('edit-product-form').innerHTML = formHtml;
+            } else {
+              document.getElementById('edit-product-form').innerHTML = '<p style="color: #ef4444;">Error loading product</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('edit-product-form').innerHTML = '<p style="color: #ef4444;">Error loading product</p>';
+          });
+      }
+
+      function submitProductEdit() {
+        const form = document.getElementById('editProductForm');
+        const formData = new FormData(form);
+        
+        // Compare with original data to find changes
+        const changes = {};
+        const fieldMap = {
+          'name': 'Product Name',
+          'description': 'Description',
+          'price': 'Price',
+          'brand': 'Brand',
+          'category_id': 'Category'
+        };
+        
+        for (let [key, label] of Object.entries(fieldMap)) {
+          const newValue = formData.get(key);
+          const oldValue = originalProductData[key]?.toString() || '';
+          
+          if (newValue !== oldValue) {
+            changes[key] = {
+              label: label,
+              old: oldValue,
+              new: newValue
+            };
           }
+        }
+        
+        if (Object.keys(changes).length === 0) {
+          alert('No changes detected');
+          return;
+        }
+        
+        // Confirm changes with user
+        let confirmMsg = 'You are requesting to change:\\n\\n';
+        for (let [key, change] of Object.entries(changes)) {
+          confirmMsg += `${change.label}: "${change.old}" → "${change.new}"\\n`;
+        }
+        confirmMsg += '\\nThese changes will require admin approval. Continue?';
+        
+        if (!confirm(confirmMsg)) {
+          return;
+        }
+        
+        fetch('/seller/edit-product', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✓ Product edit submitted for admin approval!\\n\\nYour changes will be reviewed and applied once approved.');
+            loadPage('products');
+          } else {
+            alert('Error: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error submitting edit request');
         });
+      }
+
+      function archiveProduct(productId, productName) {
+        const reason = prompt(`Archive "${productName}"?\n\nOptional reason for archiving:`, '');
+        if (reason === null) return;
+        
+        if (!confirm(`Are you sure you want to archive "${productName}"?\n\nArchived products will be hidden from your store and require admin approval to recover.`)) {
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('product_id', productId);
+        formData.append('reason', reason);
+        
+        fetch('/seller/archive-product', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✓ Product archived successfully!');
+            loadPage('products');
+          } else {
+            alert('Error: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error archiving product');
+        });
+      }
+      
+      function loadArchivedProducts() {
+        fetch('/seller/archived-products')
+          .then(response => response.json())
+          .then(data => {
+            if (data.products && data.products.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>SKU</th>
+                      <th>Price</th>
+                      <th>Archived Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.products.forEach(product => {
+                const archivedDate = new Date(product.archived_at).toLocaleDateString();
+                const statusText = product.archive_status === 'pending_recovery' ? 'Recovery Pending' : 'Archived';
+                const statusClass = product.archive_status === 'pending_recovery' ? 'status-pending' : 'status-inactive';
+                
+                html += `
+                  <tr>
+                    <td>${product.name}</td>
+                    <td>${product.sku || 'N/A'}</td>
+                    <td>₱${parseFloat(product.price).toFixed(2)}</td>
+                    <td style="font-size:13px;color:var(--muted)">${archivedDate}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td>
+                      ${product.archive_status === 'archived' ? 
+                        `<button class="action-btn" onclick="requestRecovery(${product.id}, '${product.name}')" style="padding: 6px 12px; font-size: 12px; background: #10b981;">Request Recovery</button>` :
+                        '<span style="color: #f59e0b; font-size: 12px;">⏳ Awaiting admin approval</span>'
+                      }
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              document.getElementById('archived-products-list').innerHTML = html;
+            } else {
+              document.getElementById('archived-products-list').innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No archived products</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('archived-products-list').innerHTML = '<p style="color:#ef4444;">Error loading archived products</p>';
+          });
+      }
+      
+      function requestRecovery(productId, productName) {
+        const reason = prompt(`Request recovery for "${productName}"?\n\nReason for recovery (required):`, '');
+        if (!reason || reason.trim() === '') {
+          if (reason !== null) alert('Please provide a reason for recovery');
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('product_id', productId);
+        formData.append('reason', reason);
+        
+        fetch('/seller/request-recovery', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✓ Recovery request submitted!\n\nAn admin will review your request.');
+            loadArchivedProducts();
+          } else {
+            alert('Error: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error submitting recovery request');
+        });
+      }
+
+      function updateStock(productId, currentStock) {
+        const newStock = prompt(`Update stock for product (current: ${currentStock}):`, currentStock);
+        if (newStock !== null && !isNaN(newStock)) {
+          const formData = new FormData();
+          formData.append('product_id', productId);
+          formData.append('stock_quantity', newStock);
+          
+          fetch('/seller/update-stock', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Stock updated successfully!');
+              // Reload current page
+              const activePage = document.querySelector('.side-link.active')?.getAttribute('data-page');
+              if (activePage) loadPage(activePage);
+            } else {
+              alert('Error updating stock: ' + data.error);
+            }
+          })
+          .catch(error => {
+            alert('Error updating stock');
+          });
+        }
+      }
+
+      // Optimized single event delegation for all sidebar links
+      document.addEventListener('click', function(e) {
+        const link = e.target.closest('.side-link');
+        if (link) {
+          const page = link.getAttribute('data-page');
+          const href = link.getAttribute('href');
+          
+          // Only handle hash links with data-page attribute
+          if (page && href === '#') {
+            e.preventDefault();
+            e.stopPropagation();
+            loadPage(page);
+          }
+        }
+      }, true); // Use capture phase for faster response
+
+      // Image preview functionality
+      document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'productImages') {
+          const files = e.target.files;
+          const previewContainer = document.getElementById('imagePreviewContainer');
+          previewContainer.innerHTML = ''; // Clear previous previews
+          
+          if (files.length > 0) {
+            Array.from(files).forEach((file, index) => {
+              if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                  const previewItem = document.createElement('div');
+                  previewItem.style.cssText = 'position: relative; border: 2px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 1/1;';
+                  
+                  const img = document.createElement('img');
+                  img.src = e.target.result;
+                  img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+                  
+                  const badge = document.createElement('div');
+                  badge.textContent = index === 0 ? 'Primary' : `${index + 1}`;
+                  badge.style.cssText = `position: absolute; top: 4px; left: 4px; background: ${index === 0 ? '#0a0a0a' : '#666'}; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;`;
+                  
+                  previewItem.appendChild(img);
+                  previewItem.appendChild(badge);
+                  previewContainer.appendChild(previewItem);
+                };
+                
+                reader.readAsDataURL(file);
+              }
+            });
+          }
+        }
       });
     </script>
   </body>

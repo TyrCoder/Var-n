@@ -73,7 +73,10 @@
         <div class="side-group">
           <div class="side-title">Menu</div>
           <a class="side-link active" href="#" data-page="overview">Overview</a>
-          <a class="side-link" href="#" data-page="product">Product</a>
+          <a class="side-link" href="#" data-page="pending-products">Pending Products <span class="tag" style="background:#ef4444;margin-left:auto;font-size:10px;padding:2px 6px;">{{ pending_products if pending_products else 0 }}</span></a>
+          <a class="side-link" href="#" data-page="product-edits">Product Edits <span class="tag" style="background:#f59e0b;margin-left:auto;font-size:10px;padding:2px 6px;" id="edits-count">0</span></a>
+          <a class="side-link" href="#" data-page="recovery-requests">Recovery Requests <span class="tag" style="background:#10b981;margin-left:auto;font-size:10px;padding:2px 6px;" id="recovery-count">0</span></a>
+          <a class="side-link" href="#" data-page="product">All Products</a>
           <a class="side-link" href="#" data-page="customer">Customer</a>
           <a class="side-link" href="#" data-page="transactions">Transactions</a>
           <a class="side-link" href="#" data-page="statistics">Statistics</a>
@@ -107,26 +110,22 @@
         <main class="main" id="dashboardContent">
           <!-- Stat cards -->
           <div class="grid stats">
-            <div class="card"><div class="inner"><div class="metric">Total Revenue (PHP)</div><div class="value">₱1,250 <span class="delta">↑ 1%</span></div></div></div>
-            <div class="card"><div class="inner"><div class="metric">Total Customers</div><div class="value">9 <span class="delta" style="color:#ef4444">↓ 0.2%</span></div></div></div>
-            <div class="card"><div class="inner"><div class="metric">Total Transactions</div><div class="value">17 <span class="delta">↑ 1%</span></div></div></div>
-            <div class="card"><div class="inner"><div class="metric">Total Products</div><div class="value">6 <span class="delta">↑ 1%</span></div></div></div>
+            <div class="card"><div class="inner"><div class="metric">Total Users</div><div class="value">{{ total_users if total_users else 0 }}</div></div></div>
+            <div class="card"><div class="inner"><div class="metric">Total Orders</div><div class="value">{{ total_orders if total_orders else 0 }}</div></div></div>
+            <div class="card"><div class="inner"><div class="metric">Pending Products</div><div class="value">{{ pending_products if pending_products else 0 }} <span class="delta" style="color:#ef4444">{% if pending_products %}Needs Review{% endif %}</span></div></div></div>
+            <div class="card"><div class="inner"><div class="metric">Pending Verifications</div><div class="value">{{ (pending_sellers if pending_sellers else 0) + (pending_riders if pending_riders else 0) }} <span class="delta" style="color:#ef4444">{% if pending_sellers or pending_riders %}Sellers/Riders{% endif %}</span></div></div></div>
           </div>
 
           <!-- Charts row -->
           <div class="grid two" style="margin-top:14px">
             <div class="card">
               <div class="inner">
-                <div class="metric">Revenue Growth (USD)</div>
+                <div class="metric">Revenue Growth (PHP)</div>
                 <div class="chart">
                   <div class="bars">
-                    <div class="bar" style="height:30%"></div>
-                    <div class="bar" style="height:42%"></div>
-                    <div class="bar" style="height:25%"></div>
-                    <div class="bar" style="height:48%"></div>
-                    <div class="bar" style="height:33%"></div>
-                    <div class="bar" style="height:55%"></div>
-                    <div class="bar" style="height:38%"></div>
+                    {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                    <div class="bar" style="height:{{ ((weekly_revenue[day] / max_weekly_revenue) * 100)|int if weekly_revenue[day] > 0 else 5 }}%"></div>
+                    {% endfor %}
                   </div>
                   <div class="legend"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
                 </div>
@@ -198,6 +197,758 @@
         </main>
       </section>
     </div>
-    <script src="script.js"></script>
+    <script>
+      // Page templates
+      const pageTemplates = {
+        'pending-products': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Pending Product Approvals</h2>
+              <div id="pending-products-list">Loading pending products...</div>
+            </div>
+          </div>
+        `,
+        'product-edits': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">📝 Product Edit Requests</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">Review and approve changes requested by sellers</p>
+              <div id="product-edits-list">Loading product edits...</div>
+            </div>
+          </div>
+          <div id="edit-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:24px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line)">
+                <h2 style="margin:0;font-size:20px;font-weight:700">Review Product Edit</h2>
+                <button onclick="closeEditModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
+              </div>
+              <div id="edit-modal-body">Loading...</div>
+            </div>
+          </div>
+        `,
+        'recovery-requests': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">♻️ Product Recovery Requests</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">Review requests from sellers to recover archived products</p>
+              <div id="recovery-requests-list">Loading recovery requests...</div>
+            </div>
+          </div>
+        `,
+        'sellers': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Pending Seller Verifications</h2>
+              <div id="pending-sellers-list">Loading pending sellers...</div>
+            </div>
+          </div>
+        `,
+        'riders': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">Pending Rider Verifications</h2>
+              <div id="pending-riders-list">Loading pending riders...</div>
+            </div>
+          </div>
+        `
+      };
+
+      function loadPage(page) {
+        console.log('Loading page:', page);
+        
+        // Remove active class from all links
+        document.querySelectorAll('.side-link').forEach(l => l.classList.remove('active'));
+        // Add active class to clicked link
+        document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+        
+        const content = document.getElementById('dashboardContent');
+        
+        // Handle overview page - reload the page
+        if (page === 'overview') {
+          window.location.reload();
+          return;
+        }
+        
+        if (pageTemplates[page]) {
+          content.innerHTML = pageTemplates[page];
+          
+          // Load dynamic data for specific pages
+          if (page === 'pending-products') {
+            loadPendingProducts();
+          } else if (page === 'product-edits') {
+            loadProductEdits();
+          } else if (page === 'recovery-requests') {
+            loadRecoveryRequests();
+          } else if (page === 'sellers') {
+            loadPendingSellers();
+          } else if (page === 'riders') {
+            loadPendingRiders();
+          }
+        } else {
+          content.innerHTML = `
+            <div class="card">
+              <div class="inner">
+                <h2 style="margin: 0 0 16px;">${page.charAt(0).toUpperCase() + page.slice(1)}</h2>
+                <p style="text-align:center;color:#999;padding:40px;">This page is under construction.</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        // Update page title
+        const pageNames = {
+          'overview': 'Dashboard',
+          'pending-products': 'Pending Products',
+          'product': 'All Products',
+          'customer': 'Customers',
+          'transactions': 'Transactions',
+          'statistics': 'Statistics',
+          'riders': 'Rider Verifications',
+          'sellers': 'Seller Verifications',
+          'log': 'Activity Log'
+        };
+        document.querySelector('.page-title').textContent = pageNames[page] || 'Dashboard';
+      }
+
+      function loadPendingProducts() {
+        console.log('Loading pending products...');
+        fetch('/admin/pending-products')
+          .then(response => {
+            console.log('Products response:', response);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Products data:', data);
+            if (data.products && data.products.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Seller</th>
+                      <th>Price</th>
+                      <th>Stock</th>
+                      <th>Submitted</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.products.forEach(product => {
+                const date = new Date(product.created_at).toLocaleDateString();
+                html += `
+                  <tr id="product-${product.id}">
+                    <td>
+                      <strong>${product.name}</strong><br>
+                      <small style="color: var(--muted)">${product.description ? product.description.substring(0, 50) + '...' : 'No description'}</small>
+                    </td>
+                    <td>${product.store_name}</td>
+                    <td>₱${parseFloat(product.price).toFixed(2)}</td>
+                    <td>${product.stock} pcs</td>
+                    <td>${date}</td>
+                    <td>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="tag" onclick="approveProduct(${product.id})" style="background: #10b981; cursor: pointer; border: none;">Approve</button>
+                        <button class="tag" onclick="rejectProduct(${product.id})" style="background: #ef4444; cursor: pointer; border: none;">Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              document.getElementById('pending-products-list').innerHTML = html;
+            } else {
+              document.getElementById('pending-products-list').innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending products to review</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('pending-products-list').innerHTML = '<p style="color:#ef4444;">Error loading pending products</p>';
+          });
+      }
+
+      function approveProduct(productId) {
+        if (!confirm('Approve this product?')) return;
+        
+        fetch(`/admin/approve-product/${productId}`, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Product approved successfully!');
+            // Remove the row
+            document.getElementById(`product-${productId}`)?.remove();
+            // Update counter
+            const badge = document.querySelector('[data-page="pending-products"] .tag');
+            if (badge) {
+              const count = parseInt(badge.textContent) - 1;
+              badge.textContent = count > 0 ? count : '0';
+            }
+          } else {
+            alert('Error approving product: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error approving product');
+        });
+      }
+
+      function rejectProduct(productId) {
+        if (!confirm('Reject and delete this product? This cannot be undone.')) return;
+        
+        fetch(`/admin/reject-product/${productId}`, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Product rejected and removed');
+            // Remove the row
+            document.getElementById(`product-${productId}`)?.remove();
+            // Update counter
+            const badge = document.querySelector('[data-page="pending-products"] .tag');
+            if (badge) {
+              const count = parseInt(badge.textContent) - 1;
+              badge.textContent = count > 0 ? count : '0';
+            }
+          } else {
+            alert('Error rejecting product: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error rejecting product');
+        });
+      }
+
+      function loadPendingSellers() {
+        console.log('Loading pending sellers...');
+        fetch('/admin/pending-sellers')
+          .then(response => {
+            console.log('Sellers response:', response);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Sellers data:', data);
+            if (data.sellers && data.sellers.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Seller Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Store Name</th>
+                      <th>Submitted</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.sellers.forEach(seller => {
+                const date = new Date(seller.created_at).toLocaleDateString();
+                html += `
+                  <tr id="seller-${seller.id}">
+                    <td><strong>${seller.first_name} ${seller.last_name}</strong></td>
+                    <td>${seller.email}</td>
+                    <td>${seller.phone || 'N/A'}</td>
+                    <td>${seller.store_name}</td>
+                    <td>${date}</td>
+                    <td>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="tag" onclick="approveSeller(${seller.id})" style="background: #10b981; cursor: pointer; border: none;">Approve</button>
+                        <button class="tag" onclick="rejectSeller(${seller.id})" style="background: #ef4444; cursor: pointer; border: none;">Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              document.getElementById('pending-sellers-list').innerHTML = html;
+            } else {
+              document.getElementById('pending-sellers-list').innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending sellers to verify</p>';
+            }
+          })
+          .catch(error => {
+            console.error('Error loading sellers:', error);
+            document.getElementById('pending-sellers-list').innerHTML = '<p style="color:#ef4444;">Error loading pending sellers: ' + error.message + '</p>';
+          });
+      }
+
+      function approveSeller(sellerId) {
+        if (!confirm('Approve this seller?')) return;
+        
+        fetch(`/admin/approve-seller/${sellerId}`, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Seller approved successfully!');
+            document.getElementById(`seller-${sellerId}`)?.remove();
+          } else {
+            alert('Error approving seller: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error approving seller');
+        });
+      }
+
+      function rejectSeller(sellerId) {
+        if (!confirm('Reject this seller application? This will remove their seller account.')) return;
+        
+        fetch(`/admin/reject-seller/${sellerId}`, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Seller application rejected');
+            document.getElementById(`seller-${sellerId}`)?.remove();
+          } else {
+            alert('Error rejecting seller: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error rejecting seller');
+        });
+      }
+
+      function loadPendingRiders() {
+        console.log('Loading pending riders...');
+        fetch('/admin/pending-riders')
+          .then(response => {
+            console.log('Riders response:', response);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Riders data:', data);
+            if (data.riders && data.riders.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Rider Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Vehicle Type</th>
+                      <th>License Number</th>
+                      <th>Applied On</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.riders.forEach(rider => {
+                const date = new Date(rider.created_at).toLocaleDateString();
+                html += `
+                  <tr id="rider-${rider.id}">
+                    <td><strong>${rider.first_name} ${rider.last_name}</strong></td>
+                    <td>${rider.email}</td>
+                    <td>${rider.phone || 'N/A'}</td>
+                    <td>${rider.vehicle_type || 'N/A'}</td>
+                    <td>${rider.license_number || 'N/A'}</td>
+                    <td>${date}</td>
+                    <td>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="tag" onclick="approveRider(${rider.id})" style="background: #10b981; cursor: pointer; border: none;">Approve</button>
+                        <button class="tag" onclick="rejectRider(${rider.id})" style="background: #ef4444; cursor: pointer; border: none;">Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              document.getElementById('pending-riders-list').innerHTML = html;
+            } else {
+              document.getElementById('pending-riders-list').innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending riders to verify</p>';
+            }
+          })
+          .catch(error => {
+            console.error('Error loading riders:', error);
+            document.getElementById('pending-riders-list').innerHTML = '<p style="color:#ef4444;">Error loading pending riders: ' + error.message + '</p>';
+          });
+      }
+
+      function approveRider(riderId) {
+        if (!confirm('Approve this rider?')) return;
+        
+        fetch(`/admin/approve-rider/${riderId}`, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Rider approved successfully!');
+            document.getElementById(`rider-${riderId}`)?.remove();
+          } else {
+            alert('Error approving rider: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error approving rider');
+        });
+      }
+
+      function rejectRider(riderId) {
+        if (!confirm('Reject this rider application?')) return;
+        
+        fetch(`/admin/reject-rider/${riderId}`, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Rider application rejected');
+            document.getElementById(`rider-${riderId}`)?.remove();
+          } else {
+            alert('Error rejecting rider: ' + data.error);
+          }
+        })
+        .catch(error => {
+          alert('Error rejecting rider');
+        });
+      }
+
+      // Product Edits Functions
+      function loadProductEdits() {
+        fetch('/admin/pending-edits')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('product-edits-list');
+            const editsCount = document.getElementById('edits-count');
+            
+            if (data.pending_edits && data.pending_edits.length > 0) {
+              if (editsCount) editsCount.textContent = data.pending_edits.length;
+              
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Store</th>
+                      <th>Changes</th>
+                      <th>Requested</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.pending_edits.forEach(item => {
+                const date = new Date(item.first_request).toLocaleString();
+                html += `
+                  <tr id="edit-row-${item.product_id}">
+                    <td><strong>${item.product_name}</strong></td>
+                    <td>${item.store_name}</td>
+                    <td><span class="tag" style="background:#fef3c7;color:#92400e">${item.edit_count} change${item.edit_count > 1 ? 's' : ''}</span></td>
+                    <td style="color:var(--muted);font-size:13px">${date}</td>
+                    <td>
+                      <button class="tag" onclick="viewEditDetails(${item.product_id})" style="background:#0a0a0a;cursor:pointer;border:none">Review</button>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              if (editsCount) editsCount.textContent = '0';
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">✓ No pending edit requests</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('product-edits-list').innerHTML = '<p style="color:#ef4444">Error loading edits</p>';
+          });
+      }
+      
+      function viewEditDetails(productId) {
+        const modal = document.getElementById('edit-modal');
+        modal.style.display = 'flex';
+        document.getElementById('edit-modal-body').innerHTML = 'Loading...';
+        
+        fetch('/admin/product-edit-details/' + productId)
+          .then(response => response.json())
+          .then(data => {
+            if (data.product && data.edits) {
+              let html = `
+                <div style="background:#f9fafb;padding:16px;border-radius:8px;margin-bottom:20px">
+                  <h3 style="margin:0 0 8px">${data.product.name}</h3>
+                  <p style="margin:0;color:var(--muted);font-size:14px">Store: ${data.product.store_name}</p>
+                </div>
+                
+                <h3 style="margin:20px 0 12px">Requested Changes:</h3>
+              `;
+              
+              data.edits.forEach(edit => {
+                html += `
+                  <div style="background:#f9fafb;padding:12px;border-radius:6px;margin:8px 0;border-left:3px solid #3b82f6" id="edit-item-${edit.id}">
+                    <div style="font-weight:600;color:#0a0a0a;margin-bottom:6px">📝 ${edit.field_name}</div>
+                    <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;font-size:14px">
+                      <div>
+                        <div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Current</div>
+                        <div style="color:#ef4444;text-decoration:line-through">${edit.old_value || '(empty)'}</div>
+                      </div>
+                      <div style="color:var(--muted)">→</div>
+                      <div>
+                        <div style="font-size:11px;text-transform:uppercase;color:var(--muted);margin-bottom:4px">Proposed</div>
+                        <div style="color:#10b981;font-weight:500">${edit.new_value}</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:12px">
+                      <button class="tag" onclick="approveSingleEdit(${edit.id})" style="background:#10b981;cursor:pointer;border:none">✓ Approve</button>
+                      <button class="tag" onclick="rejectSingleEdit(${edit.id})" style="background:#ef4444;cursor:pointer;border:none">✗ Reject</button>
+                    </div>
+                  </div>
+                `;
+              });
+              
+              html += `
+                <div style="display:flex;gap:12px;margin-top:24px;padding-top:20px;border-top:2px solid var(--line)">
+                  <button class="tag" onclick="approveAllProductEdits(${productId})" style="background:#10b981;cursor:pointer;border:none;padding:10px 16px">✓ Approve All Changes</button>
+                  <button class="tag" onclick="closeEditModal()" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px">Close</button>
+                </div>
+              `;
+              
+              document.getElementById('edit-modal-body').innerHTML = html;
+            }
+          })
+          .catch(error => {
+            document.getElementById('edit-modal-body').innerHTML = '<p style="color:#ef4444">Error loading details</p>';
+          });
+      }
+      
+      function approveSingleEdit(editId) {
+        if (!confirm('Approve this change?')) return;
+        
+        fetch('/admin/approve-edit/' + editId, { method: 'POST' })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('✓ Edit approved successfully!');
+              document.getElementById('edit-item-' + editId)?.remove();
+              
+              // Check if any edits remain
+              if (!document.querySelectorAll('[id^="edit-item-"]').length) {
+                closeEditModal();
+                loadProductEdits();
+              }
+            } else {
+              alert('Error: ' + data.error);
+            }
+          })
+          .catch(error => alert('Error approving edit'));
+      }
+      
+      function rejectSingleEdit(editId) {
+        const notes = prompt('Rejection reason (optional):');
+        if (notes === null) return;
+        
+        const formData = new FormData();
+        formData.append('notes', notes);
+        
+        fetch('/admin/reject-edit/' + editId, { 
+          method: 'POST',
+          body: formData
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Edit rejected');
+              document.getElementById('edit-item-' + editId)?.remove();
+              
+              // Check if any edits remain
+              if (!document.querySelectorAll('[id^="edit-item-"]').length) {
+                closeEditModal();
+                loadProductEdits();
+              }
+            } else {
+              alert('Error: ' + data.error);
+            }
+          })
+          .catch(error => alert('Error rejecting edit'));
+      }
+      
+      function approveAllProductEdits(productId) {
+        if (!confirm('Approve ALL changes for this product?')) return;
+        
+        const editItems = document.querySelectorAll('[id^="edit-item-"]');
+        const promises = [];
+        
+        editItems.forEach(item => {
+          const editId = item.id.replace('edit-item-', '');
+          promises.push(fetch('/admin/approve-edit/' + editId, { method: 'POST' }));
+        });
+        
+        Promise.all(promises)
+          .then(() => {
+            alert('✓ All changes approved successfully!');
+            closeEditModal();
+            loadProductEdits();
+          })
+          .catch(error => alert('Error approving all edits'));
+      }
+      
+      function closeEditModal() {
+        document.getElementById('edit-modal').style.display = 'none';
+      }
+      
+      // Recovery Requests Functions
+      function loadRecoveryRequests() {
+        fetch('/admin/pending-recoveries')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('recovery-requests-list');
+            const recoveryCount = document.getElementById('recovery-count');
+            
+            if (data.pending_recoveries && data.pending_recoveries.length > 0) {
+              if (recoveryCount) recoveryCount.textContent = data.pending_recoveries.length;
+              
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Store</th>
+                      <th>Price</th>
+                      <th>Reason</th>
+                      <th>Requested</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.pending_recoveries.forEach(item => {
+                const date = new Date(item.requested_at).toLocaleString();
+                html += `
+                  <tr id="recovery-row-${item.request_id}">
+                    <td><strong>${item.product_name}</strong><br><small style="color:var(--muted)">SKU: ${item.sku || 'N/A'}</small></td>
+                    <td>${item.store_name}</td>
+                    <td>₱${parseFloat(item.price).toFixed(2)}</td>
+                    <td style="max-width:200px;font-size:13px">${item.reason || 'No reason provided'}</td>
+                    <td style="color:var(--muted);font-size:13px">${date}</td>
+                    <td>
+                      <button class="tag" onclick="approveRecovery(${item.request_id})" style="background:#10b981;cursor:pointer;border:none;margin-right:4px">✓ Approve</button>
+                      <button class="tag" onclick="rejectRecovery(${item.request_id})" style="background:#ef4444;cursor:pointer;border:none">✗ Reject</button>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              if (recoveryCount) recoveryCount.textContent = '0';
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">✓ No pending recovery requests</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('recovery-requests-list').innerHTML = '<p style="color:#ef4444">Error loading recovery requests</p>';
+          });
+      }
+      
+      function approveRecovery(requestId) {
+        if (!confirm('Approve this recovery request? The product will be restored to active status.')) return;
+        
+        fetch('/admin/approve-recovery/' + requestId, { method: 'POST' })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('✓ Recovery approved! Product restored.');
+              document.getElementById('recovery-row-' + requestId)?.remove();
+              
+              // Update count
+              const recoveryCount = document.getElementById('recovery-count');
+              if (recoveryCount) {
+                const count = parseInt(recoveryCount.textContent) - 1;
+                recoveryCount.textContent = count > 0 ? count : '0';
+              }
+              
+              // Reload if no items left
+              if (!document.querySelectorAll('[id^="recovery-row-"]').length) {
+                loadRecoveryRequests();
+              }
+            } else {
+              alert('Error: ' + data.error);
+            }
+          })
+          .catch(error => alert('Error approving recovery'));
+      }
+      
+      function rejectRecovery(requestId) {
+        const notes = prompt('Rejection reason (optional):');
+        if (notes === null) return;
+        
+        const formData = new FormData();
+        formData.append('notes', notes);
+        
+        fetch('/admin/reject-recovery/' + requestId, { 
+          method: 'POST',
+          body: formData
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Recovery request rejected');
+              document.getElementById('recovery-row-' + requestId)?.remove();
+              
+              // Update count
+              const recoveryCount = document.getElementById('recovery-count');
+              if (recoveryCount) {
+                const count = parseInt(recoveryCount.textContent) - 1;
+                recoveryCount.textContent = count > 0 ? count : '0';
+              }
+              
+              // Reload if no items left
+              if (!document.querySelectorAll('[id^="recovery-row-"]').length) {
+                loadRecoveryRequests();
+              }
+            } else {
+              alert('Error: ' + data.error);
+            }
+          })
+          .catch(error => alert('Error rejecting recovery'));
+      }
+      
+      // Load edit count on page load
+      fetch('/admin/pending-edits')
+        .then(response => response.json())
+        .then(data => {
+          const editsCount = document.getElementById('edits-count');
+          if (editsCount && data.pending_edits) {
+            editsCount.textContent = data.pending_edits.length;
+          }
+        })
+        .catch(error => console.error('Error loading edit count:', error));
+      
+      // Load recovery count on page load
+      fetch('/admin/pending-recoveries')
+        .then(response => response.json())
+        .then(data => {
+          const recoveryCount = document.getElementById('recovery-count');
+          if (recoveryCount && data.pending_recoveries) {
+            recoveryCount.textContent = data.pending_recoveries.length;
+          }
+        })
+        .catch(error => console.error('Error loading recovery count:', error));
+
+      // Add click handlers for sidebar navigation
+      document.querySelectorAll('.side-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          const page = e.currentTarget.getAttribute('data-page');
+          if (page && e.currentTarget.getAttribute('href') === '#') {
+            e.preventDefault();
+            loadPage(page);
+          }
+        });
+      });
+    </script>
   </body>
 </html>

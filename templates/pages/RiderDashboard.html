@@ -4,6 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Rider Dashboard — Varón</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
       :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef;--success:#10b981;--warning:#f59e0b;--error:#ef4444}
       *{box-sizing:border-box}
@@ -17,7 +21,7 @@
       .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
       .side-group{margin-top:8px}
       .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
-      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea}
+      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea;cursor:pointer;user-select:none}
       .side-link.active,.side-link:hover{background:#141414;color:#fff}
 
       .content{display:flex;flex-direction:column}
@@ -52,15 +56,18 @@
       .status.delivered{background:#dcfce7;color:#15803d}
       .status.cancelled{background:#fee2e2;color:#991b1b}
 
-      /* Map placeholder */
-      .map-container{height:300px;background:#f3f4f6;border-radius:8px;position:relative;overflow:hidden}
-      .map-placeholder{position:absolute;inset:0;background:url('https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/121.4147,14.2691,13,0/800x300@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw');background-size:cover}
+      /* Map container */
+      .map-container{height:400px;background:#f3f4f6;border-radius:8px;position:relative;overflow:hidden;border:1px solid var(--line)}
+      #serviceMap{height:100%;width:100%;z-index:1}
 
       /* Area coverage section */
       .coverage-area{margin-top:14px;padding:14px;background:#f8fafc;border-radius:8px}
-      .coverage-title{font-weight:600;margin-bottom:8px}
-      .coverage-details{color:var(--muted);font-size:14px}
-      .coverage-map{height:200px;margin-top:10px;border-radius:8px;background:#eee;overflow:hidden}
+      .coverage-title{font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+      .coverage-title .icon{font-size:20px}
+      .coverage-details{color:var(--muted);font-size:14px;line-height:1.6}
+      .coverage-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:6px}
+      .coverage-list li{padding:8px 10px;background:#fff;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px}
+      .coverage-list li:before{content:'📍';font-size:14px}
 
       @media (max-width:1000px){
         .app{grid-template-columns:1fr}
@@ -116,15 +123,30 @@
         <main class="main" id="mainContent">
           <!-- Overview Section -->
           <div id="overview-section">
-            <!-- Coverage Area -->
-            <div class="coverage-area">
-              <div class="coverage-title">Your Service Area: Sta Cruz, Laguna</div>
-              <div class="coverage-details">
-                Covering: Sta Cruz proper, Patimbao, Santissima, Poblacion I-V, and surrounding barangays
-              </div>
-              <div class="coverage-map">
-                <!-- Map placeholder for Sta Cruz, Laguna -->
-                <div class="map-placeholder" style="background-image:url('https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/121.4147,14.2691,13,0/800x200@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw')"></div>
+            <!-- Coverage Area with Interactive Map -->
+            <div class="card">
+              <div class="inner">
+                <div class="coverage-title">
+                  <span class="icon">🗺️</span>
+                  Your Service Area: {{ rider.service_area if rider and rider.service_area else 'Sta Cruz, Laguna' }}
+                </div>
+                <div class="coverage-details">
+                  Covering: Sta Cruz proper, Patimbao, Santissima, Poblacion I-V, and surrounding barangays
+                </div>
+                
+                <!-- Interactive Map -->
+                <div class="map-container" style="margin-top:12px">
+                  <div id="serviceMap"></div>
+                </div>
+
+                <!-- Barangays List -->
+                <ul class="coverage-list">
+                  <li>Sta Cruz Proper</li>
+                  <li>Patimbao</li>
+                  <li>Santissima</li>
+                  <li>Poblacion I-V</li>
+                  <li>Surrounding Barangays</li>
+                </ul>
               </div>
             </div>
 
@@ -133,25 +155,25 @@
               <div class="card">
                 <div class="inner">
                   <div class="metric">Today's Earnings</div>
-                  <div class="value">₱850 <span class="delta">↑ 12%</span></div>
+                  <div class="value">₱{{ "%.2f"|format(earnings_today) }}</div>
                 </div>
               </div>
               <div class="card">
                 <div class="inner">
                   <div class="metric">Deliveries Today</div>
-                  <div class="value">6 <span class="delta">↑ 2</span></div>
+                  <div class="value">{{ deliveries_today }}</div>
                 </div>
               </div>
               <div class="card">
                 <div class="inner">
                   <div class="metric">Rating</div>
-                  <div class="value">4.9 <span class="delta">↑ 0.1</span></div>
+                  <div class="value">{{ "%.1f"|format(rating) }}</div>
                 </div>
               </div>
               <div class="card">
                 <div class="inner">
                   <div class="metric">Acceptance Rate</div>
-                  <div class="value">95% <span class="delta down">↓ 2%</span></div>
+                  <div class="value">{{ acceptance_rate }}%</div>
                 </div>
               </div>
             </div>
@@ -175,20 +197,21 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>#SC2530</td>
-                        <td>Poblacion I → Poblacion IV</td>
-                        <td>10:45 AM</td>
-                        <td><span class="status delivered">Delivered</span></td>
-                        <td>₱85</td>
-                      </tr>
-                      <tr>
-                        <td>#SC2529</td>
-                        <td>Market Area → Patimbao</td>
-                        <td>9:30 AM</td>
-                        <td><span class="status delivered">Delivered</span></td>
-                        <td>₱65</td>
-                      </tr>
+                      {% if recent_deliveries and recent_deliveries|length > 0 %}
+                        {% for delivery in recent_deliveries %}
+                        <tr>
+                          <td>#{{ delivery.order_number }}</td>
+                          <td>{{ delivery.pickup_location or 'N/A' }} → {{ delivery.delivery_location or 'N/A' }}</td>
+                          <td>{{ delivery.delivered_at.strftime('%I:%M %p') if delivery.delivered_at else 'N/A' }}</td>
+                          <td><span class="status {{ delivery.status }}">{{ delivery.status|title|replace('_', ' ') }}</span></td>
+                          <td>₱{{ "%.2f"|format(delivery.total_amount * 0.15) }}</td>
+                        </tr>
+                        {% endfor %}
+                      {% else %}
+                        <tr>
+                          <td colspan="5" style="text-align:center;color:#999">No recent deliveries</td>
+                        </tr>
+                      {% endif %}
                     </tbody>
                   </table>
                 </div>
@@ -202,7 +225,7 @@
               <div class="inner">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <div class="metric">Active Deliveries</div>
-                  <div class="tag" style="background:#10b981;color:#fff">2 Active Orders</div>
+                  <div class="tag" style="background:#10b981;color:#fff">{{ active_deliveries|length if active_deliveries else 0 }} Active Orders</div>
                 </div>
                 <div style="overflow:auto">
                   <table>
@@ -217,22 +240,22 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td>#SC2531</td>
-                        <td>Jollibee Sta Cruz</td>
-                        <td>Patimbao, Sta Cruz</td>
-                        <td><span class="status in-transit">In Transit</span></td>
-                        <td>₱75</td>
-                        <td><a class="tag" style="background:#efefef;color:#0a0a0a">Navigate</a></td>
-                      </tr>
-                      <tr>
-                        <td>#SC2532</td>
-                        <td>Mercury Drug Sta Cruz</td>
-                        <td>Santissima, Sta Cruz</td>
-                        <td><span class="status pending">Pending Pickup</span></td>
-                        <td>₱60</td>
-                        <td><a class="tag" style="background:#efefef;color:#0a0a0a">Start</a></td>
-                      </tr>
+                      {% if active_deliveries and active_deliveries|length > 0 %}
+                        {% for delivery in active_deliveries %}
+                        <tr>
+                          <td>#{{ delivery.order_number }}</td>
+                          <td>{{ delivery.pickup_location or 'Pickup Location' }}</td>
+                          <td>{{ delivery.delivery_location or 'Delivery Location' }}</td>
+                          <td><span class="status {{ delivery.status.replace('_', '-') }}">{{ delivery.status|title|replace('_', ' ') }}</span></td>
+                          <td>₱{{ "%.2f"|format(delivery.total_amount * 0.15) }}</td>
+                          <td><a href="#" class="tag" style="background:#efefef;color:#0a0a0a">Navigate</a></td>
+                        </tr>
+                        {% endfor %}
+                      {% else %}
+                        <tr>
+                          <td colspan="6" style="text-align:center;color:#999">No active deliveries</td>
+                        </tr>
+                      {% endif %}
                     </tbody>
                   </table>
                 </div>
@@ -418,15 +441,23 @@
                   <div style="display:grid;gap:10px">
                     <div style="display:flex;justify-content:space-between">
                       <div>Vehicle Type</div>
-                      <div>Motorcycle</div>
+                      <div>{{ rider.vehicle_type|title if rider and rider.vehicle_type else 'Not specified' }}</div>
                     </div>
                     <div style="display:flex;justify-content:space-between">
                       <div>License Number</div>
-                      <div>N01-XX-XXXXX</div>
+                      <div>{{ rider.license_number if rider and rider.license_number else 'Not provided' }}</div>
                     </div>
                     <div style="display:flex;justify-content:space-between">
                       <div>Contact Number</div>
-                      <div>+63 XXX XXX XXXX</div>
+                      <div>{{ user.phone if user and user.phone else 'Not provided' }}</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between">
+                      <div>Email</div>
+                      <div>{{ user.email if user and user.email else 'N/A' }}</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between">
+                      <div>Total Deliveries</div>
+                      <div>{{ total_deliveries }}</div>
                     </div>
                   </div>
                 </div>
@@ -449,6 +480,50 @@
     </style>
 
     <script>
+      // Initialize Interactive Map
+      function initializeMap() {
+        // Coordinates for Sta Cruz, Laguna
+        const staCruzCenter = [14.2691, 121.4147];
+        
+        // Initialize the map
+        const map = L.map('serviceMap').setView(staCruzCenter, 13);
+        
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19
+        }).addTo(map);
+        
+        // Add a marker for Sta Cruz center
+        const marker = L.marker(staCruzCenter).addTo(map);
+        marker.bindPopup('<b>Sta Cruz, Laguna</b><br>Your Service Area').openPopup();
+        
+        // Define service area boundaries (approximate circle)
+        const serviceArea = L.circle(staCruzCenter, {
+          color: '#10b981',
+          fillColor: '#10b981',
+          fillOpacity: 0.15,
+          radius: 5000 // 5km radius
+        }).addTo(map);
+        
+        // Add markers for key barangays
+        const barangays = [
+          { name: 'Patimbao', coords: [14.2850, 121.4200] },
+          { name: 'Santissima', coords: [14.2600, 121.4100] },
+          { name: 'Poblacion I', coords: [14.2691, 121.4147] },
+          { name: 'Poblacion II', coords: [14.2700, 121.4160] },
+        ];
+        
+        barangays.forEach(barangay => {
+          L.marker(barangay.coords)
+            .addTo(map)
+            .bindPopup(`<b>${barangay.name}</b><br>Service Available`);
+        });
+        
+        // Add scale control
+        L.control.scale().addTo(map);
+      }
+      
       // Simple function to switch between sections
       function switchSection(sectionId) {
         // Hide all sections
@@ -481,6 +556,9 @@
         // Show overview section by default
         document.getElementById('overview-section').style.display = 'block';
         
+        // Initialize the map for Sta Cruz, Laguna
+        initializeMap();
+        
         // Add click handler for "View History" link
         document.querySelectorAll('.show-section').forEach(link => {
           link.addEventListener('click', function(e) {
@@ -491,6 +569,25 @@
             }
           });
         });
+        
+        // Add click handlers to all sidebar links as backup
+        document.querySelectorAll('.side-link').forEach(link => {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Extract section from onclick attribute or text
+            const onclickAttr = this.getAttribute('onclick');
+            if (onclickAttr) {
+              // Extract section name from onclick="switchSection('section'); return false;"
+              const match = onclickAttr.match(/switchSection\('(.+?)'\)/);
+              if (match && match[1]) {
+                switchSection(match[1]);
+              }
+            }
+          });
+        });
+        
+        console.log('Rider Dashboard initialized');
       });
     </script>
   </body>
