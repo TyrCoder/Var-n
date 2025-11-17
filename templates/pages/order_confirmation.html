@@ -261,5 +261,13 @@
     </main>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+      // Clear cart after successful order
+      localStorage.removeItem('cart');
+      
+      // Trigger an event or flag that the user now has orders
+      // This can be used by the dashboard to show the "My Orders" link
+      localStorage.setItem('hasOrders', 'true');
+    </script>
   </body>
 </html>

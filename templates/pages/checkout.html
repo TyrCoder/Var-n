@@ -413,13 +413,94 @@
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>
-      let cart = JSON.parse(localStorage.getItem('cart')) || [];
+      // Get cart - try both possible keys
+      function getCart() {
+        try {
+          // Try varon_cart first (new key)
+          let cartData = localStorage.getItem('varon_cart');
+          if (cartData) {
+            return JSON.parse(cartData);
+          }
+          // Fallback to cart if it exists
+          cartData = localStorage.getItem('cart');
+          if (cartData) {
+            return JSON.parse(cartData);
+          }
+          return {};
+        } catch (e) {
+          console.error('Error reading cart:', e);
+          return {};
+        }
+      }
+
+      let cart = getCart();
+      let validatedCart = [];
       let selectedPayment = 'cod';
       const shippingFee = 100;
 
-      // Redirect if cart is empty
-      if (cart.length === 0) {
-        window.location.href = '{{ url_for("buyer_dashboard") if session.get("logged_in") and session.get("role") == "buyer" else url_for("index") }}';
+      // Debug: log cart contents
+      console.log('Cart contents:', cart);
+      console.log('Cart type:', Array.isArray(cart) ? 'Array' : 'Object');
+      console.log('Cart length:', Array.isArray(cart) ? cart.length : Object.keys(cart).length);
+
+      // Check if cart is empty (handle both array and object formats)
+      const cartIsEmpty = Array.isArray(cart) 
+        ? cart.length === 0 
+        : Object.keys(cart).filter(key => cart[key] && (cart[key].qty > 0 || cart[key].quantity > 0)).length === 0;
+      
+      if (cartIsEmpty) {
+        setTimeout(() => {
+          alert('Your cart is empty. Please add items before checking out.');
+          window.location.href = '{{ url_for("buyer_dashboard") if session.get("logged_in") and session.get("role") == "buyer" else url_for("index") }}';
+        }, 100);
+      } else {
+        // Validate cart with database
+        validateCartWithDatabase();
+      }
+
+      // Validate cart items with database
+      function validateCartWithDatabase() {
+        // Convert cart to array format for API
+        let cartArray;
+        if (Array.isArray(cart)) {
+          cartArray = cart.map(item => ({
+            id: item.id || item.product_id,
+            quantity: parseInt(item.quantity || item.qty) || 1,
+            size: item.size || '',
+            color: item.color || ''
+          }));
+        } else {
+          cartArray = Object.entries(cart).map(([id, item]) => ({
+            id: item.product_id || id,
+            quantity: parseInt(item.qty || item.quantity) || 1,
+            size: item.size || '',
+            color: item.color || ''
+          }));
+        }
+
+        fetch('/api/validate-cart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ items: cartArray })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.items) {
+            validatedCart = data.items;
+            console.log('Validated cart:', validatedCart);
+            displayOrderSummary();
+          } else {
+            console.error('Failed to validate cart:', data.error);
+            alert('Unable to validate cart items. Please try again.');
+          }
+        })
+        .catch(error => {
+          console.error('Error validating cart:', error);
+          // Fallback to displaying from localStorage
+          displayOrderSummary();
+        });
       }
 
       function displayOrderSummary() {
@@ -427,22 +508,52 @@
         const subtotalEl = document.getElementById('subtotal');
         const totalEl = document.getElementById('total');
         
-        // Display items
-        orderItems.innerHTML = cart.map(item => `
+        // Use validated cart from database if available, otherwise use localStorage cart
+        let cartArray;
+        if (validatedCart.length > 0) {
+          cartArray = validatedCart;
+        } else {
+          // Fallback to localStorage cart
+          if (Array.isArray(cart)) {
+            cartArray = cart.map(item => ({
+              id: item.id || item.product_id,
+              name: item.name || item.title || 'Product',
+              price: parseFloat(item.price) || 0,
+              quantity: parseInt(item.quantity || item.qty) || 1,
+              size: item.size || '',
+              color: item.color || ''
+            }));
+          } else {
+            cartArray = Object.entries(cart).map(([id, item]) => ({
+              id: item.product_id || id,
+              name: item.title || item.name || 'Product',
+              price: parseFloat(item.price) || 0,
+              quantity: parseInt(item.qty || item.quantity) || 1,
+              size: item.size || '',
+              color: item.color || ''
+            }));
+          }
+        }
+        
+        // Display items with stock information
+        orderItems.innerHTML = cartArray.map(item => `
           <div class="order-item">
             <div class="order-item-info">
               <h4>${item.name}</h4>
+              ${item.size || item.color ? `<p style="color:#666;font-size:13px;">${[item.size, item.color].filter(Boolean).join(', ')}</p>` : ''}
+              ${item.seller_name ? `<p style="color:#999;font-size:12px;">Sold by: ${item.seller_name}</p>` : ''}
               <p>Quantity: ${item.quantity}</p>
-              <p>₱${parseFloat(item.price).toFixed(2)} each</p>
+              ${item.stock_available !== undefined && item.stock_available < item.quantity ? `<p style="color:#dc2626;font-size:12px;">⚠️ Only ${item.stock_available} in stock</p>` : ''}
+              <p>₱${item.price.toFixed(2)} each</p>
             </div>
             <div class="order-item-price">
-              ₱${(parseFloat(item.price) * item.quantity).toFixed(2)}
+              ₱${(item.price * item.quantity).toFixed(2)}
             </div>
           </div>
         `).join('');
         
         // Calculate totals
-        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const subtotal = cartArray.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const total = subtotal + shippingFee;
         
         subtotalEl.textContent = `₱${subtotal.toFixed(2)}`;
@@ -476,6 +587,36 @@
         
         // Get form data
         const formData = new FormData(form);
+        
+        // Use validated cart from database for accurate pricing
+        let cartArray = validatedCart.length > 0 ? validatedCart : [];
+        
+        // Fallback if validation failed
+        if (cartArray.length === 0) {
+          if (Array.isArray(cart)) {
+            cartArray = cart.map(item => ({
+              id: item.id || item.product_id,
+              name: item.name || item.title || 'Product',
+              price: parseFloat(item.price) || 0,
+              quantity: parseInt(item.quantity || item.qty) || 1,
+              size: item.size || '',
+              color: item.color || ''
+            }));
+          } else {
+            cartArray = Object.entries(cart).map(([id, item]) => ({
+              id: item.product_id || id,
+              name: item.title || item.name || 'Product',
+              price: parseFloat(item.price) || 0,
+              quantity: parseInt(item.qty || item.quantity) || 1,
+              size: item.size || '',
+              color: item.color || ''
+            }));
+          }
+        }
+        
+        const subtotal = cartArray.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const total = subtotal + shippingFee;
+        
         const orderData = {
           shipping: {
             firstName: formData.get('firstName'),
@@ -483,17 +624,19 @@
             email: formData.get('email'),
             phone: formData.get('phone'),
             address: formData.get('address'),
+            barangay: formData.get('barangay') || '',
             city: formData.get('city'),
             province: formData.get('province'),
             postalCode: formData.get('postalCode'),
             country: formData.get('country'),
-            notes: formData.get('notes')
+            notes: formData.get('notes') || ''
           },
           payment_method: selectedPayment,
-          items: cart,
-          subtotal: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+          payment_provider: null,
+          items: cartArray,
+          subtotal: subtotal,
           shipping_fee: shippingFee,
-          total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingFee
+          total: total
         };
         
         // Disable button
@@ -515,7 +658,12 @@
             showSnackbar('Order placed successfully!', 'success');
             
             // Clear cart
-            localStorage.removeItem('cart');
+            localStorage.removeItem('varon_cart');
+            
+            // Update cart badge
+            if (typeof updateCartBadge === 'function') {
+              updateCartBadge();
+            }
             
             // Redirect to order confirmation
             setTimeout(() => {

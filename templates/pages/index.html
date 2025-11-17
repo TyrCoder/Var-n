@@ -14,12 +14,12 @@
       <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
       <h1 class="brand"><a href="javascript:void(0)" onclick="showSection('home')" style="color:#fff;text-decoration:none">Varón</a></h1>
       <nav class="top-nav" id="topNav">
-        <a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Your Order</a>
+        <a href="{{ url_for('login') }}">Track Your Order</a>
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
         <a href="javascript:void(0)" onclick="showSection('about')">About</a>
         <a href="{{ url_for('login') }}" id="accountLink" class="account">Login</a>
-        <a href="#" onclick="openModal('cartModal')" id="cartToggle" class="account">Cart <span id="cartCount">0</span></a>
+        <a href="{{ url_for('login') }}" id="cartToggle" class="account">Cart <span id="cartCount">0</span></a>
       </nav>
     </header>
 
@@ -121,14 +121,16 @@
       <section class="product-grid" id="productGrid">
         {% if products %}
           {% for product in products %}
-            <article class="product" data-category="men" data-genre="{{ product.category_slug or 'all' }}" data-product-id="{{ product.id }}">
-              <div class="media" style="background-image:url('{{ product.image_url or 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=1200&auto=format&fit=crop' }}')"></div>
-              <div class="meta">
-                <h3 class="title">{{ product.name }}</h3>
-                <div class="price">₱{{ "{:,.2f}".format(product.price) }}</div>
-              </div>
-              <button class="add-cart" aria-label="Add {{ product.name }} to cart" data-name="{{ product.name }}" data-price="{{ product.price }}" data-id="{{ product.id }}">＋</button>
-            </article>
+            <a href="/login" style="text-decoration:none;color:inherit">
+              <article class="product" data-category="men" data-genre="{{ product.category_slug or 'all' }}" data-product-id="{{ product.id }}" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:transform 0.2s,box-shadow 0.2s;cursor:pointer" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'">
+                <div class="product-image" style="position:relative;width:100%;height:280px;background:#f5f5f5;background-image:url('{{ product.image_url or 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=1200&auto=format&fit=crop' }}');background-size:cover;background-position:center">
+                </div>
+                <div class="product-info" style="padding:16px">
+                  <h3 style="margin:0 0 6px;font-size:15px;font-weight:500;color:#0a0a0a;line-height:1.3">{{ product.name }}</h3>
+                  <div class="price" style="font-size:16px;font-weight:600;color:#0a0a0a">₱{{ "{:,.2f}".format(product.price) }}</div>
+                </div>
+              </article>
+            </a>
           {% endfor %}
         {% else %}
           <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
@@ -185,12 +187,12 @@
     <div class="overlay" id="overlay"></div>
     <aside class="sidebar" id="sidebar">
       <nav class="sidebar-nav">
-        <a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Your Order</a>
+        <a href="{{ url_for('login') }}">Track Your Order</a>
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
         <a href="javascript:void(0)" onclick="showSection('about')">About</a>
         <a href="{{ url_for('login') }}" class="account">Login</a>
-        <a href="#" onclick="openModal('cartModal')" class="account">Cart <span id="cartCountSidebar">0</span></a>
+        <a href="{{ url_for('login') }}" class="account">Cart <span id="cartCountSidebar">0</span></a>
       </nav>
     </aside>
 
@@ -244,17 +246,37 @@
 
     <!-- Cart Modal -->
     <div id="cartModal" class="modal" aria-hidden="true">
-      <div class="cart-card" style="margin:20px; position: relative;">
-        <button onclick="closeModal('cartModal')" style="position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; font-size: 20px; color: #fff; background: #000; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
-        <h2 style="margin: 0 0 16px;">Your Cart</h2>
+      <div class="cart-card">
+        <button onclick="closeModal('cartModal')" class="cart-close-btn" aria-label="Close cart">×</button>
+        <h2 style="text-align:left;margin-bottom:20px">Your Cart</h2>
         <div id="cartList" class="cart-list">
-          <!-- Cart items will be inserted here -->
+          <!-- Empty cart state -->
+          <div class="empty-cart-state" style="text-align:center;padding:60px 20px">
+            <div style="font-size:80px;color:#ddd;margin-bottom:16px">
+              <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline-block">
+                <path d="M9 2L7.17 4H3c-.55 0-1 .45-1 1s.45 1 1 1h1l1.6 8.6c.18 1 1.05 1.73 2.06 1.73h7.72c1.01 0 1.88-.73 2.06-1.73L19 6h1c.55 0 1-.45 1-1s-.45-1-1-1h-4.17L14 2H9z"/>
+                <circle cx="9" cy="20" r="1"/>
+                <circle cx="16" cy="20" r="1"/>
+              </svg>
+            </div>
+            <h3 style="font-size:18px;font-weight:400;color:#999;margin:0 0 8px">Your cart is empty</h3>
+            <p style="font-size:14px;color:#bbb;margin:0">Add some products to get started!</p>
+          </div>
         </div>
-        <div class="cart-actions">
-          <div class="cart-total">Total: <strong id="cartTotal">₱0.00</strong></div>
-          <div style="display:flex;gap:8px">
-            <button onclick="clearCart()" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a">Clear Cart</button>
-            <button id="checkoutBtn" class="btn-cta">Checkout</button>
+        <div class="cart-totals">
+          <div style="padding:24px 0;border-top:1px solid #eee">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <span style="color:#666;font-size:15px">Subtotal:</span>
+              <span style="font-size:16px;font-weight:500" id="cartSubtotal">₱0.00</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+              <span style="font-size:18px;font-weight:600;color:#0a0a0a">Total:</span>
+              <span style="font-size:20px;font-weight:600;color:#0a0a0a" id="cartTotal">₱0.00</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px">
+            <button onclick="clearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
+            <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
           </div>
         </div>
       </div>
@@ -287,272 +309,7 @@
       </div>
     </div>
 
-    <!-- Product Detail Modal -->
-    <div id="productModal" class="modal" aria-hidden="true">
-      <div class="cart-card" style="margin:20px; max-width:1000px; position: relative; background: #fff; padding: 0;">
-        <button onclick="closeModal('productModal')" style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; font-size: 20px; color: #666; background: #fff; border: 1px solid #e0e0e0; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10;">×</button>
-        
-        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0;">
-          <!-- Product Images -->
-          <div style="background: #f8f8f8; padding: 40px;">
-            <div id="productModalImage" style="width: 100%; height: 500px; background-size: contain; background-repeat: no-repeat; background-position: center; background-color: #f8f8f8; margin-bottom: 20px;"></div>
-            <div id="productThumbnails" style="display: flex; gap: 10px; justify-content: center;">
-              <!-- Thumbnails will be inserted here -->
-            </div>
-          </div>
-          
-          <!-- Product Info -->
-          <div style="padding: 40px 30px;">
-            <h2 id="productModalName" style="margin: 0 0 8px; font-size: 20px; font-weight: 600; line-height: 1.4;">Product Name</h2>
-            
-            <div style="margin-bottom: 20px;">
-              <div id="productModalPrice" style="font-size: 20px; font-weight: 700; color: #0a0a0a;">₱0.00</div>
-              <small style="color: #666; font-size: 13px;">Tax included</small>
-            </div>
-            
-            <!-- Color Selection -->
-            <div style="margin-bottom: 24px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <strong style="font-size: 14px;">Color: <span id="selectedColorName" style="font-weight: 400;">Select a color</span></strong>
-              </div>
-              <div id="productModalColors" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <!-- Color swatches will be inserted here -->
-              </div>
-            </div>
-            
-            <!-- Size Selection -->
-            <div style="margin-bottom: 24px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <strong style="font-size: 14px;">Size: <span id="selectedSizeName" style="font-weight: 400;">Select a size</span></strong>
-                <a href="#" style="font-size: 13px; color: #0a0a0a; text-decoration: underline;">Check my size</a>
-              </div>
-              <div id="productModalSizes" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;">
-                <!-- Size buttons will be inserted here -->
-              </div>
-            </div>
-            
-            <!-- Quantity -->
-            <div style="margin-bottom: 24px;">
-              <strong style="display: block; margin-bottom: 12px; font-size: 14px;">Quantity</strong>
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <button onclick="decreaseQuantity()" style="width: 40px; height: 40px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 18px; border-radius: 4px;">−</button>
-                <input type="number" id="productQuantity" value="1" min="1" readonly style="width: 60px; height: 40px; text-align: center; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 16px;">
-                <button onclick="increaseQuantity()" style="width: 40px; height: 40px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 18px; border-radius: 4px;">+</button>
-              </div>
-            </div>
-            
-            <!-- Stock Status -->
-            <div id="stockStatus" style="margin-bottom: 20px;">
-              <span style="color: #10b981; font-size: 14px; font-weight: 500;">✓ In stock</span>
-            </div>
-            
-            <!-- Add to Cart Button -->
-            <button id="productModalAddCart" class="btn-cta" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 600; margin-bottom: 12px;" disabled>Select Size and Color</button>
-            
-            <!-- Description -->
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-              <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 10px;">Product Details</h3>
-              <p id="productModalDescription" style="color: #666; font-size: 14px; line-height: 1.6; margin: 0;">Product description will appear here.</p>
-              
-              <div style="margin-top: 16px;">
-                <div style="font-size: 13px; color: #666; margin-bottom: 4px;"><strong>Brand:</strong> <span id="productModalBrand">-</span></div>
-                <div style="font-size: 13px; color: #666; margin-bottom: 4px;"><strong>SKU:</strong> <span id="productModalSKU">-</span></div>
-                <div style="font-size: 13px; color: #666;"><strong>Category:</strong> <span id="productModalCategory">-</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <script>
-      let selectedColor = null;
-      let selectedSize = null;
-      let currentProduct = null;
-
-      // Quantity controls
-      function increaseQuantity() {
-        const input = document.getElementById('productQuantity');
-        input.value = parseInt(input.value) + 1;
-      }
-
-      function decreaseQuantity() {
-        const input = document.getElementById('productQuantity');
-        if (parseInt(input.value) > 1) {
-          input.value = parseInt(input.value) - 1;
-        }
-      }
-
-      // Select color
-      function selectColor(color) {
-        selectedColor = color;
-        document.getElementById('selectedColorName').textContent = color;
-        
-        // Update color swatch selection
-        document.querySelectorAll('.color-swatch').forEach(swatch => {
-          swatch.style.border = '2px solid #e0e0e0';
-        });
-        event.target.closest('.color-swatch').style.border = '2px solid #0a0a0a';
-        
-        checkSelectionComplete();
-      }
-
-      // Select size
-      function selectSize(size) {
-        selectedSize = size;
-        document.getElementById('selectedSizeName').textContent = size;
-        
-        // Update size button selection
-        document.querySelectorAll('.size-btn').forEach(btn => {
-          btn.style.background = '#fff';
-          btn.style.color = '#0a0a0a';
-          btn.style.borderColor = '#e0e0e0';
-        });
-        event.target.style.background = '#0a0a0a';
-        event.target.style.color = '#fff';
-        event.target.style.borderColor = '#0a0a0a';
-        
-        checkSelectionComplete();
-      }
-
-      // Check if both size and color are selected
-      function checkSelectionComplete() {
-        const addCartBtn = document.getElementById('productModalAddCart');
-        if (selectedSize && selectedColor) {
-          addCartBtn.disabled = false;
-          addCartBtn.textContent = 'Add to Cart';
-          addCartBtn.style.opacity = '1';
-          addCartBtn.style.cursor = 'pointer';
-        } else {
-          addCartBtn.disabled = true;
-          addCartBtn.textContent = 'Select Size and Color';
-          addCartBtn.style.opacity = '0.6';
-          addCartBtn.style.cursor = 'not-allowed';
-        }
-      }
-
-      // Get color hex codes
-      function getColorHex(colorName) {
-        const colors = {
-          'Black': '#000000',
-          'White': '#FFFFFF',
-          'Gray': '#808080',
-          'Navy': '#000080',
-          'Blue': '#0000FF',
-          'Red': '#FF0000',
-          'Green': '#008000',
-          'Brown': '#8B4513',
-          'Beige': '#F5F5DC',
-          'Khaki': '#C3B091',
-          'Burgundy': '#800020',
-          'Olive': '#808000',
-          'Charcoal': '#36454F'
-        };
-        return colors[colorName] || '#CCCCCC';
-      }
-
-      // Show product detail modal
-      function showProductDetail(productId) {
-        fetch(`/api/product/${productId}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              const product = data.product;
-              currentProduct = product;
-              selectedColor = null;
-              selectedSize = null;
-              
-              // Reset quantity
-              document.getElementById('productQuantity').value = 1;
-              
-              // Set product details
-              document.getElementById('productModalName').textContent = product.name;
-              document.getElementById('productModalPrice').textContent = `PHP ${parseFloat(product.price).toFixed(2)}`;
-              document.getElementById('productModalDescription').textContent = product.description || 'High-quality product crafted with attention to detail.';
-              document.getElementById('productModalCategory').textContent = product.category_name || 'Uncategorized';
-              document.getElementById('productModalBrand').textContent = product.brand || '-';
-              document.getElementById('productModalSKU').textContent = product.sku || '-';
-              
-              // Reset selection display
-              document.getElementById('selectedColorName').textContent = 'Select a color';
-              document.getElementById('selectedSizeName').textContent = 'Select a size';
-              
-              // Set image
-              const imageDiv = document.getElementById('productModalImage');
-              imageDiv.style.backgroundImage = `url('${product.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=1200&auto=format&fit=crop'}')`;
-              
-              // Set colors as swatches
-              const colorsDiv = document.getElementById('productModalColors');
-              if (product.colors && product.colors.length > 0) {
-                colorsDiv.innerHTML = product.colors.map(color => {
-                  const hexColor = getColorHex(color);
-                  const borderColor = color === 'White' ? '#e0e0e0' : hexColor;
-                  return `<button class="color-swatch" onclick="selectColor('${color}')" title="${color}" 
-                    style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid #e0e0e0; background: ${hexColor}; cursor: pointer; position: relative; padding: 0;">
-                  </button>`;
-                }).join('');
-              } else {
-                colorsDiv.innerHTML = '<span style="color: #999; font-size: 14px;">One Color</span>';
-                selectedColor = 'Standard';
-              }
-              
-              // Set sizes as buttons
-              const sizesDiv = document.getElementById('productModalSizes');
-              if (product.sizes && product.sizes.length > 0) {
-                sizesDiv.innerHTML = product.sizes.map(size => 
-                  `<button class="size-btn" onclick="selectSize('${size}')" 
-                    style="padding: 10px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 14px; font-weight: 500; border-radius: 4px; transition: all 0.2s;">
-                    ${size}
-                  </button>`
-                ).join('');
-              } else {
-                sizesDiv.innerHTML = '<span style="color: #999; font-size: 14px;">One Size</span>';
-                selectedSize = 'One Size';
-              }
-              
-              // Set up add to cart button
-              const addCartBtn = document.getElementById('productModalAddCart');
-              checkSelectionComplete();
-              
-              addCartBtn.onclick = function() {
-                if (selectedSize && selectedColor) {
-                  const quantity = parseInt(document.getElementById('productQuantity').value);
-                  const itemName = `${product.name} (${selectedSize}, ${selectedColor})`;
-                  addToCart(itemName, product.price, product.id, quantity);
-                  closeModal('productModal');
-                }
-              };
-              
-              // Open modal
-              openModal('productModal');
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching product details:', error);
-          });
-      }
-
-      // Check if user is logged in (server-side check)
-      const isUserLoggedIn = {{ 'true' if session.get('logged_in') else 'false' }};
-      
-      // Update addToCart function to handle quantity and authentication
-      const originalAddToCart = window.addToCart;
-      window.addToCart = function(name, price, id, quantity = 1) {
-        // Check if user is logged in
-        if (!isUserLoggedIn) {
-          alert('You need to log in to add items to cart');
-          window.location.href = '/login';
-          return;
-        }
-        
-        for (let i = 0; i < quantity; i++) {
-          if (originalAddToCart) {
-            originalAddToCart(name, price, id);
-          }
-        }
-      };
-
-      // Add click event to products
       // Function to load and display products in browse section
       function loadBrowseProducts() {
         fetch('/api/products')
@@ -584,14 +341,37 @@
       window.addEventListener('load', loadBrowseProducts);
 
       document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.product .media, .product .meta').forEach(element => {
-          element.style.cursor = 'pointer';
-          element.addEventListener('click', function(e) {
-            const productArticle = this.closest('.product');
-            const productId = productArticle.getAttribute('data-product-id');
-            if (productId) {
-              window.location.href = '/product/' + productId;
+        // Handle product card clicks to show detail modal
+        document.querySelectorAll('.product').forEach(product => {
+          product.addEventListener('click', function(e) {
+            // Don't trigger if clicking the add-to-cart button
+            if (e.target.classList.contains('add-to-cart')) return;
+            
+            const productId = this.getAttribute('data-product-id');
+            if (productId && !isUserLoggedIn) {
+              // Redirect to login if not logged in
+              window.location.href = '/login';
+            } else if (productId) {
+              showProductDetail(productId);
             }
+          });
+          
+          // Make image and info clickable
+          const image = product.querySelector('.product-image');
+          const info = product.querySelector('.product-info');
+          if (image) image.style.cursor = 'pointer';
+          if (info) info.style.cursor = 'pointer';
+        });
+        
+        // Handle add-to-cart button clicks - redirect to login for non-logged-in users
+        document.querySelectorAll('.add-to-cart').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Cart functionality is disabled on landing page, redirect to login
+            alert('You need to log in to add items to cart');
+            window.location.href = '/login';
           });
         });
       });

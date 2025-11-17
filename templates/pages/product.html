@@ -636,11 +636,12 @@
           const productName = '{{ product.name }}';
           const productPrice = {{ product.price }};
           const productId = {{ product.id }};
+          const productImage = {% if images and images|length > 0 %}'{{ images[0].image_url }}'{% else %}'{{ product.image_url }}'{% endif %};
           
           const itemName = `${productName} (${selectedSize}, ${selectedColor})`;
           
           for (let i = 0; i < quantity; i++) {
-            addToCart(itemName, productPrice, productId);
+            addToCart(itemName, productPrice, productId, productImage);
           }
           
           // Show success message
@@ -699,21 +700,26 @@
                       </div>
                   `;
               } else {
-                  cartList.innerHTML = cart.map((item, index) => `
+                  cartList.innerHTML = cart.map((item, index) => {
+                      const imageUrl = item.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
+                      return `
                       <div class="cart-item">
-                          <div class="cart-item-info">
-                              <h4>${item.name}</h4>
-                              <p>₱${parseFloat(item.price).toFixed(2)} each</p>
-                              <p style="margin-top:4px;font-size:14px;color:#0a0a0a;font-weight:600">Subtotal: ₱${(parseFloat(item.price) * item.quantity).toFixed(2)}</p>
+                          <div class="cart-item-content">
+                              <div class="cart-item-left">
+                                  <div class="cart-title">${item.name}</div>
+                                  <div class="cart-price muted">₱${parseFloat(item.price).toFixed(2)}</div>
+                                  <div class="qty" style="margin-top:8px">Qty: <button onclick="decreaseCartQuantity(${index})">−</button> <span class="q">${item.quantity}</span> <button onclick="increaseCartQuantity(${index})">+</button></div>
+                              </div>
+                              <div class="cart-item-right">
+                                  <img src="${imageUrl}" alt="${item.name}" class="cart-item-image" />
+                              </div>
                           </div>
-                          <div style="display:flex;align-items:center;gap:12px">
-                              <button onclick="decreaseCartQuantity(${index})" style="width:36px;height:36px;border:1px solid #ddd;background:#fff;cursor:pointer;border-radius:6px;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.borderColor='#0a0a0a'" onmouseout="this.style.borderColor='#ddd'">−</button>
-                              <span style="min-width:40px;text-align:center;font-weight:600;font-size:16px">${item.quantity}</span>
-                              <button onclick="increaseCartQuantity(${index})" style="width:36px;height:36px;border:1px solid #ddd;background:#fff;cursor:pointer;border-radius:6px;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.borderColor='#0a0a0a'" onmouseout="this.style.borderColor='#ddd'">+</button>
+                          <div class="cart-item-actions">
+                              <button onclick="removeFromCart(${index})" class="remove-btn">Remove</button>
                           </div>
-                          <button onclick="removeFromCart(${index})" style="width:36px;height:36px;border:none;background:#fee;color:#c00;cursor:pointer;border-radius:6px;font-size:20px;display:flex;align-items:center;justify-content:center;transition:all 0.2s" onmouseover="this.style.background='#fcc'" onmouseout="this.style.background='#fee'">×</button>
                       </div>
-                  `).join('');
+                  `;
+                  }).join('');
               }
           }
           
@@ -723,7 +729,7 @@
           if (cartSubtotal) cartSubtotal.textContent = `₱${total.toFixed(2)}`;
       }
 
-      function addToCart(name, price, id) {
+      function addToCart(name, price, id, image_url) {
           // Check if item already exists in cart
           const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
           
@@ -733,7 +739,7 @@
               showSnackbar('Item quantity updated');
           } else {
               // New item, add to cart
-              cart.push({ name, price, id, quantity: 1 });
+              cart.push({ name, price, id, quantity: 1, image_url: image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop' });
               showSnackbar('Added to cart');
           }
           
@@ -814,25 +820,36 @@
     <!-- Cart Modal -->
     <div id="cartModal" class="modal" aria-hidden="true">
       <div class="cart-card">
-        <button onclick="closeModal('cartModal')" style="position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; font-size: 24px; color: #fff; background: #0a0a0a; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: all 0.2s;" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">×</button>
-        <h2>Your Cart</h2>
+        <button onclick="closeModal('cartModal')" class="cart-close-btn" aria-label="Close cart">×</button>
+        <h2 style="text-align:left;margin-bottom:20px">Your Cart</h2>
         <div id="cartList" class="cart-list">
-          <!-- Cart items will be inserted here -->
-        </div>
-        <div class="cart-actions">
-          <div style="background:#f8f8f8;padding:20px;border-radius:8px;margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <span style="color:#666;font-size:16px">Subtotal:</span>
-              <span style="font-size:18px;font-weight:600" id="cartSubtotal">₱0.00</span>
+          <!-- Empty cart state -->
+          <div class="empty-cart-state" style="text-align:center;padding:60px 20px">
+            <div style="font-size:80px;color:#ddd;margin-bottom:16px">
+              <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline-block">
+                <path d="M9 2L7.17 4H3c-.55 0-1 .45-1 1s.45 1 1 1h1l1.6 8.6c.18 1 1.05 1.73 2.06 1.73h7.72c1.01 0 1.88-.73 2.06-1.73L19 6h1c.55 0 1-.45 1-1s-.45-1-1-1h-4.17L14 2H9z"/>
+                <circle cx="9" cy="20" r="1"/>
+                <circle cx="16" cy="20" r="1"/>
+              </svg>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:2px solid #ddd">
-              <span style="font-size:20px;font-weight:600">Total:</span>
-              <strong style="font-size:24px;color:#0a0a0a" id="cartTotal">₱0.00</strong>
+            <h3 style="font-size:18px;font-weight:400;color:#999;margin:0 0 8px">Your cart is empty</h3>
+            <p style="font-size:14px;color:#bbb;margin:0">Add some products to get started!</p>
+          </div>
+        </div>
+        <div class="cart-totals">
+          <div style="padding:24px 0;border-top:1px solid #eee">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <span style="color:#666;font-size:15px">Subtotal:</span>
+              <span style="font-size:16px;font-weight:500" id="cartSubtotal">₱0.00</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+              <span style="font-size:18px;font-weight:600;color:#0a0a0a">Total:</span>
+              <span style="font-size:20px;font-weight:600;color:#0a0a0a" id="cartTotal">₱0.00</span>
             </div>
           </div>
           <div style="display:flex;gap:12px">
-            <button onclick="clearCart()" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a;flex:1">Clear Cart</button>
-            <button id="checkoutBtn" class="btn-cta" style="flex:2;font-size:16px;padding:14px">Proceed to Checkout</button>
+            <button onclick="clearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
+            <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
           </div>
         </div>
       </div>

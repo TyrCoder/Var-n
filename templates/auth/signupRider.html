@@ -373,19 +373,157 @@
 							<input id="licenseNumber" name="license_number" class="form-input" type="text" placeholder="Enter license number" required />
 						</div>
 
-						<div class="form-group">
-							<label for="riderArea">Service Area</label>
-							<select id="riderArea" name="service_area" class="form-select" required>
-								<option value="">Select area</option>
-								<option value="ncr">NCR (Metro Manila)</option>
-								<option value="calabarzon">CALABARZON</option>
-								<option value="central_luzon">Central Luzon</option>
-								<option value="central_visayas">Central Visayas</option>
-								<option value="davao">Davao Region</option>
-							</select>
-						</div>
-
-						<div class="form-group">
+					<div class="form-group">
+						<label for="riderArea">Service Area</label>
+						<select id="riderArea" name="service_area" class="form-select" required>
+							<option value="">Select your service area</option>
+							
+							<optgroup label="NCR - National Capital Region">
+								<option value="Manila">Manila</option>
+								<option value="Quezon City">Quezon City</option>
+								<option value="Makati">Makati</option>
+								<option value="Pasig">Pasig</option>
+								<option value="Taguig">Taguig</option>
+								<option value="Mandaluyong">Mandaluyong</option>
+								<option value="Marikina">Marikina</option>
+								<option value="Pasay">Pasay</option>
+								<option value="Parañaque">Parañaque</option>
+								<option value="Las Piñas">Las Piñas</option>
+								<option value="Muntinlupa">Muntinlupa</option>
+								<option value="Caloocan">Caloocan</option>
+								<option value="Malabon">Malabon</option>
+								<option value="Navotas">Navotas</option>
+								<option value="Valenzuela">Valenzuela</option>
+								<option value="San Juan">San Juan</option>
+							</optgroup>
+							
+							<optgroup label="Region I - Ilocos Region">
+								<option value="Laoag, Ilocos Norte">Laoag, Ilocos Norte</option>
+								<option value="Vigan, Ilocos Sur">Vigan, Ilocos Sur</option>
+								<option value="San Fernando, La Union">San Fernando, La Union</option>
+								<option value="Dagupan, Pangasinan">Dagupan, Pangasinan</option>
+								<option value="Urdaneta, Pangasinan">Urdaneta, Pangasinan</option>
+							</optgroup>
+							
+							<optgroup label="Region II - Cagayan Valley">
+								<option value="Tuguegarao, Cagayan">Tuguegarao, Cagayan</option>
+								<option value="Ilagan, Isabela">Ilagan, Isabela</option>
+								<option value="Santiago, Isabela">Santiago, Isabela</option>
+								<option value="Cauayan, Isabela">Cauayan, Isabela</option>
+							</optgroup>
+							
+							<optgroup label="Region III - Central Luzon">
+								<option value="San Fernando, Pampanga">San Fernando, Pampanga</option>
+								<option value="Angeles, Pampanga">Angeles, Pampanga</option>
+								<option value="Mabalacat, Pampanga">Mabalacat, Pampanga</option>
+								<option value="Olongapo, Zambales">Olongapo, Zambales</option>
+								<option value="Tarlac City, Tarlac">Tarlac City, Tarlac</option>
+								<option value="Cabanatuan, Nueva Ecija">Cabanatuan, Nueva Ecija</option>
+								<option value="San Jose, Nueva Ecija">San Jose, Nueva Ecija</option>
+								<option value="Balanga, Bataan">Balanga, Bataan</option>
+							</optgroup>
+							
+							<optgroup label="Region IV-A - CALABARZON">
+								<option value="Calamba, Laguna">Calamba, Laguna</option>
+								<option value="Santa Cruz, Laguna">Santa Cruz, Laguna</option>
+								<option value="Sta Cruz, Laguna">Sta Cruz, Laguna</option>
+								<option value="San Pablo, Laguna">San Pablo, Laguna</option>
+								<option value="Biñan, Laguna">Biñan, Laguna</option>
+								<option value="Los Baños, Laguna">Los Baños, Laguna</option>
+								<option value="Cabuyao, Laguna">Cabuyao, Laguna</option>
+								<option value="Batangas City, Batangas">Batangas City, Batangas</option>
+								<option value="Lipa, Batangas">Lipa, Batangas</option>
+								<option value="Tanauan, Batangas">Tanauan, Batangas</option>
+								<option value="Lucena, Quezon">Lucena, Quezon</option>
+								<option value="Antipolo, Rizal">Antipolo, Rizal</option>
+								<option value="Cainta, Rizal">Cainta, Rizal</option>
+								<option value="Tagaytay, Cavite">Tagaytay, Cavite</option>
+								<option value="Bacoor, Cavite">Bacoor, Cavite</option>
+								<option value="Imus, Cavite">Imus, Cavite</option>
+								<option value="Dasmariñas, Cavite">Dasmariñas, Cavite</option>
+							</optgroup>
+							
+							<optgroup label="Region IV-B - MIMAROPA">
+								<option value="Calapan, Oriental Mindoro">Calapan, Oriental Mindoro</option>
+								<option value="Puerto Princesa, Palawan">Puerto Princesa, Palawan</option>
+								<option value="Boac, Marinduque">Boac, Marinduque</option>
+							</optgroup>
+							
+							<optgroup label="Region V - Bicol Region">
+								<option value="Legazpi, Albay">Legazpi, Albay</option>
+								<option value="Naga, Camarines Sur">Naga, Camarines Sur</option>
+								<option value="Iriga, Camarines Sur">Iriga, Camarines Sur</option>
+								<option value="Sorsogon City, Sorsogon">Sorsogon City, Sorsogon</option>
+							</optgroup>
+							
+							<optgroup label="Region VI - Western Visayas">
+								<option value="Iloilo City, Iloilo">Iloilo City, Iloilo</option>
+								<option value="Bacolod, Negros Occidental">Bacolod, Negros Occidental</option>
+								<option value="Roxas, Capiz">Roxas, Capiz</option>
+								<option value="Kalibo, Aklan">Kalibo, Aklan</option>
+							</optgroup>
+							
+							<optgroup label="Region VII - Central Visayas">
+								<option value="Cebu City, Cebu">Cebu City, Cebu</option>
+								<option value="Mandaue, Cebu">Mandaue, Cebu</option>
+								<option value="Lapu-Lapu, Cebu">Lapu-Lapu, Cebu</option>
+								<option value="Tagbilaran, Bohol">Tagbilaran, Bohol</option>
+								<option value="Dumaguete, Negros Oriental">Dumaguete, Negros Oriental</option>
+							</optgroup>
+							
+							<optgroup label="Region VIII - Eastern Visayas">
+								<option value="Tacloban, Leyte">Tacloban, Leyte</option>
+								<option value="Ormoc, Leyte">Ormoc, Leyte</option>
+								<option value="Calbayog, Samar">Calbayog, Samar</option>
+							</optgroup>
+							
+							<optgroup label="Region IX - Zamboanga Peninsula">
+								<option value="Zamboanga City, Zamboanga del Sur">Zamboanga City, Zamboanga del Sur</option>
+								<option value="Pagadian, Zamboanga del Sur">Pagadian, Zamboanga del Sur</option>
+								<option value="Dipolog, Zamboanga del Norte">Dipolog, Zamboanga del Norte</option>
+							</optgroup>
+							
+							<optgroup label="Region X - Northern Mindanao">
+								<option value="Cagayan de Oro, Misamis Oriental">Cagayan de Oro, Misamis Oriental</option>
+								<option value="Iligan, Lanao del Norte">Iligan, Lanao del Norte</option>
+								<option value="Valencia, Bukidnon">Valencia, Bukidnon</option>
+								<option value="Malaybalay, Bukidnon">Malaybalay, Bukidnon</option>
+							</optgroup>
+							
+							<optgroup label="Region XI - Davao Region">
+								<option value="Davao City, Davao del Sur">Davao City, Davao del Sur</option>
+								<option value="Tagum, Davao del Norte">Tagum, Davao del Norte</option>
+								<option value="Panabo, Davao del Norte">Panabo, Davao del Norte</option>
+								<option value="Digos, Davao del Sur">Digos, Davao del Sur</option>
+								<option value="Mati, Davao Oriental">Mati, Davao Oriental</option>
+							</optgroup>
+							
+							<optgroup label="Region XII - SOCCSKSARGEN">
+								<option value="General Santos, South Cotabato">General Santos, South Cotabato</option>
+								<option value="Koronadal, South Cotabato">Koronadal, South Cotabato</option>
+								<option value="Tacurong, Sultan Kudarat">Tacurong, Sultan Kudarat</option>
+								<option value="Kidapawan, Cotabato">Kidapawan, Cotabato</option>
+							</optgroup>
+							
+							<optgroup label="Region XIII - Caraga">
+								<option value="Butuan, Agusan del Norte">Butuan, Agusan del Norte</option>
+								<option value="Surigao City, Surigao del Norte">Surigao City, Surigao del Norte</option>
+								<option value="Tandag, Surigao del Sur">Tandag, Surigao del Sur</option>
+								<option value="Bayugan, Agusan del Sur">Bayugan, Agusan del Sur</option>
+							</optgroup>
+							
+							<optgroup label="CAR - Cordillera Administrative Region">
+								<option value="Baguio, Benguet">Baguio, Benguet</option>
+								<option value="Tabuk, Kalinga">Tabuk, Kalinga</option>
+								<option value="La Trinidad, Benguet">La Trinidad, Benguet</option>
+							</optgroup>
+							
+							<optgroup label="BARMM - Bangsamoro">
+								<option value="Cotabato City, Maguindanao">Cotabato City, Maguindanao</option>
+								<option value="Marawi, Lanao del Sur">Marawi, Lanao del Sur</option>
+							</optgroup>
+						</select>
+					</div>						<div class="form-group">
 							<label for="riderPassword">Create password</label>
 							<input id="riderPassword" name="password" class="form-input" type="password" placeholder="Choose a secure password" minlength="8" required />
 						</div>
