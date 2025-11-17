@@ -548,6 +548,89 @@ def get_product_detail(product_id):
             conn.close()
         return jsonify({'success': False, 'error': str(err)})
 
+@app.route('/api/track_order/<order_id>')
+def track_order(order_id):
+    """Track order by order ID for logged-in users"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'})
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get order details - only for the current user
+        cursor.execute('''
+            SELECT 
+                id,
+                buyer_id,
+                status,
+                total_amount as total,
+                tracking_number,
+                created_at,
+                estimated_delivery
+            FROM orders
+            WHERE (id = %s OR tracking_number = %s) AND buyer_id = %s
+        ''', (order_id, order_id, session['user_id']))
+        
+        order = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not order:
+            return jsonify({'success': False, 'error': 'Order not found'})
+        
+        return jsonify({'success': True, 'order': order})
+        
+    except Exception as err:
+        print(f"Error tracking order: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
+
+@app.route('/api/products')
+def get_products():
+    """Get all active products"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Fetch active products
+        cursor.execute('''
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.sku,
+                c.name as category_name,
+                c.slug as category_slug,
+                pi.image_url
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE p.is_active = 1
+            ORDER BY p.created_at DESC
+            LIMIT 50
+        ''')
+        
+        products = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'products': products})
+        
+    except Exception as err:
+        print(f"Error fetching products: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
+
 # Remove static route as Flask will handle static files automatically
 
 @app.route('/shop')
