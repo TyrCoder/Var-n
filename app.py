@@ -527,6 +527,89 @@ def get_product_detail(product_id):
             conn.close()
         return jsonify({'success': False, 'error': str(err)})
 
+@app.route('/api/track_order/<order_id>')
+def track_order(order_id):
+    """Track order by order ID for logged-in users"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'})
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get order details - only for the current user
+        cursor.execute('''
+            SELECT 
+                id,
+                buyer_id,
+                status,
+                total_amount as total,
+                tracking_number,
+                created_at,
+                estimated_delivery
+            FROM orders
+            WHERE (id = %s OR tracking_number = %s) AND buyer_id = %s
+        ''', (order_id, order_id, session['user_id']))
+        
+        order = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not order:
+            return jsonify({'success': False, 'error': 'Order not found'})
+        
+        return jsonify({'success': True, 'order': order})
+        
+    except Exception as err:
+        print(f"Error tracking order: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
+
+@app.route('/api/products')
+def get_products():
+    """Get all active products"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Fetch active products
+        cursor.execute('''
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.sku,
+                c.name as category_name,
+                c.slug as category_slug,
+                pi.image_url
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE p.is_active = 1
+            ORDER BY p.created_at DESC
+            LIMIT 50
+        ''')
+        
+        products = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'products': products})
+        
+    except Exception as err:
+        print(f"Error fetching products: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
+
 # Remove static route as Flask will handle static files automatically
 
 @app.route('/shop')
@@ -2258,12 +2341,87 @@ def seller_edit_product():
         if conn:
             conn.close()
 
+@app.route('/get_buyer_name')
+def get_buyer_name():
+    """Get the first name of the logged-in buyer"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'})
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get buyer's first name
+        cursor.execute('''
+            SELECT first_name
+            FROM users
+            WHERE id = %s
+        ''', (session['user_id'],))
+        
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+        
+        return jsonify({'success': True, 'firstName': user['first_name']})
+        
+    except Exception as err:
+        print(f"Error fetching buyer name: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
+
 @app.route('/buyer-dashboard')
 def buyer_dashboard():
     if not session.get('logged_in') or session.get('role') != 'buyer':
         flash('Access denied. Please log in first.', 'error')
         return redirect(url_for('login'))
-    return render_template('pages/indexLoggedIn.html')
+    
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Fetch active products
+        cursor.execute('''
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.sku,
+                c.name as category_name,
+                c.slug as category_slug,
+                pi.image_url
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE p.is_active = 1
+            ORDER BY p.created_at DESC
+            LIMIT 50
+        ''')
+        
+        products = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('pages/indexLoggedIn.html', products=products)
+        
+    except Exception as err:
+        print(f"Error fetching products: {err}")
+        if conn:
+            conn.close()
+        flash('Error loading products', 'error')
+        return render_template('pages/indexLoggedIn.html', products=[])
 
 @app.route('/logout')
 def logout():
