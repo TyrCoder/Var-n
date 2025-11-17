@@ -7,256 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
-    <link href="products.css" rel="stylesheet">
-    <style>
-/* Same CSS styles as index.html */
-:root{
-  --bg:#fff;
-  --fg:#0a0a0a;
-  --muted:#777;
-  --accent:#000;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font-family: 'Playfair Display', Georgia, serif;
-  background:var(--bg);
-  color:var(--fg);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  line-height:1.6;
-}
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-weight:400;
-}
-button, .btn-cta, .menu-toggle, input, select {
-  font-family: 'Commissioner', sans-serif;
-}
-.site-header{
-  display:flex;
-  align-items:center;
-  gap:16px;
-  padding:18px 28px;
-  position:sticky;
-  top:0;
-  background:#000;
-  color:#fff;
-  z-index:100;
-}
-.brand{
-  margin:0;
-  font-weight:700;
-  letter-spacing:1px;
-  font-size:20px;
-  color:#fff;
-}
-.menu-toggle{
-  background:none;
-  border:none;
-  font-size:24px;
-  cursor:pointer;
-  padding:6px;
-  color:#fff;
-  position:relative;
-  z-index:150;
-  transition:transform 0.3s ease;
-}
-.menu-toggle.open{
-  transform:rotate(90deg);
-}
-.top-nav{margin-left:auto;display:flex;gap:18px;align-items:center}
-.top-nav a{color:#fff;text-decoration:none;font-size:14px}
-.top-nav a.account{border:1px solid #fff;padding:6px 10px;border-radius:6px;color:#fff}
-.top-nav .welcome-msg {color: #fff; font-size: 14px;}
-
-.sidebar{
-  position:fixed;
-  top:0;
-  left:-300px;
-  width:300px;
-  height:100vh;
-  background:#000;
-  padding-top:80px;
-  z-index:90;
-  transition:left 0.3s ease-in-out;
-  box-shadow:2px 0 10px rgba(0,0,0,0.1);
-}
-
-.sidebar.open{
-  left:0;
-}
-
-.sidebar-nav{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:20px;
-}
-
-.sidebar-nav a{
-  color:#fff;
-  text-decoration:none;
-  padding:12px 16px;
-  border-radius:8px;
-  transition:background 0.2s ease;
-  font-size:15px;
-}
-
-.sidebar-nav a:hover{
-  background:rgba(255,255,255,0.1);
-}
-
-.overlay{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.5);
-  opacity:0;
-  visibility:hidden;
-  transition:all 0.3s ease;
-  z-index:80;
-}
-
-.overlay.open{
-  opacity:1;
-  visibility:visible;
-}
-
-.sidebar {
-  position: fixed;
-  top: 0;
-  right: -100%;
-  width: 300px;
-  height: 100%;
-  background: #000;
-  padding-top: 80px;
-  transition: right 0.3s ease-in-out;
-  z-index: 40;
-  box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-}
-
-.sidebar.open {
-  right: 0;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  margin: 0;
-}
-
-.sidebar-nav a {
-  color: #fff;
-  text-decoration: none;
-  padding: 16px 24px;
-  transition: background 0.2s ease;
-  font-size: 16px;
-  display: block;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.sidebar-nav a:hover {
-  background: rgba(255,255,255,0.1);
-}
-
-.sidebar-nav a.account {
-  background: transparent;
-  border: none;
-  padding: 16px 24px;
-  margin: 0;
-}
-
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.5);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-  z-index: 39;
-}
-
-.overlay.open {
-  opacity: 1;
-  visibility: visible;
-}
-
-.menu-toggle {
-  z-index: 45;
-  transition: transform 0.3s ease;
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 6px;
-  color: #fff;
-}
-
-.menu-toggle.open {
-  transform: rotate(90deg);
-}
-
-.container{max-width:1200px;margin:28px auto;padding:0 20px}
-.hero{
-  background:#0a0a0a;
-  padding:80px 0;
-  color:#fff;
-}
-.hero-inner{
-  display:grid;
-  grid-template-columns:1fr 420px;
-  gap:40px;
-  align-items:center
-}
-.hero-copy h2{
-  font-size:48px;
-  margin:0 0 20px;
-  line-height:1.1;
-  font-weight:300;
-  letter-spacing:-0.5px;
-}
-.hero-copy p.muted{
-  margin:0 0 30px;
-  font-size:18px;
-  line-height:1.6;
-  color:rgba(255,255,255,0.8);
-}
-.btn-cta{
-  display:inline-block;
-  background:#fff;
-  color:#000;
-  padding:16px 32px;
-  border-radius:0;
-  text-decoration:none;
-  font-weight:400;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  font-size:14px;
-  transition:all 0.3s ease;
-}
-.btn-cta:hover {
-  background:rgba(255,255,255,0.9);
-  transform:translateY(-2px);
-}
-.hero-media{
-  height:500px;
-  background-image:url('https://images.unsplash.com/photo-1621072156002-e2fccdc0b176?q=80&w=1600&auto=format&fit=crop');
-  background-size:cover;
-  background-position:center;
-  border-radius:0;
-  position:relative;
-  overflow:hidden;
-}
-/* Rest of the original styles */
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   </head>
   <body>
     <header class="site-header">
@@ -273,7 +24,8 @@ button, .btn-cta, .menu-toggle, input, select {
       </nav>
     </header>
 
-    <section class="hero">
+    <!-- Hero Section (Home Only) -->
+    <section class="hero" id="heroSection">
       <div class="hero-inner container">
         <div class="hero-copy">
           <h2>Refined Elegance for the Modern Gentleman</h2>
@@ -286,71 +38,106 @@ button, .btn-cta, .menu-toggle, input, select {
 
     <!-- Content Sections -->
     <div id="trackOrder" class="content-section" style="display:none">
-      <div class="container" style="max-width:600px;margin:40px auto;padding:20px">
-        <h2 style="margin-bottom:24px;text-align:center">Track Your Order</h2>
-        <div style="background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
-          <form id="trackingForm" style="display:flex;flex-direction:column;gap:16px">
-            <div>
+      <div class="container" style="max-width:900px;margin:40px auto;padding:20px">
+        <h2 style="margin-bottom:24px;text-align:center">Track Your Orders</h2>
+        
+        <!-- Order Tracking Search -->
+        <div style="background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,0.1);margin-bottom:30px">
+          <form id="trackingForm" style="display:flex;gap:12px;align-items:flex-end">
+            <div style="flex:1">
               <label style="display:block;margin-bottom:8px;font-weight:500">Order Number</label>
-              <input type="text" placeholder="Enter your order number" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px">
-            </div>
-            <div>
-              <label style="display:block;margin-bottom:8px;font-weight:500">Email</label>
-              <input type="email" placeholder="Enter your email address" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px">
+              <input type="text" id="trackingOrderNumber" placeholder="Enter your order number" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px;box-sizing:border-box">
             </div>
             <button type="submit" class="btn-cta" style="width:100%">Track Order</button>
+=======
+              <input type="text" id="orderNumberSearch" placeholder="Enter order number (e.g., ORD-123456)" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px">
+            </div>
+            <button type="submit" class="btn-cta">Search</button>
+>>>>>>> Stashed changes
           </form>
         </div>
+
+        <!-- User's Orders -->
+        <div id="userOrders">
+          <h3 style="margin-bottom:20px">Your Orders</h3>
+          <div id="ordersContainer">
+            <!-- Orders will be loaded here via JavaScript -->
+            <div style="text-align:center;padding:40px;color:#999">
+              <p>Loading your orders...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Details Modal Result -->
+        <div id="trackingResult" style="display:none;margin-top:20px"></div>
       </div>
     </div>
 
     <div id="browse" class="content-section" style="display:none">
       <div class="container">
         <h2 style="margin:24px 0">Browse Collection</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
-          <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-            <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1617347454431-f49d7ff5c3b1?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
-            <div style="padding:16px">
-              <h3 style="margin:0 0 8px">New Arrivals</h3>
-              <p style="margin:0;color:#666">Discover our latest collection</p>
-            </div>
-          </div>
-          <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-            <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
-            <div style="padding:16px">
-              <h3 style="margin:0 0 8px">Best Sellers</h3>
-              <p style="margin:0;color:#666">Our most popular items</p>
-            </div>
-          </div>
-          <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-            <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
-            <div style="padding:16px">
-              <h3 style="margin:0 0 8px">Collections</h3>
-              <p style="margin:0;color:#666">Curated sets for every style</p>
-            </div>
-          </div>
+        <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
+          <!-- Products will be loaded here -->
         </div>
       </div>
     </div>
 
     <div id="journal" class="content-section" style="display:none">
       <div class="container">
-        <h2 style="margin:24px 0">Journal</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px">
+        <h2 style="margin:24px 0">Style Journal</h2>
+        <p style="color:#666;margin-bottom:30px">Discover the latest trends, style guides, and fashion insights from Varón.</p>
+        
+        <div id="journalArticles" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px">
+          <!-- Default articles while database is being set up -->
           <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
             <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
             <div style="padding:20px">
+              <div style="display:flex;gap:10px;margin-bottom:10px">
+                <span style="font-size:12px;color:#999">November 13, 2025</span>
+                <span style="font-size:12px;color:#10b981;font-weight:600">STYLE GUIDE</span>
+              </div>
               <h3 style="margin:0 0 10px">Style Guide: Fall 2025</h3>
-              <p style="margin:0;color:#666;line-height:1.5">Explore our comprehensive guide to fall fashion trends and essential pieces for your wardrobe.</p>
-              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>
+              <p style="margin:0;color:#666;line-height:1.5;font-size:14px">Explore our comprehensive guide to fall fashion trends and essential pieces for your wardrobe. Discover the perfect balance between comfort and elegance.</p>
+              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px;padding:8px 20px">Read More</a>
             </div>
           </article>
+          
           <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
             <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1610963876305-c8e7cb43a09b?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
             <div style="padding:20px">
+              <div style="display:flex;gap:10px;margin-bottom:10px">
+                <span style="font-size:12px;color:#999">November 10, 2025</span>
+                <span style="font-size:12px;color:#10b981;font-weight:600">SUSTAINABILITY</span>
+              </div>
               <h3 style="margin:0 0 10px">Sustainable Fashion</h3>
-              <p style="margin:0;color:#666;line-height:1.5">Learn about our commitment to sustainable practices and ethical fashion production.</p>
-              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>
+              <p style="margin:0;color:#666;line-height:1.5;font-size:14px">Learn about our commitment to sustainable practices and ethical fashion production. Every choice we make considers the environment and our community.</p>
+              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px;padding:8px 20px">Read More</a>
+            </div>
+          </article>
+          
+          <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
+            <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1617347454431-f49d7ff5c3b1?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
+            <div style="padding:20px">
+              <div style="display:flex;gap:10px;margin-bottom:10px">
+                <span style="font-size:12px;color:#999">November 8, 2025</span>
+                <span style="font-size:12px;color:#10b981;font-weight:600">FASHION TIPS</span>
+              </div>
+              <h3 style="margin:0 0 10px">The Art of Layering</h3>
+              <p style="margin:0;color:#666;line-height:1.5;font-size:14px">Master the technique of layering your outfits for a sophisticated and versatile look that works for any occasion this season.</p>
+              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px;padding:8px 20px">Read More</a>
+            </div>
+          </article>
+
+          <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
+            <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
+            <div style="padding:20px">
+              <div style="display:flex;gap:10px;margin-bottom:10px">
+                <span style="font-size:12px;color:#999">November 5, 2025</span>
+                <span style="font-size:12px;color:#10b981;font-weight:600">BRAND STORY</span>
+              </div>
+              <h3 style="margin:0 0 10px">Craftsmanship Meets Innovation</h3>
+              <p style="margin:0;color:#666;line-height:1.5;font-size:14px">Discover how traditional craftsmanship and modern innovation come together to create timeless pieces that define the Varón aesthetic.</p>
+              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px;padding:8px 20px">Read More</a>
             </div>
           </article>
         </div>
@@ -371,59 +158,118 @@ button, .btn-cta, .menu-toggle, input, select {
     <!-- Main Content -->
     <main class="container" id="mainContent">
       <section class="toolbar">
-        <div class="category-filter">
-          <button class="filter-btn active">Men</button>
+        <div class="filters">
+          <button data-filter="men" class="active">Men</button>
         </div>
-        <div class="genre-filter">
-          <button class="genre-btn active">All</button>
-          <button class="genre-btn">Tops</button>
-          <button class="genre-btn">Bottoms</button>
-          <button class="genre-btn">Outerwear</button>
-          <button class="genre-btn">Accessories</button>
+        <div class="genres">
+          <label>Genres:</label>
+          <button data-genre="all" class="genre active">All</button>
+          <button data-genre="shirts" class="genre">Shirts</button>
+          <button data-genre="pants" class="genre">Pants</button>
+          <button data-genre="shorts" class="genre">Shorts</button>
+          <button data-genre="jackets" class="genre">Jackets</button>
+          <button data-genre="shoes" class="genre">Shoes</button>
+          <button data-genre="accessories" class="genre">Accessories</button>
+          <button data-genre="formal" class="genre">Formal</button>
+          <button data-genre="casual" class="genre">Casual</button>
         </div>
       </section>
 
       <section class="product-grid" id="productGrid">
-        <article class="product" data-category="men" data-genre="tops">
-          <div class="product-image">
-            <img src="https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=1200&auto=format&fit=crop" alt="Classic White T-shirt">
-            <button class="add-to-cart" aria-label="Add Classic White T-shirt to cart">+</button>
-          </div>
-          <div class="product-info">
-            <h3>Classic White T‑shirt</h3>
-            <p class="price">₱1,250.00</p>
-          </div>
-        </article>
-
-        <article class="product" data-category="men" data-genre="tops">
-          <div class="product-image">
-            <img src="https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=1200&auto=format&fit=crop" alt="Half Sleeve T-shirts">
-            <button class="add-to-cart" aria-label="Add Half Sleeve T-shirts to cart">+</button>
-          </div>
-          <div class="product-info">
-            <h3>Half Sleeve T‑shirts</h3>
-            <p class="price">₱950.00</p>
-          </div>
-        </article>
-
-        <article class="product" data-category="men" data-genre="tops">
-          <div class="product-image">
-            <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop" alt="Modern T-shirts">
-            <button class="add-to-cart" aria-label="Add Modern T-shirts to cart">+</button>
-          </div>
-          <div class="product-info">
-            <h3>Modern T‑shirts</h3>
-            <p class="price">₱1,450.00</p>
+        {% if products %}
+          {% for product in products %}
+            <article class="product" data-category="men" data-genre="{{ product.category_slug or 'all' }}" data-product-id="{{ product.id }}">
+              <div class="media" style="background-image:url('{{ product.image_url or 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=1200&auto=format&fit=crop' }}')"></div>
+              <div class="meta">
+                <h3 class="title">{{ product.name }}</h3>
+                <div class="price">₱{{ "{:,.2f}".format(product.price) }}</div>
+              </div>
+              <button class="add-cart" aria-label="Add {{ product.name }} to cart" data-name="{{ product.name }}" data-price="{{ product.price }}" data-id="{{ product.id }}">＋</button>
+            </article>
+          {% endfor %}
+        {% else %}
+          <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+            <h3 style="margin: 0 0 12px; color: #666;">No Products Available</h3>
+            <p style="margin: 0; color: #999;">Check back soon for new arrivals!</p>
           </div>
         </article>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="footer-grid">
-        <div>
-          <h4>Varón</h4>
-          <p class="muted">Minimal, responsibly-made apparel. Clean silhouettes and timeless staples.</p>
+    <!-- Product Detail Modal -->
+    <div id="productModal" class="modal" aria-hidden="true">
+      <div class="cart-card" style="margin:20px; max-width:1000px; position: relative; background: #fff; padding: 0;">
+        <button onclick="closeModal('productModal')" style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; font-size: 20px; color: #666; background: #fff; border: 1px solid #e0e0e0; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 10;">×</button>
+        
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0;">
+          <!-- Product Images -->
+          <div style="background: #f8f8f8; padding: 40px;">
+            <div id="productModalImage" style="width: 100%; height: 500px; background-size: contain; background-repeat: no-repeat; background-position: center; background-color: #f8f8f8; margin-bottom: 20px;"></div>
+            <div id="productThumbnails" style="display: flex; gap: 10px; justify-content: center;">
+              <!-- Thumbnails will be inserted here -->
+            </div>
+          </div>
+          
+          <!-- Product Info -->
+          <div style="padding: 40px 30px;">
+            <h2 id="productModalName" style="margin: 0 0 8px; font-size: 20px; font-weight: 600; line-height: 1.4;">Product Name</h2>
+            
+            <div style="margin-bottom: 20px;">
+              <div id="productModalPrice" style="font-size: 20px; font-weight: 700; color: #0a0a0a;">₱0.00</div>
+              <small style="color: #666; font-size: 13px;">Tax included</small>
+            </div>
+            
+            <!-- Color Selection -->
+            <div style="margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <strong style="font-size: 14px;">Color: <span id="selectedColorName" style="font-weight: 400;">Select a color</span></strong>
+              </div>
+              <div id="productModalColors" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <!-- Color swatches will be inserted here -->
+              </div>
+            </div>
+            
+            <!-- Size Selection -->
+            <div style="margin-bottom: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <strong style="font-size: 14px;">Size: <span id="selectedSizeName" style="font-weight: 400;">Select a size</span></strong>
+                <a href="#" style="font-size: 13px; color: #0a0a0a; text-decoration: underline;">Check my size</a>
+              </div>
+              <div id="productModalSizes" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;">
+                <!-- Size buttons will be inserted here -->
+              </div>
+            </div>
+            
+            <!-- Quantity -->
+            <div style="margin-bottom: 24px;">
+              <strong style="display: block; margin-bottom: 12px; font-size: 14px;">Quantity</strong>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <button onclick="decreaseQuantity()" style="width: 40px; height: 40px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 18px; border-radius: 4px;">−</button>
+                <input type="number" id="productQuantity" value="1" min="1" readonly style="width: 60px; height: 40px; text-align: center; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 16px;">
+                <button onclick="increaseQuantity()" style="width: 40px; height: 40px; border: 1px solid #e0e0e0; background: #fff; cursor: pointer; font-size: 18px; border-radius: 4px;">+</button>
+              </div>
+            </div>
+            
+            <!-- Stock Status -->
+            <div id="stockStatus" style="margin-bottom: 20px;">
+              <span style="color: #10b981; font-size: 14px; font-weight: 500;">✓ In stock</span>
+            </div>
+            
+            <!-- Add to Cart Button -->
+            <button id="productModalAddCart" class="btn-cta" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 600; margin-bottom: 12px;" disabled>Select Size and Color</button>
+            
+            <!-- Description -->
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+              <h3 style="font-size: 14px; font-weight: 600; margin: 0 0 10px;">Product Details</h3>
+              <p id="productModalDescription" style="color: #666; font-size: 14px; line-height: 1.6; margin: 0;">Product description will appear here.</p>
+              
+              <div style="margin-top: 16px;">
+                <div style="font-size: 13px; color: #666; margin-bottom: 4px;"><strong>Brand:</strong> <span id="productModalBrand">-</span></div>
+                <div style="font-size: 13px; color: #666; margin-bottom: 4px;"><strong>SKU:</strong> <span id="productModalSKU">-</span></div>
+                <div style="font-size: 13px; color: #666;"><strong>Category:</strong> <span id="productModalCategory">-</span></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div>
           <h5>Shop</h5>
@@ -448,6 +294,7 @@ button, .btn-cta, .menu-toggle, input, select {
             <li><a href="signupSeller.html" id="footerSeller">Register as a seller</a></li>
             <li><a href="signupRider.html" id="footerRider">Register as a rider</a></li>
           </ul>
+>>>>>>> Stashed changes
         </div>
       </div>
       <div class="footer-bottom">
@@ -458,17 +305,26 @@ button, .btn-cta, .menu-toggle, input, select {
 
     <!-- Cart Modal -->
     <div id="cartModal" class="modal" aria-hidden="true">
-      <div class="cart-card" style="margin:20px; position: relative;">
-        <button onclick="closeModal('cartModal')" style="position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; font-size: 20px; color: #fff; background: #000; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">×</button>
-        <h2 style="margin: 0 0 16px;">Your Cart</h2>
+      <div class="cart-card">
+        <button onclick="closeModal('cartModal')" style="position: absolute; top: 20px; right: 20px; width: 36px; height: 36px; font-size: 24px; color: #fff; background: #0a0a0a; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: all 0.2s;" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">×</button>
+        <h2>Your Cart</h2>
         <div id="cartList" class="cart-list">
           <!-- Cart items will be inserted here -->
         </div>
         <div class="cart-actions">
-          <div class="cart-total">Total: <strong id="cartTotal">₱0.00</strong></div>
-          <div style="display:flex;gap:8px">
-            <button onclick="clearCart()" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a">Clear Cart</button>
-            <button id="checkoutBtn" class="btn-cta">Checkout</button>
+          <div style="background:#f8f8f8;padding:20px;border-radius:8px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="color:#666;font-size:16px">Subtotal:</span>
+              <span style="font-size:18px;font-weight:600" id="cartSubtotal">₱0.00</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:2px solid #ddd">
+              <span style="font-size:20px;font-weight:600">Total:</span>
+              <strong style="font-size:24px;color:#0a0a0a" id="cartTotal">₱0.00</strong>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px">
+            <button onclick="clearCart()" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a;flex:1">Clear Cart</button>
+            <button id="checkoutBtn" class="btn-cta" style="flex:2;font-size:16px;padding:14px">Proceed to Checkout</button>
           </div>
         </div>
       </div>
@@ -520,15 +376,108 @@ button, .btn-cta, .menu-toggle, input, select {
     // Fetch the buyer's first name on page load
     window.addEventListener('DOMContentLoaded', (event) => {
         fetch('/get_buyer_name')
+          .then(response => response.json())
+          .then(data => {
+            document.getElementById('buyerFirstName').textContent = data.firstName;
+            document.getElementById('buyerFirstNameSidebar').textContent = data.firstName;
+          })
+          .catch(error => console.error('Error fetching buyer name:', error));
+        
+        // Load browse products when page loads
+        loadBrowseProducts();
+      });
+
+      // Function to load and display products in browse section
+      function loadBrowseProducts() {
+        fetch('/api/products')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.products) {
+              const browseGrid = document.getElementById('browseGrid');
+              browseGrid.innerHTML = data.products.map(product => `
+                <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);cursor:pointer;transition:transform 0.2s" 
+                     onclick="window.location.href='/product/${product.id}'" 
+                     onmouseover="this.style.transform='translateY(-4px)'" 
+                     onmouseout="this.style.transform='translateY(0)'">
+                  <div style="height:200px;background:#f5f5f5;background-image:url('${product.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
+                  <div style="padding:16px">
+                    <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;line-height:1.3">${product.name}</h3>
+                    <p style="margin:0;color:#666;font-size:14px">₱${parseFloat(product.price).toFixed(2)}</p>
+                  </div>
+                </div>
+              `).join('');
+            }
+          })
+          .catch(error => {
+            console.error('Error loading browse products:', error);
+            document.getElementById('browseGrid').innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999">Error loading products</p>';
+          });
+      }
+
+      // Track Order Form Handler
+      const trackingForm = document.getElementById('trackingForm');
+      if (trackingForm) {
+        trackingForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const orderNumber = document.getElementById('trackingOrderNumber').value.trim();
+          
+          if (!orderNumber) {
+            alert('Please enter an order number');
+            return;
+          }
+          
+          // Fetch order tracking information
+          fetch(`/api/track_order/${orderNumber}`)
             .then(response => response.json())
             .then(data => {
-                document.getElementById('buyerFirstName').textContent = data.firstName;
-                document.getElementById('buyerFirstNameSidebar').textContent = data.firstName;
+              const resultDiv = document.getElementById('trackingResult');
+              const detailsDiv = document.getElementById('trackingDetails');
+              
+              if (data.success) {
+                const order = data.order;
+                let statusHtml = `
+                  <div><strong>Order #:</strong> ${order.id}</div>
+                  <div><strong>Status:</strong> ${order.status || 'Processing'}</div>
+                  <div><strong>Total:</strong> ₱${parseFloat(order.total).toFixed(2)}</div>
+                `;
+                
+                if (order.tracking_number) {
+                  statusHtml += `<div><strong>Tracking #:</strong> ${order.tracking_number}</div>`;
+                }
+                
+                if (order.estimated_delivery) {
+                  statusHtml += `<div><strong>Est. Delivery:</strong> ${order.estimated_delivery}</div>`;
+                }
+                
+                detailsDiv.innerHTML = statusHtml;
+                resultDiv.style.display = 'block';
+              } else {
+                detailsDiv.innerHTML = `<div style="color:#dc2626">Order not found. Please check your order number.</div>`;
+                resultDiv.style.display = 'block';
+              }
             })
-            .catch(error => console.error('Error fetching buyer name:', error));
-    });
+            .catch(error => {
+              console.error('Error tracking order:', error);
+              document.getElementById('trackingDetails').innerHTML = '<div style="color:#dc2626">Error loading order information.</div>';
+              document.getElementById('trackingResult').style.display = 'block';
+            });
+        });
+      }
 
-    // Rest of the JavaScript functions from index.html
+      // Add click event to products
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.product .media, .product .meta').forEach(element => {
+          element.style.cursor = 'pointer';
+          element.addEventListener('click', function(e) {
+            const productArticle = this.closest('.product');
+            const productId = productArticle.getAttribute('data-product-id');
+            if (productId) {
+              window.location.href = '/product/' + productId;
+            }
+          });
+        });
+      });
     </script>
     <script src="script.js"></script>
   </body>

@@ -384,7 +384,7 @@ def index():
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
-                WHERE p.is_active = 1
+                WHERE p.is_active = 1 AND p.archive_status = 'active'
                 ORDER BY p.created_at DESC
                 LIMIT 20
             ''')
@@ -400,6 +400,22 @@ def index():
 
 @app.route('/product/<int:product_id>')
 def product_page(product_id):
+    # Get user's first name if logged in
+    user_first_name = None
+    if session.get('logged_in') and session.get('user_id'):
+        conn_user = get_db()
+        if conn_user:
+            try:
+                cursor_user = conn_user.cursor(dictionary=True)
+                cursor_user.execute('SELECT first_name FROM users WHERE id = %s', (session.get('user_id'),))
+                user_data = cursor_user.fetchone()
+                if user_data:
+                    user_first_name = user_data['first_name']
+                cursor_user.close()
+                conn_user.close()
+            except:
+                pass
+    
     conn = get_db()
     product = None
     sizes = []
@@ -465,7 +481,12 @@ def product_page(product_id):
         flash('Product not found', 'error')
         return redirect(url_for('index'))
     
-    return render_template('pages/product.html', product=product, sizes=sizes, colors=colors, images=images)
+    return render_template('pages/product.html', 
+                         product=product, 
+                         sizes=sizes, 
+                         colors=colors, 
+                         images=images,
+                         user_first_name=user_first_name)
 
 @app.route('/api/product/<int:product_id>')
 def get_product_detail(product_id):
@@ -536,6 +557,149 @@ def shop():
 @app.route('/browse')
 def browse():
     return render_template('pages/browse.html')
+
+@app.route('/checkout')
+def checkout():
+    # Check if user is logged in
+    if not session.get('logged_in'):
+        flash('Please log in to checkout', 'error')
+        return redirect(url_for('login'))
+    
+    return render_template('pages/checkout.html')
+
+@app.route('/api/place-order', methods=['POST'])
+def place_order():
+    # Check if user is logged in
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'message': 'Please log in to place an order'})
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'})
+    
+    try:
+        data = request.json
+        cursor = conn.cursor(dictionary=True)
+        
+        # Generate order number
+        import random
+        import string
+        order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+        
+        # Create shipping address string
+        shipping = data.get('shipping', {})
+        shipping_address = f"{shipping.get('address')}, {shipping.get('city')}, {shipping.get('province')} {shipping.get('postalCode')}, {shipping.get('country')}"
+        
+        # Insert into orders table
+        cursor.execute('''
+            INSERT INTO orders (
+                user_id, order_number, total_amount, status, 
+                payment_method, shipping_address, order_date
+            ) VALUES (%s, %s, %s, %s, %s, %s, NOW())
+        ''', (
+            session.get('user_id'),
+            order_number,
+            data.get('total'),
+            'pending',
+            data.get('payment_method'),
+            shipping_address
+        ))
+        
+        order_id = cursor.lastrowid
+        
+        # Insert order items
+        for item in data.get('items', []):
+            cursor.execute('''
+                INSERT INTO order_items (
+                    order_id, product_id, product_name, quantity, price
+                ) VALUES (%s, %s, %s, %s, %s)
+            ''', (
+                order_id,
+                item.get('id'),
+                item.get('name'),
+                item.get('quantity'),
+                item.get('price')
+            ))
+        
+        # Insert shipping information (if you have a separate addresses table)
+        cursor.execute('''
+            INSERT INTO addresses (
+                user_id, first_name, last_name, phone, 
+                address_line1, city, state_province, 
+                postal_code, country, is_default
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            session.get('user_id'),
+            shipping.get('firstName'),
+            shipping.get('lastName'),
+            shipping.get('phone'),
+            shipping.get('address'),
+            shipping.get('city'),
+            shipping.get('province'),
+            shipping.get('postalCode'),
+            shipping.get('country'),
+            False
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Order placed successfully',
+            'order_number': order_number
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/order-confirmation/<order_number>')
+def order_confirmation(order_number):
+    # Check if user is logged in
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    if not conn:
+        flash('Database connection failed', 'error')
+        return redirect(url_for('buyer_dashboard'))
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get order details
+        cursor.execute('''
+            SELECT * FROM orders 
+            WHERE order_number = %s AND user_id = %s
+        ''', (order_number, session.get('user_id')))
+        
+        order = cursor.fetchone()
+        
+        if not order:
+            cursor.close()
+            conn.close()
+            flash('Order not found', 'error')
+            return redirect(url_for('buyer_dashboard'))
+        
+        # Get order items
+        cursor.execute('''
+            SELECT * FROM order_items WHERE order_id = %s
+        ''', (order['id'],))
+        
+        items = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('pages/order_confirmation.html', order=order, items=items)
+        
+    except Exception as e:
+        conn.close()
+        flash('Error loading order', 'error')
+        return redirect(url_for('buyer_dashboard'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -2258,12 +2422,87 @@ def seller_edit_product():
         if conn:
             conn.close()
 
+@app.route('/get_buyer_name')
+def get_buyer_name():
+    """Get the first name of the logged-in buyer"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'})
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get buyer's first name
+        cursor.execute('''
+            SELECT first_name
+            FROM users
+            WHERE id = %s
+        ''', (session['user_id'],))
+        
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'})
+        
+        return jsonify({'success': True, 'firstName': user['first_name']})
+        
+    except Exception as err:
+        print(f"Error fetching buyer name: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
+
 @app.route('/buyer-dashboard')
 def buyer_dashboard():
     if not session.get('logged_in') or session.get('role') != 'buyer':
         flash('Access denied. Please log in first.', 'error')
         return redirect(url_for('login'))
-    return render_template('pages/indexLoggedIn.html')
+    
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Fetch active products
+        cursor.execute('''
+            SELECT 
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.sku,
+                c.name as category_name,
+                c.slug as category_slug,
+                pi.image_url
+            FROM products p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE p.is_active = 1
+            ORDER BY p.created_at DESC
+            LIMIT 50
+        ''')
+        
+        products = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('pages/indexLoggedIn.html', products=products)
+        
+    except Exception as err:
+        print(f"Error fetching products: {err}")
+        if conn:
+            conn.close()
+        flash('Error loading products', 'error')
+        return render_template('pages/indexLoggedIn.html', products=[])
 
 @app.route('/logout')
 def logout():
