@@ -211,6 +211,11 @@ function openModal(modalId){
   if(!modal) return;
   modal.setAttribute('aria-hidden','false');
   document.body.style.overflow = 'hidden';
+  
+  // Refresh cart display when opening cart modal
+  if(modalId === 'cartModal' && typeof renderCartPage === 'function'){
+    renderCartPage();
+  }
 }
 function closeModal(modalId){
   const modal = document.getElementById(modalId);
@@ -218,6 +223,16 @@ function closeModal(modalId){
   modal.setAttribute('aria-hidden','true');
   document.body.style.overflow = '';
 }
+
+// Handle Escape key to close modals
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' || e.keyCode === 27) {
+    const openModals = document.querySelectorAll('.modal[aria-hidden="false"]');
+    openModals.forEach(modal => {
+      closeModal(modal.id);
+    });
+  }
+});
 
 [sellerBtn, riderBtn, footerSeller, footerRider].forEach(el=>{
   if(!el) return;
@@ -284,32 +299,46 @@ function goToLogin(reason){
 }
 
 function readCart(){
-  try{ return JSON.parse(localStorage.getItem('varon_cart')||'{}'); }catch(e){ return {}; }
+  try{ return JSON.parse(localStorage.getItem('cart')||'[]'); }catch(e){ return []; }
 }
-function writeCart(cart){ localStorage.setItem('varon_cart', JSON.stringify(cart)); }
+function writeCart(cart){ localStorage.setItem('cart', JSON.stringify(cart)); }
 
 function cartTotalCount(){
   const c = readCart();
-  return Object.values(c).reduce((s,i)=>s + (i.qty||0), 0);
+  return c.reduce((s,i)=>s + (i.quantity||0), 0);
 }
 
 function updateCartBadge(){
+  // Only update cart badge if user is logged in
+  if(!isLoggedIn()) {
+    if(cartCountEl) cartCountEl.textContent = 0;
+    return;
+  }
   const n = cartTotalCount();
   if(cartCountEl) cartCountEl.textContent = n;
 }
 
 function addItemToCart(data){
   if(!data) return;
-  const title = data.title || 'Item';
+  const name = data.title || 'Item';
   const price = typeof data.price === 'number' ? data.price : (parseFloat((data.priceText||'').replace(/[^0-9\.]/g,'')) || 0);
-  const id = (data.id) || title.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const id = (data.id) || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const image_url = data.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
   const cart = readCart();
-  if(!cart[id]) cart[id] = {title, price, qty:0};
-  cart[id].qty += (data.qty || 1);
+  
+  // Check if item already exists
+  const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
+  
+  if (existingItemIndex > -1) {
+    cart[existingItemIndex].quantity += (data.qty || 1);
+  } else {
+    cart.push({ name, price, id, quantity: (data.qty || 1), image_url });
+  }
+  
   writeCart(cart);
   updateCartBadge();
   if(snackbar){
-    snackbar.textContent = `${title} added to cart`;
+    snackbar.textContent = `${name} added to cart`;
     snackbar.classList.add('show');
     setTimeout(()=> snackbar.classList.remove('show'), 2200);
   }
@@ -320,15 +349,42 @@ function handleAddCartClick(e, btn){
   const title = card?.querySelector('.title')?.textContent || 'Item';
   const priceText = card?.querySelector('.price')?.textContent || '£0';
   const price = parseFloat(priceText.replace(/[^0-9\.]/g,'')) || 0;
-  const id = title.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const productId = card?.dataset?.productId || title.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  
+  // Get image URL from product card
+  const productImage = card?.querySelector('.product-image');
+  const bgImage = productImage?.style?.backgroundImage;
+  let image_url = 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
+  if(bgImage){
+    const urlMatch = bgImage.match(/url\(['"]?([^'"\)]+)['"]?\)/);
+    if(urlMatch && urlMatch[1]) image_url = urlMatch[1];
+  }
 
   if(!isLoggedIn()){
     e.preventDefault();
-    saveIntendedAction({ type:'addToCart', payload:{ id, title, price, qty:1 }, next: window.location.href });
+    saveIntendedAction({ type:'addToCart', payload:{ id: productId, title, price, qty:1, image_url }, next: window.location.href });
     goToLogin('add_to_cart');
     return;
   }
-  addItemToCart({id,title,price,qty:1});
+  
+  // Fetch product data from API to get the correct image
+  if(productId && !isNaN(productId)){
+    fetch(`/api/product/${productId}`)
+      .then(response => response.json())
+      .then(data => {
+        if(data.success && data.product){
+          const apiImage = data.product.image_url;
+          addItemToCart({id: productId, title, price, qty:1, image_url: apiImage || image_url});
+        } else {
+          addItemToCart({id: productId, title, price, qty:1, image_url});
+        }
+      })
+      .catch(() => {
+        addItemToCart({id: productId, title, price, qty:1, image_url});
+      });
+  } else {
+    addItemToCart({id: productId, title, price, qty:1, image_url});
+  }
 }
 
 function applyAuthGate(){
@@ -359,36 +415,68 @@ try{ window.applyAuthGate = applyAuthGate; }catch(e){}
 function renderCartPage(){
   const cartList = document.getElementById('cartList');
   const cartTotal = document.getElementById('cartTotal');
+  const cartSubtotal = document.getElementById('cartSubtotal');
+  
   if(!cartList) return;
+  
   const cart = readCart();
   cartList.innerHTML = '';
   let total = 0;
-  Object.entries(cart).forEach(([id,item])=>{
-    const line = document.createElement('div');
-    line.className = 'cart-item';
-    line.innerHTML = `<div class="cart-item-left">
-        <div class="cart-title">${item.title}</div>
-        <div class="cart-price muted">£${item.price.toFixed(2)}</div>
-      </div>
-      <div class="cart-item-right">
-        <div class="qty">Qty: <button data-op="dec" data-id="${id}">-</button> <span class="q">${item.qty}</span> <button data-op="inc" data-id="${id}">+</button></div>
-        <div><button data-remove data-id="${id}" class="secondary">Remove</button></div>
+  
+  // Check if cart has items
+  if(cart.length === 0) {
+    cartList.innerHTML = `
+      <div class="empty-cart-state" style="text-align:center;padding:60px 20px">
+        <div style="font-size:80px;color:#ddd;margin-bottom:16px">
+          <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline-block">
+            <path d="M9 2L7.17 4H3c-.55 0-1 .45-1 1s.45 1 1 1h1l1.6 8.6c.18 1 1.05 1.73 2.06 1.73h7.72c1.01 0 1.88-.73 2.06-1.73L19 6h1c.55 0 1-.45 1-1s-.45-1-1-1h-4.17L14 2H9z"/>
+            <circle cx="9" cy="20" r="1"/>
+            <circle cx="16" cy="20" r="1"/>
+          </svg>
+        </div>
+        <h3 style="font-size:18px;font-weight:400;color:#999;margin:0 0 8px">Your cart is empty</h3>
+        <p style="font-size:14px;color:#bbb;margin:0">Add some products to get started!</p>
       </div>`;
-    cartList.appendChild(line);
-    total += item.price * item.qty;
-  });
-  cartTotal.textContent = `₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  } else {
+    cart.forEach((item, index)=>{
+      const line = document.createElement('div');
+      line.className = 'cart-item';
+      const imageUrl = item.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
+      line.innerHTML = `
+        <div class="cart-item-content">
+          <div class="cart-item-left">
+            <div class="cart-title">${item.name}</div>
+            <div class="cart-price muted">₱${item.price.toFixed(2)}</div>
+            <div class="qty" style="margin-top:8px">Qty: <button data-op="dec" data-index="${index}">-</button> <span class="q">${item.quantity}</span> <button data-op="inc" data-index="${index}">+</button></div>
+          </div>
+          <div class="cart-item-right">
+            <img src="${imageUrl}" alt="${item.name}" class="cart-item-image" style="display:block" />
+          </div>
+        </div>
+        <div class="cart-item-actions">
+          <button data-remove data-index="${index}" class="remove-btn">Remove</button>
+        </div>`;
+      cartList.appendChild(line);
+      total += item.price * item.quantity;
+    });
+  }
 
+  // Update totals
+  const formattedTotal = `₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  if(cartTotal) cartTotal.textContent = formattedTotal;
+  if(cartSubtotal) cartSubtotal.textContent = formattedTotal;
+
+  // Add event listeners for quantity buttons
   cartList.querySelectorAll('[data-op]').forEach(btn=>btn.addEventListener('click', (e)=>{
-    const id = btn.dataset.id; const op = btn.dataset.op;
-    const c = readCart(); if(!c[id]) return;
-    if(op==='inc') c[id].qty += 1; else c[id].qty = Math.max(0, c[id].qty-1);
-    if(c[id].qty===0) delete c[id];
+    const index = parseInt(btn.dataset.index); const op = btn.dataset.op;
+    const c = readCart(); if(!c[index]) return;
+    if(op==='inc') c[index].quantity += 1; else c[index].quantity = Math.max(0, c[index].quantity-1);
+    if(c[index].quantity===0) c.splice(index, 1);
     writeCart(c); renderCartPage(); updateCartBadge();
   }));
 
   cartList.querySelectorAll('[data-remove]').forEach(btn=>btn.addEventListener('click', ()=>{
-    const id = btn.dataset.id; const c = readCart(); delete c[id]; writeCart(c); renderCartPage(); updateCartBadge();
+    const index = parseInt(btn.dataset.index); const c = readCart(); c.splice(index, 1); writeCart(c); renderCartPage(); updateCartBadge();
   }));
 }
 
@@ -397,29 +485,21 @@ document.addEventListener('click', (e)=>{
     const clearModal = document.getElementById('clearModal'); if(clearModal) clearModal.setAttribute('aria-hidden','false');
   }
   if(e.target && e.target.id==='checkoutBtn'){
-    const checkoutModal = document.getElementById('checkoutModal');
-    const sumEl = document.getElementById('checkoutSummary');
+    // Check if cart is empty
     const cart = readCart();
-    if(sumEl){
-      let html = '<ul style="list-style:none;padding:0;margin:0">'; let total=0;
-      Object.values(cart).forEach(it=>{ html += `<li style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><strong style="color:#fff">${it.title}</strong> <div class="muted">${it.qty} × ₱${it.price.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div></li>`; total += it.qty*it.price });
-      html += `</ul><div style="margin-top:10px;color:#fff">Total: <strong>₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div>`;
-      sumEl.innerHTML = html;
+    if(cart.length === 0){
+      alert('Your cart is empty. Please add items before checking out.');
+      return;
     }
-    if(checkoutModal) checkoutModal.setAttribute('aria-hidden','false');
+    // Redirect to checkout page
+    window.location.href = '/checkout';
   }
 });
 
 const confirmClearYes = document.getElementById('confirmClearYes');
 if(confirmClearYes) confirmClearYes.addEventListener('click', ()=>{
-  localStorage.removeItem('varon_cart'); renderCartPage(); updateCartBadge();
+  localStorage.removeItem('cart'); renderCartPage(); updateCartBadge();
   const clearModal = document.getElementById('clearModal'); if(clearModal) clearModal.setAttribute('aria-hidden','true');
-});
-
-const proceedCheckout = document.getElementById('proceedCheckout');
-if(proceedCheckout) proceedCheckout.addEventListener('click', ()=>{
-  alert('Demo: proceed to payment (implement real integration).');
-  const checkoutModal = document.getElementById('checkoutModal'); if(checkoutModal) checkoutModal.setAttribute('aria-hidden','true');
 });
 
 updateCartBadge();

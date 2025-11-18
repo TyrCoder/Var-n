@@ -292,6 +292,7 @@ CREATE TABLE IF NOT EXISTS riders (
     license_number VARCHAR(50),
     vehicle_plate VARCHAR(20),
     service_area TEXT,
+    profile_image VARCHAR(500),
     max_delivery_distance INT DEFAULT 50,
     current_location_lat DECIMAL(10,8),
     current_location_lng DECIMAL(11,8),
