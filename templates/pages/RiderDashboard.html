@@ -1147,5 +1147,33 @@
         console.log('Rider Dashboard initialized');
       });
     </script>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" style="position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1000">
+      <div style="background:#fff;border-radius:10px;padding:24px;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,0.2)">
+        <button onclick="closeLogoutModal()" style="float:right;background:none;border:none;font-size:24px;cursor:pointer;color:#999">×</button>
+        <h2 style="margin:0 0 8px;font-size:18px">Confirm Logout</h2>
+        <p style="margin:0 0 18px;color:#666;font-size:14px">Are you sure you want to logout? You will need to log in again to access your account.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closeLogoutModal()" style="padding:10px 20px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:6px;cursor:pointer;font-weight:500">Cancel</button>
+          <button onclick="proceedLogout()" style="padding:10px 20px;border:none;background:#ef4444;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">Yes, Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function confirmLogout(event) {
+        event.preventDefault();
+        document.getElementById('logoutModal').style.display = 'flex';
+      }
+
+      function closeLogoutModal() {
+        document.getElementById('logoutModal').style.display = 'none';
+      }
+
+      function proceedLogout() {
+        window.location.href = '/logout';
+      }
+    </script>
   </body>
 </html>

@@ -478,6 +478,8 @@
           }));
         }
 
+        console.log('📤 Sending cart for validation:', cartArray);
+
         fetch('/api/validate-cart', {
           method: 'POST',
           headers: {
@@ -485,20 +487,27 @@
           },
           body: JSON.stringify({ items: cartArray })
         })
-        .then(response => response.json())
+        .then(response => {
+          console.log('📥 Validation response status:', response.status);
+          return response.json();
+        })
         .then(data => {
+          console.log('📥 Validation response data:', data);
           if (data.success && data.items) {
             validatedCart = data.items;
-            console.log('Validated cart:', validatedCart);
+            console.log('✅ Cart validated successfully:', validatedCart);
             displayOrderSummary();
           } else {
-            console.error('Failed to validate cart:', data.error);
-            alert('Unable to validate cart items. Please try again.');
+            console.error('❌ Failed to validate cart:', data.error);
+            // Fallback to localStorage cart
+            console.log('⚠️  Falling back to localStorage cart');
+            displayOrderSummary();
           }
         })
         .catch(error => {
-          console.error('Error validating cart:', error);
+          console.error('❌ Error validating cart:', error);
           // Fallback to displaying from localStorage
+          console.log('⚠️  Falling back to localStorage cart due to error');
           displayOrderSummary();
         });
       }

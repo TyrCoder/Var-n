@@ -104,13 +104,14 @@ def init_db():
             price DECIMAL(10,2) NOT NULL,
             sale_price DECIMAL(10,2),
             cost_price DECIMAL(10,2),
-            sku VARCHAR(100) UNIQUE,
+            sku VARCHAR(100),
             weight DECIMAL(8,2),
             dimensions VARCHAR(100),
             material VARCHAR(200),
             care_instructions TEXT,
             is_featured BOOLEAN DEFAULT FALSE,
             is_active BOOLEAN DEFAULT TRUE,
+            archive_status VARCHAR(50) DEFAULT 'active',
             views_count INT DEFAULT 0,
             sales_count INT DEFAULT 0,
             rating DECIMAL(3,2) DEFAULT 0.00,
@@ -139,7 +140,7 @@ def init_db():
         cursor.execute('''CREATE TABLE IF NOT EXISTS product_variants (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
-            sku VARCHAR(100) UNIQUE,
+            sku VARCHAR(100),
             size VARCHAR(20),
             color VARCHAR(50),
             stock_quantity INT DEFAULT 0,
@@ -609,12 +610,14 @@ def validate_cart():
                     p.id,
                     p.name,
                     p.price,
-                    p.image_url,
-                    p.stock_quantity,
                     p.is_active,
-                    s.business_name as seller_name,
+                    pi.image_url,
+                    i.stock_quantity,
+                    s.store_name as seller_name,
                     s.id as seller_id
                 FROM products p
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                LEFT JOIN inventory i ON p.id = i.product_id
                 JOIN sellers s ON p.seller_id = s.id
                 WHERE p.id = %s AND p.is_active = 1
             ''', (product_id,))
@@ -631,7 +634,7 @@ def validate_cart():
                     'name': product['name'],
                     'price': float(product['price']),
                     'quantity': min(requested_qty, available_stock) if available_stock > 0 else requested_qty,
-                    'image_url': product['image_url'],
+                    'image_url': product['image_url'] or '/static/images/placeholder.jpg',
                     'seller_id': product['seller_id'],
                     'seller_name': product['seller_name'],
                     'stock_available': available_stock,
@@ -2131,13 +2134,11 @@ def seller_products():
 @app.route('/seller/add-product', methods=['POST'])
 def seller_add_product():
     if not session.get('logged_in') or session.get('role') != 'seller':
-        flash('Access denied', 'error')
-        return redirect(url_for('login'))
+        return jsonify({'error': 'Access denied'}), 403
     
     conn = get_db()
     if not conn:
-        flash('Database error', 'error')
-        return redirect(url_for('seller_dashboard'))
+        return jsonify({'error': 'Database error'}), 500
     
     try:
         cursor = conn.cursor(dictionary=True)
@@ -2148,16 +2149,28 @@ def seller_add_product():
         seller = cursor.fetchone()
         
         if not seller:
-            flash('Seller profile not found', 'error')
-            return redirect(url_for('login'))
+            return jsonify({'error': 'Seller profile not found'}), 404
         
         # Get form data
-        name = request.form.get('name')
-        description = request.form.get('description')
-        price = request.form.get('price')
-        category_name = request.form.get('category', 'casual')  # Get category name
-        brand = request.form.get('brand')
-        sku = request.form.get('sku')
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        price = request.form.get('price', '0')
+        category_name = request.form.get('category', 'casual')
+        brand = request.form.get('brand', '').strip()
+        sku = request.form.get('sku', '').strip()
+        
+        # If SKU is empty, generate a unique one
+        if not sku:
+            import time
+            sku = f"SKU-{seller['id']}-{int(time.time() * 1000)}"
+        
+        # Validate required fields
+        if not name:
+            return jsonify({'error': 'Product name is required'}), 400
+        if not price or float(price) <= 0:
+            return jsonify({'error': 'Valid price is required'}), 400
+        if not category_name:
+            return jsonify({'error': 'Category is required'}), 400
         
         # Get sizes and colors
         sizes = request.form.getlist('sizes')
@@ -2174,6 +2187,20 @@ def seller_add_product():
         if custom_colors:
             custom_color_list = [c.strip() for c in custom_colors.split(',') if c.strip()]
             colors.extend(custom_color_list)
+        
+        # Validate sizes and colors for non-grooming products
+        if category_name != 'grooming':
+            if not sizes:
+                return jsonify({'error': 'Please select at least one size'}), 400
+            if not colors:
+                return jsonify({'error': 'Please select at least one color'}), 400
+        
+        # Handle ingredients for grooming products
+        ingredients = ''
+        if category_name == 'grooming':
+            ingredients = request.form.get('ingredients', '').strip()
+            if not ingredients:
+                return jsonify({'error': 'Ingredients are required for grooming products'}), 400
         
         # Get or create category
         cursor.execute('SELECT id FROM categories WHERE slug = %s', (category_name,))
@@ -2192,6 +2219,9 @@ def seller_add_product():
         if 'product_images' in request.files:
             files = request.files.getlist('product_images')
             
+            if not files or len(files) == 0:
+                return jsonify({'error': 'At least one product image is required'}), 400
+            
             if files and len(files) > 0:
                 import os
                 from werkzeug.utils import secure_filename
@@ -2203,6 +2233,10 @@ def seller_add_product():
                 
                 for file in files:
                     if file and file.filename:
+                        # Validate file
+                        if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.avif', '.webp')):
+                            return jsonify({'error': 'Only image files (JPG, PNG, AVIF, WebP) are allowed'}), 400
+                        
                         # Generate unique filename with timestamp
                         filename = secure_filename(file.filename)
                         timestamp = int(time.time() * 1000)  # milliseconds for uniqueness
@@ -2213,6 +2247,8 @@ def seller_add_product():
                         # Store relative URL
                         image_url = f"/static/images/products/{unique_filename}"
                         uploaded_images.append(image_url)
+        else:
+            return jsonify({'error': 'At least one product image is required'}), 400
         
         # Create slug from name
         slug = name.lower().replace(' ', '-').replace('&', 'and').replace("'", '')
@@ -2239,18 +2275,27 @@ def seller_add_product():
         # Calculate total stock from size-color combinations
         total_stock = 0
         
-        # Add size and color variants with individual stock
-        for size in sizes:
-            for color in colors:
-                stock_key = f'stock_{size}_{color}'
-                variant_stock = int(request.form.get(stock_key, 0))
-                total_stock += variant_stock
-                
-                # Insert product variant
-                cursor.execute('''
-                    INSERT INTO product_variants (product_id, size, color, stock_quantity)
-                    VALUES (%s, %s, %s, %s)
-                ''', (product_id, size, color, variant_stock))
+        # Add size and color variants with individual stock (skip for grooming)
+        if category_name != 'grooming':
+            for size in sizes:
+                for color in colors:
+                    stock_key = f'stock_{size}_{color}'
+                    variant_stock = int(request.form.get(stock_key, 0))
+                    total_stock += variant_stock
+                    
+                    # Insert product variant
+                    cursor.execute('''
+                        INSERT INTO product_variants (product_id, size, color, stock_quantity)
+                        VALUES (%s, %s, %s, %s)
+                    ''', (product_id, size, color, variant_stock))
+        else:
+            # For grooming products, store ingredients
+            cursor.execute('''
+                UPDATE products 
+                SET description = CONCAT(description, '\n\nIngredients:\n', %s)
+                WHERE id = %s
+            ''', (ingredients, product_id))
+            total_stock = int(request.form.get('stock_quantity', 0)) if 'stock_quantity' in request.form else 10
         
         # Add total inventory
         cursor.execute('''
@@ -2262,12 +2307,11 @@ def seller_add_product():
         cursor.close()
         conn.close()
         
-        flash('Product submitted for admin approval!', 'success')
-        return redirect(url_for('seller_dashboard'))
+        return jsonify({'success': True, 'message': 'Product submitted for admin approval!', 'product_id': product_id}), 200
         
     except Exception as err:
-        flash(f'Error adding product: {str(err)}', 'error')
-        return redirect(url_for('seller_dashboard'))
+        print(f"[ERROR] Add product error: {str(err)}")
+        return jsonify({'error': f'Error adding product: {str(err)}'}), 500
 
 @app.route('/seller/update-stock', methods=['POST'])
 def seller_update_stock():
@@ -2638,12 +2682,563 @@ def seller_edit_product():
         if conn:
             conn.close()
 
+@app.route('/get_buyer_name')
+def get_buyer_name():
+    """Get the logged-in buyer's first name"""
+    try:
+        if not session.get('logged_in') or session.get('role') != 'buyer':
+            return jsonify({'error': 'Not logged in'}), 401
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        user_id = session.get('user_id')
+        cursor.execute('SELECT first_name FROM users WHERE id = %s', (user_id,))
+        user = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if user:
+            return jsonify({'firstName': user['first_name']}), 200
+        else:
+            return jsonify({'firstName': 'Guest'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/products')
+def api_products():
+    """Get all active products for browsing"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Fetch products with images
+        query = """
+            SELECT 
+                p.id,
+                p.name,
+                p.price,
+                p.description,
+                p.category_id,
+                pi.image_url,
+                c.name as category_name
+            FROM products p
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.is_active = 1 AND p.archive_status = 'active'
+            ORDER BY p.created_at DESC
+            LIMIT 50
+        """
+        
+        cursor.execute(query)
+        products = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'products': products
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/seller-products/<int:seller_id>')
+def api_seller_products(seller_id):
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get products for the specified seller
+        cursor.execute('''
+            SELECT p.id, p.name, p.price, p.description, 
+                   pi.image_url, p.seller_id, p.is_active,
+                   c.name as category
+            FROM products p
+            LEFT JOIN product_images pi ON (p.id = pi.product_id AND pi.is_primary = 1)
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.seller_id = %s AND p.is_active = 1 AND p.archive_status = 'active'
+            ORDER BY p.created_at DESC
+            LIMIT 50
+        ''', (seller_id,))
+        
+        products = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'products': products
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/user-orders')
+def api_user_orders():
+    """Get orders for logged-in user"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Fetch user's orders
+        cursor.execute('''
+            SELECT o.id, o.order_number, o.total_amount, o.status, o.created_at,
+                   u.first_name, u.email
+            FROM orders o
+            JOIN users u ON o.buyer_id = u.id
+            WHERE o.buyer_id = %s
+            ORDER BY o.created_at DESC
+            LIMIT 50
+        ''', (user_id,))
+        
+        orders = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'orders': orders
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/search-order', methods=['POST'])
+def api_search_order():
+    """Search for a specific order by order number and email"""
+    try:
+        data = request.json
+        order_number = data.get('order_number')
+        email = data.get('email')
+        
+        if not order_number or not email:
+            return jsonify({'success': False, 'error': 'Order number and email required'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Search for order
+        cursor.execute('''
+            SELECT o.id, o.order_number, o.total_amount, o.status, o.created_at,
+                   u.first_name, u.email
+            FROM orders o
+            JOIN users u ON o.buyer_id = u.id
+            WHERE o.order_number = %s AND u.email = %s
+            LIMIT 1
+        ''', (order_number, email))
+        
+        order = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not order:
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'order': order
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/buyer-dashboard')
 def buyer_dashboard():
     if not session.get('logged_in') or session.get('role') != 'buyer':
         flash('Access denied. Please log in first.', 'error')
         return redirect(url_for('login'))
     return render_template('pages/indexLoggedIn.html')
+
+@app.route('/admin/recent-orders')
+def admin_recent_orders():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get recent orders (last 4)
+        query = '''
+            SELECT o.id, o.order_number, o.total_amount, o.status, o.created_at, u.first_name, u.last_name
+            FROM orders o
+            JOIN users u ON o.buyer_id = u.id
+            ORDER BY o.created_at DESC
+            LIMIT 4
+        '''
+        cursor.execute(query)
+        orders = cursor.fetchall()
+        
+        # Format orders
+        formatted_orders = []
+        for order in orders:
+            formatted_orders.append({
+                'order_number': order['order_number'],
+                'buyer_name': f"{order['first_name']} {order['last_name']}",
+                'created_at': order['created_at'],
+                'total_amount': order['total_amount'],
+                'status': order['status']
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'orders': formatted_orders})
+    except Exception as err:
+        print(f"[ERROR] {err}")
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/best-product')
+def admin_best_product():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get best selling product (by order count)
+        query = '''
+            SELECT p.id, p.name, pi.image_url, s.store_name,
+                   COUNT(oi.id) as order_count
+            FROM products p
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            LEFT JOIN sellers s ON p.seller_id = s.id
+            LEFT JOIN order_items oi ON p.id = oi.product_id
+            WHERE p.is_active = 1 AND p.archive_status = 'active'
+            GROUP BY p.id, p.name, pi.image_url, s.store_name
+            ORDER BY order_count DESC
+            LIMIT 1
+        '''
+        cursor.execute(query)
+        product = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if product:
+            return jsonify({
+                'success': True,
+                'product': {
+                    'id': product['id'],
+                    'name': product['name'],
+                    'image_url': product['image_url'],
+                    'store_name': product['store_name'],
+                    'order_count': product['order_count'] or 0
+                }
+            })
+        else:
+            return jsonify({'success': True, 'product': None})
+    except Exception as err:
+        print(f"[ERROR] {err}")
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/seller/orders', methods=['GET'])
+def seller_orders():
+    """Get all orders for the logged-in seller"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session['user_id']
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get the seller_id for this user (from sellers table)
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+        
+        seller_id = seller_result['id']
+        
+        # Fetch orders for this seller
+        query = """
+            SELECT 
+                o.id,
+                o.order_number,
+                o.user_id,
+                o.total_amount,
+                o.order_status,
+                o.created_at,
+                o.updated_at,
+                u.first_name as customer_name,
+                COUNT(oi.id) as item_count
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            WHERE o.seller_id = %s
+            GROUP BY o.id
+            ORDER BY o.created_at DESC
+        """
+        
+        cursor.execute(query, (seller_id,))
+        orders = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        # Convert datetime objects to strings
+        for order in orders:
+            if order['created_at']:
+                order['created_at'] = order['created_at'].isoformat()
+        
+        return jsonify({
+            'success': True,
+            'orders': orders
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] seller_orders: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/seller/update-order-status', methods=['POST'])
+def update_order_status():
+    """Update the status of an order (for seller fulfillment)"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session['user_id']
+        order_id = request.form.get('order_id')
+        new_status = request.form.get('new_status')
+        
+        # Validate input
+        if not order_id or not new_status:
+            return jsonify({'success': False, 'error': 'Missing order_id or new_status'}), 400
+        
+        valid_statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned']
+        if new_status not in valid_statuses:
+            return jsonify({'success': False, 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get the seller_id for this user
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+        
+        seller_id = seller_result['id']
+        
+        # Verify that this seller owns the products in this order
+        verify_query = """
+            SELECT o.id
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE o.id = %s AND p.seller_id = %s
+            LIMIT 1
+        """
+        
+        cursor.execute(verify_query, (order_id, seller_id))
+        order_check = cursor.fetchone()
+        
+        if not order_check:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found or you do not have permission to update it'}), 403
+        
+        # Update the order status
+        update_query = """
+            UPDATE orders
+            SET order_status = %s, updated_at = NOW()
+            WHERE id = %s
+        """
+        
+        cursor.execute(update_query, (new_status, order_id))
+        conn.commit()
+        
+        print(f"[✅] Order {order_id} status updated to {new_status} by seller {seller_id}")
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Order status updated to {new_status}'
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] update_order_status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ============ ORDER TRACKING ENDPOINTS FOR BUYERS ============
+@app.route('/api/order-status/<order_id>', methods=['GET'])
+def get_order_status(order_id):
+    """API endpoint for buyers to check their order status in real-time"""
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get order details - verify ownership
+        cursor.execute('''
+            SELECT 
+                o.id, o.order_number, o.order_status, o.created_at, o.updated_at,
+                o.total_amount, o.payment_method, u.first_name, u.last_name
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.id = %s AND o.user_id = %s
+        ''', (order_id, user_id))
+        
+        order = cursor.fetchone()
+        
+        if not order:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+        
+        # Get order items
+        cursor.execute('''
+            SELECT product_name, quantity, unit_price, size, color
+            FROM order_items
+            WHERE order_id = %s
+        ''', (order_id,))
+        
+        items = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        # Status progression timeline
+        status_timeline = {
+            'pending': {'label': 'Pending', 'emoji': '⏳', 'step': 1},
+            'confirmed': {'label': 'Confirmed', 'emoji': '✔️', 'step': 2},
+            'processing': {'label': 'Processing', 'emoji': '🔄', 'step': 3},
+            'shipped': {'label': 'Shipped', 'emoji': '📦', 'step': 4},
+            'delivered': {'label': 'Delivered', 'emoji': '✅', 'step': 5},
+            'cancelled': {'label': 'Cancelled', 'emoji': '❌', 'step': 0},
+            'returned': {'label': 'Returned', 'emoji': '↩️', 'step': 0}
+        }
+        
+        current_status = order.get('order_status', 'pending')
+        status_info = status_timeline.get(current_status, status_timeline['pending'])
+        
+        return jsonify({
+            'success': True,
+            'order': {
+                'id': order['id'],
+                'order_number': order['order_number'],
+                'status': current_status,
+                'status_label': status_info['label'],
+                'status_emoji': status_info['emoji'],
+                'progress_step': status_info['step'],
+                'created_at': order['created_at'].isoformat() if order['created_at'] else None,
+                'updated_at': order['updated_at'].isoformat() if order['updated_at'] else None,
+                'total_amount': float(order['total_amount']),
+                'payment_method': order['payment_method'],
+                'customer_name': f"{order['first_name']} {order['last_name']}"
+            },
+            'items': items,
+            'timeline': status_timeline
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting order status: {str(e)}")
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/user-orders-detailed', methods=['GET'])
+def get_user_orders_detailed():
+    """Get all orders for logged-in user with status details"""
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get all user's orders with seller info
+        cursor.execute('''
+            SELECT 
+                o.id, o.order_number, o.order_status, o.created_at, o.updated_at,
+                o.total_amount, o.payment_method, s.store_name,
+                COUNT(oi.id) as item_count
+            FROM orders o
+            LEFT JOIN sellers s ON o.seller_id = s.id
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            WHERE o.user_id = %s
+            GROUP BY o.id
+            ORDER BY o.created_at DESC
+        ''', (user_id,))
+        
+        orders = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        status_emoji = {
+            'pending': '⏳',
+            'confirmed': '✔️',
+            'processing': '🔄',
+            'shipped': '📦',
+            'delivered': '✅',
+            'cancelled': '❌',
+            'returned': '↩️'
+        }
+        
+        return jsonify({
+            'success': True,
+            'orders': [
+                {
+                    'id': order['id'],
+                    'order_number': order['order_number'],
+                    'status': order['order_status'],
+                    'status_emoji': status_emoji.get(order['order_status'], '📋'),
+                    'created_at': order['created_at'].isoformat() if order['created_at'] else None,
+                    'updated_at': order['updated_at'].isoformat() if order['updated_at'] else None,
+                    'total_amount': float(order['total_amount']),
+                    'payment_method': order['payment_method'],
+                    'store_name': order['store_name'] or 'Store',
+                    'item_count': order['item_count']
+                }
+                for order in orders
+            ]
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting user orders: {str(e)}")
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+# ============ END ORDER TRACKING ============
 
 @app.route('/logout')
 def logout():

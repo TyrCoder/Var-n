@@ -1,4 +1,4 @@
-<!doctype html>
+  <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -118,7 +118,7 @@
           <div class="side-title">Settings</div>
           <a class="side-link" href="#" data-page="store-settings">Store Settings</a>
           <a class="side-link" href="#" data-page="account">Account</a>
-          <a class="side-link" href="/logout">Logout</a>
+          <a class="side-link" href="#" onclick="confirmLogout(event)">Logout</a>
         </div>
       </aside>
 
@@ -222,7 +222,7 @@
               <div class="inner">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <div class="metric">Recent Orders</div>
-                  <a href="#" class="action-btn">Process Orders</a>
+                  <a href="#" class="action-btn" onclick="loadPage('orders'); return false;">Process Orders</a>
                 </div>
                 <div style="overflow:auto">
                   <table>
@@ -316,7 +316,7 @@
                 
                 <div>
                   <label style="display: block; margin-bottom: 6px; font-weight: 500;">Category/Genre *</label>
-                  <select name="category" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
+                  <select id="categorySelect" name="category" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" onchange="toggleSizeColorSections()">
                     <option value="">Select a category</option>
                     <option value="shirts">Shirts & T-Shirts</option>
                     <option value="pants">Pants & Jeans</option>
@@ -328,6 +328,7 @@
                     <option value="activewear">Activewear & Sports</option>
                     <option value="formal">Formal Wear</option>
                     <option value="casual">Casual Wear</option>
+                    <option value="grooming">Grooming Products</option>
                   </select>
                 </div>
                 
@@ -361,7 +362,7 @@
                   </div>
                 </div>
                 
-                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;">
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="sizesSection">
                   <h3 style="margin: 0 0 12px; font-size: 16px;">Available Sizes *</h3>
                   <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all sizes available for this product</small>
                   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
@@ -402,7 +403,7 @@
                   </div>
                 </div>
                 
-                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;">
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="colorsSection">
                   <h3 style="margin: 0 0 12px; font-size: 16px;">Available Colors *</h3>
                   <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all colors available for this product</small>
                   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
@@ -463,11 +464,18 @@
                   </div>
                 </div>
                 
+                <div id="ingredientsSection" style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa; display: none;">
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Ingredients *</h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">List all key ingredients in this grooming product</small>
+                  <textarea id="ingredients" name="ingredients" rows="5" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font-family: monospace; font-size: 13px;" placeholder="e.g. Aloe Vera&#10;Vitamin E&#10;Coconut Oil&#10;Tea Tree Extract&#10;Shea Butter"></textarea>
+                  <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 6px;">Enter one ingredient per line. Include all active ingredients and major components.</small>
+                </div>
+                
                 <input type="hidden" name="custom-sizes" id="custom-sizes-hidden">
                 <input type="hidden" name="custom-colors" id="custom-colors-hidden">
                 
                 <div style="display: flex; gap: 12px; margin-top: 10px;">
-                  <button type="submit" class="action-btn" style="padding: 12px 24px;" onclick="submitCustomValues()">Add Product</button>
+                  <button type="button" class="action-btn" style="padding: 12px 24px;" onclick="confirmAddProduct()">Add Product</button>
                   <button type="button" class="action-btn" onclick="loadPage('products')" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
                 </div>
               </form>
@@ -519,8 +527,29 @@
         'orders': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 16px;">Orders</h2>
-              <p style="color: var(--muted); padding: 40px; text-align: center;">Order management coming soon...</p>
+              <h2 style="margin: 0 0 16px;">Order Management</h2>
+              
+              <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button class="action-btn" data-filter-btn="all" onclick="filterOrders('all')" style="background: #0a0a0a; color: #fff; padding: 8px 16px; font-size: 13px;">
+                  📋 All Orders
+                </button>
+                <button class="action-btn" data-filter-btn="pending" onclick="filterOrders('pending')" style="background: #ff9800; color: #fff; padding: 8px 16px; font-size: 13px;">
+                  ⏳ Pending
+                </button>
+                <button class="action-btn" data-filter-btn="confirmed" onclick="filterOrders('confirmed')" style="background: #2196f3; color: #fff; padding: 8px 16px; font-size: 13px;">
+                  ✔️ Confirmed
+                </button>
+                <button class="action-btn" data-filter-btn="processing" onclick="filterOrders('processing')" style="background: #ff5722; color: #fff; padding: 8px 16px; font-size: 13px;">
+                  🔄 Processing
+                </button>
+                <button class="action-btn" data-filter-btn="shipped" onclick="filterOrders('shipped')" style="background: #4caf50; color: #fff; padding: 8px 16px; font-size: 13px;">
+                  📦 Shipped
+                </button>
+              </div>
+              
+              <div id="orders-list" style="overflow-x: auto;">
+                <p style="color: #999;">Click a status filter to view orders...</p>
+              </div>
             </div>
           </div>
         `,
@@ -582,6 +611,47 @@
         'overview': null  // Special case - will reload page
       };
 
+      // Function to toggle size and color sections based on category
+      function toggleSizeColorSections() {
+        const categorySelect = document.getElementById('categorySelect');
+        const sizesSection = document.getElementById('sizesSection');
+        const colorsSection = document.getElementById('colorsSection');
+        const stockSection = document.getElementById('size-color-stocks');
+        const ingredientsSection = document.getElementById('ingredientsSection');
+        const ingredientsInput = document.getElementById('ingredients');
+        
+        if (categorySelect && sizesSection && colorsSection && stockSection) {
+          if (categorySelect.value === 'grooming') {
+            // Hide sizes, colors, and stock sections for grooming products
+            sizesSection.style.display = 'none';
+            colorsSection.style.display = 'none';
+            stockSection.style.display = 'none';
+            
+            // Show ingredients section for grooming products
+            if (ingredientsSection) {
+              ingredientsSection.style.display = 'block';
+              if (ingredientsInput) ingredientsInput.required = true;
+            }
+            
+            // Remove required attribute from checkboxes
+            document.querySelectorAll('input[name="sizes"], input[name="colors"]').forEach(input => {
+              input.removeAttribute('required');
+            });
+          } else {
+            // Show sections for other categories
+            sizesSection.style.display = 'block';
+            colorsSection.style.display = 'block';
+            stockSection.style.display = 'block';
+            
+            // Hide ingredients section for non-grooming products
+            if (ingredientsSection) {
+              ingredientsSection.style.display = 'none';
+              if (ingredientsInput) ingredientsInput.required = false;
+            }
+          }
+        }
+      }
+
       // Function to copy custom values to hidden inputs before form submission
       function submitCustomValues() {
         const customSizes = document.getElementById('custom-sizes');
@@ -597,6 +667,96 @@
         }
         
         return true;
+      }
+      
+      // Function to confirm product addition
+      function confirmAddProduct() {
+        const form = document.getElementById('addProductForm');
+        const categorySelect = document.getElementById('categorySelect');
+        const nameInput = form.elements['name'];
+        const priceInput = form.elements['price'];
+        
+        // Validate required fields
+        if (!form.checkValidity()) {
+          alert('Please fill in all required fields');
+          return;
+        }
+        
+        const productName = nameInput.value.trim();
+        const productPrice = parseFloat(priceInput.value);
+        const category = categorySelect.options[categorySelect.selectedIndex].text;
+        
+        const confirmMsg = `Are you sure you want to add this product?\n\nProduct Name: ${productName}\nCategory: ${category}\nPrice: ₱${productPrice.toFixed(2)}\n\nThis product will be submitted for admin approval.`;
+        
+        if (confirm(confirmMsg)) {
+          submitProductViaAJAX();
+        }
+      }
+      
+      // Function to submit product via AJAX
+      function submitProductViaAJAX() {
+        const form = document.getElementById('addProductForm');
+        const formData = new FormData(form);
+        
+        // Validate form before submitting
+        if (!form.checkValidity()) {
+          alert('❌ Please fill in all required fields correctly');
+          return;
+        }
+        
+        // Copy custom sizes and colors to hidden inputs first
+        submitCustomValues();
+        
+        // Show loading state
+        const submitBtn = document.querySelector('button[onclick="confirmAddProduct()"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Adding Product...';
+        
+        console.log('Submitting product form...');
+        
+        fetch('/seller/add-product', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => {
+          console.log('Response status:', response.status);
+          return response.json().then(data => ({
+            status: response.status,
+            data: data
+          }));
+        })
+        .then(({ status, data }) => {
+          console.log('Response data:', data);
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          
+          if (status === 200 && data.success) {
+            // Success - product added to pending approval
+            alert('✅ Product submitted successfully!\n\nYour product has been added to the admin queue for approval.\n\nOnce approved, it will appear in your store.');
+            // Clear form
+            form.reset();
+            // Reset category to trigger size/color sections
+            document.getElementById('categorySelect').value = '';
+            toggleSizeColorSections();
+            // Load products list
+            loadPage('products');
+          } else if (status === 400) {
+            // Validation error
+            alert('❌ Validation Error:\n\n' + data.error);
+          } else if (data.error) {
+            // Server error
+            alert('❌ Error adding product:\n\n' + data.error);
+          } else {
+            alert('❌ Unexpected error occurred. Please try again.');
+          }
+        })
+        .catch(error => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          console.error('Request error:', error);
+          alert('❌ Network error: ' + error.message + '\n\nPlease check your connection and try again.');
+        });
       }
       
       // Function to update stock inputs based on selected sizes and colors
@@ -665,7 +825,7 @@
           'products': 'Products',
           'archived-products': 'Archived Products',
           'inventory': 'Inventory',
-          'orders': 'Orders',
+          'orders': 'Order Management',
           'reviews': 'Customer Reviews',
           'promotions': 'Promotions',
           'sales': 'Sales Analytics',
@@ -694,6 +854,8 @@
               loadArchivedProducts();
             } else if (page === 'inventory') {
               loadInventory();
+            } else if (page === 'orders') {
+              loadOrders('all');
             } else if (page === 'add-product') {
               // Attach event listeners for size/color checkboxes
               const sizeColorInputs = document.querySelectorAll('input[name="sizes"], input[name="colors"]');
@@ -718,6 +880,218 @@
           });
         }
       }
+
+      // ============ ORDER MANAGEMENT FUNCTIONS ============
+      let allOrders = [];
+      let currentOrderFilter = 'all';
+
+      function filterOrders(status) {
+        console.log('📋 Filtering orders by status:', status);
+        currentOrderFilter = status;
+        
+        // Update active button
+        const buttons = document.querySelectorAll('[data-filter-btn]');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`[data-filter-btn="${status}"]`)?.classList.add('active');
+        
+        // Filter and display orders
+        let filteredOrders = allOrders;
+        if (status !== 'all') {
+          filteredOrders = allOrders.filter(order => order.order_status === status);
+        }
+        
+        displayOrders(filteredOrders);
+      }
+
+      function loadOrders(initialFilter = 'all') {
+        console.log('📤 Fetching orders from /seller/orders');
+        
+        fetch('/seller/orders')
+          .then(response => {
+            console.log('📥 Response status:', response.status);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then(data => {
+            console.log('✅ Orders loaded:', data);
+            
+            if (data.orders && Array.isArray(data.orders)) {
+              allOrders = data.orders;
+              filterOrders(initialFilter);
+            } else {
+              console.warn('❌ No orders in response');
+              document.getElementById('orders-list').innerHTML = '<p style="color:#999;">No orders yet</p>';
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error loading orders:', error);
+            document.getElementById('orders-list').innerHTML = `<p style="color:#d32f2f;">Error loading orders: ${error.message}</p>`;
+          });
+      }
+
+      function displayOrders(orders) {
+        const container = document.getElementById('orders-list');
+        
+        if (!orders || orders.length === 0) {
+          container.innerHTML = '<p style="color:#999;">No orders found</p>';
+          return;
+        }
+        
+        let html = `
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background:#f5f5f5; border-bottom: 2px solid #ddd;">
+                <th style="padding:10px; text-align:left; font-weight:600;">Order Number</th>
+                <th style="padding:10px; text-align:left; font-weight:600;">Customer</th>
+                <th style="padding:10px; text-align:left; font-weight:600;">Items</th>
+                <th style="padding:10px; text-align:right; font-weight:600;">Amount</th>
+                <th style="padding:10px; text-align:left; font-weight:600;">Status</th>
+                <th style="padding:10px; text-align:left; font-weight:600;">Date</th>
+                <th style="padding:10px; text-align:center; font-weight:600;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        orders.forEach(order => {
+          const statusColors = {
+            'pending': '#ff9800',
+            'confirmed': '#2196f3',
+            'processing': '#ff5722',
+            'shipped': '#4caf50',
+            'delivered': '#9c27b0',
+            'cancelled': '#f44336',
+            'returned': '#795548'
+          };
+          
+          const statusEmojis = {
+            'pending': '⏳',
+            'confirmed': '✔️',
+            'processing': '🔄',
+            'shipped': '📦',
+            'delivered': '✅',
+            'cancelled': '❌',
+            'returned': '↩️'
+          };
+          
+          const statusBadgeColor = statusColors[order.order_status] || '#666';
+          const statusEmoji = statusEmojis[order.order_status] || '📋';
+          const orderDate = new Date(order.created_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+          
+          html += `
+            <tr style="border-bottom: 1px solid #eee;" data-order-id="${order.id}" data-order-status="${order.order_status}">
+              <td style="padding:10px;"><strong>${order.order_number}</strong></td>
+              <td style="padding:10px;">${order.customer_name || 'N/A'}</td>
+              <td style="padding:10px;">${order.item_count || 1} item(s)</td>
+              <td style="padding:10px; text-align:right;"><strong>₱${parseFloat(order.total_amount || 0).toFixed(2)}</strong></td>
+              <td style="padding:10px;">
+                <span style="background:${statusBadgeColor}; color:#fff; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">
+                  ${statusEmoji} ${order.order_status.replace(/_/g, ' ').toUpperCase()}
+                </span>
+              </td>
+              <td style="padding:10px; font-size:12px; color:#666;">${orderDate}</td>
+              <td style="padding:10px; text-align:center;">
+                <button class="action-btn" onclick="viewOrderDetails(${order.id})" style="font-size:12px; padding:4px 8px; margin-right:4px;">View</button>
+                ${order.order_status !== 'delivered' && order.order_status !== 'cancelled' ? `<button class="action-btn" onclick="openStatusModal(${order.id}, '${order.order_status}')" style="font-size:12px; padding:4px 8px;">Update</button>` : ''}
+              </td>
+            </tr>
+          `;
+        });
+        
+        html += `
+            </tbody>
+          </table>
+        `;
+        
+        container.innerHTML = html;
+      }
+
+      function viewOrderDetails(orderId) {
+        console.log('👀 Viewing order details:', orderId);
+        const order = allOrders.find(o => o.id === orderId);
+        
+        if (!order) {
+          alert('Order not found');
+          return;
+        }
+        
+        const details = `
+Order Number: ${order.order_number}
+Customer: ${order.customer_name || 'N/A'}
+Total: ₱${parseFloat(order.total_amount || 0).toFixed(2)}
+Status: ${order.order_status.replace(/_/g, ' ').toUpperCase()}
+Items: ${order.item_count || 1}
+Date: ${new Date(order.created_at).toLocaleDateString()}
+        `;
+        
+        alert(details);
+      }
+
+      function openStatusModal(orderId, currentStatus) {
+        console.log('🔄 Opening status modal for order:', orderId);
+        
+        const statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+        let statusOptions = statuses.map(s => `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s.replace(/_/g, ' ').toUpperCase()}</option>`).join('');
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        modal.innerHTML = `
+          <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-width:400px;">
+            <h3>Update Order Status</h3>
+            <label style="display:block; margin:15px 0; font-weight:600;">New Status</label>
+            <select id="new-status-select" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; font-size:14px;">
+              ${statusOptions}
+            </select>
+            <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+              <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 16px; border:1px solid #ddd; border-radius:4px; cursor:pointer;">Cancel</button>
+              <button onclick="updateOrderStatus(${orderId})" style="padding:8px 16px; background:#0a0a0a; color:#fff; border:none; border-radius:4px; cursor:pointer;">Update</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+      }
+
+      function updateOrderStatus(orderId) {
+        console.log('📊 Updating order status:', orderId);
+        
+        const newStatus = document.getElementById('new-status-select').value;
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        formData.append('new_status', newStatus);
+        
+        fetch('/seller/update-order-status', {
+          method: 'POST',
+          body: formData
+        })
+          .then(response => {
+            console.log('📥 Status update response:', response.status);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then(data => {
+            console.log('✅ Order status updated:', data);
+            
+            if (data.success) {
+              alert('✅ Order status updated successfully!');
+              // Remove modal
+              document.querySelectorAll('[style*="position:fixed"]').forEach(el => el.remove());
+              // Reload orders
+              loadOrders(currentOrderFilter);
+            } else {
+              alert('❌ Failed to update order status: ' + (data.message || 'Unknown error'));
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error updating order status:', error);
+            alert('Error updating order status: ' + error.message);
+          });
+      }
+      // ============ END ORDER MANAGEMENT ============
 
       function loadProducts() {
         fetch('/seller/products')
@@ -1146,6 +1520,34 @@
           }
         }
       });
+    </script>
+
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="modal" style="position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1000">
+      <div style="background:#fff;border-radius:10px;padding:24px;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,0.2)">
+        <button onclick="closeLogoutModal()" style="float:right;background:none;border:none;font-size:24px;cursor:pointer;color:#999">×</button>
+        <h2 style="margin:0 0 8px;font-size:18px">Confirm Logout</h2>
+        <p style="margin:0 0 18px;color:#666;font-size:14px">Are you sure you want to logout? You will need to log in again to access your account.</p>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closeLogoutModal()" style="padding:10px 20px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:6px;cursor:pointer;font-weight:500">Cancel</button>
+          <button onclick="proceedLogout()" style="padding:10px 20px;border:none;background:#ef4444;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">Yes, Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function confirmLogout(event) {
+        event.preventDefault();
+        document.getElementById('logoutModal').style.display = 'flex';
+      }
+
+      function closeLogoutModal() {
+        document.getElementById('logoutModal').style.display = 'none';
+      }
+
+      function proceedLogout() {
+        window.location.href = '/logout';
+      }
     </script>
   </body>
 </html>
