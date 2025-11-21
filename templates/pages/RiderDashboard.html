@@ -57,7 +57,7 @@
       .status.cancelled{background:#fee2e2;color:#991b1b}
 
       /* Map container */
-      .map-container{height:400px;background:#f3f4f6;border-radius:8px;position:relative;overflow:hidden;border:1px solid var(--line)}
+      .map-container{height:500px;background:#f3f4f6;border-radius:8px;position:relative;overflow:hidden;border:1px solid var(--line);margin-left:-14px;margin-right:-14px;width:calc(100% + 28px)}
       #serviceMap{height:100%;width:100%;z-index:1}
 
       /* Area coverage section */
@@ -144,11 +144,6 @@
                 <div class="map-container" style="margin-top:12px">
                   <div id="serviceMap"></div>
                 </div>
-
-                <!-- Barangays List -->
-                <ul class="coverage-list" id="barangays-list">
-                  <li>Loading...</li>
-                </ul>
               </div>
             </div>
 
@@ -482,36 +477,188 @@
     </style>
 
     <script>
-      // Region coordinates mapping - supports various naming formats
+      // Region coordinates mapping - organized by major geographic areas
       const regionCoordinates = {
-        'sta cruz': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Sta Cruz, Laguna (CALABARZON)' },
-        'santa cruz': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Santa Cruz, Laguna (CALABARZON)' },
-        'sta cruz, laguna': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Sta Cruz, Laguna (CALABARZON)' },
-        'santa cruz, laguna': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Santa Cruz, Laguna (CALABARZON)' },
-        'calamba': { center: [14.2117, 121.1653], zoom: 13, radius: 6000, displayName: 'Calamba, Laguna (CALABARZON)' },
-        'los baños': { center: [14.1697, 121.2408], zoom: 13, radius: 5000, displayName: 'Los Baños, Laguna (CALABARZON)' },
-        'san pablo': { center: [14.0681, 121.3260], zoom: 13, radius: 7000, displayName: 'San Pablo, Laguna (CALABARZON)' },
-        'biñan': { center: [14.3364, 121.0823], zoom: 13, radius: 5000, displayName: 'Biñan, Laguna (CALABARZON)' },
-        'cabuyao': { center: [14.2780, 121.1230], zoom: 13, radius: 5000, displayName: 'Cabuyao, Laguna (CALABARZON)' },
-        'manila': { center: [14.5995, 120.9842], zoom: 12, radius: 8000, displayName: 'Manila (NCR)' },
-        'ncr': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Sta Cruz, Laguna (CALABARZON)' },
-        'quezon city': { center: [14.6760, 121.0437], zoom: 12, radius: 10000, displayName: 'Quezon City (NCR)' },
-        'makati': { center: [14.5547, 121.0244], zoom: 13, radius: 6000, displayName: 'Makati (NCR)' },
-        'calabarzon': { center: [14.2691, 121.4147], zoom: 11, radius: 15000, displayName: 'CALABARZON Region' }
+        // ===== NORTH LUZON =====
+        // Cordillera Administrative Region (CAR)
+        'baguio': { center: [16.4023, 120.5960], zoom: 11, radius: 18000, displayName: 'Baguio City (North Luzon - CAR)' },
+        'baguio city': { center: [16.4023, 120.5960], zoom: 11, radius: 18000, displayName: 'Baguio City (North Luzon - CAR)' },
+        
+        // Ilocos Region
+        'laoag': { center: [18.1987, 120.5937], zoom: 11, radius: 15000, displayName: 'Laoag City (North Luzon - Region I)' },
+        'vigan': { center: [17.5747, 120.3869], zoom: 11, radius: 12000, displayName: 'Vigan City (North Luzon - Region I)' },
+        
+        // Cagayan Valley
+        'tuguegarao': { center: [17.6132, 121.7270], zoom: 11, radius: 18000, displayName: 'Tuguegarao City (North Luzon - Region II)' },
+        'santiago': { center: [16.6875, 121.5468], zoom: 11, radius: 15000, displayName: 'Santiago City (North Luzon - Region II)' },
+        
+        // ===== CENTRAL LUZON =====
+        // Metro Manila (NCR)
+        'manila': { center: [14.5995, 120.9842], zoom: 11, radius: 20000, displayName: 'Manila (Central Luzon - NCR)' },
+        'quezon city': { center: [14.6760, 121.0437], zoom: 10, radius: 30000, displayName: 'Quezon City (Central Luzon - NCR)' },
+        'makati': { center: [14.5547, 121.0244], zoom: 11, radius: 18000, displayName: 'Makati (Central Luzon - NCR)' },
+        'pasig': { center: [14.5764, 121.0851], zoom: 11, radius: 18000, displayName: 'Pasig City (Central Luzon - NCR)' },
+        'taguig': { center: [14.5176, 121.0509], zoom: 11, radius: 20000, displayName: 'Taguig City (Central Luzon - NCR)' },
+        'mandaluyong': { center: [14.5794, 121.0359], zoom: 12, radius: 12000, displayName: 'Mandaluyong (Central Luzon - NCR)' },
+        'paranaque': { center: [14.4793, 121.0198], zoom: 11, radius: 18000, displayName: 'Parañaque (Central Luzon - NCR)' },
+        'las pinas': { center: [14.4453, 120.9820], zoom: 11, radius: 18000, displayName: 'Las Piñas (Central Luzon - NCR)' },
+        'muntinlupa': { center: [14.3833, 121.0333], zoom: 11, radius: 18000, displayName: 'Muntinlupa (Central Luzon - NCR)' },
+        'caloocan': { center: [14.6500, 120.9833], zoom: 11, radius: 20000, displayName: 'Caloocan City (Central Luzon - NCR)' },
+        'valenzuela': { center: [14.7000, 120.9833], zoom: 11, radius: 18000, displayName: 'Valenzuela City (Central Luzon - NCR)' },
+        'malabon': { center: [14.6604, 120.9570], zoom: 12, radius: 12000, displayName: 'Malabon City (Central Luzon - NCR)' },
+        'navotas': { center: [14.6617, 120.9408], zoom: 12, radius: 10000, displayName: 'Navotas City (Central Luzon - NCR)' },
+        'ncr': { center: [14.5995, 120.9842], zoom: 10, radius: 35000, displayName: 'Metro Manila (Central Luzon - NCR)' },
+        
+        // Central Luzon Region (Region III)
+        'angeles': { center: [15.1450, 120.5887], zoom: 11, radius: 18000, displayName: 'Angeles City (Central Luzon - Region III)' },
+        'san fernando': { center: [15.0290, 120.6897], zoom: 11, radius: 15000, displayName: 'San Fernando, Pampanga (Central Luzon - Region III)' },
+        'olongapo': { center: [14.8294, 120.2828], zoom: 11, radius: 15000, displayName: 'Olongapo City (Central Luzon - Region III)' },
+        'tarlac': { center: [15.4755, 120.5963], zoom: 11, radius: 18000, displayName: 'Tarlac City (Central Luzon - Region III)' },
+        
+        // ===== SOUTH LUZON =====
+        // CALABARZON (Region IV-A)
+        'santa cruz': { center: [14.2691, 121.4147], zoom: 11, radius: 15000, displayName: 'Santa Cruz, Laguna (South Luzon - CALABARZON)' },
+        'santa cruz, laguna': { center: [14.2691, 121.4147], zoom: 11, radius: 15000, displayName: 'Santa Cruz, Laguna (South Luzon - CALABARZON)' },
+        'calamba': { center: [14.2117, 121.1653], zoom: 11, radius: 18000, displayName: 'Calamba, Laguna (South Luzon - CALABARZON)' },
+        'los baños': { center: [14.1697, 121.2408], zoom: 11, radius: 15000, displayName: 'Los Baños, Laguna (South Luzon - CALABARZON)' },
+        'san pablo': { center: [14.0681, 121.3260], zoom: 11, radius: 20000, displayName: 'San Pablo, Laguna (South Luzon - CALABARZON)' },
+        'biñan': { center: [14.3364, 121.0823], zoom: 11, radius: 15000, displayName: 'Biñan, Laguna (South Luzon - CALABARZON)' },
+        'cabuyao': { center: [14.2780, 121.1230], zoom: 11, radius: 15000, displayName: 'Cabuyao, Laguna (South Luzon - CALABARZON)' },
+        'batangas': { center: [13.7565, 121.0583], zoom: 11, radius: 18000, displayName: 'Batangas City (South Luzon - CALABARZON)' },
+        'lipa': { center: [13.9411, 121.1650], zoom: 11, radius: 18000, displayName: 'Lipa City (South Luzon - CALABARZON)' },
+        'lucena': { center: [13.9372, 121.6176], zoom: 11, radius: 18000, displayName: 'Lucena City (South Luzon - CALABARZON)' },
+        'antipolo': { center: [14.5864, 121.1755], zoom: 11, radius: 20000, displayName: 'Antipolo City (South Luzon - CALABARZON)' },
+        'cavite': { center: [14.2456, 120.8782], zoom: 11, radius: 20000, displayName: 'Cavite City (South Luzon - CALABARZON)' },
+        'bacoor': { center: [14.4598, 120.9414], zoom: 11, radius: 15000, displayName: 'Bacoor, Cavite (South Luzon - CALABARZON)' },
+        'imus': { center: [14.4297, 120.9367], zoom: 11, radius: 15000, displayName: 'Imus, Cavite (South Luzon - CALABARZON)' },
+        'dasmarinas': { center: [14.3294, 120.9367], zoom: 11, radius: 18000, displayName: 'Dasmariñas, Cavite (South Luzon - CALABARZON)' },
+        
+        // MIMAROPA (Region IV-B)
+        'puerto princesa': { center: [9.7392, 118.7353], zoom: 11, radius: 25000, displayName: 'Puerto Princesa (South Luzon - MIMAROPA)' },
+        'calapan': { center: [13.4117, 121.1803], zoom: 11, radius: 15000, displayName: 'Calapan City (South Luzon - MIMAROPA)' },
+        
+        // Bicol Region (Region V)
+        'legazpi': { center: [13.1391, 123.7437], zoom: 11, radius: 20000, displayName: 'Legazpi City (South Luzon - Bicol)' },
+        'legazpi city': { center: [13.1391, 123.7437], zoom: 11, radius: 20000, displayName: 'Legazpi City (South Luzon - Bicol)' },
+        'naga': { center: [13.6192, 123.1814], zoom: 11, radius: 18000, displayName: 'Naga City (South Luzon - Bicol)' },
+        'naga city': { center: [13.6192, 123.1814], zoom: 11, radius: 18000, displayName: 'Naga City (South Luzon - Bicol)' },
+        'albay': { center: [13.1391, 123.7437], zoom: 10, radius: 30000, displayName: 'Albay Province (South Luzon - Bicol)' },
+        'sorsogon': { center: [12.9736, 124.0047], zoom: 11, radius: 18000, displayName: 'Sorsogon City (South Luzon - Bicol)' },
+        
+        // ===== VISAYAS =====
+        // Western Visayas (Region VI)
+        'iloilo': { center: [10.7202, 122.5621], zoom: 11, radius: 20000, displayName: 'Iloilo City (Visayas - Region VI)' },
+        'iloilo city': { center: [10.7202, 122.5621], zoom: 11, radius: 20000, displayName: 'Iloilo City (Visayas - Region VI)' },
+        'bacolod': { center: [10.6760, 122.9500], zoom: 11, radius: 20000, displayName: 'Bacolod City (Visayas - Region VI)' },
+        'roxas': { center: [11.5854, 122.7510], zoom: 11, radius: 15000, displayName: 'Roxas City (Visayas - Region VI)' },
+        
+        // Central Visayas (Region VII)
+        'cebu': { center: [10.3157, 123.8854], zoom: 10, radius: 25000, displayName: 'Cebu City (Visayas - Region VII)' },
+        'cebu city': { center: [10.3157, 123.8854], zoom: 10, radius: 25000, displayName: 'Cebu City (Visayas - Region VII)' },
+        'mandaue': { center: [10.3237, 123.9227], zoom: 11, radius: 18000, displayName: 'Mandaue City (Visayas - Region VII)' },
+        'lapu-lapu': { center: [10.3103, 123.9494], zoom: 11, radius: 15000, displayName: 'Lapu-Lapu City (Visayas - Region VII)' },
+        'tagbilaran': { center: [9.6478, 123.8533], zoom: 11, radius: 15000, displayName: 'Tagbilaran City (Visayas - Region VII)' },
+        'dumaguete': { center: [9.3068, 123.3054], zoom: 11, radius: 15000, displayName: 'Dumaguete City (Visayas - Region VII)' },
+        
+        // Eastern Visayas (Region VIII)
+        'tacloban': { center: [11.2447, 125.0038], zoom: 11, radius: 18000, displayName: 'Tacloban City (Visayas - Region VIII)' },
+        'ormoc': { center: [11.0059, 124.6074], zoom: 11, radius: 15000, displayName: 'Ormoc City (Visayas - Region VIII)' },
+        
+        // ===== MINDANAO =====
+        // Zamboanga Peninsula (Region IX)
+        'zamboanga': { center: [6.9214, 122.0790], zoom: 11, radius: 25000, displayName: 'Zamboanga City (Mindanao - Region IX)' },
+        'zamboanga city': { center: [6.9214, 122.0790], zoom: 11, radius: 25000, displayName: 'Zamboanga City (Mindanao - Region IX)' },
+        'pagadian': { center: [7.8250, 123.4353], zoom: 11, radius: 15000, displayName: 'Pagadian City (Mindanao - Region IX)' },
+        
+        // Northern Mindanao (Region X)
+        'cagayan de oro': { center: [8.4542, 124.6319], zoom: 11, radius: 20000, displayName: 'Cagayan de Oro (Mindanao - Region X)' },
+        'cdo': { center: [8.4542, 124.6319], zoom: 11, radius: 20000, displayName: 'Cagayan de Oro (Mindanao - Region X)' },
+        'iligan': { center: [8.2280, 124.2452], zoom: 11, radius: 18000, displayName: 'Iligan City (Mindanao - Region X)' },
+        
+        // Davao Region (Region XI)
+        'davao': { center: [7.0731, 125.6128], zoom: 10, radius: 35000, displayName: 'Davao City (Mindanao - Region XI)' },
+        'davao city': { center: [7.0731, 125.6128], zoom: 10, radius: 35000, displayName: 'Davao City (Mindanao - Region XI)' },
+        'tagum': { center: [7.4479, 125.8078], zoom: 11, radius: 18000, displayName: 'Tagum City (Mindanao - Region XI)' },
+        'panabo': { center: [7.3068, 125.6838], zoom: 11, radius: 15000, displayName: 'Panabo City (Mindanao - Region XI)' },
+        'digos': { center: [6.7497, 125.3569], zoom: 11, radius: 15000, displayName: 'Digos City (Mindanao - Region XI)' },
+        
+        // SOCCSKSARGEN (Region XII)
+        'general santos': { center: [6.1164, 125.1716], zoom: 11, radius: 20000, displayName: 'General Santos City (Mindanao - Region XII)' },
+        'koronadal': { center: [6.5008, 124.8461], zoom: 11, radius: 15000, displayName: 'Koronadal City (Mindanao - Region XII)' },
+        
+        // Caraga (Region XIII)
+        'butuan': { center: [8.9475, 125.5406], zoom: 11, radius: 18000, displayName: 'Butuan City (Mindanao - Region XIII)' },
+        
+        // BARMM
+        'cotabato': { center: [7.2233, 124.2461], zoom: 11, radius: 18000, displayName: 'Cotabato City (Mindanao - BARMM)' },
+        
+        // ===== REGIONAL DEFAULTS =====
+        'north luzon': { center: [16.4023, 120.5960], zoom: 6, radius: 250000, displayName: 'North Luzon Region' },
+        'central luzon': { center: [14.5995, 120.9842], zoom: 6, radius: 180000, displayName: 'Central Luzon Region' },
+        'south luzon': { center: [13.5, 121.5], zoom: 6, radius: 250000, displayName: 'South Luzon Region' },
+        'visayas': { center: [10.3157, 123.8854], zoom: 6, radius: 300000, displayName: 'Visayas Region' },
+        'mindanao': { center: [7.5, 125.0], zoom: 6, radius: 350000, displayName: 'Mindanao Region' },
+        'calabarzon': { center: [14.2691, 121.4147], zoom: 9, radius: 50000, displayName: 'CALABARZON Region' },
+        'region i': { center: [17.5, 120.5], zoom: 9, radius: 50000, displayName: 'Ilocos Region (I)' },
+        'region ii': { center: [17.5, 121.5], zoom: 9, radius: 50000, displayName: 'Cagayan Valley (II)' },
+        'region iii': { center: [15.0, 120.5], zoom: 9, radius: 50000, displayName: 'Central Luzon (III)' },
+        'region v': { center: [13.1391, 123.7437], zoom: 9, radius: 50000, displayName: 'Bicol Region (V)' },
+        'region vi': { center: [10.7202, 122.5621], zoom: 9, radius: 50000, displayName: 'Western Visayas (VI)' },
+        'region vii': { center: [10.3157, 123.8854], zoom: 9, radius: 50000, displayName: 'Central Visayas (VII)' },
+        'region viii': { center: [11.2447, 125.0038], zoom: 9, radius: 50000, displayName: 'Eastern Visayas (VIII)' },
+        'region ix': { center: [6.9214, 122.0790], zoom: 9, radius: 50000, displayName: 'Zamboanga Peninsula (IX)' },
+        'region x': { center: [8.4542, 124.6319], zoom: 9, radius: 50000, displayName: 'Northern Mindanao (X)' },
+        'region xi': { center: [7.0731, 125.6128], zoom: 9, radius: 50000, displayName: 'Davao Region (XI)' },
+        'region xii': { center: [6.5, 125.0], zoom: 9, radius: 50000, displayName: 'SOCCSKSARGEN (XII)' },
+        'region xiii': { center: [8.9475, 125.5406], zoom: 9, radius: 50000, displayName: 'Caraga (XIII)' }
       };
 
-      // Warehouse locations for different regions - case insensitive keys
+      // Warehouse locations organized by geographic area - case insensitive keys
       const warehouses = {
-        'sta cruz': [
-          { name: 'Varón Main Warehouse', coords: [14.2741, 121.4097], type: 'main' },
-          { name: 'Patimbao Distribution Hub', coords: [14.2850, 121.4200], type: 'distribution' },
-          { name: 'Poblacion Storage', coords: [14.2680, 121.4160], type: 'storage' }
+        // NORTH LUZON Warehouses
+        'baguio': [
+          { name: 'Baguio Main Warehouse', coords: [16.4023, 120.5960], type: 'main' },
+          { name: 'Session Road Distribution', coords: [16.4100, 120.5980], type: 'distribution' }
         ],
-        'santa cruz': [
-          { name: 'Varón Main Warehouse', coords: [14.2741, 121.4097], type: 'main' },
-          { name: 'Patimbao Distribution Hub', coords: [14.2850, 121.4200], type: 'distribution' }
+        'laoag': [
+          { name: 'Laoag Main Hub', coords: [18.1987, 120.5937], type: 'main' }
+        ],
+        'tuguegarao': [
+          { name: 'Tuguegarao Warehouse', coords: [17.6132, 121.7270], type: 'main' }
+        ],
+        
+        // CENTRAL LUZON Warehouses
+        'manila': [
+          { name: 'Manila Main Hub', coords: [14.6042, 120.9822], type: 'main' },
+          { name: 'Divisoria Storage', coords: [14.6008, 120.9756], type: 'storage' }
+        ],
+        'quezon city': [
+          { name: 'Quezon City Main Warehouse', coords: [14.6760, 121.0437], type: 'main' },
+          { name: 'Cubao Distribution Hub', coords: [14.6190, 121.0556], type: 'distribution' }
+        ],
+        'makati': [
+          { name: 'Makati Central Warehouse', coords: [14.5547, 121.0244], type: 'main' },
+          { name: 'BGC Storage Facility', coords: [14.5520, 121.0472], type: 'storage' }
+        ],
+        'pasig': [
+          { name: 'Pasig Main Warehouse', coords: [14.5764, 121.0851], type: 'main' }
+        ],
+        'taguig': [
+          { name: 'Taguig Distribution Hub', coords: [14.5176, 121.0509], type: 'main' }
         ],
         'ncr': [
+          { name: 'Manila Main Hub', coords: [14.6042, 120.9822], type: 'main' },
+          { name: 'Quezon City Warehouse', coords: [14.6760, 121.0437], type: 'distribution' }
+        ],
+        'angeles': [
+          { name: 'Angeles City Warehouse', coords: [15.1450, 120.5887], type: 'main' }
+        ],
+        'san fernando': [
+          { name: 'San Fernando Pampanga Hub', coords: [15.0290, 120.6897], type: 'main' }
+        ],
+        
+        // SOUTH LUZON Warehouses
+        'santa cruz': [
           { name: 'Varón Main Warehouse', coords: [14.2741, 121.4097], type: 'main' },
           { name: 'Patimbao Distribution Hub', coords: [14.2850, 121.4200], type: 'distribution' },
           { name: 'Poblacion Storage', coords: [14.2680, 121.4160], type: 'storage' }
@@ -520,154 +667,340 @@
           { name: 'Calamba Central Warehouse', coords: [14.2150, 121.1700], type: 'main' },
           { name: 'PEZA Distribution Center', coords: [14.2080, 121.1620], type: 'distribution' }
         ],
-        'manila': [
+        'batangas': [
+          { name: 'Batangas Main Warehouse', coords: [13.7565, 121.0583], type: 'main' }
+        ],
+        'lipa': [
+          { name: 'Lipa City Hub', coords: [13.9411, 121.1650], type: 'main' }
+        ],
+        'lucena': [
+          { name: 'Lucena Distribution Center', coords: [13.9372, 121.6176], type: 'main' }
+        ],
+        'antipolo': [
+          { name: 'Antipolo Warehouse', coords: [14.5864, 121.1755], type: 'main' }
+        ],
+        'cavite': [
+          { name: 'Cavite Main Hub', coords: [14.2456, 120.8782], type: 'main' }
+        ],
+        'bacoor': [
+          { name: 'Bacoor Distribution', coords: [14.4598, 120.9414], type: 'main' }
+        ],
+        'legazpi': [
+          { name: 'Legazpi Main Warehouse', coords: [13.1450, 123.7450], type: 'main' },
+          { name: 'Albay Distribution Hub', coords: [13.1300, 123.7350], type: 'distribution' }
+        ],
+        'albay': [
+          { name: 'Legazpi Main Warehouse', coords: [13.1450, 123.7450], type: 'main' },
+          { name: 'Albay Distribution Hub', coords: [13.1300, 123.7350], type: 'distribution' }
+        ],
+        'naga': [
+          { name: 'Naga Main Warehouse', coords: [13.6192, 123.1814], type: 'main' },
+          { name: 'Naga Distribution', coords: [13.6250, 123.1900], type: 'distribution' }
+        ],
+        
+        // VISAYAS Warehouses
+        'cebu': [
+          { name: 'Cebu Main Warehouse', coords: [10.3200, 123.8900], type: 'main' },
+          { name: 'IT Park Storage', coords: [10.3186, 123.8950], type: 'storage' }
+        ],
+        'cebu city': [
+          { name: 'Cebu Main Warehouse', coords: [10.3200, 123.8900], type: 'main' },
+          { name: 'Mandaue Distribution Hub', coords: [10.3237, 123.9227], type: 'distribution' }
+        ],
+        'mandaue': [
+          { name: 'Mandaue Distribution Hub', coords: [10.3237, 123.9227], type: 'main' }
+        ],
+        'iloilo': [
+          { name: 'Iloilo Central Warehouse', coords: [10.7202, 122.5621], type: 'main' },
+          { name: 'Jaro Distribution Center', coords: [10.7300, 122.5450], type: 'distribution' }
+        ],
+        'bacolod': [
+          { name: 'Bacolod Central Warehouse', coords: [10.6760, 122.9500], type: 'main' }
+        ],
+        'tacloban': [
+          { name: 'Tacloban Main Hub', coords: [11.2447, 125.0038], type: 'main' }
+        ],
+        'dumaguete': [
+          { name: 'Dumaguete Warehouse', coords: [9.3068, 123.3054], type: 'main' }
+        ],
+        
+        // MINDANAO Warehouses
+        'davao': [
+          { name: 'Davao Main Warehouse', coords: [7.0780, 125.6120], type: 'main' },
+          { name: 'Matina Distribution Center', coords: [7.0645, 125.6050], type: 'distribution' },
+          { name: 'Toril Storage Hub', coords: [7.0100, 125.5050], type: 'storage' }
+        ],
+        'davao city': [
+          { name: 'Davao Main Warehouse', coords: [7.0780, 125.6120], type: 'main' },
+          { name: 'Matina Distribution Center', coords: [7.0645, 125.6050], type: 'distribution' }
+        ],
+        'cagayan de oro': [
+          { name: 'CDO Main Warehouse', coords: [8.4542, 124.6319], type: 'main' },
+          { name: 'Carmen Distribution Hub', coords: [8.4700, 124.6200], type: 'distribution' }
+        ],
+        'cdo': [
+          { name: 'CDO Main Warehouse', coords: [8.4542, 124.6319], type: 'main' }
+        ],
+        'zamboanga': [
+          { name: 'Zamboanga Main Hub', coords: [6.9214, 122.0790], type: 'main' },
+          { name: 'Zamboanga Distribution', coords: [6.9300, 122.0850], type: 'distribution' }
+        ],
+        'general santos': [
+          { name: 'General Santos Warehouse', coords: [6.1164, 125.1716], type: 'main' }
+        ],
+        'butuan': [
+          { name: 'Butuan Main Hub', coords: [8.9475, 125.5406], type: 'main' }
+        ],
+        'iligan': [
+          { name: 'Iligan Distribution Center', coords: [8.2280, 124.2452], type: 'main' }
+        ],
+        
+        // REGIONAL WAREHOUSE CONSOLIDATIONS
+        'north luzon': [
+          { name: 'Baguio Main Warehouse', coords: [16.4023, 120.5960], type: 'main' },
+          { name: 'Laoag Main Hub', coords: [18.1987, 120.5937], type: 'main' },
+          { name: 'Tuguegarao Warehouse', coords: [17.6132, 121.7270], type: 'main' },
+          { name: 'Vigan Distribution', coords: [17.5747, 120.3869], type: 'distribution' },
+          { name: 'Santiago Hub', coords: [16.6875, 121.5468], type: 'distribution' }
+        ],
+        'central luzon': [
           { name: 'Manila Main Hub', coords: [14.6042, 120.9822], type: 'main' },
-          { name: 'Divisoria Storage', coords: [14.6008, 120.9756], type: 'storage' }
+          { name: 'Quezon City Main Warehouse', coords: [14.6760, 121.0437], type: 'main' },
+          { name: 'Makati Central Warehouse', coords: [14.5547, 121.0244], type: 'main' },
+          { name: 'Angeles City Warehouse', coords: [15.1450, 120.5887], type: 'main' },
+          { name: 'Cubao Distribution Hub', coords: [14.6190, 121.0556], type: 'distribution' },
+          { name: 'BGC Storage Facility', coords: [14.5520, 121.0472], type: 'storage' },
+          { name: 'Pasig Warehouse', coords: [14.5764, 121.0851], type: 'distribution' },
+          { name: 'San Fernando Pampanga Hub', coords: [15.0290, 120.6897], type: 'distribution' }
+        ],
+        'south luzon': [
+          { name: 'Varón Main Warehouse (Santa Cruz)', coords: [14.2741, 121.4097], type: 'main' },
+          { name: 'Calamba Central Warehouse', coords: [14.2150, 121.1700], type: 'main' },
+          { name: 'Batangas Main Warehouse', coords: [13.7565, 121.0583], type: 'main' },
+          { name: 'Legazpi Main Warehouse', coords: [13.1450, 123.7450], type: 'main' },
+          { name: 'Naga Main Warehouse', coords: [13.6192, 123.1814], type: 'main' },
+          { name: 'Lipa City Hub', coords: [13.9411, 121.1650], type: 'distribution' },
+          { name: 'Lucena Distribution Center', coords: [13.9372, 121.6176], type: 'distribution' },
+          { name: 'Antipolo Warehouse', coords: [14.5864, 121.1755], type: 'distribution' },
+          { name: 'Cavite Main Hub', coords: [14.2456, 120.8782], type: 'distribution' },
+          { name: 'Patimbao Distribution Hub', coords: [14.2850, 121.4200], type: 'storage' }
+        ],
+        'visayas': [
+          { name: 'Cebu Main Warehouse', coords: [10.3200, 123.8900], type: 'main' },
+          { name: 'Iloilo Central Warehouse', coords: [10.7202, 122.5621], type: 'main' },
+          { name: 'Bacolod Central Warehouse', coords: [10.6760, 122.9500], type: 'main' },
+          { name: 'Tacloban Main Hub', coords: [11.2447, 125.0038], type: 'main' },
+          { name: 'Mandaue Distribution Hub', coords: [10.3237, 123.9227], type: 'distribution' },
+          { name: 'Dumaguete Warehouse', coords: [9.3068, 123.3054], type: 'distribution' },
+          { name: 'Jaro Distribution Center', coords: [10.7300, 122.5450], type: 'storage' }
+        ],
+        'mindanao': [
+          { name: 'Davao Main Warehouse', coords: [7.0780, 125.6120], type: 'main' },
+          { name: 'CDO Main Warehouse', coords: [8.4542, 124.6319], type: 'main' },
+          { name: 'Zamboanga Main Hub', coords: [6.9214, 122.0790], type: 'main' },
+          { name: 'General Santos Warehouse', coords: [6.1164, 125.1716], type: 'main' },
+          { name: 'Butuan Main Hub', coords: [8.9475, 125.5406], type: 'main' },
+          { name: 'Matina Distribution Center', coords: [7.0645, 125.6050], type: 'distribution' },
+          { name: 'Carmen Distribution Hub', coords: [8.4700, 124.6200], type: 'distribution' },
+          { name: 'Iligan Distribution Center', coords: [8.2280, 124.2452], type: 'distribution' },
+          { name: 'Toril Storage Hub', coords: [7.0100, 125.5050], type: 'storage' }
         ]
       };
 
       // Initialize Interactive Map based on rider's region
       function initializeMap() {
+        // Check if Leaflet is loaded
+        if (typeof L === 'undefined') {
+          console.error('Leaflet library not loaded');
+          return;
+        }
+        
+        // Check if map container exists
+        const mapContainer = document.getElementById('serviceMap');
+        if (!mapContainer) {
+          console.error('Map container not found');
+          return;
+        }
+        
         // Get rider's service area from template
-        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "Sta Cruz, Laguna" }}';
+        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "North Luzon" }}';
         console.log('Service Area from DB:', serviceAreaText);
         
         // Normalize the service area text for matching
         const normalizedArea = serviceAreaText.toLowerCase().trim();
         
-        // Find matching region coordinates (case-insensitive)
+        // Find matching region coordinates with improved matching
         let regionConfig = null;
+        let matchedKey = null;
+        
+        // First try exact match
         for (const [region, config] of Object.entries(regionCoordinates)) {
-          if (normalizedArea.includes(region.toLowerCase()) || region.toLowerCase().includes(normalizedArea)) {
+          if (normalizedArea === region.toLowerCase()) {
             regionConfig = config;
-            console.log('Matched region:', region, config);
+            matchedKey = region;
+            console.log('Exact match:', region);
             break;
           }
         }
         
-        // Default to Sta Cruz if no match found
+        // If no exact match, try partial match with better logic
         if (!regionConfig) {
-          console.log('No match found, using default: Sta Cruz, Laguna');
-          regionConfig = regionCoordinates['sta cruz'];
-        }
-        
-        // Initialize the map with region-specific settings
-        const map = L.map('serviceMap').setView(regionConfig.center, regionConfig.zoom);
-        
-        // Add OpenStreetMap tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19
-        }).addTo(map);
-        
-        // Define service area boundaries with region-specific radius
-        const serviceArea = L.circle(regionConfig.center, {
-          color: '#10b981',
-          fillColor: '#10b981',
-          fillOpacity: 0.15,
-          radius: regionConfig.radius
-        }).addTo(map);
-        
-        // Add warehouse markers based on region (case-insensitive matching)
-        const normalizedAreaKey = normalizedArea.replace(/,.*$/,'').trim(); // Remove everything after comma
-        let regionWarehouses = null;
-        
-        // Try to find matching warehouses
-        for (const [warehouseKey, warehouseList] of Object.entries(warehouses)) {
-          if (normalizedAreaKey.includes(warehouseKey.toLowerCase()) || warehouseKey.toLowerCase().includes(normalizedAreaKey)) {
-            regionWarehouses = warehouseList;
-            console.log('Matched warehouses for:', warehouseKey);
-            break;
+          // Remove common suffixes for better matching
+          const areaBase = normalizedArea.replace(/, ?(city|laguna|philippines|ph|region \w+)$/gi, '').trim();
+          
+          for (const [region, config] of Object.entries(regionCoordinates)) {
+            const regionLower = region.toLowerCase();
+            
+            // Check if the base area matches the region key
+            if (areaBase === regionLower || areaBase.includes(regionLower) || regionLower.includes(areaBase)) {
+              regionConfig = config;
+              matchedKey = region;
+              console.log('Partial match:', region, 'for area:', serviceAreaText);
+              break;
+            }
           }
         }
         
-        // Default to Sta Cruz warehouses if no match
-        if (!regionWarehouses) {
-          console.log('No warehouse match, using default Sta Cruz warehouses');
-          regionWarehouses = warehouses['sta cruz'];
+        // Default to North Luzon if no match found
+        if (!regionConfig) {
+          console.warn('No region match found for:', serviceAreaText, '- using default North Luzon');
+          regionConfig = regionCoordinates['north luzon'];
+          matchedKey = 'north luzon';
         }
         
-        // Custom icons for different warehouse types
-        const mainWarehouseIcon = L.divIcon({
-          className: 'warehouse-marker',
-          html: '<div style="background:#ef4444;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:18px;">🏭</div>',
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        });
+        console.log('Final matched region:', matchedKey, 'Config:', regionConfig);
         
-        const distributionIcon = L.divIcon({
-          className: 'warehouse-marker',
-          html: '<div style="background:#f59e0b;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);font-size:16px;">📦</div>',
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
-        
-        const storageIcon = L.divIcon({
-          className: 'warehouse-marker',
-          html: '<div style="background:#3b82f6;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:14px;">🏪</div>',
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
-        });
-        
-        // Add warehouse markers
-        regionWarehouses.forEach(warehouse => {
-          let icon = storageIcon;
-          let warehouseType = 'Storage Facility';
+        try {
+          // Initialize the map with region-specific settings
+          const map = L.map('serviceMap').setView(regionConfig.center, regionConfig.zoom);
           
-          if (warehouse.type === 'main') {
-            icon = mainWarehouseIcon;
-            warehouseType = 'Main Warehouse';
-          } else if (warehouse.type === 'distribution') {
-            icon = distributionIcon;
-            warehouseType = 'Distribution Hub';
+          // Add OpenStreetMap tile layer
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+          }).addTo(map);
+          
+          // Define service area boundaries with region-specific radius
+          const serviceArea = L.circle(regionConfig.center, {
+            color: '#10b981',
+            fillColor: '#10b981',
+            fillOpacity: 0.15,
+            radius: regionConfig.radius
+          }).addTo(map);
+          
+          // Add warehouse markers based on region (case-insensitive matching)
+          const normalizedAreaKey = normalizedArea.replace(/,.*$/,'').trim(); // Remove everything after comma
+          let regionWarehouses = null;
+          
+          // Try to find matching warehouses
+          for (const [warehouseKey, warehouseList] of Object.entries(warehouses)) {
+            if (normalizedAreaKey.includes(warehouseKey.toLowerCase()) || warehouseKey.toLowerCase().includes(normalizedAreaKey)) {
+              regionWarehouses = warehouseList;
+              console.log('Matched warehouses for:', warehouseKey);
+              break;
+            }
           }
           
-          const marker = L.marker(warehouse.coords, { icon: icon }).addTo(map);
-          marker.bindPopup(`
-            <div style="font-family:Inter,sans-serif;">
-              <strong style="font-size:14px;">${warehouse.name}</strong><br>
-              <span style="color:#666;font-size:12px;">${warehouseType}</span><br>
-              <span style="color:#10b981;font-size:11px;">✓ Pickup Available</span>
-            </div>
-          `);
-        });
-        
-        // Add center marker for service area
-        const centerMarker = L.marker(regionConfig.center, {
-          icon: L.divIcon({
-            className: 'center-marker',
-            html: '<div style="background:#0a0a0a;color:white;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);">📍 ' + (regionConfig.displayName || serviceAreaText) + '</div>',
-            iconSize: [120, 32],
-            iconAnchor: [60, 16]
-          })
-        }).addTo(map);
-        
-        centerMarker.bindPopup(`<b>${regionConfig.displayName || serviceAreaText}</b><br>Your Service Area`);
-        
-        // Add scale control
-        L.control.scale().addTo(map);
-        
-        // Add legend for warehouse types
-        const legend = L.control({ position: 'bottomright' });
-        legend.onAdd = function(map) {
-          const div = L.DomUtil.create('div', 'legend');
-          div.innerHTML = `
-            <div style="background:white;padding:10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-family:Inter,sans-serif;">
-              <div style="font-weight:600;margin-bottom:6px;font-size:11px;color:#666;">PICKUP LOCATIONS</div>
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">
-                <span style="font-size:14px;">🏭</span> Main Warehouse
+          // Default to Baguio warehouses if no match (North Luzon)
+          if (!regionWarehouses) {
+            console.log('No warehouse match, using default Baguio warehouses');
+            regionWarehouses = warehouses['baguio'] || [];
+          }
+          
+          // Custom icons for different warehouse types
+          const mainWarehouseIcon = L.divIcon({
+            className: 'warehouse-marker',
+            html: '<div style="background:#ef4444;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:18px;">🏭</div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+          
+          const distributionIcon = L.divIcon({
+            className: 'warehouse-marker',
+            html: '<div style="background:#f59e0b;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);font-size:16px;">📦</div>',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          });
+          
+          const storageIcon = L.divIcon({
+            className: 'warehouse-marker',
+            html: '<div style="background:#3b82f6;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:14px;">🏪</div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          });
+          
+          // Add warehouse markers
+          regionWarehouses.forEach(warehouse => {
+            let icon = storageIcon;
+            let warehouseType = 'Storage Facility';
+            
+            if (warehouse.type === 'main') {
+              icon = mainWarehouseIcon;
+              warehouseType = 'Main Warehouse';
+            } else if (warehouse.type === 'distribution') {
+              icon = distributionIcon;
+              warehouseType = 'Distribution Hub';
+            }
+            
+            const marker = L.marker(warehouse.coords, { icon: icon }).addTo(map);
+            marker.bindPopup(`
+              <div style="font-family:Inter,sans-serif;">
+                <strong style="font-size:14px;">${warehouse.name}</strong><br>
+                <span style="color:#666;font-size:12px;">${warehouseType}</span><br>
+                <span style="color:#10b981;font-size:11px;">✓ Pickup Available</span>
               </div>
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">
-                <span style="font-size:14px;">📦</span> Distribution Hub
+            `);
+          });
+          
+          // Add center marker for service area
+          const centerMarker = L.marker(regionConfig.center, {
+            icon: L.divIcon({
+              className: 'center-marker',
+              html: '<div style="background:#0a0a0a;color:white;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);">📍 ' + (regionConfig.displayName || serviceAreaText) + '</div>',
+              iconSize: [120, 32],
+              iconAnchor: [60, 16]
+            })
+          }).addTo(map);
+          
+          centerMarker.bindPopup(`<b>${regionConfig.displayName || serviceAreaText}</b><br>Your Service Area`);
+          
+          // Add scale control
+          L.control.scale().addTo(map);
+          
+          // Add legend for warehouse types
+          const legend = L.control({ position: 'bottomright' });
+          legend.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+              <div style="background:white;padding:10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-family:Inter,sans-serif;">
+                <div style="font-weight:600;margin-bottom:6px;font-size:11px;color:#666;">PICKUP LOCATIONS</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">
+                  <span style="font-size:14px;">🏭</span> Main Warehouse
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">
+                  <span style="font-size:14px;">📦</span> Distribution Hub
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;">
+                  <span style="font-size:14px;">🏪</span> Storage Facility
+                </div>
               </div>
-              <div style="display:flex;align-items:center;gap:6px;font-size:11px;">
-                <span style="font-size:14px;">🏪</span> Storage Facility
-              </div>
-            </div>
-          `;
-          return div;
-        };
-        legend.addTo(map);
+            `;
+            return div;
+          };
+          legend.addTo(map);
+          
+          // Fix map size after initialization
+          setTimeout(function() {
+            map.invalidateSize();
+          }, 250);
+        
+        } catch (error) {
+          console.error('Error initializing map:', error);
+          const mapContainer = document.getElementById('serviceMap');
+          if (mapContainer) {
+            mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#999;font-size:14px;">Unable to load map. Please refresh the page.</div>';
+          }
+        }
       }
       
       // Simple function to switch between sections
@@ -756,11 +1089,11 @@
 
       // Load rider's active deliveries
       function loadMyActiveDeliveries() {
-        fetch('/api/rider/available-orders')
+        fetch('/api/rider/active-deliveries')
           .then(response => response.json())
           .then(data => {
             const tbody = document.querySelector('#active-deliveries-table tbody');
-            const activeOrders = data.orders ? data.orders.filter(order => order.shipment_status === 'picked_up') : [];
+            const activeOrders = data.deliveries || [];
             
             // Update count badge
             document.getElementById('active-count').textContent = `${activeOrders.length} Active`;
@@ -768,8 +1101,29 @@
             if (activeOrders.length > 0) {
               tbody.innerHTML = activeOrders.map(order => {
                 const earning = (parseFloat(order.total_amount) * 0.15).toFixed(2);
-                const statusClass = order.shipment_status.replace('_', '-');
-                const statusText = order.shipment_status.replace('_', ' ').toUpperCase();
+                const isAwaitingConfirmation = !order.seller_confirmed && order.shipment_status === 'pending';
+                
+                let statusDisplay, statusClass, actionButton;
+                
+                if (isAwaitingConfirmation) {
+                  statusClass = 'pending';
+                  statusDisplay = '⏳ AWAITING SELLER CONFIRMATION';
+                  actionButton = `<span class="tag" style="background:#fef3c7;color:#92400e;padding:8px 16px">Waiting...</span>`;
+                } else {
+                  statusClass = order.shipment_status.replace('_', '-');
+                  statusDisplay = order.shipment_status.replace('_', ' ').toUpperCase();
+                  actionButton = `
+                    <select onchange="updateDeliveryStatus(${order.shipment_id}, this.value)" 
+                            class="tag" 
+                            style="background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer;color:#0a0a0a">
+                      <option value="">Update Status...</option>
+                      <option value="in_transit">In Transit</option>
+                      <option value="out_for_delivery">Out for Delivery</option>
+                      <option value="delivered">Delivered ✓</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  `;
+                }
                 
                 return `
                   <tr>
@@ -782,19 +1136,11 @@
                     </td>
                     <td style="max-width:200px">${order.delivery_address}</td>
                     <td>
-                      <span class="status ${statusClass}">${statusText}</span>
+                      <span class="status ${statusClass}">${statusDisplay}</span>
                     </td>
                     <td style="color:#10b981;font-weight:600">₱${earning}</td>
                     <td>
-                      <select onchange="updateDeliveryStatus(${order.shipment_id}, this.value)" 
-                              class="tag" 
-                              style="background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer">
-                        <option value="">Update Status...</option>
-                        <option value="in_transit">In Transit</option>
-                        <option value="out_for_delivery">Out for Delivery</option>
-                        <option value="delivered">Delivered ✓</option>
-                        <option value="failed">Failed</option>
-                      </select>
+                      ${actionButton}
                     </td>
                   </tr>
                 `;
@@ -990,63 +1336,37 @@
           });
       }
 
-      // Region-specific coverage data
+      // Region-specific coverage data - Updated for major regions
       const regionCoverage = {
-        'Sta Cruz, Laguna': {
-          description: 'Covering: Sta Cruz proper, Patimbao, Santissima, Poblacion I-V, and surrounding barangays',
-          barangays: ['Sta Cruz Proper', 'Patimbao', 'Santissima', 'Poblacion I', 'Poblacion II', 'Poblacion III', 'Poblacion IV', 'Poblacion V']
+        'North Luzon': {
+          description: 'Serving all of North Luzon including CAR (Baguio), Ilocos Region, and Cagayan Valley areas'
         },
-        'Santa Cruz, Laguna': {
-          description: 'Covering: Sta Cruz proper, Patimbao, Santissima, Poblacion I-V, and surrounding barangays',
-          barangays: ['Sta Cruz Proper', 'Patimbao', 'Santissima', 'Poblacion I', 'Poblacion II', 'Poblacion III']
+        'Central Luzon': {
+          description: 'Serving Metro Manila (NCR) and Central Luzon (Region III) including all cities and municipalities'
         },
-        'Calamba, Laguna': {
-          description: 'Covering: Calamba City proper, PEZA industrial area, and major residential barangays',
-          barangays: ['Barangay 1 (Poblacion)', 'Barangay 2', 'Barangay 3', 'Parian', 'Canlubang', 'Halang', 'Bucal', 'Milagros']
+        'South Luzon': {
+          description: 'Serving South Luzon including CALABARZON, MIMAROPA, and Bicol Region areas'
         },
-        'Los Baños, Laguna': {
-          description: 'Covering: Los Baños proper, UPLB area, and commercial districts',
-          barangays: ['Poblacion', 'Anos', 'Batong Malake', 'Bay', 'Mayondon', 'Maahas', 'Malinta']
+        'Visayas': {
+          description: 'Serving all Visayas regions including Western, Central, and Eastern Visayas'
         },
-        'Manila': {
-          description: 'Covering: Manila downtown, Ermita, Malate, and major commercial districts',
-          barangays: ['Ermita', 'Malate', 'Paco', 'San Miguel', 'Santa Ana', 'Sampaloc', 'Quiapo', 'Binondo']
-        },
-        'Quezon City': {
-          description: 'Covering: Quezon City central business districts and residential areas',
-          barangays: ['Araneta Center Area', 'Cubao', 'Diliman', 'Project 4-8', 'Commonwealth', 'Fairview', 'Novaliches']
+        'Mindanao': {
+          description: 'Serving all Mindanao regions including Davao, Northern Mindanao, Zamboanga, and other areas'
         }
       };
 
       // Update coverage details based on rider's region
       function updateCoverageDetails() {
-        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "Sta Cruz, Laguna" }}';
-        const normalizedArea = serviceAreaText.toLowerCase().trim();
+        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "South Luzon" }}';
+        console.log('Service Area from DB:', serviceAreaText);
         
         // Find matching region coverage
-        let coverage = null;
-        for (const [region, data] of Object.entries(regionCoverage)) {
-          if (normalizedArea.includes(region.toLowerCase()) || region.toLowerCase().includes(normalizedArea)) {
-            coverage = data;
-            console.log('Matched coverage for:', region);
-            break;
-          }
-        }
-        
-        // Default to Sta Cruz if no match
-        if (!coverage) {
-          console.log('No coverage match, using default');
-          coverage = regionCoverage['Sta Cruz, Laguna'];
-        }
+        const coverage = regionCoverage[serviceAreaText] || regionCoverage['South Luzon'];
         
         // Update description
         document.getElementById('coverage-description').textContent = coverage.description;
         
-        // Update barangays list
-        const barangaysList = document.getElementById('barangays-list');
-        barangaysList.innerHTML = coverage.barangays.map(barangay => 
-          `<li>${barangay}</li>`
-        ).join('');
+        console.log('Coverage updated for region:', serviceAreaText);
       }
 
       // Upload profile image
@@ -1108,8 +1428,11 @@
         // Update coverage details based on region
         updateCoverageDetails();
         
-        // Initialize the map with region-specific settings
-        initializeMap();
+        // Initialize the map with region-specific settings after a short delay
+        // This ensures the DOM is fully rendered
+        setTimeout(function() {
+          initializeMap();
+        }, 100);
         
         // Load data from database
         loadDeliveryHistory();

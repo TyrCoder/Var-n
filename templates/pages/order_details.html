@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Order Details - Varón</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+      .user-dropdown {
+        position: relative;
+        display: inline-block;
+      }
+      .user-button {
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 8px 12px;
+        font-size: 14px;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+      .user-button:hover {
+        background: rgba(255,255,255,0.1);
+      }
+      .dropdown-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: #fff;
+        min-width: 160px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        margin-top: 8px;
+        z-index: 1000;
+        overflow: hidden;
+      }
+      .dropdown-content.show {
+        display: block;
+      }
+      .dropdown-content a {
+        color: #0a0a0a;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        transition: background 0.2s;
+      }
+      .dropdown-content a:hover {
+        background: #f3f4f6;
+      }
+    </style>
+    <style>
+      .order-details-container {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 20px;
+      }
+      .detail-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+      }
+      .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #f3f4f6;
+        margin-bottom: 20px;
+      }
+      .status-badge {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .info-label {
+        color: #666;
+        font-size: 14px;
+      }
+      .info-value {
+        font-weight: 600;
+        text-align: right;
+      }
+      .item-card {
+        display: flex;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 12px;
+      }
+      .item-image {
+        width: 80px;
+        height: 80px;
+        border-radius: 6px;
+        object-fit: cover;
+        background: #f5f5f5;
+      }
+      .item-details {
+        flex: 1;
+      }
+      .timeline {
+        position: relative;
+        padding-left: 40px;
+      }
+      .timeline-item {
+        position: relative;
+        padding-bottom: 24px;
+      }
+      .timeline-item:last-child {
+        padding-bottom: 0;
+      }
+      .timeline-dot {
+        position: absolute;
+        left: -34px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #10b981;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 2px #10b981;
+      }
+      .timeline-dot.inactive {
+        background: #e5e7eb;
+        box-shadow: 0 0 0 2px #e5e7eb;
+      }
+      .timeline-line {
+        position: absolute;
+        left: -29px;
+        top: 16px;
+        width: 2px;
+        height: calc(100% - 16px);
+        background: #e5e7eb;
+      }
+      #orderReceivedBtn:hover:not(:disabled) {
+        background: #059669 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+      }
+      #orderReceivedBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      #confirmOrderBtn:hover:not(:disabled) {
+        background: #059669 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+      }
+      #confirmOrderBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: #f3f4f6;
+        color: #0a0a0a;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        margin-bottom: 20px;
+      }
+      .btn-back:hover {
+        background: #e5e7eb;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+      <h1 class="brand"><a href="/" style="color:#fff;text-decoration:none">Varón</a></h1>
+      <nav class="top-nav" id="topNav">
+        <a href="{{ url_for('buyer_dashboard') }}">Home</a>
+        <a href="{{ url_for('buyer_dashboard') }}">Browse</a>
+        <a href="{{ url_for('buyer_dashboard') }}#myOrders">My Orders</a>
+        <div class="user-dropdown">
+          <button class="user-button" onclick="toggleUserDropdown()">
+            <span id="buyerFirstName">
+              {% if session.get('first_name') %}
+                {{ session.get('first_name') }}
+              {% else %}
+                Account
+              {% endif %}
+            </span> ▾
+          </button>
+          <div id="userDropdown" class="dropdown-content">
+            <a href="{{ url_for('logout') }}">Logout</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <div class="order-details-container">
+      <a href="{{ url_for('buyer_dashboard') }}#myOrders" class="btn-back">← Back to Orders</a>
+      
+      <!-- Order Header -->
+      <div class="detail-card">
+        <div class="detail-header">
+          <div>
+            <h1 style="margin:0 0 8px;font-size:28px">Order #{{ order.order_number }}</h1>
+            <p style="margin:0;color:#666">Placed on {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+          </div>
+          <span class="status-badge" style="background:{{ status_colors[order.order_status]['bg'] }};color:{{ status_colors[order.order_status]['color'] }}">
+            {{ status_colors[order.order_status]['emoji'] }} {{ order.order_status.upper() }}
+          </span>
+        </div>
+        
+        <div class="info-row">
+          <span class="info-label">Order Total</span>
+          <span class="info-value" style="font-size:20px;color:#0a0a0a">₱{{ "%.2f"|format(order.total_amount|float) }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Payment Method</span>
+          <span class="info-value">{{ order.payment_method or 'Cash on Delivery' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Payment Status</span>
+          <span class="info-value" style="color:{% if order.payment_status == 'paid' %}#10b981{% else %}#f59e0b{% endif %}">{{ order.payment_status.upper() }}</span>
+        </div>
+        
+        <!-- Confirm Order Button (only shows for pending orders) -->
+        {% if order.order_status == 'pending' %}
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f3f4f6">
+          <button onclick="confirmOrderStatus()" id="confirmOrderBtn" style="width:100%;padding:12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s">
+            ✓ Confirm Order
+          </button>
+        </div>
+        {% endif %}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <!-- Shipping Address -->
+        <div class="detail-card">
+          <h3 style="margin:0 0 16px;font-size:18px">📦 Shipping Address</h3>
+          <p style="margin:0;line-height:1.6">
+            <strong>{{ shipping_address.full_name }}</strong><br>
+            {{ shipping_address.street_address }}<br>
+            {% if shipping_address.barangay %}{{ shipping_address.barangay }}, {% endif %}
+            {{ shipping_address.city }}, {{ shipping_address.province }}<br>
+            {{ shipping_address.postal_code }}<br>
+            📞 {{ shipping_address.phone }}
+          </p>
+        </div>
+
+        <!-- Billing Address -->
+        <div class="detail-card">
+          <h3 style="margin:0 0 16px;font-size:18px">💳 Billing Address</h3>
+          {% if billing_address %}
+          <p style="margin:0;line-height:1.6">
+            <strong>{{ billing_address.full_name }}</strong><br>
+            {{ billing_address.street_address }}<br>
+            {% if billing_address.barangay %}{{ billing_address.barangay }}, {% endif %}
+            {{ billing_address.city }}, {{ billing_address.province }}<br>
+            {{ billing_address.postal_code }}<br>
+            📞 {{ billing_address.phone }}
+          </p>
+          {% else %}
+          <p style="margin:0;color:#999">Same as shipping address</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Order Items -->
+      <div class="detail-card">
+        <h3 style="margin:0 0 20px;font-size:18px">🛍️ Order Items ({{ items|length }})</h3>
+        {% for item in items %}
+        <div class="item-card">
+          <img src="{{ item.image_url or 'https://via.placeholder.com/80' }}" alt="{{ item.product_name }}" class="item-image">
+          <div class="item-details">
+            <h4 style="margin:0 0 4px;font-size:16px">{{ item.product_name }}</h4>
+            <p style="margin:0 0 8px;color:#666;font-size:14px">
+              {% if item.size %}Size: {{ item.size }}{% endif %}
+              {% if item.color %}{% if item.size %} • {% endif %}Color: {{ item.color }}{% endif %}
+              {% if item.sku %}<br>SKU: {{ item.sku }}{% endif %}
+            </p>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="color:#666">Quantity: {{ item.quantity }}</span>
+              <div style="text-align:right">
+                <div style="color:#666;font-size:13px">₱{{ "%.2f"|format(item.unit_price|float) }} each</div>
+                <div style="font-weight:600;font-size:16px">₱{{ "%.2f"|format(item.subtotal|float) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Order Summary -->
+      <div class="detail-card">
+        <h3 style="margin:0 0 20px;font-size:18px">💰 Order Summary</h3>
+        <div class="info-row">
+          <span class="info-label">Subtotal</span>
+          <span class="info-value">₱{{ "%.2f"|format(order.subtotal|float) }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Shipping Fee</span>
+          <span class="info-value">₱{{ "%.2f"|format(order.shipping_fee|float) }}</span>
+        </div>
+        {% if order.tax_amount and order.tax_amount > 0 %}
+        <div class="info-row">
+          <span class="info-label">Tax</span>
+          <span class="info-value">₱{{ "%.2f"|format(order.tax_amount|float) }}</span>
+        </div>
+        {% endif %}
+        {% if order.discount_amount and order.discount_amount > 0 %}
+        <div class="info-row" style="color:#10b981">
+          <span class="info-label">Discount</span>
+          <span class="info-value">-₱{{ "%.2f"|format(order.discount_amount|float) }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row" style="padding-top:16px;margin-top:12px;border-top:2px solid #f3f4f6">
+          <span class="info-label" style="font-size:18px;font-weight:600;color:#0a0a0a">Total</span>
+          <span class="info-value" style="font-size:22px;font-weight:600;color:#0a0a0a">₱{{ "%.2f"|format(order.total_amount|float) }}</span>
+        </div>
+      </div>
+
+      <!-- Order Timeline -->
+      {% if shipment %}
+      <div class="detail-card">
+        <h3 style="margin:0 0 20px;font-size:18px">📍 Order Tracking</h3>
+        {% if shipment.tracking_number %}
+        <div style="background:#f0f9ff;padding:12px 16px;border-radius:6px;margin-bottom:20px">
+          <span style="color:#666;font-size:14px">Tracking Number: </span>
+          <strong style="color:#3b82f6">{{ shipment.tracking_number }}</strong>
+        </div>
+        {% endif %}
+        
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-line"></div>
+            <strong>Order Placed</strong>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">{{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+          </div>
+          
+          {% if order.order_status in ['confirmed', 'processing', 'shipped', 'delivered'] %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-line"></div>
+            <strong>Order Confirmed</strong>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">Seller confirmed your order</p>
+          </div>
+          {% else %}
+          <div class="timeline-item">
+            <div class="timeline-dot inactive"></div>
+            <div class="timeline-line"></div>
+            <strong style="color:#999">Order Confirmed</strong>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+          </div>
+          {% endif %}
+          
+          {% if shipment.status in ['picked_up', 'in_transit', 'out_for_delivery', 'delivered'] %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-line"></div>
+            <strong>Order Picked Up</strong>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">
+              {% if shipment.shipped_at %}{{ shipment.shipped_at.strftime('%B %d, %Y at %I:%M %p') }}{% else %}In Progress{% endif %}
+            </p>
+          </div>
+          {% else %}
+          <div class="timeline-item">
+            <div class="timeline-dot inactive"></div>
+            <div class="timeline-line"></div>
+            <strong style="color:#999">Order Picked Up</strong>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+          </div>
+          {% endif %}
+          
+          {% if shipment.status in ['in_transit', 'out_for_delivery', 'delivered'] %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-line"></div>
+            <strong>In Transit</strong>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">On the way to you</p>
+          </div>
+          {% else %}
+          <div class="timeline-item">
+            <div class="timeline-dot inactive"></div>
+            <div class="timeline-line"></div>
+            <strong style="color:#999">In Transit</strong>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+          </div>
+          {% endif %}
+          
+          {% if shipment.status in ['out_for_delivery', 'delivered'] %}
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-line"></div>
+            <strong>Out for Delivery</strong>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">Your package is nearby</p>
+          </div>
+          {% else %}
+          <div class="timeline-item">
+            <div class="timeline-dot inactive"></div>
+            <div class="timeline-line"></div>
+            <strong style="color:#999">Out for Delivery</strong>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+          </div>
+          {% endif %}
+          
+          {% if shipment.status == 'delivered' %}
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:#10b981;box-shadow:0 0 0 2px #10b981"></div>
+            <strong style="color:#10b981">Delivered</strong>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">
+              {% if shipment.delivered_at %}{{ shipment.delivered_at.strftime('%B %d, %Y at %I:%M %p') }}{% endif %}
+            </p>
+            {% if shipment.delivery_notes %}
+            <p style="margin:8px 0 0;color:#666;font-size:13px;font-style:italic">"{{ shipment.delivery_notes }}"</p>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="timeline-item">
+            <div class="timeline-dot inactive"></div>
+            <strong style="color:#999">Delivered</strong>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">
+              {% if shipment.estimated_delivery %}Est. {{ shipment.estimated_delivery.strftime('%B %d, %Y') }}{% else %}Pending{% endif %}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Seller Information -->
+      {% if seller %}
+      <div class="detail-card">
+        <h3 style="margin:0 0 16px;font-size:18px">🏪 Seller Information</h3>
+        <div style="display:flex;gap:16px;align-items:center">
+          {% if seller.logo_url %}
+          <img src="{{ seller.logo_url }}" alt="{{ seller.store_name }}" style="width:60px;height:60px;border-radius:50%;object-fit:cover">
+          {% else %}
+          <div style="width:60px;height:60px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:24px">
+            🏪
+          </div>
+          {% endif %}
+          <div>
+            <h4 style="margin:0 0 4px">{{ seller.store_name }}</h4>
+            <p style="margin:0;color:#666;font-size:14px">
+              {% if seller.rating %}⭐ {{ "%.1f"|format(seller.rating|float) }} Rating{% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if order.notes %}
+      <div class="detail-card">
+        <h3 style="margin:0 0 12px;font-size:18px">📝 Order Notes</h3>
+        <p style="margin:0;color:#666;line-height:1.6">{{ order.notes }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Action Buttons -->
+      <div class="detail-card" style="display:flex;gap:12px;justify-content:flex-end">
+        <a href="{{ url_for('buyer_dashboard') }}#myOrders" class="btn-back" style="margin:0">Back to Orders</a>
+        {% if order.order_status == 'pending' %}
+        <button onclick="cancelOrder('{{ order.order_number }}')" style="padding:10px 20px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">
+          Cancel Order
+        </button>
+        {% endif %}
+        {% if order.order_status == 'delivered' %}
+        <button onclick="window.print()" style="padding:10px 20px;background:#0a0a0a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">
+          Print Receipt
+        </button>
+        {% endif %}
+      </div>
+      
+      <!-- Order Received Button (Only shows when order is delivered) -->
+      {% if order.order_status == 'delivered' %}
+      <div id="orderReceivedSection" style="margin-top:24px;padding:20px;background:#f0fdf4;border:2px solid #10b981;border-radius:12px;text-align:center">
+        {% if order.buyer_received %}
+        <div style="color:#166534;font-weight:600">
+          ✅ You confirmed receipt of this order on {{ order.buyer_received_at.strftime('%B %d, %Y at %I:%M %p') if order.buyer_received_at else 'N/A' }}.
+        </div>
+        {% else %}
+        <p style="margin:0 0 16px;font-size:15px;color:#166534">
+          📦 <strong>Package Delivered!</strong> Please confirm once you've received your order.
+        </p>
+        <button id="orderReceivedBtn" onclick="confirmOrderReceived()" style="background:#10b981;color:#fff;padding:12px 32px;font-size:16px;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s">
+          ✓ Order Received
+        </button>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-bottom">
+        <div class="footer-brand">Varón — Minimal Apparel</div>
+        <small>© <span class="muted">2025</span></small>
+      </div>
+    </footer>
+
+    <script>
+      async function confirmOrderStatus() {
+        const btn = document.getElementById('confirmOrderBtn');
+        
+        if (!btn) return;
+        
+        if (!confirm('Confirm this order? This will change the status to CONFIRMED.')) return;
+        
+        // Disable button and show loading
+        btn.disabled = true;
+        btn.textContent = 'Confirming...';
+        
+        try {
+          const response = await fetch('/api/confirm-order/{{ order.id }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            alert('✅ Order confirmed successfully!');
+            location.reload();
+          } else {
+            alert(data.error || 'Failed to confirm order');
+            btn.disabled = false;
+            btn.textContent = '✓ Confirm Order';
+          }
+        } catch (error) {
+          console.error('Error confirming order:', error);
+          alert('An error occurred. Please try again.');
+          btn.disabled = false;
+          btn.textContent = '✓ Confirm Order';
+        }
+      }
+      
+      async function confirmOrderReceived() {
+        const btn = document.getElementById('orderReceivedBtn');
+        
+        if (!btn) return;
+        
+        // Disable button and show loading
+        btn.disabled = true;
+        btn.textContent = 'Confirming...';
+        
+        try {
+          const response = await fetch('/api/order-received/{{ order.id }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            alert('✅ ' + data.message);
+            location.reload();
+          } else {
+            alert(data.error || 'Failed to confirm order receipt');
+            btn.disabled = false;
+            btn.textContent = '✓ Order Received';
+          }
+        } catch (error) {
+          console.error('Error confirming order:', error);
+          alert('An error occurred. Please try again.');
+          btn.disabled = false;
+          btn.textContent = '✓ Order Received';
+        }
+      }
+      
+      function cancelOrder(orderNumber) {
+        if (!confirm('Are you sure you want to cancel this order?')) return;
+        
+        fetch('/api/cancel-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ order_number: orderNumber })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Order cancelled successfully');
+            location.reload();
+          } else {
+            alert('Failed to cancel order: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error cancelling order');
+        });
+      }
+      
+      // User dropdown functionality
+      function toggleUserDropdown() {
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.classList.toggle('show');
+      }
+      
+      // Close dropdown when clicking outside
+      window.addEventListener('click', function(e) {
+        if (!e.target.matches('.user-button')) {
+          const dropdown = document.getElementById('userDropdown');
+          if (dropdown && dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+          }
+        }
+      });
+      
+      // Fetch buyer's first name on page load
+      window.addEventListener('DOMContentLoaded', function() {
+        fetch('/get_buyer_name')
+          .then(response => response.json())
+          .then(data => {
+            if (data.firstName) {
+              document.getElementById('buyerFirstName').textContent = data.firstName;
+            }
+          })
+          .catch(error => console.error('Error fetching buyer name:', error));
+      });
+    </script>
+  </body>
+</html>

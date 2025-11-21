@@ -9,6 +9,105 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
+      .user-dropdown {
+        position: relative;
+        display: inline-block;
+      }
+      .user-button {
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        padding: 8px 12px;
+        font-size: 14px;
+        border-radius: 4px;
+        transition: background 0.2s;
+      }
+      .user-button:hover {
+        background: rgba(255,255,255,0.1);
+      }
+      .dropdown-content {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: #fff;
+        min-width: 160px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        margin-top: 8px;
+        z-index: 1000;
+        overflow: hidden;
+      }
+      .dropdown-content.show {
+        display: block;
+      }
+      .dropdown-content a {
+        color: #0a0a0a;
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        transition: background 0.2s;
+      }
+      .dropdown-content a:hover {
+        background: #f3f4f6;
+      }
+      /* Floating Cart Button */
+      .floating-cart {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        background: #0a0a0a;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 999;
+        transition: all 0.3s ease;
+      }
+      .floating-cart:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      }
+      .floating-cart svg {
+        width: 24px;
+        height: 24px;
+        fill: #fff;
+      }
+      .floating-cart-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ef4444;
+        color: #fff;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        border: 2px solid #fff;
+      }
+      @media (max-width: 768px) {
+        .floating-cart {
+          bottom: 20px;
+          right: 20px;
+          width: 50px;
+          height: 50px;
+        }
+        .floating-cart svg {
+          width: 20px;
+          height: 20px;
+        }
+      }
+    </style>
+    <style>
       body {
         background: #f8f8f8;
       }
@@ -135,6 +234,15 @@
         text-decoration: none;
         display: inline-block;
         text-align: center;
+      }
+      #orderReceivedBtn:hover:not(:disabled) {
+        background: #059669 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+      }
+      #orderReceivedBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
       .btn-primary {
         background: #0a0a0a;
@@ -265,8 +373,14 @@
       <nav class="top-nav" id="topNav">
         <a href="{{ url_for('buyer_dashboard') if session.get('logged_in') and session.get('role') == 'buyer' else url_for('index') }}">Shop</a>
         {% if session.get('logged_in') %}
-          <span class="welcome-msg" style="color: #fff; font-size: 14px;">Welcome, {{ session.get('first_name', 'User') }}</span>
-          <a href="{{ url_for('logout') }}" class="account">Logout</a>
+          <div class="user-dropdown">
+            <button class="user-button" onclick="toggleUserDropdown()">
+              {{ session.get('first_name', 'User') }} ▾
+            </button>
+            <div id="userDropdown" class="dropdown-content">
+              <a href="{{ url_for('logout') }}">Logout</a>
+            </div>
+          </div>
         {% else %}
           <a href="{{ url_for('login') }}" class="account">Login</a>
         {% endif %}
@@ -336,7 +450,21 @@
         
         <div class="action-buttons">
           <a href="{{ url_for('buyer_dashboard') }}" class="btn btn-secondary">Continue Shopping</a>
+          <a href="{{ url_for('buyer_dashboard') }}#myOrders" class="btn btn-secondary">View My Orders</a>
           <a href="javascript:window.print()" class="btn btn-primary">Print Receipt</a>
+        </div>
+        
+        <!-- Order Received Button (Only shows when order is delivered) -->
+        <div id="orderReceivedSection" style="display:none;margin-top:24px;padding:20px;background:#f0fdf4;border:2px solid #10b981;border-radius:12px;text-align:center">
+          <p style="margin:0 0 16px;font-size:15px;color:#166534">
+            📦 <strong>Package Delivered!</strong> Please confirm once you've received your order.
+          </p>
+          <button id="orderReceivedBtn" onclick="confirmOrderReceived()" class="btn" style="background:#10b981;color:#fff;padding:12px 32px;font-size:16px;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:all 0.2s">
+            ✓ Order Received
+          </button>
+          <div id="orderReceivedConfirmation" style="display:none;margin-top:16px;color:#166534;font-weight:600">
+            ✅ Thank you! You've confirmed receipt of your order.
+          </div>
         </div>
         
         <p style="margin-top: 32px; font-size: 14px;">
@@ -395,11 +523,12 @@
             // Build progress timeline
             const progressTimeline = document.getElementById('progressTimeline');
             const steps = [
-              { key: 'pending', label: 'Pending' },
-              { key: 'confirmed', label: 'Confirmed' },
-              { key: 'processing', label: 'Processing' },
-              { key: 'shipped', label: 'Shipped' },
-              { key: 'delivered', label: 'Delivered' }
+              { key: 'pending', label: 'Order Placed', section: 'seller' },
+              { key: 'confirmed', label: 'Order Confirmed', section: 'seller' },
+              { key: 'processing', label: 'Order Picked Up', section: 'rider' },
+              { key: 'shipped', label: 'In Transit', section: 'rider' },
+              { key: 'out_for_delivery', label: 'Out for Delivery', section: 'rider' },
+              { key: 'delivered', label: 'Delivered', section: 'rider' }
             ];
             
             const currentStepIndex = steps.findIndex(s => s.key === order.status);
@@ -432,11 +561,12 @@
             
             // Update status message
             const statusMessages = {
-              'pending': '⏳ Your order has been received. Waiting for seller confirmation...',
-              'confirmed': '✔️ Seller has confirmed your order! Preparing for shipment...',
-              'processing': '🔄 Your order is being prepared for shipment...',
-              'shipped': '📦 Your order has been shipped! Track it on the way...',
-              'delivered': '✅ Your order has been delivered! Thank you for shopping with us!',
+              'pending': '⏳ Order placed! Waiting for seller confirmation...',
+              'confirmed': '✔️ Order confirmed! Seller is preparing your package...',
+              'processing': '🔄 Order picked up by rider! On the way to you...',
+              'shipped': '📦 In transit! Your package is moving...',
+              'out_for_delivery': '🚚 Out for delivery! Your package is nearby...',
+              'delivered': '✅ Delivered! Thank you for shopping with us!',
               'cancelled': '❌ Your order has been cancelled.',
               'returned': '↩️ Your order has been returned.'
             };
@@ -444,11 +574,69 @@
             const statusMessage = document.getElementById('statusMessage');
             statusMessage.textContent = statusMessages[order.status] || 'Order status: ' + order.status;
             
+            // Display seller information
+            if (data.seller) {
+              let sellerHtml = `
+                <div style="margin-top:20px;padding:16px;background:#f8fafc;border-radius:8px;border-left:4px solid #3b82f6">
+                  <h4 style="margin:0 0 12px;font-size:16px;color:#1e40af">🏪 Seller Information</h4>
+                  <p style="margin:4px 0;font-size:14px"><strong>Store:</strong> ${data.seller.name}</p>
+                  ${data.seller.phone ? `<p style="margin:4px 0;font-size:14px"><strong>Contact:</strong> ${data.seller.phone}</p>` : ''}
+                </div>
+              `;
+              statusMessage.insertAdjacentHTML('afterend', sellerHtml);
+            }
+            
+            // Display rider information when assigned
+            if (data.rider && data.rider.name) {
+              let riderHtml = `
+                <div style="margin-top:16px;padding:16px;background:#f0fdf4;border-radius:8px;border-left:4px solid #10b981">
+                  <h4 style="margin:0 0 12px;font-size:16px;color:#15803d">🏍️ Delivery Rider</h4>
+                  <p style="margin:4px 0;font-size:14px"><strong>Rider:</strong> ${data.rider.name}</p>
+                  ${data.rider.phone ? `<p style="margin:4px 0;font-size:14px"><strong>Contact:</strong> ${data.rider.phone}</p>` : ''}
+                  ${data.rider.vehicle ? `<p style="margin:4px 0;font-size:14px"><strong>Vehicle:</strong> ${data.rider.vehicle}</p>` : ''}
+                </div>
+              `;
+              statusMessage.insertAdjacentHTML('afterend', riderHtml);
+            }
+            
+            // Display tracking number if available
+            if (data.shipment && data.shipment.tracking_number) {
+              let trackingHtml = `
+                <div style="margin-top:16px;padding:16px;background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b">
+                  <h4 style="margin:0 0 12px;font-size:16px;color:#92400e">📦 Tracking Information</h4>
+                  <p style="margin:4px 0;font-size:14px"><strong>Tracking #:</strong> <code style="background:#fff;padding:4px 8px;border-radius:4px;font-family:monospace">${data.shipment.tracking_number}</code></p>
+                  ${data.shipment.estimated_delivery ? `<p style="margin:4px 0;font-size:14px"><strong>Estimated Delivery:</strong> ${new Date(data.shipment.estimated_delivery).toLocaleDateString()}</p>` : ''}
+                </div>
+              `;
+              statusMessage.insertAdjacentHTML('afterend', trackingHtml);
+            }
+            
             // Change color based on status
             const progressBox = document.getElementById('orderProgress');
             if (order.status === 'delivered') {
               progressBox.style.background = '#dcfce7';
               progressBox.style.borderColor = '#10b981';
+              
+              // Show Order Received button if delivered and not yet confirmed
+              const orderReceivedSection = document.getElementById('orderReceivedSection');
+              const orderReceivedBtn = document.getElementById('orderReceivedBtn');
+              const orderReceivedConfirmation = document.getElementById('orderReceivedConfirmation');
+              
+              if (order.buyer_received) {
+                // Already confirmed - show confirmation message
+                orderReceivedSection.style.display = 'block';
+                orderReceivedBtn.style.display = 'none';
+                orderReceivedConfirmation.style.display = 'block';
+                if (order.buyer_received_at) {
+                  const receivedDate = new Date(order.buyer_received_at);
+                  orderReceivedConfirmation.innerHTML = `✅ Thank you! You confirmed receipt on ${receivedDate.toLocaleDateString()} at ${receivedDate.toLocaleTimeString()}.`;
+                }
+              } else {
+                // Not confirmed yet - show button
+                orderReceivedSection.style.display = 'block';
+                orderReceivedBtn.style.display = 'inline-block';
+                orderReceivedConfirmation.style.display = 'none';
+              }
             } else if (order.status === 'cancelled' || order.status === 'returned') {
               progressBox.style.background = '#fee2e2';
               progressBox.style.borderColor = '#ef4444';
@@ -456,6 +644,44 @@
           }
         } catch (error) {
           console.error('Error updating order status:', error);
+        }
+      }
+      
+      // Function to confirm order received
+      async function confirmOrderReceived() {
+        const btn = document.getElementById('orderReceivedBtn');
+        const confirmation = document.getElementById('orderReceivedConfirmation');
+        
+        // Disable button and show loading
+        btn.disabled = true;
+        btn.textContent = 'Confirming...';
+        
+        try {
+          const response = await fetch(`/api/order-received/${orderId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            // Hide button, show confirmation
+            btn.style.display = 'none';
+            confirmation.style.display = 'block';
+            confirmation.innerHTML = `✅ ${data.message}`;
+            
+            // Update order status to reflect the change
+            updateOrderStatus();
+          } else {
+            alert(data.error || 'Failed to confirm order receipt');
+            btn.disabled = false;
+            btn.textContent = '✓ Order Received';
+          }
+        } catch (error) {
+          console.error('Error confirming order:', error);
+          alert('An error occurred. Please try again.');
+          btn.disabled = false;
+          btn.textContent = '✓ Order Received';
         }
       }
       
@@ -475,6 +701,23 @@
         }
       });
       // ============ END ORDER STATUS TRACKING ============
+      
+      // ============ USER DROPDOWN FUNCTIONALITY ============
+      function toggleUserDropdown() {
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.classList.toggle('show');
+      }
+      
+      // Close dropdown when clicking outside
+      window.addEventListener('click', function(e) {
+        if (!e.target.matches('.user-button')) {
+          const dropdown = document.getElementById('userDropdown');
+          if (dropdown && dropdown.classList.contains('show')) {
+            dropdown.classList.remove('show');
+          }
+        }
+      });
+      // ============ END USER DROPDOWN ============
     </script>
   </body>
 </html>

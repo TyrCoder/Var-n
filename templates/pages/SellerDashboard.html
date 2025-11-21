@@ -525,6 +525,21 @@
         `,
         
         'orders': `
+          <!-- Pending Rider Confirmations -->
+          <div class="card" id="pending-confirmations-card" style="margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+            <div class="inner">
+              <h2 style="margin: 0 0 8px; display: flex; align-items: center; gap: 10px;">
+                <span>⏳</span> Pending Rider Confirmations
+                <span id="confirmation-badge" class="tag" style="background: #fef3c7; color: #92400e; font-size: 12px; padding: 4px 10px;">0</span>
+              </h2>
+              <p style="color: var(--muted); font-size: 13px; margin: 0 0 14px;">Riders have accepted these orders and are waiting for your confirmation to proceed with delivery.</p>
+              
+              <div id="pending-confirmations-list" style="overflow-x: auto;">
+                <p style="color: #999; text-align: center; padding: 20px;">Loading...</p>
+              </div>
+            </div>
+          </div>
+        
           <div class="card">
             <div class="inner">
               <h2 style="margin: 0 0 16px;">Order Management</h2>
@@ -544,6 +559,9 @@
                 </button>
                 <button class="action-btn" data-filter-btn="shipped" onclick="filterOrders('shipped')" style="background: #4caf50; color: #fff; padding: 8px 16px; font-size: 13px;">
                   📦 Shipped
+                </button>
+                <button class="action-btn" data-filter-btn="released_to_rider" onclick="filterOrders('released_to_rider')" style="background: #9c27b0; color: #fff; padding: 8px 16px; font-size: 13px;">
+                  🚚 Released to Rider
                 </button>
               </div>
               
@@ -566,8 +584,34 @@
         'promotions': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 16px;">Promotions</h2>
-              <p style="color: var(--muted); padding: 40px; text-align: center;">Promotions management coming soon...</p>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">⚡ Flash Sales & Promotions</h2>
+                <button class="action-btn" onclick="openCreateSaleModal()">+ Create Flash Sale</button>
+              </div>
+              
+              <!-- Active Sales -->
+              <div style="margin-bottom: 30px;">
+                <h3 style="margin: 0 0 12px; font-size: 16px;">🔥 Active Sales</h3>
+                <div id="active-sales-list">
+                  <p style="color: var(--muted); text-align: center; padding: 20px;">Loading active sales...</p>
+                </div>
+              </div>
+              
+              <!-- Upcoming Sales -->
+              <div style="margin-bottom: 30px;">
+                <h3 style="margin: 0 0 12px; font-size: 16px;">📅 Upcoming Sales</h3>
+                <div id="upcoming-sales-list">
+                  <p style="color: var(--muted); text-align: center; padding: 20px;">Loading upcoming sales...</p>
+                </div>
+              </div>
+              
+              <!-- Past Sales -->
+              <div>
+                <h3 style="margin: 0 0 12px; font-size: 16px;">📊 Past Sales</h3>
+                <div id="past-sales-list">
+                  <p style="color: var(--muted); text-align: center; padding: 20px;">Loading past sales...</p>
+                </div>
+              </div>
             </div>
           </div>
         `,
@@ -855,7 +899,10 @@
             } else if (page === 'inventory') {
               loadInventory();
             } else if (page === 'orders') {
+              loadPendingConfirmations(); // Load pending rider confirmations
               loadOrders('all');
+            } else if (page === 'promotions') {
+              loadFlashSales();
             } else if (page === 'add-product') {
               // Attach event listeners for size/color checkboxes
               const sizeColorInputs = document.querySelectorAll('input[name="sizes"], input[name="colors"]');
@@ -897,7 +944,16 @@
         // Filter and display orders
         let filteredOrders = allOrders;
         if (status !== 'all') {
-          filteredOrders = allOrders.filter(order => order.order_status === status);
+          if (status === 'released_to_rider') {
+            // Filter for orders that are released to rider (seller_confirmed and rider assigned)
+            filteredOrders = allOrders.filter(order => 
+              order.seller_confirmed && order.rider_id && 
+              (order.shipment_status === 'picked_up' || order.shipment_status === 'in_transit' || 
+               order.shipment_status === 'out_for_delivery')
+            );
+          } else {
+            filteredOrders = allOrders.filter(order => order.order_status === status);
+          }
         }
         
         displayOrders(filteredOrders);
@@ -954,28 +1010,67 @@
         `;
         
         orders.forEach(order => {
-          const statusColors = {
-            'pending': '#ff9800',
-            'confirmed': '#2196f3',
-            'processing': '#ff5722',
-            'shipped': '#4caf50',
-            'delivered': '#9c27b0',
-            'cancelled': '#f44336',
-            'returned': '#795548'
-          };
+          // Determine display status based on seller_confirmed and order_status
+          let displayStatus = order.order_status;
+          let statusBadgeColor, statusEmoji;
           
-          const statusEmojis = {
-            'pending': '⏳',
-            'confirmed': '✔️',
-            'processing': '🔄',
-            'shipped': '📦',
-            'delivered': '✅',
-            'cancelled': '❌',
-            'returned': '↩️'
-          };
-          
-          const statusBadgeColor = statusColors[order.order_status] || '#666';
-          const statusEmoji = statusEmojis[order.order_status] || '📋';
+          // If seller has confirmed the rider, show "Released to Rider" or shipment status
+          if (order.seller_confirmed && order.rider_id) {
+            if (order.shipment_status === 'picked_up' || order.shipment_status === 'in_transit' || 
+                order.shipment_status === 'out_for_delivery') {
+              displayStatus = 'released_to_rider';
+              statusBadgeColor = '#9c27b0';
+              statusEmoji = '🚚';
+            } else if (order.shipment_status === 'delivered') {
+              displayStatus = 'delivered';
+              statusBadgeColor = '#4caf50';
+              statusEmoji = '✅';
+            } else {
+              // Default to order status colors
+              const statusColors = {
+                'pending': '#ff9800',
+                'confirmed': '#2196f3',
+                'processing': '#ff5722',
+                'shipped': '#4caf50',
+                'delivered': '#4caf50',
+                'cancelled': '#f44336',
+                'returned': '#795548'
+              };
+              const statusEmojis = {
+                'pending': '⏳',
+                'confirmed': '✔️',
+                'processing': '🔄',
+                'shipped': '📦',
+                'delivered': '✅',
+                'cancelled': '❌',
+                'returned': '↩️'
+              };
+              statusBadgeColor = statusColors[order.order_status] || '#666';
+              statusEmoji = statusEmojis[order.order_status] || '📋';
+            }
+          } else {
+            // Normal status colors when no rider assigned or not confirmed
+            const statusColors = {
+              'pending': '#ff9800',
+              'confirmed': '#2196f3',
+              'processing': '#ff5722',
+              'shipped': '#4caf50',
+              'delivered': '#4caf50',
+              'cancelled': '#f44336',
+              'returned': '#795548'
+            };
+            const statusEmojis = {
+              'pending': '⏳',
+              'confirmed': '✔️',
+              'processing': '🔄',
+              'shipped': '📦',
+              'delivered': '✅',
+              'cancelled': '❌',
+              'returned': '↩️'
+            };
+            statusBadgeColor = statusColors[order.order_status] || '#666';
+            statusEmoji = statusEmojis[order.order_status] || '📋';
+          }
           const orderDate = new Date(order.created_at).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -990,7 +1085,7 @@
               <td style="padding:10px; text-align:right;"><strong>₱${parseFloat(order.total_amount || 0).toFixed(2)}</strong></td>
               <td style="padding:10px;">
                 <span style="background:${statusBadgeColor}; color:#fff; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">
-                  ${statusEmoji} ${order.order_status.replace(/_/g, ' ').toUpperCase()}
+                  ${statusEmoji} ${displayStatus.replace(/_/g, ' ').toUpperCase()}
                 </span>
               </td>
               <td style="padding:10px; font-size:12px; color:#666;">${orderDate}</td>
@@ -1034,8 +1129,11 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
       function openStatusModal(orderId, currentStatus) {
         console.log('🔄 Opening status modal for order:', orderId);
         
-        const statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
-        let statusOptions = statuses.map(s => `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s.replace(/_/g, ' ').toUpperCase()}</option>`).join('');
+        const statuses = [
+          {value: 'confirmed', label: 'CONFIRMED'},
+          {value: 'processing', label: 'RELEASED TO RIDER'}
+        ];
+        let statusOptions = '<option value="" selected disabled>Select to update</option>' + statuses.map(s => `<option value="${s.value}" ${s.value === currentStatus ? 'selected' : ''}>${s.label}</option>`).join('');
         
         const modal = document.createElement('div');
         modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;';
@@ -1060,6 +1158,11 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         console.log('📊 Updating order status:', orderId);
         
         const newStatus = document.getElementById('new-status-select').value;
+        
+        if (!newStatus) {
+          alert('⚠️ Please select a status to update');
+          return;
+        }
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('new_status', newStatus);
@@ -1091,6 +1194,114 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
             alert('Error updating order status: ' + error.message);
           });
       }
+      
+      // ============ PENDING RIDER CONFIRMATIONS ============
+      function loadPendingConfirmations() {
+        fetch('/seller/pending-rider-confirmations')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('pending-confirmations-list');
+            const badge = document.getElementById('confirmation-badge');
+            const card = document.getElementById('pending-confirmations-card');
+            
+            if (data.success && data.confirmations && data.confirmations.length > 0) {
+              // Update badge
+              badge.textContent = data.confirmations.length;
+              card.style.display = 'block';
+              
+              // Build table
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Customer</th>
+                      <th>Rider</th>
+                      <th>Amount</th>
+                      <th>Accepted At</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.confirmations.forEach(conf => {
+                const acceptedAt = new Date(conf.accepted_at).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+                
+                html += `
+                  <tr>
+                    <td><strong>#${conf.order_number}</strong></td>
+                    <td>
+                      <div>${conf.customer_name}</div>
+                      <div style="font-size: 11px; color: #999;">${conf.customer_phone || 'N/A'}</div>
+                    </td>
+                    <td>
+                      <div>${conf.rider_name}</div>
+                      <div style="font-size: 11px; color: #999;">${conf.rider_phone || 'N/A'}</div>
+                    </td>
+                    <td style="font-weight: 600;">₱${parseFloat(conf.total_amount).toFixed(2)}</td>
+                    <td style="font-size: 12px; color: #999;">${acceptedAt}</td>
+                    <td>
+                      <button onclick="confirmRider(${conf.shipment_id}, '${conf.order_number}')" 
+                              class="action-btn" 
+                              style="background: #10b981; color: #fff; padding: 6px 16px; font-size: 12px;">
+                        ✓ Confirm Rider
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              // Hide card if no pending confirmations
+              badge.textContent = '0';
+              card.style.display = 'none';
+            }
+          })
+          .catch(error => {
+            console.error('Error loading pending confirmations:', error);
+            document.getElementById('pending-confirmations-list').innerHTML = 
+              '<p style="color: #dc2626; text-align: center; padding: 20px;">Error loading pending confirmations</p>';
+          });
+      }
+      
+      function confirmRider(shipmentId, orderNumber) {
+        if (!confirm(`Confirm rider for order #${orderNumber}?\n\nThis will allow the rider to proceed with delivery.`)) {
+          return;
+        }
+        
+        fetch('/seller/confirm-rider-delivery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ shipment_id: shipmentId })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Rider confirmed! They can now proceed with delivery.');
+            loadPendingConfirmations(); // Reload the list
+            // Reload orders if currently viewing them
+            if (currentOrderFilter) {
+              loadOrders(currentOrderFilter);
+            }
+          } else {
+            alert('❌ Failed to confirm rider: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error confirming rider:', error);
+          alert('Error confirming rider. Please try again.');
+        });
+      }
+      // ============ END PENDING RIDER CONFIRMATIONS ============
+      
       // ============ END ORDER MANAGEMENT ============
 
       function loadProducts() {
@@ -1468,6 +1679,315 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
           });
         }
       }
+
+      // ============ FLASH SALES & PROMOTIONS ============
+      function openCreateSaleModal() {
+        const modal = document.createElement('div');
+        modal.id = 'createSaleModal';
+        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000; overflow-y:auto; padding:20px;';
+        modal.innerHTML = `
+          <div style="background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.3); max-width:600px; width:100%; max-height:90vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+              <h3 style="margin:0;">⚡ Create Flash Sale</h3>
+              <button onclick="document.getElementById('createSaleModal').remove()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
+            </div>
+            
+            <form id="createSaleForm" style="display:flex; flex-direction:column; gap:16px;">
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:600;">Sale Name</label>
+                <input type="text" name="sale_name" required placeholder="e.g., Weekend Flash Sale" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+              </div>
+              
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:600;">Discount Percentage</label>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <input type="number" name="discount_percentage" min="5" max="90" step="5" required value="10" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                  <span style="font-weight:600; font-size:18px;">% OFF</span>
+                </div>
+                <p style="color:var(--muted); font-size:12px; margin:4px 0 0;">Discount range: 5% - 90%</p>
+              </div>
+              
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                  <label style="display:block; margin-bottom:6px; font-weight:600;">Start Date & Time</label>
+                  <input type="datetime-local" name="start_date" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                </div>
+                <div>
+                  <label style="display:block; margin-bottom:6px; font-weight:600;">End Date & Time</label>
+                  <input type="datetime-local" name="end_date" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                </div>
+              </div>
+              
+              <div>
+                <label style="display:block; margin-bottom:6px; font-weight:600;">Description (Optional)</label>
+                <textarea name="description" rows="3" placeholder="Describe your flash sale..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; resize:vertical;"></textarea>
+              </div>
+              
+              <div>
+                <label style="display:block; margin-bottom:10px; font-weight:600;">Select Products for Sale</label>
+                <div id="product-selection-list" style="max-height:200px; overflow-y:auto; border:1px solid #ddd; border-radius:6px; padding:10px;">
+                  <p style="color:var(--muted); text-align:center;">Loading products...</p>
+                </div>
+              </div>
+              
+              <div style="background:#f0f9ff; border:1px solid #3b82f6; border-radius:8px; padding:12px;">
+                <p style="margin:0; font-size:13px; color:#1e40af;">
+                  <strong>💡 Tip:</strong> Flash sales create urgency and boost sales! The discounted price will be shown to all buyers during the sale period.
+                </p>
+              </div>
+              
+              <div style="display:flex; gap:10px; margin-top:10px;">
+                <button type="button" onclick="document.getElementById('createSaleModal').remove()" style="flex:1; padding:12px; border:1px solid #ddd; background:#f5f5f5; border-radius:6px; cursor:pointer; font-weight:600;">Cancel</button>
+                <button type="button" onclick="submitFlashSale()" style="flex:1; padding:12px; border:none; background:#0a0a0a; color:#fff; border-radius:6px; cursor:pointer; font-weight:600;">Create Flash Sale ⚡</button>
+              </div>
+            </form>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+        loadProductsForSale();
+      }
+      
+      function loadProductsForSale() {
+        fetch('/seller/products')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('product-selection-list');
+            
+            if (data.products && data.products.length > 0) {
+              // Filter only active products
+              const activeProducts = data.products.filter(p => p.is_active);
+              
+              if (activeProducts.length === 0) {
+                container.innerHTML = '<p style="color:var(--muted); text-align:center;">No active products available for sale</p>';
+                return;
+              }
+              
+              let html = '<div style="display:flex; flex-direction:column; gap:8px;">';
+              
+              activeProducts.forEach(product => {
+                html += `
+                  <label style="display:flex; align-items:center; gap:10px; padding:8px; border:1px solid #e5e5e5; border-radius:6px; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='#fff'">
+                    <input type="checkbox" name="product_ids" value="${product.id}" style="width:18px; height:18px; cursor:pointer;">
+                    <div style="flex:1;">
+                      <div style="font-weight:600; font-size:14px;">${product.name}</div>
+                      <div style="color:var(--muted); font-size:12px;">Current Price: ₱${parseFloat(product.price).toFixed(2)}</div>
+                    </div>
+                  </label>
+                `;
+              });
+              
+              html += '</div>';
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="color:var(--muted); text-align:center;">No products available</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('product-selection-list').innerHTML = '<p style="color:#ef4444;">Error loading products</p>';
+          });
+      }
+      
+      function submitFlashSale() {
+        const form = document.getElementById('createSaleForm');
+        const formData = new FormData(form);
+        
+        // Validate form
+        if (!form.checkValidity()) {
+          alert('Please fill in all required fields');
+          return;
+        }
+        
+        // Get selected products
+        const selectedProducts = Array.from(document.querySelectorAll('input[name="product_ids"]:checked')).map(cb => cb.value);
+        
+        if (selectedProducts.length === 0) {
+          alert('⚠️ Please select at least one product for the flash sale');
+          return;
+        }
+        
+        // Validate dates
+        const startDate = new Date(formData.get('start_date'));
+        const endDate = new Date(formData.get('end_date'));
+        
+        if (endDate <= startDate) {
+          alert('⚠️ End date must be after start date');
+          return;
+        }
+        
+        // Add selected products to form data
+        formData.delete('product_ids');
+        formData.append('product_ids', JSON.stringify(selectedProducts));
+        
+        // Show loading
+        const submitBtn = event.target;
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Creating Sale...';
+        
+        fetch('/seller/create-flash-sale', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Flash Sale Created Successfully!\n\nYour sale has been created and will automatically activate at the scheduled time.');
+            document.getElementById('createSaleModal').remove();
+            loadPage('promotions');
+          } else {
+            alert('❌ Error: ' + (data.error || 'Failed to create flash sale'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Flash Sale ⚡';
+          }
+        })
+        .catch(error => {
+          alert('❌ Error creating flash sale: ' + error.message);
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Flash Sale ⚡';
+        });
+      }
+      
+      function loadFlashSales() {
+        // Load active sales
+        fetch('/seller/flash-sales?status=active')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('active-sales-list');
+            displaySales(data.sales, container, 'active');
+          });
+        
+        // Load upcoming sales
+        fetch('/seller/flash-sales?status=upcoming')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('upcoming-sales-list');
+            displaySales(data.sales, container, 'upcoming');
+          });
+        
+        // Load past sales
+        fetch('/seller/flash-sales?status=past')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('past-sales-list');
+            displaySales(data.sales, container, 'past');
+          });
+      }
+      
+      function displaySales(sales, container, status) {
+        if (!sales || sales.length === 0) {
+          container.innerHTML = `<p style="color:var(--muted); text-align:center; padding:20px;">No ${status} sales</p>`;
+          return;
+        }
+        
+        let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+        
+        sales.forEach(sale => {
+          const startDate = new Date(sale.start_date).toLocaleString();
+          const endDate = new Date(sale.end_date).toLocaleString();
+          const productCount = sale.product_count || 0;
+          
+          let statusBadge = '';
+          if (status === 'active') {
+            statusBadge = '<span style="background:#10b981; color:#fff; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600;">🔥 LIVE NOW</span>';
+          } else if (status === 'upcoming') {
+            statusBadge = '<span style="background:#3b82f6; color:#fff; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600;">📅 UPCOMING</span>';
+          } else {
+            statusBadge = '<span style="background:#6b7280; color:#fff; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600;">✓ ENDED</span>';
+          }
+          
+          html += `
+            <div style="border:1px solid #e5e5e5; border-radius:10px; padding:16px; background:#fff;">
+              <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+                <div>
+                  <h4 style="margin:0 0 4px; font-size:16px;">${sale.sale_name}</h4>
+                  <p style="margin:0; color:var(--muted); font-size:13px;">${sale.description || 'No description'}</p>
+                </div>
+                ${statusBadge}
+              </div>
+              
+              <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:12px;">
+                <div style="background:#f9fafb; padding:10px; border-radius:6px;">
+                  <div style="font-size:11px; color:var(--muted); margin-bottom:2px;">Discount</div>
+                  <div style="font-size:20px; font-weight:700; color:#ef4444;">${sale.discount_percentage}% OFF</div>
+                </div>
+                <div style="background:#f9fafb; padding:10px; border-radius:6px;">
+                  <div style="font-size:11px; color:var(--muted); margin-bottom:2px;">Products</div>
+                  <div style="font-size:20px; font-weight:700;">${productCount}</div>
+                </div>
+                <div style="background:#f9fafb; padding:10px; border-radius:6px;">
+                  <div style="font-size:11px; color:var(--muted); margin-bottom:2px;">Orders</div>
+                  <div style="font-size:20px; font-weight:700;">${sale.total_orders || 0}</div>
+                </div>
+              </div>
+              
+              <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">
+                <div>📅 Start: ${startDate}</div>
+                <div>⏰ End: ${endDate}</div>
+              </div>
+              
+              <div style="display:flex; gap:8px;">
+                <button onclick="viewSaleDetails(${sale.id})" style="flex:1; padding:8px; border:1px solid #ddd; background:#fff; border-radius:6px; cursor:pointer; font-size:13px;">View Details</button>
+                ${status !== 'past' ? `<button onclick="endSale(${sale.id})" style="padding:8px 16px; border:1px solid #ef4444; color:#ef4444; background:#fff; border-radius:6px; cursor:pointer; font-size:13px;">End Sale</button>` : ''}
+              </div>
+            </div>
+          `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+      }
+      
+      function viewSaleDetails(saleId) {
+        fetch('/seller/flash-sale/' + saleId)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.sale) {
+              const sale = data.sale;
+              let details = `Flash Sale: ${sale.sale_name}\n\n`;
+              details += `Discount: ${sale.discount_percentage}% OFF\n`;
+              details += `Start: ${new Date(sale.start_date).toLocaleString()}\n`;
+              details += `End: ${new Date(sale.end_date).toLocaleString()}\n\n`;
+              details += `Products in Sale: ${data.products.length}\n`;
+              
+              if (data.products.length > 0) {
+                details += `\nProducts:\n`;
+                data.products.forEach(p => {
+                  const originalPrice = parseFloat(p.original_price);
+                  const salePrice = originalPrice * (1 - sale.discount_percentage / 100);
+                  details += `- ${p.product_name}: ₱${originalPrice.toFixed(2)} → ₱${salePrice.toFixed(2)}\n`;
+                });
+              }
+              
+              alert(details);
+            }
+          })
+          .catch(error => {
+            alert('Error loading sale details');
+          });
+      }
+      
+      function endSale(saleId) {
+        if (!confirm('Are you sure you want to end this flash sale?\n\nThis will immediately stop the sale and restore original prices.')) {
+          return;
+        }
+        
+        fetch('/seller/end-flash-sale/' + saleId, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Flash sale ended successfully!');
+            loadPage('promotions');
+          } else {
+            alert('❌ Error: ' + (data.error || 'Failed to end sale'));
+          }
+        })
+        .catch(error => {
+          alert('❌ Error ending sale: ' + error.message);
+        });
+      }
+      // ============ END FLASH SALES & PROMOTIONS ============
 
       // Optimized single event delegation for all sidebar links
       document.addEventListener('click', function(e) {

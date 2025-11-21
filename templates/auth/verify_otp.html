@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Verify OTP — Varón</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #0a0a0a;
+            --muted: #6b7280;
+            --card: #ffffff;
+            --line: #e5e7eb;
+            --accent: #111827;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Commissioner', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            color: var(--fg);
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            line-height: 1.5;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', Georgia, serif;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 460px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card {
+            width: 100%;
+            background: var(--card);
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            padding: 40px;
+            animation: slideUp .3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .brand-link {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            text-decoration: none;
+            z-index: 1000;
+        }
+        
+        .brand {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--fg);
+            transition: color 0.2s ease;
+        }
+        
+        .brand:hover {
+            color: var(--accent);
+        }
+        
+        .card-title {
+            font-size: 28px;
+            margin: 0 0 8px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .card-subtitle {
+            color: var(--muted);
+            margin: 0 0 32px;
+            font-size: 15px;
+            text-align: center;
+        }
+        
+        .otp-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 32px 0;
+        }
+        
+        .otp-input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            border: 2px solid var(--line);
+            border-radius: 12px;
+            transition: all 0.2s;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .otp-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(17,24,39,0.1);
+        }
+        
+        .alert {
+            padding: 14px 16px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        .alert-success {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Commissioner', sans-serif;
+        }
+        
+        .btn:hover {
+            background: #000000;
+            transform: translateY(-1px);
+        }
+        
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .resend-container {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+        
+        .resend-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .resend-link:hover {
+            text-decoration: underline;
+        }
+        
+        .resend-link.disabled {
+            color: var(--muted);
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .timer {
+            font-weight: 600;
+            color: var(--accent);
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 30px 20px;
+            }
+            
+            .otp-input {
+                width: 45px;
+                height: 55px;
+                font-size: 20px;
+            }
+            
+            .brand-link {
+                top: 20px;
+                left: 20px;
+            }
+            
+            .brand {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('index') }}" class="brand-link">
+        <h1 class="brand">Varón</h1>
+    </a>
+    
+    <main class="container">
+        <div class="card">
+            <h2 class="card-title">Verify Your Account</h2>
+            <p class="card-subtitle">
+                We've sent a verification code to<br>
+                <strong>{{ verification_target }}</strong>
+            </p>
+            
+            <div id="alertContainer"></div>
+            
+            <form id="otpForm" method="POST" action="{{ url_for('verify_otp') }}">
+                <input type="hidden" name="verification_type" value="{{ verification_type }}">
+                <input type="hidden" name="email" value="{{ email }}">
+                <input type="hidden" name="phone" value="{{ phone }}">
+                <input type="hidden" name="purpose" value="{{ purpose }}">
+                
+                <div class="otp-container">
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" data-index="0">
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" data-index="1">
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" data-index="2">
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" data-index="3">
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" data-index="4">
+                    <input type="text" class="otp-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" data-index="5">
+                </div>
+                
+                <input type="hidden" name="otp_code" id="otpCode">
+                
+                <button type="submit" class="btn" id="verifyBtn">Verify Code</button>
+            </form>
+            
+            <div class="resend-container">
+                <span>Didn't receive the code?</span>
+                <a href="#" class="resend-link" id="resendLink">Resend OTP</a>
+                <span id="timerDisplay" style="display: none;"> in <span class="timer" id="countdown">60</span>s</span>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        const otpInputs = document.querySelectorAll('.otp-input');
+        const otpForm = document.getElementById('otpForm');
+        const otpCodeInput = document.getElementById('otpCode');
+        const alertContainer = document.getElementById('alertContainer');
+        const resendLink = document.getElementById('resendLink');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const countdownSpan = document.getElementById('countdown');
+        const verifyBtn = document.getElementById('verifyBtn');
+        
+        let resendTimer = 60;
+        let timerInterval;
+        
+        otpInputs[0].focus();
+        
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+                
+                if (value && /^\d$/.test(value)) {
+                    if (index < otpInputs.length - 1) {
+                        otpInputs[index + 1].focus();
+                    }
+                } else if (!value) {
+                    e.target.value = '';
+                }
+                
+                updateOTPCode();
+            });
+            
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    otpInputs[index - 1].focus();
+                    otpInputs[index - 1].value = '';
+                    updateOTPCode();
+                }
+                
+                if (e.key === 'ArrowLeft' && index > 0) {
+                    otpInputs[index - 1].focus();
+                }
+                
+                if (e.key === 'ArrowRight' && index < otpInputs.length - 1) {
+                    otpInputs[index + 1].focus();
+                }
+            });
+            
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = e.clipboardData.getData('text').replace(/\D/g, '');
+                
+                if (pastedData) {
+                    const digits = pastedData.slice(0, 6).split('');
+                    digits.forEach((digit, i) => {
+                        if (otpInputs[i]) {
+                            otpInputs[i].value = digit;
+                        }
+                    });
+                    
+                    if (digits.length === 6) {
+                        otpInputs[5].focus();
+                    } else {
+                        otpInputs[Math.min(digits.length, 5)].focus();
+                    }
+                    
+                    updateOTPCode();
+                }
+            });
+        });
+        
+        function updateOTPCode() {
+            const otp = Array.from(otpInputs).map(input => input.value).join('');
+            otpCodeInput.value = otp;
+            
+            if (otp.length === 6) {
+                verifyBtn.disabled = false;
+            } else {
+                verifyBtn.disabled = true;
+            }
+        }
+        
+        function showAlert(message, type = 'error') {
+            alertContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 5000);
+        }
+        
+        function startResendTimer() {
+            resendTimer = 60;
+            resendLink.classList.add('disabled');
+            timerDisplay.style.display = 'inline';
+            
+            timerInterval = setInterval(() => {
+                resendTimer--;
+                countdownSpan.textContent = resendTimer;
+                
+                if (resendTimer <= 0) {
+                    clearInterval(timerInterval);
+                    resendLink.classList.remove('disabled');
+                    timerDisplay.style.display = 'none';
+                }
+            }, 1000);
+        }
+        
+        startResendTimer();
+        
+        otpForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const otp = otpCodeInput.value;
+            if (otp.length !== 6) {
+                showAlert('Please enter a 6-digit code', 'error');
+                return;
+            }
+            
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+            
+            fetch('{{ url_for("verify_otp") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(new FormData(otpForm))
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message || 'Verification successful!', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '{{ url_for("login") }}';
+                    }, 1500);
+                } else {
+                    showAlert(data.message || 'Invalid OTP code', 'error');
+                    otpInputs.forEach(input => input.value = '');
+                    otpInputs[0].focus();
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = 'Verify Code';
+                }
+            })
+            .catch(error => {
+                showAlert('Verification failed. Please try again.', 'error');
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify Code';
+            });
+        });
+        
+        resendLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (resendLink.classList.contains('disabled')) {
+                return;
+            }
+            
+            resendLink.textContent = 'Sending...';
+            
+            fetch('{{ url_for("resend_otp") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    verification_type: '{{ verification_type }}',
+                    email: '{{ email }}',
+                    phone: '{{ phone }}',
+                    purpose: '{{ purpose }}'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Code resent successfully!', 'success');
+                    resendLink.textContent = 'Resend OTP';
+                    startResendTimer();
+                } else {
+                    showAlert(data.message || 'Failed to resend code', 'error');
+                    resendLink.textContent = 'Resend OTP';
+                }
+            })
+            .catch(error => {
+                showAlert('Failed to resend code. Please try again.', 'error');
+                resendLink.textContent = 'Resend OTP';
+            });
+        });
+    </script>
+</body>
+</html>
