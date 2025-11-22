@@ -354,8 +354,8 @@ def init_db():
             max_discount DECIMAL(10,2),
             usage_limit INT,
             used_count INT DEFAULT 0,
-            start_date TIMESTAMP NOT NULL,
-            end_date TIMESTAMP NOT NULL,
+            start_date DATETIME NOT NULL,
+            end_date DATETIME NOT NULL,
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
