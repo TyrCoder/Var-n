@@ -465,7 +465,7 @@
               {{ user_first_name or session.get('first_name', 'User') }} ▾
             </button>
             <div id="userDropdown" class="dropdown-content">
-              <a href="{{ url_for('logout') }}">Logout</a>
+              <a href="#" onclick="confirmLogout(event); return false;">Logout</a>
             </div>
           </div>
         {% else %}
@@ -502,8 +502,8 @@
           
           <div class="product-price">PHP {{ "{:,.2f}".format(product.price) }}</div>
           <div class="tax-info">Tax included</div>
-
-          <!-- Color Selection -->
+          <!-- Color Selection (Hidden for grooming products) -->
+          {% if product.category_slug != 'grooming' %}
           <div class="selection-group">
             <div class="selection-label">
               <strong>Color: <span id="selectedColorName">{% if colors %}Select a color{% else %}One Color{% endif %}</span></strong>
@@ -511,7 +511,7 @@
             <div class="color-swatches" id="colorSwatches">
               {% if colors and colors|length > 0 %}
                 {% for color in colors %}
-                  <button class="color-swatch" data-color="{{ color }}" title="{{ color }}" onclick="selectColor('{{ color }}')">
+                  <button class="color-swatch" data-color="{{ color }}" title="{{ color }}" onclick="selectColor('{{ color }}', this)">
                   </button>
                 {% endfor %}
               {% else %}
@@ -520,7 +520,7 @@
             </div>
           </div>
 
-          <!-- Size Selection -->
+          <!-- Size Selection (Hidden for grooming products) -->
           <div class="selection-group">
             <div class="selection-label">
               <strong>Size: <span id="selectedSizeName">{% if sizes %}Select a size{% else %}One Size{% endif %}</span></strong>
@@ -529,11 +529,22 @@
             <div class="size-grid" id="sizeGrid">
               {% if sizes and sizes|length > 0 %}
                 {% for size in sizes %}
-                  <button class="size-btn" onclick="selectSize('{{ size }}')">{{ size }}</button>
+                  <button class="size-btn" onclick="selectSize('{{ size }}', this)">{{ size }}</button>
                 {% endfor %}
               {% else %}
                 <span style="color: #999; font-size: 14px;">One Size Available</span>
               {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Stock Availability -->
+          <div class="selection-group" id="stockDisplay" style="display: none;">
+            <div class="selection-label">
+              <strong>Available Stock</strong>
+            </div>
+            <div style="font-size: 16px; font-weight: 600; color: #10b981;" id="stockCount">
+              Loading...
             </div>
           </div>
 
@@ -558,9 +569,15 @@
           </div>
 
           <!-- Add to Cart -->
+          {% if product.category_slug == 'grooming' %}
+          <button class="add-to-cart-btn" id="addToCartBtn" onclick="addToCartFromPage()">
+            Add to Cart
+          </button>
+          {% else %}
           <button class="add-to-cart-btn" id="addToCartBtn" onclick="addToCartFromPage()" disabled>
             Select Size and Color
           </button>
+          {% endif %}
 
           <!-- Product Details -->
           <div class="product-details">
@@ -594,12 +611,124 @@
       </div>
     </footer>
 
+    <!-- Logout Confirmation Modal -->
+    <div id="logoutModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(10,10,10,0.45);align-items:center;justify-content:center;z-index:1000">
+      <div style="background:#fff;padding:24px;border-radius:12px;max-width:400px;width:90%;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
+        <button onclick="closeLogoutModal()" style="float:right;background:none;border:none;font-size:24px;cursor:pointer;color:#999">×</button>
+        <h2 style="margin:0 0 8px;font-size:18px">Confirm Logout</h2>
+        <p style="margin:0 0 18px;color:#666;font-size:14px">Are you sure you want to logout? You will need to log in again to access your account.</p>
+        <div style="display:flex;gap:12px;justify-content:flex-end">
+          <button onclick="closeLogoutModal()" style="padding:10px 20px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:6px;cursor:pointer;font-weight:500">Cancel</button>
+          <button onclick="proceedLogout()" style="padding:10px 20px;border:none;background:#ef4444;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">Yes, Logout</button>
+        </div>
+      </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <script>
-      let selectedColor = {% if not colors %}'Standard'{% else %}null{% endif %};
-      let selectedSize = {% if not sizes %}'One Size'{% else %}null{% endif %};
+      const isGroomingProduct = {{ 'true' if product.category_slug == 'grooming' else 'false' }};
+      let selectedColor = {% if product.category_slug == 'grooming' or not colors %}'Standard'{% else %}null{% endif %};
+      let selectedSize = {% if product.category_slug == 'grooming' or not sizes %}'One Size'{% else %}null{% endif %};
+      let availableStock = 0;
+      let productVariants = [];
+
+      // Load all variants on page load
+      async function loadProductVariants() {
+        if (isGroomingProduct) return;
+        
+        try {
+          const productId = {{ product.id }};
+          const response = await fetch(`/api/product/${productId}/variants`);
+          const data = await response.json();
+          
+          if (data.success && data.variants) {
+            productVariants = data.variants;
+            
+            // Initialize with all available sizes (before any color is selected)
+            updateInitialSizes();
+          }
+        } catch (error) {
+          console.error('Error loading variants:', error);
+        }
+      }
+
+      // Update initial sizes to show only those with stock
+      function updateInitialSizes() {
+        const sizeContainer = document.getElementById('sizeGrid');
+        if (!sizeContainer || productVariants.length === 0) return;
+        
+        // Get all unique sizes that have stock
+        const availableSizes = [...new Set(productVariants.map(v => v.size))].sort();
+        
+        // Clear and rebuild size buttons
+        sizeContainer.innerHTML = '';
+        availableSizes.forEach(size => {
+          const button = document.createElement('button');
+          button.className = 'size-btn';
+          button.setAttribute('data-size', size);
+          button.textContent = size;
+          button.onclick = function() { selectSize(size); };
+          sizeContainer.appendChild(button);
+        });
+        
+        if (availableSizes.length === 0) {
+          sizeContainer.innerHTML = '<span style="color: #999; font-size: 14px;">No sizes available</span>';
+        }
+      }
+
+      // Call this when page loads
+      if (!isGroomingProduct) {
+        loadProductVariants();
+      }
+
+      // Function to fetch and display stock
+      async function updateStockDisplay() {
+        if (!selectedColor || !selectedSize) {
+          document.getElementById('stockDisplay').style.display = 'none';
+          return;
+        }
+
+        try {
+          const productId = {{ product.id }};
+          const response = await fetch(`/api/product/${productId}/stock?color=${encodeURIComponent(selectedColor)}&size=${encodeURIComponent(selectedSize)}`);
+          const data = await response.json();
+          
+          if (data.success) {
+            availableStock = data.stock;
+            const stockDisplay = document.getElementById('stockDisplay');
+            const stockCount = document.getElementById('stockCount');
+            
+            stockDisplay.style.display = 'block';
+            stockCount.textContent = `${availableStock} pieces`;
+            
+            // Update stock count color based on availability
+            if (availableStock === 0) {
+              stockCount.style.color = '#ef4444';
+              stockCount.textContent = 'Out of Stock';
+            } else if (availableStock <= 5) {
+              stockCount.style.color = '#f59e0b';
+              stockCount.textContent = `Only ${availableStock} left`;
+            } else {
+              stockCount.style.color = '#10b981';
+              stockCount.textContent = `${availableStock} pieces available`;
+            }
+            
+            // Update quantity input max
+            const qtyInput = document.getElementById('quantity');
+            qtyInput.max = availableStock;
+            if (parseInt(qtyInput.value) > availableStock) {
+              qtyInput.value = availableStock > 0 ? 1 : 0;
+            }
+          } else {
+            document.getElementById('stockDisplay').style.display = 'none';
+          }
+        } catch (error) {
+          console.error('Error fetching stock:', error);
+          document.getElementById('stockDisplay').style.display = 'none';
+        }
+      }
 
       // Color hex mapping - expanded list
       const colorHex = {
@@ -671,47 +800,139 @@
         });
       }
 
-      function selectColor(color) {
+      async function selectColor(color, element) {
         selectedColor = color;
         document.getElementById('selectedColorName').textContent = color;
         
         document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-        event.target.classList.add('selected');
+        if (element) element.classList.add('selected');
+        else {
+          // Fallback if element not passed
+          const swatch = document.querySelector(`.color-swatch[data-color="${color}"]`);
+          if (swatch) swatch.classList.add('selected');
+        }
+        
+        // Reset size selection
+        selectedSize = null;
+        document.getElementById('selectedSizeName').textContent = 'Select a size';
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
         
         checkSelection();
       }
-
-      function selectSize(size) {
+      
+      async function selectSize(size, element) {
         selectedSize = size;
         document.getElementById('selectedSizeName').textContent = size;
         
         document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
-        event.target.classList.add('selected');
+        if (element) element.classList.add('selected');
+        else {
+          // Fallback if element not passed
+          const btn = Array.from(document.querySelectorAll('.size-btn')).find(b => b.textContent.trim() === size);
+          if (btn) btn.classList.add('selected');
+        }
         
+        await updateStockDisplay();
         checkSelection();
       }
-
+      
       function checkSelection() {
-        const btn = document.getElementById('addToCartBtn');
-        if (selectedSize && selectedColor) {
-          btn.disabled = false;
-          btn.textContent = 'Add to Cart';
-          btn.style.opacity = '1';
-          btn.style.cursor = 'pointer';
+        const addBtn = document.getElementById('addToCartBtn');
+        if (!addBtn) return;
+        
+        if (isGroomingProduct) {
+          addBtn.disabled = false;
+          addBtn.textContent = 'Add to Cart';
         } else {
-          btn.disabled = true;
+          if (selectedSize && selectedColor) {
+            addBtn.disabled = false;
+            addBtn.textContent = 'Add to Cart';
+          } else {
+            addBtn.disabled = true;
+            addBtn.textContent = 'Select Size and Color';
+          }
+        }
+      }
+
+      // Function to update available sizes based on selected color
+      async function updateAvailableSizes(color) {
+        if (!color || isGroomingProduct) return;
+        
+        try {
+          const productId = {{ product.id }};
+          const response = await fetch(`/api/product/${productId}/available-sizes?color=${encodeURIComponent(color)}`);
+          const data = await response.json();
+          
+          if (data.success && data.sizes) {
+            // Get the size buttons container
+            const sizeContainer = document.getElementById('sizeGrid');
+            if (!sizeContainer) return;
+            
+            // Clear existing size buttons
+            sizeContainer.innerHTML = '';
+            
+            // Add only available sizes
+            data.sizes.forEach(size => {
+              const button = document.createElement('button');
+              button.className = 'size-btn';
+              button.setAttribute('data-size', size);
+              button.textContent = size;
+              button.onclick = function() { selectSize(size, this); };
+              sizeContainer.appendChild(button);
+            });
+            
+            // Show message if no sizes available
+            if (data.sizes.length === 0) {
+              sizeContainer.innerHTML = '<span style="color: #ef4444; font-size: 14px;">No sizes available for this color</span>';
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching available sizes:', error);
+        }
+      }
+
+      async function updateStockDisplay() {
+        const stockInfo = document.getElementById('stockInfo');
+        const addBtn = document.getElementById('addToCartBtn');
+        
+        if (!addBtn) return;
+        
+        // For grooming products, button is always enabled
+        if (isGroomingProduct) {
+          addBtn.disabled = false;
+          addBtn.textContent = 'Add to Cart';
+          addBtn.style.opacity = '1';
+          addBtn.style.cursor = 'pointer';
+          return;
+        }
+        
+        // For other products, check size and color selection
+        if (selectedSize && selectedColor) {
+          addBtn.disabled = false;
+          addBtn.textContent = 'Add to Cart';
+          addBtn.style.opacity = '1';
+          addBtn.style.cursor = 'pointer';
+        } else {
+          addBtn.disabled = true;
           const missing = [];
           if (!selectedSize && {% if sizes and sizes|length > 0 %}true{% else %}false{% endif %}) missing.push('Size');
           if (!selectedColor && {% if colors and colors|length > 0 %}true{% else %}false{% endif %}) missing.push('Color');
-          btn.textContent = missing.length > 0 ? `Select ${missing.join(' and ')}` : 'Add to Cart';
-          btn.style.opacity = '0.6';
-          btn.style.cursor = 'not-allowed';
+          addBtn.textContent = missing.length > 0 ? `Select ${missing.join(' and ')}` : 'Add to Cart';
+          addBtn.style.opacity = '0.6';
+          addBtn.style.cursor = 'not-allowed';
         }
       }
 
       function increaseQuantity() {
         const input = document.getElementById('quantity');
-        input.value = parseInt(input.value) + 1;
+        const currentQty = parseInt(input.value);
+        const maxStock = availableStock > 0 ? availableStock : 999;
+        
+        if (currentQty < maxStock) {
+          input.value = currentQty + 1;
+        } else {
+          alert(`Maximum available stock is ${maxStock} pieces`);
+        }
       }
 
       function decreaseQuantity() {
@@ -724,55 +945,135 @@
       // Check if user is logged in (server-side check)
       const isUserLoggedIn = {{ 'true' if session.get('logged_in') else 'false' }};
       
+      // Get variant ID based on color and size
+      async function getVariantId(productId, color, size) {
+        try {
+          console.log(`Getting variant ID for product ${productId}, color: ${color}, size: ${size}`);
+          const response = await fetch(`/api/product/${productId}/variants`);
+          const data = await response.json();
+          
+          console.log('Available variants:', data);
+          
+          if (data.success && data.variants) {
+            console.log('Searching for variant with color:', color, 'and size:', size);
+            const variant = data.variants.find(v => v.color === color && v.size === size);
+            
+            if (variant) {
+              console.log('Found variant:', variant);
+              return variant.id;
+            } else {
+              console.warn('No matching variant found!');
+              console.log('Available variants:', data.variants);
+              return null;
+            }
+          }
+          return null;
+        } catch (error) {
+          console.error('Error getting variant ID:', error);
+          return null;
+        }
+      }
+      
       async function addToCartFromPage() {
         // Check if user is logged in
         if (!isUserLoggedIn) {
-          alert('You need to log in to add items to cart');
-          window.location.href = '/login';
+          const snackbar = document.getElementById('snackbar');
+          if(snackbar) {
+            snackbar.textContent = 'Please log in to add items to cart';
+            snackbar.classList.add('show', 'error');
+            setTimeout(() => snackbar.classList.remove('show', 'error'), 3000);
+          }
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1500);
           return;
         }
         
-        if (selectedSize && selectedColor) {
-          const quantity = parseInt(document.getElementById('quantity').value);
-          const productId = {{ product.id }};
-          const productName = '{{ product.name }}';
-          
-          // Use VaronCart if available (database cart)
-          if (window.VaronCart) {
-            const success = await VaronCart.add(productId, quantity);
-            if (success) {
-              // Update cart badge
-              await VaronCart.updateBadge();
-              
-              // Show success message
-              const snackbar = document.getElementById('snackbar');
-              snackbar.textContent = `Added ${quantity} item(s) to cart`;
-              snackbar.classList.add('show');
-              setTimeout(() => snackbar.classList.remove('show'), 3000);
-            } else {
-              alert('Failed to add item to cart. Please try again.');
-            }
+        // Validate selection for non-grooming products
+        if (!isGroomingProduct && (!selectedSize || !selectedColor)) {
+          const snackbar = document.getElementById('snackbar');
+          if(snackbar) {
+            snackbar.textContent = 'Please select size and color';
+            snackbar.classList.add('show', 'error');
+            setTimeout(() => snackbar.classList.remove('show', 'error'), 3000);
+          }
+          return;
+        }
+        
+        const quantity = parseInt(document.getElementById('quantity').value);
+        const productId = {{ product.id }};
+        const productName = '{{ product.name }}';
+        const addButton = document.querySelector('.add-to-cart-btn');
+        
+        // Disable button and show loading state
+        if(addButton) {
+          addButton.disabled = true;
+          addButton.textContent = 'Adding to cart...';
+        }
+        
+        // Use VaronCart (database cart)
+        if (window.VaronCart) {
+          // Get variant ID if not grooming product
+          let variantId = null;
+          if (!isGroomingProduct) {
+            console.log('Product is not grooming, getting variant...');
+            console.log('Selected color:', selectedColor, 'Selected size:', selectedSize);
+            variantId = await getVariantId(productId, selectedColor, selectedSize);
+            console.log('Retrieved variant ID:', variantId);
           } else {
-            // Fallback to localStorage cart
-            const productPrice = {{ product.price }};
-            const productImage = {% if images and images|length > 0 %}'{{ images[0].image_url }}'{% else %}'{{ product.image_url }}'{% endif %};
-            const itemName = `${productName} (${selectedSize}, ${selectedColor})`;
-            
-            for (let i = 0; i < quantity; i++) {
-              addToCart(itemName, productPrice, productId, productImage);
-            }
-            
-            // Show success message
-            const snackbar = document.getElementById('snackbar');
-            snackbar.textContent = `Added ${quantity} item(s) to cart`;
-            snackbar.classList.add('show');
-            setTimeout(() => snackbar.classList.remove('show'), 3000);
+            console.log('Product is grooming category, skipping variant lookup');
+          }
+          
+          console.log('Adding to cart with:', { productId, quantity, variantId, selectedColor, selectedSize });
+          const success = await VaronCart.add(productId, quantity, variantId, selectedColor, selectedSize);
+          // VaronCart.add now handles showing success/error messages and badge update
+          
+          // Re-enable button
+          if(addButton) {
+            addButton.disabled = false;
+            addButton.textContent = 'Add to Cart';
+          }
+        } else {
+          // Show error if cart system not loaded
+          const snackbar = document.getElementById('snackbar');
+          if(snackbar) {
+            snackbar.textContent = 'Cart system not loaded. Please refresh the page.';
+            snackbar.classList.add('show', 'error');
+            setTimeout(() => snackbar.classList.remove('show', 'error'), 3000);
+          }
+          
+          if(addButton) {
+            addButton.disabled = false;
+            addButton.textContent = 'Add to Cart';
           }
         }
       }
 
       // Check initial selection state
       checkSelection();
+
+      // Logout confirmation function
+      function confirmLogout(event) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+          modal.style.display = 'flex';
+        }
+      }
+
+      function closeLogoutModal() {
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      }
+
+      function proceedLogout() {
+        window.location.href = '/logout';
+      }
 
       // User dropdown toggle
       function toggleUserDropdown() {
@@ -791,20 +1092,166 @@
       });
 
       // Modal functionality
-      function openCartModal() {
+      async function openCartModal() {
+          console.log('Opening cart modal...');
           const modal = document.getElementById('cartModal');
           if (modal) {
+              console.log('Cart modal found, displaying...');
               modal.style.display = 'flex';
               modal.setAttribute('aria-hidden', 'false');
+              document.body.style.overflow = 'hidden';
+              
+              // Force reflow to ensure animation works
+              void modal.offsetWidth;
+              
+              // Load cart items when opening
+              console.log('Loading cart items...');
+              await renderCartItems();
+          } else {
+              console.error('Cart modal not found!');
           }
       }
 
       function closeModal(modalId) {
           const modal = document.getElementById(modalId);
           if (modal) {
-              modal.style.display = 'none';
               modal.setAttribute('aria-hidden', 'true');
+              document.body.style.overflow = '';
+              
+              // Wait for animation to complete before hiding
+              setTimeout(() => {
+                  if (modal.getAttribute('aria-hidden') === 'true') {
+                      modal.style.display = 'none';
+                  }
+              }, 300);
           }
+      }
+
+      // Render cart items in modal
+      async function renderCartItems() {
+          if (!window.VaronCart) {
+              console.error('VaronCart not loaded');
+              return;
+          }
+
+          const cartList = document.getElementById('cartList');
+          const items = await VaronCart.get();
+          
+          if (!items || items.length === 0) {
+              // Show empty cart state
+              cartList.innerHTML = `
+                  <div class="empty-cart-state" style="text-align:center;padding:60px 20px">
+                      <div style="font-size:80px;color:#ddd;margin-bottom:16px">
+                          <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline-block">
+                              <path d="M9 2L7.17 4H3c-.55 0-1 .45-1 1s.45 1 1 1h1l1.6 8.6c.18 1 1.05 1.73 2.06 1.73h7.72c1.01 0 1.88-.73 2.06-1.73L19 6h1c.55 0 1-.45 1-1s-.45-1-1-1h-4.17L14 2H9z"/>
+                              <circle cx="9" cy="20" r="1"/>
+                              <circle cx="16" cy="20" r="1"/>
+                          </svg>
+                      </div>
+                      <h3 style="font-size:18px;font-weight:400;color:#999;margin:0 0 8px">Your cart is empty</h3>
+                      <p style="font-size:14px;color:#bbb;margin:0">Add some products to get started!</p>
+                  </div>
+              `;
+              updateCartTotals(0);
+              return;
+          }
+
+          // Render cart items
+          let html = '';
+          items.forEach(item => {
+              const imageUrl = item.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
+              const itemTotal = (parseFloat(item.price) * parseInt(item.quantity)).toFixed(2);
+              const sizeColor = [];
+              if (item.size) sizeColor.push(`Size: ${item.size}`);
+              if (item.color) sizeColor.push(`Color: ${item.color}`);
+              const variant = sizeColor.length > 0 ? sizeColor.join(', ') : '';
+
+              html += `
+                  <div class="cart-item" style="display:flex;gap:16px;padding:16px;border-bottom:1px solid #f0f0f0;align-items:center">
+                      <img src="${imageUrl}" alt="${item.name}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0">
+                      <div style="flex:1;min-width:0">
+                          <h4 style="margin:0 0 4px;font-size:15px;font-weight:500;color:#0a0a0a">${item.name}</h4>
+                          ${variant ? `<p style="margin:0 0 8px;font-size:13px;color:#666">${variant}</p>` : ''}
+                          <div style="display:flex;align-items:center;gap:12px">
+                              <div style="display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden">
+                                  <button onclick="updateCartQuantity(${item.cart_id}, ${item.quantity - 1})" style="padding:6px 12px;background:#fff;border:none;cursor:pointer;font-size:18px;color:#666;transition:background 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">−</button>
+                                  <span style="padding:6px 16px;font-size:14px;font-weight:500;min-width:40px;text-align:center">${item.quantity}</span>
+                                  <button onclick="updateCartQuantity(${item.cart_id}, ${item.quantity + 1})" style="padding:6px 12px;background:#fff;border:none;cursor:pointer;font-size:18px;color:#666;transition:background 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">+</button>
+                              </div>
+                              <button onclick="removeCartItem(${item.cart_id})" style="padding:6px 12px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;cursor:pointer;font-size:13px;color:#ef4444;transition:all 0.2s" onmouseover="this.style.background='#fef2f2';this.style.borderColor='#ef4444'" onmouseout="this.style.background='#fff';this.style.borderColor='#e0e0e0'">Remove</button>
+                          </div>
+                      </div>
+                      <div style="text-align:right;flex-shrink:0">
+                          <p style="margin:0;font-size:16px;font-weight:600;color:#0a0a0a">₱${itemTotal}</p>
+                      </div>
+                  </div>
+              `;
+          });
+
+          cartList.innerHTML = html;
+          
+          // Update totals
+          const total = items.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.quantity)), 0);
+          updateCartTotals(total);
+      }
+
+      // Update cart totals display
+      function updateCartTotals(total) {
+          const subtotalEl = document.getElementById('cartSubtotal');
+          const totalEl = document.getElementById('cartTotal');
+          
+          if (subtotalEl) subtotalEl.textContent = `₱${total.toFixed(2)}`;
+          if (totalEl) totalEl.textContent = `₱${total.toFixed(2)}`;
+      }
+
+      // Update cart item quantity
+      async function updateCartQuantity(cartId, newQuantity) {
+          if (newQuantity < 1) {
+              await removeCartItem(cartId);
+              return;
+          }
+
+          if (window.VaronCart) {
+              const success = await VaronCart.update(cartId, newQuantity);
+              if (success) {
+                  await renderCartItems();
+              }
+          }
+      }
+
+      // Remove item from cart
+      async function removeCartItem(cartId) {
+          if (window.VaronCart) {
+              const success = await VaronCart.remove(cartId);
+              if (success) {
+                  VaronCart.showMessage('Item removed from cart', 'success');
+                  await renderCartItems();
+              }
+          }
+      }
+
+      // Clear entire cart with confirmation
+      async function clearEntireCart() {
+          if (!window.VaronCart) return;
+
+          const items = await VaronCart.get();
+          if (!items || items.length === 0) {
+              VaronCart.showMessage('Cart is already empty', 'error');
+              return;
+          }
+
+          if (confirm('Are you sure you want to clear your cart? This will remove all items.')) {
+              const success = await VaronCart.clear();
+              if (success) {
+                  VaronCart.showMessage('Cart cleared successfully', 'success');
+                  await renderCartItems();
+              }
+          }
+      }
+
+      // Checkout function
+      function proceedToCheckout() {
+          window.location.href = '/checkout';
       }
 
       // Cart functionality - Use VaronCart if available (database), fallback to localStorage
@@ -889,7 +1336,7 @@
     </script>
 
     <!-- Cart Modal -->
-    <div id="cartModal" class="modal" aria-hidden="true">
+    <div id="cartModal" class="modal" aria-hidden="true" style="display:none">
       <div class="cart-card">
         <button onclick="closeModal('cartModal')" class="cart-close-btn" aria-label="Close cart">×</button>
         <h2 style="text-align:left;margin-bottom:20px">Your Cart</h2>
@@ -919,8 +1366,8 @@
             </div>
           </div>
           <div style="display:flex;gap:12px">
-            <button id="clearCart" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
-            <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
+            <button onclick="clearEntireCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
+            <button onclick="proceedToCheckout()" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
           </div>
         </div>
       </div>

@@ -319,42 +319,37 @@ function updateCartBadge(){
 }
 
 async function addItemToCart(data){
-  if(!data) return;
+  if(!data) return false;
   const name = data.title || 'Item';
   const price = typeof data.price === 'number' ? data.price : (parseFloat((data.priceText||'').replace(/[^0-9\.]/g,'')) || 0);
   const id = (data.id) || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   const image_url = data.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
   
+  // Show loading feedback
+  if(snackbar){
+    snackbar.textContent = 'Adding to cart...';
+    snackbar.classList.add('show');
+  }
+  
   // Use database cart if VaronCart is available
   if(window.VaronCart) {
     const success = await VaronCart.add(id, data.qty || 1);
-    if(success && snackbar){
-      snackbar.textContent = `${name} added to cart`;
-      snackbar.classList.add('show');
-      setTimeout(()=> snackbar.classList.remove('show'), 2200);
-    }
+    // VaronCart.add now handles showing success/error messages
+    return success;
   } else {
-    // Fallback to localStorage
-    const cart = readCart();
-    const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
-    
-    if (existingItemIndex > -1) {
-      cart[existingItemIndex].quantity += (data.qty || 1);
-    } else {
-      cart.push({ name, price, id, quantity: (data.qty || 1), image_url });
-    }
-    
-    writeCart(cart);
-    updateCartBadge();
+    // Fallback - show error
     if(snackbar){
-      snackbar.textContent = `${name} added to cart`;
-      snackbar.classList.add('show');
-      setTimeout(()=> snackbar.classList.remove('show'), 2200);
+      snackbar.textContent = 'Cart system not loaded. Please refresh the page.';
+      snackbar.classList.add('show', 'error');
+      setTimeout(()=> {
+        snackbar.classList.remove('show', 'error');
+      }, 3000);
     }
+    return false;
   }
 }
 
-function handleAddCartClick(e, btn){
+async function handleAddCartClick(e, btn){
   const card = btn.closest('.product');
   const title = card?.querySelector('.title')?.textContent || 'Item';
   const priceText = card?.querySelector('.price')?.textContent || '£0';
@@ -377,23 +372,24 @@ function handleAddCartClick(e, btn){
     return;
   }
   
-  // Fetch product data from API to get the correct image
+  // Disable button during operation
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Adding...';
+  
+  // Add to cart using VaronCart
   if(productId && !isNaN(productId)){
-    fetch(`/api/product/${productId}`)
-      .then(response => response.json())
-      .then(data => {
-        if(data.success && data.product){
-          const apiImage = data.product.image_url;
-          addItemToCart({id: productId, title, price, qty:1, image_url: apiImage || image_url});
-        } else {
-          addItemToCart({id: productId, title, price, qty:1, image_url});
-        }
-      })
-      .catch(() => {
-        addItemToCart({id: productId, title, price, qty:1, image_url});
-      });
+    try {
+      await addItemToCart({id: productId, title, price, qty:1, image_url});
+    } finally {
+      // Re-enable button
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
   } else {
-    addItemToCart({id: productId, title, price, qty:1, image_url});
+    await addItemToCart({id: productId, title, price, qty:1, image_url});
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
 }
 

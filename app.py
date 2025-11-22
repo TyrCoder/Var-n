@@ -453,6 +453,7 @@ def product_page(product_id):
                     p.brand,
                     p.sku,
                     c.name as category_name,
+                    c.slug as category_slug,
                     pi.image_url
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
@@ -504,6 +505,119 @@ def product_page(product_id):
                          colors=colors, 
                          images=images,
                          user_first_name=user_first_name)
+
+@app.route('/api/product/<int:product_id>/variants')
+def get_product_variants(product_id):
+    """Get all product variants with stock information"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get all variants with stock > 0
+        cursor.execute('''
+            SELECT id, color, size, stock_quantity
+            FROM product_variants
+            WHERE product_id = %s AND stock_quantity > 0
+            ORDER BY color, size
+        ''', (product_id,))
+        
+        variants = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'variants': variants
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'variants': []
+        })
+
+@app.route('/api/product/<int:product_id>/available-sizes')
+def get_available_sizes(product_id):
+    """Get available sizes for a specific color"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    color = request.args.get('color')
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get sizes that have stock for this color
+        cursor.execute('''
+            SELECT DISTINCT size, stock_quantity
+            FROM product_variants
+            WHERE product_id = %s AND color = %s AND stock_quantity > 0
+            ORDER BY size
+        ''', (product_id, color))
+        
+        variants = cursor.fetchall()
+        sizes = [v['size'] for v in variants if v['size']]
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'sizes': sizes
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'sizes': []
+        })
+
+@app.route('/api/product/<int:product_id>/stock')
+def get_product_stock(product_id):
+    """Get stock quantity for a specific product variant"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+    
+    color = request.args.get('color')
+    size = request.args.get('size')
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get stock for specific variant
+        cursor.execute('''
+            SELECT stock_quantity
+            FROM product_variants
+            WHERE product_id = %s AND color = %s AND size = %s
+        ''', (product_id, color, size))
+        
+        variant = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if variant:
+            return jsonify({
+                'success': True,
+                'stock': variant['stock_quantity']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'stock': 0
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'stock': 0
+        })
 
 @app.route('/api/product/<int:product_id>')
 def get_product_detail(product_id):
@@ -850,6 +964,9 @@ def place_order():
             f'Order {order_number} placed with {len(items)} items'
         ))
         
+        # Clear the cart after successful order placement
+        cursor.execute('DELETE FROM cart WHERE user_id = %s', (user_id,))
+        
         conn.commit()
         cursor.close()
         conn.close()
@@ -1159,6 +1276,18 @@ def signup():
         if '@' not in email or '.' not in email:
             flash('Please enter a valid email address', 'error')
             return render_template('auth/signup.html')
+        
+        # Validate password: minimum 6 characters with letters and numbers
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('auth/signup.html')
+        
+        has_letter = any(c.isalpha() for c in password)
+        has_number = any(c.isdigit() for c in password)
+        
+        if not (has_letter and has_number):
+            flash('Password must contain both letters and numbers', 'error')
+            return render_template('auth/signup.html')
             
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
@@ -1266,6 +1395,18 @@ def signup_rider():
         # Validate email format
         if '@' not in email or '.' not in email:
             flash('Please enter a valid email address', 'error')
+            return render_template('auth/signupRider.html')
+        
+        # Validate password: minimum 6 characters with letters and numbers
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('auth/signupRider.html')
+        
+        has_letter = any(c.isalpha() for c in password)
+        has_number = any(c.isdigit() for c in password)
+        
+        if not (has_letter and has_number):
+            flash('Password must contain both letters and numbers', 'error')
             return render_template('auth/signupRider.html')
 
         # Validate phone number format
@@ -1560,6 +1701,78 @@ def admin_pending_products():
         return jsonify({'products': pending_products}), 200
         
     except Exception as err:
+        return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/product-details/<int:product_id>', methods=['GET'])
+def admin_product_details(product_id):
+    """Get detailed product information for admin review"""
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get product details with seller and category info
+        cursor.execute('''
+            SELECT 
+                p.*,
+                s.store_name,
+                s.description as store_description,
+                u.email as seller_email,
+                u.first_name as seller_first_name,
+                u.last_name as seller_last_name,
+                c.name as category_name,
+                c.slug as category_slug
+            FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.id = %s
+        ''', (product_id,))
+        
+        product = cursor.fetchone()
+        
+        if not product:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Product not found'}), 404
+        
+        # Get product images
+        cursor.execute('''
+            SELECT image_url, is_primary, sort_order
+            FROM product_images
+            WHERE product_id = %s
+            ORDER BY is_primary DESC, sort_order ASC
+        ''', (product_id,))
+        
+        images = cursor.fetchall()
+        
+        # Get product variants (sizes and colors with stock)
+        cursor.execute('''
+            SELECT size, color, stock_quantity, sku
+            FROM product_variants
+            WHERE product_id = %s
+            ORDER BY color, size
+        ''', (product_id,))
+        
+        variants = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'product': product,
+            'images': images,
+            'variants': variants
+        }), 200
+        
+    except Exception as err:
+        if conn:
+            conn.close()
         return jsonify({'error': str(err)}), 500
 
 @app.route('/admin/approve-product/<int:product_id>', methods=['POST'])
@@ -2442,7 +2655,24 @@ def seller_add_product():
         # If SKU is empty, generate a unique one
         if not sku:
             import time
-            sku = f"SKU-{seller['id']}-{int(time.time() * 1000)}"
+            import random
+            # Generate unique SKU with timestamp and random number
+            sku = f"SKU-{seller['id']}-{int(time.time() * 1000)}-{random.randint(1000, 9999)}"
+            
+            # Ensure SKU is unique by checking database
+            sku_check_attempts = 0
+            while sku_check_attempts < 10:
+                cursor.execute('SELECT id FROM products WHERE sku = %s', (sku,))
+                if not cursor.fetchone():
+                    break
+                # SKU exists, generate a new one
+                sku = f"SKU-{seller['id']}-{int(time.time() * 1000)}-{random.randint(1000, 9999)}"
+                sku_check_attempts += 1
+        else:
+            # If SKU provided, check if it already exists
+            cursor.execute('SELECT id FROM products WHERE sku = %s', (sku,))
+            if cursor.fetchone():
+                return jsonify({'error': f'SKU "{sku}" already exists. Please use a different SKU.'}), 400
         
         # Validate required fields
         if not name:
@@ -2452,24 +2682,21 @@ def seller_add_product():
         if not category_name:
             return jsonify({'error': 'Category is required'}), 400
         
-        # Get sizes and colors
-        sizes = request.form.getlist('sizes')
-        colors = request.form.getlist('colors')
+        # Get stock data (new per-color size structure)
+        stock_data_json = request.form.get('stock_data', '[]')
+        try:
+            stock_data = json.loads(stock_data_json)
+        except:
+            stock_data = []
         
-        # Add custom sizes if provided
-        custom_sizes = request.form.get('custom-sizes', '').strip()
-        if custom_sizes:
-            custom_size_list = [s.strip() for s in custom_sizes.split(',') if s.strip()]
-            sizes.extend(custom_size_list)
+        # Extract unique sizes and colors from stock_data
+        sizes = list(set([item['size'] for item in stock_data if 'size' in item]))
+        colors = list(set([item['color'] for item in stock_data if 'color' in item]))
         
-        # Add custom colors if provided
-        custom_colors = request.form.get('custom-colors', '').strip()
-        if custom_colors:
-            custom_color_list = [c.strip() for c in custom_colors.split(',') if c.strip()]
-            colors.extend(custom_color_list)
-        
-        # Validate sizes and colors for non-grooming products
+        # Validate stock data for non-grooming products
         if category_name != 'grooming':
+            if not stock_data or len(stock_data) == 0:
+                return jsonify({'error': 'Please add at least one size-color combination with stock quantity'}), 400
             if not sizes:
                 return jsonify({'error': 'Please select at least one size'}), 400
             if not colors:
@@ -2557,10 +2784,13 @@ def seller_add_product():
         
         # Add size and color variants with individual stock (skip for grooming)
         if category_name != 'grooming':
-            for size in sizes:
-                for color in colors:
-                    stock_key = f'stock_{size}_{color}'
-                    variant_stock = int(request.form.get(stock_key, 0))
+            # Use stock_data from the new per-color size structure
+            for item in stock_data:
+                size = item.get('size')
+                color = item.get('color')
+                variant_stock = int(item.get('stock_qty', 0))
+                
+                if size and color and variant_stock > 0:
                     total_stock += variant_stock
                     
                     # Insert product variant
@@ -2791,6 +3021,52 @@ def seller_request_recovery():
             conn.rollback()
         return jsonify({'error': str(err)}), 500
 
+@app.route('/seller/delete-archived-product', methods=['POST'])
+def seller_delete_archived_product():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get seller ID
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        
+        if not seller:
+            return jsonify({'error': 'Seller not found'}), 404
+        
+        product_id = request.form.get('product_id')
+        
+        # Verify product belongs to seller and is archived
+        cursor.execute('''
+            SELECT id, name FROM products 
+            WHERE id = %s AND seller_id = %s AND archive_status IN ('archived', 'pending_recovery')
+        ''', (product_id, seller['id']))
+        product = cursor.fetchone()
+        
+        if not product:
+            return jsonify({'error': 'Product not found or not archived'}), 404
+        
+        # Delete product permanently (CASCADE will handle related records)
+        cursor.execute('DELETE FROM products WHERE id = %s', (product_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Product permanently deleted'}), 200
+        
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(err)}), 500
+
 @app.route('/seller/product/<int:product_id>', methods=['GET'])
 def seller_get_product(product_id):
     if not session.get('logged_in') or session.get('role') != 'seller':
@@ -2813,7 +3089,7 @@ def seller_get_product(product_id):
         
         # Get product details
         cursor.execute('''
-            SELECT p.*, c.name as category_name
+            SELECT p.*, c.name as category_name, c.slug as category_slug
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
             WHERE p.id = %s AND p.seller_id = %s
@@ -2823,8 +3099,17 @@ def seller_get_product(product_id):
         if not product:
             return jsonify({'error': 'Product not found'}), 404
         
+        # Get product variants (sizes and colors with stock)
+        cursor.execute('''
+            SELECT size, color, stock_quantity
+            FROM product_variants
+            WHERE product_id = %s
+            ORDER BY color, size
+        ''', (product_id,))
+        variants = cursor.fetchall()
+        
         # Get all categories for the dropdown
-        cursor.execute('SELECT id, name FROM categories WHERE is_active = TRUE ORDER BY name')
+        cursor.execute('SELECT id, name, slug FROM categories WHERE is_active = TRUE ORDER BY name')
         categories = cursor.fetchall()
         
         cursor.close()
@@ -2833,6 +3118,7 @@ def seller_get_product(product_id):
         return jsonify({
             'success': True,
             'product': product,
+            'variants': variants,
             'categories': categories
         }), 200
         
@@ -2988,30 +3274,55 @@ def get_buyer_name():
 
 @app.route('/api/products')
 def api_products():
-    """Get all active products for browsing"""
+    """Get all active products for browsing with optional category filtering"""
     try:
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
         
-        # Fetch products with images
-        query = """
-            SELECT 
-                p.id,
-                p.name,
-                p.price,
-                p.description,
-                p.category_id,
-                pi.image_url,
-                c.name as category_name
-            FROM products p
-            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
-            LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.is_active = 1 AND p.archive_status = 'active'
-            ORDER BY p.created_at DESC
-            LIMIT 50
-        """
+        # Get query parameters
+        limit = request.args.get('limit', 50, type=int)
+        category = request.args.get('category', None)  # Category slug
         
-        cursor.execute(query)
+        # Build query with optional category filter
+        if category and category != 'all':
+            query = """
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.price,
+                    p.description,
+                    p.category_id,
+                    pi.image_url,
+                    c.name as category_name,
+                    c.slug as category_slug
+                FROM products p
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                LEFT JOIN categories c ON p.category_id = c.id
+                WHERE p.is_active = 1 AND p.archive_status = 'active' AND c.slug = %s
+                ORDER BY p.created_at DESC
+                LIMIT %s
+            """
+            cursor.execute(query, (category, limit))
+        else:
+            query = """
+                SELECT 
+                    p.id,
+                    p.name,
+                    p.price,
+                    p.description,
+                    p.category_id,
+                    pi.image_url,
+                    c.name as category_name,
+                    c.slug as category_slug
+                FROM products p
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                LEFT JOIN categories c ON p.category_id = c.id
+                WHERE p.is_active = 1 AND p.archive_status = 'active'
+                ORDER BY p.created_at DESC
+                LIMIT %s
+            """
+            cursor.execute(query, (limit,))
+        
         products = cursor.fetchall()
         
         cursor.close()
@@ -3019,7 +3330,8 @@ def api_products():
         
         return jsonify({
             'success': True,
-            'products': products
+            'products': products,
+            'category': category
         }), 200
     except Exception as e:
         return jsonify({
@@ -4381,6 +4693,15 @@ def api_add_to_cart():
         quantity = int(data.get('quantity', 1))
         variant_id = data.get('variant_id')
         
+        # Debug logging
+        print(f"\n=== ADD TO CART DEBUG ===")
+        print(f"User ID: {user_id}")
+        print(f"Product ID: {product_id}")
+        print(f"Quantity: {quantity}")
+        print(f"Variant ID: {variant_id}")
+        print(f"Full request data: {data}")
+        print(f"========================\n")
+        
         cursor = conn.cursor(dictionary=True)
         
         cursor.execute('''
@@ -4428,6 +4749,7 @@ def api_get_cart():
             SELECT 
                 c.id as cart_id,
                 c.product_id as id,
+                c.variant_id,
                 c.quantity,
                 p.name,
                 p.price,
@@ -4442,6 +4764,15 @@ def api_get_cart():
         ''', (user_id,))
         
         items = cursor.fetchall()
+        
+        # Debug logging
+        print(f"\n=== GET CART DEBUG ===")
+        print(f"User ID: {user_id}")
+        print(f"Number of items: {len(items)}")
+        for idx, item in enumerate(items):
+            print(f"Item {idx + 1}: {item.get('name')} - Color: {item.get('color')}, Size: {item.get('size')}, Variant ID: {item.get('variant_id')}")
+        print(f"=====================\n")
+        
         cursor.close()
         conn.close()
         
@@ -5210,6 +5541,176 @@ def api_rider_update_delivery_status():
         if conn:
             conn.close()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Send OTP to email for password reset"""
+    try:
+        email = request.form.get('email')
+        
+        if not email:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
+        
+        conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute('SELECT id, first_name FROM users WHERE email = %s', (email,))
+            user = cursor.fetchone()
+            
+            if not user:
+                cursor.close()
+                conn.close()
+                # Return error for better UX - user needs to know email is not registered
+                return jsonify({
+                    'success': False, 
+                    'error': 'No account found with this email address. Please check and try again.'
+                })
+            
+            # Generate and send OTP
+            ip_address = request.remote_addr
+            otp_code, otp_id = OTPService.create_otp_record(
+                conn,
+                email=email,
+                user_id=user['id'],
+                otp_type='email',
+                purpose='password_reset',
+                ip_address=ip_address
+            )
+        except Exception as db_error:
+            print(f"Database error in forgot password: {str(db_error)}")
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+            return jsonify({'success': False, 'error': 'Database error occurred'}), 500
+        
+        print(f"\n{'='*60}")
+        print(f"🔑 PASSWORD RESET OTP FOR {email}")
+        print(f"OTP CODE: {otp_code}")
+        print(f"{'='*60}\n")
+        
+        # Store session data regardless of email send success (for development)
+        session['password_reset'] = {
+            'email': email,
+            'user_id': user['id'],
+            'otp_id': otp_id,
+            'verified': False
+        }
+        
+        cursor.close()
+        conn.close()
+        
+        if otp_code:
+            # Try to send email, but continue even if it fails (OTP is printed in console)
+            email_sent = OTPService.send_email_otp(email, otp_code, 'password_reset')
+            if email_sent:
+                print(f"✅ Email sent successfully to {email}")
+            else:
+                print(f"⚠️ Email sending failed, but OTP is available in console")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Verification code sent to your email'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to generate verification code. Please try again.'
+            }), 500
+            
+    except Exception as e:
+        print(f"Forgot password error: {str(e)}")
+        return jsonify({'success': False, 'error': 'An error occurred'}), 500
+
+@app.route('/verify-reset-otp', methods=['POST'])
+def verify_reset_otp():
+    """Verify OTP for password reset"""
+    try:
+        otp_code = request.form.get('otp')
+        
+        if not otp_code or 'password_reset' not in session:
+            return jsonify({'success': False, 'error': 'Invalid request'}), 400
+        
+        reset_data = session['password_reset']
+        email = reset_data.get('email')
+        
+        conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        # Verify OTP (correct parameter order: conn, otp_code, email, phone, purpose)
+        is_valid, message = OTPService.verify_otp(conn, otp_code, email=email, purpose='password_reset')
+        
+        if is_valid:
+            # Mark as verified in session
+            session['password_reset']['verified'] = True
+            session.modified = True
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'OTP verified successfully'
+            })
+        else:
+            conn.close()
+            return jsonify({'success': False, 'error': message}), 400
+            
+    except Exception as e:
+        print(f"OTP verification error: {str(e)}")
+        return jsonify({'success': False, 'error': 'Verification failed'}), 500
+
+@app.route('/reset-password', methods=['POST'])
+def reset_password():
+    """Reset password after OTP verification"""
+    try:
+        new_password = request.form.get('password')
+        
+        if not new_password or 'password_reset' not in session:
+            return jsonify({'success': False, 'error': 'Invalid request'}), 400
+        
+        reset_data = session['password_reset']
+        
+        if not reset_data.get('verified'):
+            return jsonify({'success': False, 'error': 'Please verify OTP first'}), 400
+        
+        # Validate password: minimum 6 characters with letters and numbers
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'error': 'Password must be at least 6 characters long'}), 400
+        
+        has_letter = any(c.isalpha() for c in new_password)
+        has_number = any(c.isdigit() for c in new_password)
+        
+        if not (has_letter and has_number):
+            return jsonify({'success': False, 'error': 'Password must contain both letters and numbers'}), 400
+        
+        email = reset_data.get('email')
+        user_id = reset_data.get('user_id')
+        
+        conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET password = %s WHERE id = %s AND email = %s',
+                      (new_password, user_id, email))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Clear password reset session
+        session.pop('password_reset', None)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Password reset successfully'
+        })
+        
+    except Exception as e:
+        print(f"Password reset error: {str(e)}")
+        return jsonify({'success': False, 'error': 'Password reset failed'}), 500
 
 @app.route('/logout')
 def logout():
