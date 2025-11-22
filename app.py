@@ -1,21 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 import os
-import time
-import json
 import mysql.connector
-from dotenv import load_dotenv
-from utils.otp_service import OTPService
-
-load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, template_folder='templates', static_folder='static', static_url_path='/static')
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+app.secret_key = 'your-secret-key'
 
+# Set locale for Philippine Peso formatting
 import locale
 try:
     locale.setlocale(locale.LC_ALL, 'en_PH.UTF-8')
 except:
+    # Fallback if Philippine locale is not available
     locale.setlocale(locale.LC_ALL, '')
 
 def format_peso(amount):
@@ -24,12 +20,11 @@ def format_peso(amount):
         return locale.currency(float(amount), symbol='₱', grouping=True)
     except:
         return f"₱{float(amount):,.2f}"
-        
 DB_CONFIG = {
-    'host': os.environ.get('DB_HOST', 'localhost'),
-    'user': os.environ.get('DB_USER', 'root'),
-    'password': os.environ.get('DB_PASSWORD', ''),
-    'database': os.environ.get('DB_NAME', 'varon')
+    'host': 'localhost',
+    'user': 'root',
+    'password': '',
+    'database': 'varon'
 }
 
 def get_db():
@@ -999,10 +994,15 @@ def order_confirmation(order_number):
     try:
         cursor = conn.cursor(dictionary=True)
         
-        # Get order details (including buyer_received fields)
+        # Get order details with addresses
         cursor.execute('''
-            SELECT o.*
+            SELECT o.*, 
+                   CONCAT(a.street_address, ', ', COALESCE(a.barangay, ''), ', ', 
+                          a.city, ', ', a.province, ' ', COALESCE(a.postal_code, ''), ', ', 
+                          a.country) as shipping_address,
+                   a.full_name, a.phone
             FROM orders o
+            LEFT JOIN addresses a ON o.shipping_address_id = a.id
             WHERE o.order_number = %s AND o.user_id = %s
         ''', (order_number, session.get('user_id')))
         
@@ -1013,28 +1013,6 @@ def order_confirmation(order_number):
             conn.close()
             flash('Order not found', 'error')
             return redirect(url_for('buyer_dashboard'))
-        
-        # Convert Decimal to float
-        if order.get('total_amount'):
-            order['total_amount'] = float(order['total_amount'])
-        if order.get('subtotal'):
-            order['subtotal'] = float(order['subtotal'])
-        if order.get('shipping_fee'):
-            order['shipping_fee'] = float(order['shipping_fee'])
-        if order.get('tax_amount'):
-            order['tax_amount'] = float(order['tax_amount'])
-        if order.get('discount_amount'):
-            order['discount_amount'] = float(order['discount_amount'])
-        
-        # Get shipping address
-        cursor.execute('SELECT * FROM addresses WHERE id = %s', (order['shipping_address_id'],))
-        shipping_address = cursor.fetchone()
-        
-        # Get billing address
-        billing_address = None
-        if order.get('billing_address_id'):
-            cursor.execute('SELECT * FROM addresses WHERE id = %s', (order['billing_address_id'],))
-            billing_address = cursor.fetchone()
         
         # Get order items with product images
         cursor.execute('''
@@ -1047,159 +1025,13 @@ def order_confirmation(order_number):
         
         items = cursor.fetchall()
         
-        # Convert Decimal to float for items
-        for item in items:
-            if item.get('unit_price'):
-                item['unit_price'] = float(item['unit_price'])
-            if item.get('subtotal'):
-                item['subtotal'] = float(item['subtotal'])
-        
-        # Get shipment info
-        cursor.execute('SELECT * FROM shipments WHERE order_id = %s', (order['id'],))
-        shipment = cursor.fetchone()
-        
-        # Get seller info
-        cursor.execute('''
-            SELECT s.* FROM sellers s
-            WHERE s.id = %s
-        ''', (order['seller_id'],))
-        seller = cursor.fetchone()
-        
         cursor.close()
         conn.close()
         
-        # Status colors for badges
-        status_colors = {
-            'pending': {'bg': '#fef3c7', 'color': '#92400e', 'emoji': '⏳'},
-            'confirmed': {'bg': '#dbeafe', 'color': '#1e40af', 'emoji': '✔️'},
-            'processing': {'bg': '#fed7aa', 'color': '#9a3412', 'emoji': '🔄'},
-            'shipped': {'bg': '#c7d2fe', 'color': '#3730a3', 'emoji': '📦'},
-            'delivered': {'bg': '#dcfce7', 'color': '#15803d', 'emoji': '✅'},
-            'cancelled': {'bg': '#fee2e2', 'color': '#991b1b', 'emoji': '❌'},
-            'returned': {'bg': '#e9d5ff', 'color': '#6b21a8', 'emoji': '↩️'}
-        }
-        
-        return render_template('pages/order_confirmation.html', 
-                             order=order, 
-                             items=items,
-                             shipping_address=shipping_address,
-                             billing_address=billing_address,
-                             shipment=shipment,
-                             seller=seller,
-                             status_colors=status_colors)
+        return render_template('pages/order_confirmation.html', order=order, items=items)
         
     except Exception as e:
         print(f"Error loading order confirmation: {str(e)}")
-        if conn:
-            conn.close()
-        flash('Error loading order', 'error')
-        return redirect(url_for('buyer_dashboard'))
-
-@app.route('/order-details/<order_number>')
-def order_details(order_number):
-    # Check if user is logged in
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    conn = get_db()
-    if not conn:
-        flash('Database connection failed', 'error')
-        return redirect(url_for('buyer_dashboard'))
-    
-    try:
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get order details (including buyer_received fields)
-        cursor.execute('''
-            SELECT o.*
-            FROM orders o
-            WHERE o.order_number = %s AND o.user_id = %s
-        ''', (order_number, session.get('user_id')))
-        
-        order = cursor.fetchone()
-        
-        if not order:
-            cursor.close()
-            conn.close()
-            flash('Order not found', 'error')
-            return redirect(url_for('buyer_dashboard'))
-        
-        # Convert Decimal to float
-        if order.get('total_amount'):
-            order['total_amount'] = float(order['total_amount'])
-        if order.get('subtotal'):
-            order['subtotal'] = float(order['subtotal'])
-        if order.get('shipping_fee'):
-            order['shipping_fee'] = float(order['shipping_fee'])
-        if order.get('tax_amount'):
-            order['tax_amount'] = float(order['tax_amount'])
-        if order.get('discount_amount'):
-            order['discount_amount'] = float(order['discount_amount'])
-        
-        # Get shipping address
-        cursor.execute('SELECT * FROM addresses WHERE id = %s', (order['shipping_address_id'],))
-        shipping_address = cursor.fetchone()
-        
-        # Get billing address
-        billing_address = None
-        if order.get('billing_address_id'):
-            cursor.execute('SELECT * FROM addresses WHERE id = %s', (order['billing_address_id'],))
-            billing_address = cursor.fetchone()
-        
-        # Get order items with product images
-        cursor.execute('''
-            SELECT oi.*, pi.image_url
-            FROM order_items oi
-            LEFT JOIN products p ON oi.product_id = p.id
-            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
-            WHERE oi.order_id = %s
-        ''', (order['id'],))
-        
-        items = cursor.fetchall()
-        
-        # Convert Decimal to float for items
-        for item in items:
-            if item.get('unit_price'):
-                item['unit_price'] = float(item['unit_price'])
-            if item.get('subtotal'):
-                item['subtotal'] = float(item['subtotal'])
-        
-        # Get shipment info
-        cursor.execute('SELECT * FROM shipments WHERE order_id = %s', (order['id'],))
-        shipment = cursor.fetchone()
-        
-        # Get seller info
-        cursor.execute('''
-            SELECT s.* FROM sellers s
-            WHERE s.id = %s
-        ''', (order['seller_id'],))
-        seller = cursor.fetchone()
-        
-        cursor.close()
-        conn.close()
-        
-        # Status colors for badges
-        status_colors = {
-            'pending': {'bg': '#fef3c7', 'color': '#92400e', 'emoji': '⏳'},
-            'confirmed': {'bg': '#dbeafe', 'color': '#1e40af', 'emoji': '✔️'},
-            'processing': {'bg': '#fed7aa', 'color': '#9a3412', 'emoji': '🔄'},
-            'shipped': {'bg': '#c7d2fe', 'color': '#3730a3', 'emoji': '📦'},
-            'delivered': {'bg': '#dcfce7', 'color': '#15803d', 'emoji': '✅'},
-            'cancelled': {'bg': '#fee2e2', 'color': '#991b1b', 'emoji': '❌'},
-            'returned': {'bg': '#e9d5ff', 'color': '#6b21a8', 'emoji': '↩️'}
-        }
-        
-        return render_template('pages/order_details.html', 
-                             order=order, 
-                             items=items,
-                             shipping_address=shipping_address,
-                             billing_address=billing_address,
-                             shipment=shipment,
-                             seller=seller,
-                             status_colors=status_colors)
-        
-    except Exception as e:
-        print(f"Error loading order details: {str(e)}")
         if conn:
             conn.close()
         flash('Error loading order', 'error')
@@ -1233,8 +1065,6 @@ def login():
                 session['user_id'] = user['id']
                 session['email'] = user['email']
                 session['role'] = user['role']
-                session['first_name'] = user['first_name']
-                session['last_name'] = user['last_name']
                 
                 # Redirect based on role
                 if user['role'] == 'admin':
@@ -1302,51 +1132,20 @@ def signup():
         try:
             cursor = conn.cursor()
             
+            # Check if email already exists
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
                 flash('Email already registered', 'error')
                 return render_template('auth/signup.html')
             
-            cursor.execute('INSERT INTO users (email, password, first_name, last_name, phone, role, email_verified, phone_verified) VALUES (%s, %s, %s, %s, %s, %s, FALSE, FALSE)',
+            cursor.execute('INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
                            (email, password, first_name, last_name, phone, role))
-            user_id = cursor.lastrowid
             conn.commit()
+            cursor.close()
+            conn.close()
             
-            ip_address = request.remote_addr
-            otp_code, otp_id = OTPService.create_otp_record(
-                conn, 
-                email=email, 
-                user_id=user_id,
-                otp_type='email',
-                purpose='registration',
-                ip_address=ip_address
-            )
-            
-            # Display OTP in console for development
-            print(f"\n{'='*60}")
-            print(f"🔐 BUYER REGISTRATION OTP FOR {email}")
-            print(f"OTP CODE: {otp_code}")
-            print(f"{'='*60}\n")
-            
-            if otp_code and OTPService.send_email_otp(email, otp_code, 'registration'):
-                session['pending_otp_verification'] = {
-                    'email': email,
-                    'phone': phone,
-                    'verification_type': 'email',
-                    'purpose': 'registration',
-                    'user_id': user_id
-                }
-                
-                cursor.close()
-                conn.close()
-                
-                flash('Registration successful! Please check your email for verification code.', 'success')
-                return redirect(url_for('verify_otp_page'))
-            else:
-                cursor.close()
-                conn.close()
-                flash('Registration successful but failed to send verification email. Please log in.', 'warning')
-                return redirect(url_for('login'))
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
             
         except Exception as err:
             flash('Registration failed: {str(err)}', 'error')
@@ -1428,60 +1227,25 @@ def signup_rider():
                 flash('Email already registered', 'error')
                 return render_template('auth/signupRider.html')
 
+            # Create user account
             cursor.execute('''
-                INSERT INTO users (first_name, last_name, email, password, phone, role, email_verified, phone_verified) 
-                VALUES (%s, %s, %s, %s, %s, 'rider', FALSE, FALSE)
+                INSERT INTO users (first_name, last_name, email, password, phone, role) 
+                VALUES (%s, %s, %s, %s, %s, 'rider')
             ''', (first_name, last_name, email, password, phone))
             user_id = cursor.lastrowid
 
+            # Create rider profile
             cursor.execute('''
                 INSERT INTO riders (user_id, vehicle_type, license_number, vehicle_plate, service_area) 
                 VALUES (%s, %s, %s, %s, %s)
             ''', (user_id, vehicle_type, license_number, vehicle_plate, service_area))
 
             conn.commit()
-            
-            ip_address = request.remote_addr
-            otp_code, otp_id = OTPService.create_otp_record(
-                conn, 
-                email=email, 
-                phone=phone,
-                user_id=user_id,
-                otp_type='both',
-                purpose='registration',
-                ip_address=ip_address
-            )
-            
-            # Display OTP in console for development
-            print(f"\n{'='*60}")
-            print(f"🚴 RIDER REGISTRATION OTP")
-            print(f"Email: {email}")
-            print(f"Phone: {phone}")
-            print(f"OTP CODE: {otp_code}")
-            print(f"{'='*60}\n")
-            
-            email_sent = OTPService.send_email_otp(email, otp_code, 'registration')
-            sms_sent = OTPService.send_sms_otp(phone, otp_code, 'registration')
-            
-            if email_sent or sms_sent:
-                session['pending_otp_verification'] = {
-                    'email': email,
-                    'phone': phone,
-                    'verification_type': 'email' if email_sent else 'sms',
-                    'purpose': 'registration',
-                    'user_id': user_id
-                }
-                
-                cursor.close()
-                conn.close()
-                
-                flash('Registration successful! Please check your email/phone for verification code.', 'success')
-                return redirect(url_for('verify_otp_page'))
-            else:
-                cursor.close()
-                conn.close()
-                flash('Registration successful! Please log in.', 'success')
-                return redirect(url_for('login'))
+            cursor.close()
+            conn.close()
+
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
 
         except Exception as err:
             flash(f'Registration failed: {str(err)}', 'error')
@@ -1535,59 +1299,29 @@ def signup_seller():
                 flash('Shop name already taken', 'error')
                 return render_template('auth/signupSeller.html')
 
+            # Create user account (use shop name as first/last name for sellers)
+            # Split shop name into first and last name parts
             name_parts = shop_name.split(' ', 1)
             first_name = name_parts[0] if len(name_parts) > 0 else shop_name
             last_name = name_parts[1] if len(name_parts) > 1 else 'Shop'
             
-            cursor.execute('INSERT INTO users (first_name, last_name, email, password, phone, role, email_verified, phone_verified) VALUES (%s, %s, %s, %s, %s, %s, FALSE, FALSE)',
+            cursor.execute('INSERT INTO users (first_name, last_name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
                          (first_name, last_name, email, password, phone, 'seller'))
             user_id = cursor.lastrowid
 
+            # Create store slug from shop name
             store_slug = shop_name.lower().replace(' ', '-').replace("'", '')
 
+            # Create seller profile with pending status
             cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, status) VALUES (%s, %s, %s, %s)',
                          (user_id, shop_name, store_slug, 'pending'))
 
             conn.commit()
-            
-            ip_address = request.remote_addr
-            otp_code, otp_id = OTPService.create_otp_record(
-                conn, 
-                email=email, 
-                phone=phone,
-                user_id=user_id,
-                otp_type='email',
-                purpose='registration',
-                ip_address=ip_address
-            )
-            
-            # Display OTP in console for development
-            print(f"\n{'='*60}")
-            print(f"🏪 SELLER REGISTRATION OTP")
-            print(f"Email: {email}")
-            print(f"Shop: {shop_name}")
-            print(f"OTP CODE: {otp_code}")
-            print(f"{'='*60}\n")
-            
-            if otp_code and OTPService.send_email_otp(email, otp_code, 'registration'):
-                session['pending_otp_verification'] = {
-                    'email': email,
-                    'phone': phone,
-                    'verification_type': 'email',
-                    'purpose': 'registration',
-                    'user_id': user_id
-                }
-                
-                cursor.close()
-                conn.close()
-                
-                flash('Seller account created! Please check your email for verification code.', 'success')
-                return redirect(url_for('verify_otp_page'))
-            else:
-                cursor.close()
-                conn.close()
-                flash('Seller account created successfully! Please log in.', 'success')
-                return redirect(url_for('login'))
+            cursor.close()
+            conn.close()
+
+            flash('Seller account created successfully! Please log in.', 'success')
+            return redirect(url_for('login'))
 
         except Exception as err:
             flash(f'Registration failed: {str(err)}', 'error')
@@ -2509,13 +2243,9 @@ def rider_dashboard():
         ''', (rider['id'] if rider else None,))
         today_stats = cursor.fetchone()
         
-        # Convert Decimal to float for template rendering
-        deliveries_today = int(today_stats['deliveries_today']) if today_stats else 0
-        earnings_today = float(today_stats['earnings_today']) if today_stats and today_stats['earnings_today'] else 0.0
-        
         # Get rider rating
-        rating = float(rider['rating']) if rider and rider['rating'] else 4.5
-        total_deliveries = int(rider['total_deliveries']) if rider and rider['total_deliveries'] else 0
+        rating = rider['rating'] if rider and rider['rating'] else 4.5
+        total_deliveries = rider['total_deliveries'] if rider and rider['total_deliveries'] else 0
         
         # Calculate acceptance rate (mock for now)
         acceptance_rate = 95
@@ -2550,16 +2280,6 @@ def rider_dashboard():
         ''', (rider['id'] if rider else None,))
         active_deliveries = cursor.fetchall()
         
-        # Convert Decimal to float in recent deliveries
-        for delivery in recent_deliveries:
-            if delivery.get('total_amount'):
-                delivery['total_amount'] = float(delivery['total_amount'])
-        
-        # Convert Decimal to float in active deliveries
-        for delivery in active_deliveries:
-            if delivery.get('total_amount'):
-                delivery['total_amount'] = float(delivery['total_amount'])
-        
         cursor.close()
         conn.close()
         
@@ -2567,8 +2287,8 @@ def rider_dashboard():
                              rider_name=user['first_name'],
                              rider=rider,
                              user=user,
-                             deliveries_today=deliveries_today,
-                             earnings_today=earnings_today,
+                             deliveries_today=today_stats['deliveries_today'],
+                             earnings_today=today_stats['earnings_today'],
                              rating=rating,
                              acceptance_rate=acceptance_rate,
                              total_deliveries=total_deliveries,
@@ -3565,7 +3285,7 @@ def seller_orders():
         
         seller_id = seller_result['id']
         
-        # Fetch orders for this seller with shipment info
+        # Fetch orders for this seller
         query = """
             SELECT 
                 o.id,
@@ -3576,16 +3296,10 @@ def seller_orders():
                 o.created_at,
                 o.updated_at,
                 u.first_name as customer_name,
-                COUNT(DISTINCT oi.id) as item_count,
-                s.id as shipment_id,
-                s.rider_id,
-                s.seller_confirmed,
-                s.seller_confirmed_at,
-                s.status as shipment_status
+                COUNT(oi.id) as item_count
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id
             LEFT JOIN order_items oi ON o.id = oi.order_id
-            LEFT JOIN shipments s ON o.id = s.order_id
             WHERE o.seller_id = %s
             GROUP BY o.id
             ORDER BY o.created_at DESC
@@ -3669,19 +3383,6 @@ def update_order_status():
         """
         
         cursor.execute(update_query, (new_status, order_id))
-        
-        # If status is set to 'processing' (RELEASED TO RIDER), confirm the rider
-        if new_status == 'processing':
-            # Update shipment to confirm seller approval
-            cursor.execute('''
-                UPDATE shipments 
-                SET seller_confirmed = TRUE, 
-                    seller_confirmed_at = NOW(),
-                    status = 'in_transit'
-                WHERE order_id = %s AND rider_id IS NOT NULL
-            ''', (order_id,))
-            print(f"[✅] Rider confirmed for order {order_id}")
-        
         conn.commit()
         
         print(f"[✅] Order {order_id} status updated to {new_status} by seller {seller_id}")
@@ -3700,503 +3401,6 @@ def update_order_status():
             'error': str(e)
         }), 500
 
-@app.route('/seller/pending-rider-confirmations', methods=['GET'])
-def seller_pending_rider_confirmations():
-    """Get all orders awaiting seller confirmation for rider delivery"""
-    if not session.get('logged_in') or session.get('role') != 'seller':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database error'}), 500
-    
-    try:
-        seller_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get all shipments awaiting confirmation for this seller's orders
-        cursor.execute('''
-            SELECT 
-                s.id as shipment_id,
-                s.created_at as accepted_at,
-                o.id as order_id,
-                o.order_number,
-                o.total_amount,
-                CONCAT(u.first_name, ' ', u.last_name) as customer_name,
-                u.phone as customer_phone,
-                CONCAT(ru.first_name, ' ', ru.last_name) as rider_name,
-                ru.phone as rider_phone,
-                r.vehicle_type
-            FROM shipments s
-            JOIN orders o ON s.order_id = o.id
-            JOIN users u ON o.user_id = u.id
-            JOIN riders r ON s.rider_id = r.id
-            JOIN users ru ON r.user_id = ru.id
-            WHERE o.seller_id = %s 
-            AND s.seller_confirmed = FALSE
-            AND s.rider_id IS NOT NULL
-            ORDER BY s.created_at ASC
-        ''', (seller_id,))
-        
-        confirmations = cursor.fetchall()
-        
-        # Format dates for JSON
-        for conf in confirmations:
-            if conf.get('accepted_at'):
-                conf['accepted_at'] = conf['accepted_at'].isoformat() if hasattr(conf['accepted_at'], 'isoformat') else str(conf['accepted_at'])
-        
-        cursor.close()
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'confirmations': confirmations
-        })
-        
-    except Exception as e:
-        print(f"Error fetching pending confirmations: {e}")
-        import traceback
-        traceback.print_exc()
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/seller/confirm-rider-delivery', methods=['POST'])
-def seller_confirm_rider_delivery():
-    """Seller confirms that rider can proceed with delivery"""
-    if not session.get('logged_in') or session.get('role') != 'seller':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    
-    data = request.get_json()
-    shipment_id = data.get('shipment_id')
-    
-    if not shipment_id:
-        return jsonify({'success': False, 'error': 'Missing shipment_id'}), 400
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database error'}), 500
-    
-    try:
-        user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get seller_id
-        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
-        seller_result = cursor.fetchone()
-        if not seller_result:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Seller profile not found'}), 404
-        
-        seller_id = seller_result['id']
-        
-        # Verify this seller owns the order
-        cursor.execute('''
-            SELECT s.id, o.seller_id 
-            FROM shipments s
-            JOIN orders o ON s.order_id = o.id
-            WHERE s.id = %s AND o.seller_id = %s
-        ''', (shipment_id, seller_id))
-        
-        shipment = cursor.fetchone()
-        if not shipment:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Shipment not found or not authorized'}), 404
-        
-        # Confirm the rider and update status to picked_up
-        cursor.execute('''
-            UPDATE shipments 
-            SET seller_confirmed = TRUE, 
-                seller_confirmed_at = NOW(),
-                status = 'picked_up',
-                shipped_at = NOW()
-            WHERE id = %s
-        ''', (shipment_id,))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'message': 'Rider confirmed! Delivery can proceed.'})
-    except Exception as e:
-        print(f"❌ Error confirming rider: {e}")
-        import traceback
-        traceback.print_exc()
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-# ============ FLASH SALES & PROMOTIONS ============
-@app.route('/seller/create-flash-sale', methods=['POST'])
-def create_flash_sale():
-    """Create a new flash sale with percentage discount"""
-    if not session.get('logged_in') or session.get('role') != 'seller':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database error'}), 500
-    
-    try:
-        user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get seller_id
-        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
-        seller_result = cursor.fetchone()
-        if not seller_result:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Seller profile not found'}), 404
-        
-        seller_id = seller_result['id']
-        
-        # Get form data
-        sale_name = request.form.get('sale_name')
-        description = request.form.get('description', '')
-        discount_percentage = float(request.form.get('discount_percentage'))
-        start_date = request.form.get('start_date')
-        end_date = request.form.get('end_date')
-        product_ids = json.loads(request.form.get('product_ids', '[]'))
-        
-        # Validate
-        if not sale_name or not start_date or not end_date:
-            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
-        
-        if discount_percentage < 5 or discount_percentage > 90:
-            return jsonify({'success': False, 'error': 'Discount must be between 5% and 90%'}), 400
-        
-        if len(product_ids) == 0:
-            return jsonify({'success': False, 'error': 'Select at least one product'}), 400
-        
-        # Determine status based on start date
-        from datetime import datetime
-        start_dt = datetime.fromisoformat(start_date)
-        now = datetime.now()
-        status = 'active' if start_dt <= now else 'upcoming'
-        
-        # Create flash sale
-        cursor.execute('''
-            INSERT INTO flash_sales (seller_id, sale_name, description, discount_percentage, 
-                                    start_date, end_date, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ''', (seller_id, sale_name, description, discount_percentage, start_date, end_date, status))
-        
-        flash_sale_id = cursor.lastrowid
-        
-        # Add products to the sale
-        for product_id in product_ids:
-            # Get original price
-            cursor.execute('SELECT price FROM products WHERE id = %s AND seller_id = %s', 
-                          (product_id, seller_id))
-            product = cursor.fetchone()
-            
-            if product:
-                original_price = float(product['price'])
-                sale_price = original_price * (1 - discount_percentage / 100)
-                
-                cursor.execute('''
-                    INSERT INTO flash_sale_products (flash_sale_id, product_id, original_price, sale_price)
-                    VALUES (%s, %s, %s, %s)
-                ''', (flash_sale_id, product_id, original_price, sale_price))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'message': 'Flash sale created successfully', 'sale_id': flash_sale_id})
-    
-    except Exception as e:
-        print(f"❌ Error creating flash sale: {e}")
-        import traceback
-        traceback.print_exc()
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/seller/flash-sales', methods=['GET'])
-def get_flash_sales():
-    """Get flash sales filtered by status"""
-    if not session.get('logged_in') or session.get('role') != 'seller':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    
-    status_filter = request.args.get('status', 'all')
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database error'}), 500
-    
-    try:
-        user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get seller_id
-        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
-        seller_result = cursor.fetchone()
-        if not seller_result:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Seller profile not found'}), 404
-        
-        seller_id = seller_result['id']
-        
-        # Build query based on status filter
-        if status_filter == 'active':
-            status_condition = "AND fs.status = 'active'"
-        elif status_filter == 'upcoming':
-            status_condition = "AND fs.status = 'upcoming'"
-        elif status_filter == 'past':
-            status_condition = "AND fs.status = 'ended'"
-        else:
-            status_condition = ""
-        
-        query = f'''
-            SELECT fs.*, 
-                   COUNT(DISTINCT fsp.product_id) as product_count,
-                   COUNT(DISTINCT o.id) as total_orders
-            FROM flash_sales fs
-            LEFT JOIN flash_sale_products fsp ON fs.id = fsp.flash_sale_id
-            LEFT JOIN orders o ON fs.id = o.flash_sale_id
-            WHERE fs.seller_id = %s {status_condition}
-            GROUP BY fs.id
-            ORDER BY fs.created_at DESC
-        '''
-        
-        cursor.execute(query, (seller_id,))
-        sales = cursor.fetchall()
-        
-        # Convert datetime and decimal to JSON-serializable
-        for sale in sales:
-            if sale.get('discount_percentage'):
-                sale['discount_percentage'] = float(sale['discount_percentage'])
-            if sale.get('start_date'):
-                sale['start_date'] = sale['start_date'].isoformat()
-            if sale.get('end_date'):
-                sale['end_date'] = sale['end_date'].isoformat()
-            if sale.get('created_at'):
-                sale['created_at'] = sale['created_at'].isoformat()
-        
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'sales': sales})
-    
-    except Exception as e:
-        print(f"❌ Error getting flash sales: {e}")
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/seller/flash-sale/<int:sale_id>', methods=['GET'])
-def get_flash_sale_details(sale_id):
-    """Get detailed information about a flash sale"""
-    if not session.get('logged_in') or session.get('role') != 'seller':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database error'}), 500
-    
-    try:
-        user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get seller_id
-        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
-        seller_result = cursor.fetchone()
-        if not seller_result:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Seller profile not found'}), 404
-        
-        seller_id = seller_result['id']
-        
-        # Get sale details
-        cursor.execute('''
-            SELECT * FROM flash_sales 
-            WHERE id = %s AND seller_id = %s
-        ''', (sale_id, seller_id))
-        
-        sale = cursor.fetchone()
-        
-        if not sale:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Flash sale not found'}), 404
-        
-        # Get products in this sale
-        cursor.execute('''
-            SELECT fsp.*, p.name as product_name, p.sku
-            FROM flash_sale_products fsp
-            JOIN products p ON fsp.product_id = p.id
-            WHERE fsp.flash_sale_id = %s
-        ''', (sale_id,))
-        
-        products = cursor.fetchall()
-        
-        # Convert to JSON-serializable
-        if sale.get('discount_percentage'):
-            sale['discount_percentage'] = float(sale['discount_percentage'])
-        if sale.get('start_date'):
-            sale['start_date'] = sale['start_date'].isoformat()
-        if sale.get('end_date'):
-            sale['end_date'] = sale['end_date'].isoformat()
-        
-        for product in products:
-            if product.get('original_price'):
-                product['original_price'] = float(product['original_price'])
-            if product.get('sale_price'):
-                product['sale_price'] = float(product['sale_price'])
-        
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'sale': sale, 'products': products})
-    
-    except Exception as e:
-        print(f"❌ Error getting flash sale details: {e}")
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/seller/end-flash-sale/<int:sale_id>', methods=['POST'])
-def end_flash_sale(sale_id):
-    """Manually end a flash sale"""
-    if not session.get('logged_in') or session.get('role') != 'seller':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database error'}), 500
-    
-    try:
-        user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get seller_id
-        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
-        seller_result = cursor.fetchone()
-        if not seller_result:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Seller profile not found'}), 404
-        
-        seller_id = seller_result['id']
-        
-        # Update sale status to ended
-        cursor.execute('''
-            UPDATE flash_sales 
-            SET status = 'ended', updated_at = NOW()
-            WHERE id = %s AND seller_id = %s
-        ''', (sale_id, seller_id))
-        
-        if cursor.rowcount == 0:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Flash sale not found'}), 404
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'message': 'Flash sale ended successfully'})
-    
-    except Exception as e:
-        print(f"❌ Error ending flash sale: {e}")
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/active-flash-sales', methods=['GET'])
-def get_active_flash_sales():
-    """Get all currently active flash sales for buyers to see discounted prices"""
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database error'}), 500
-    
-    try:
-        from datetime import datetime
-        cursor = conn.cursor(dictionary=True)
-        
-        # Get all active flash sales with their products
-        cursor.execute('''
-            SELECT DISTINCT
-                fs.id as flash_sale_id,
-                fs.sale_name,
-                fs.discount_percentage,
-                fs.start_date,
-                fs.end_date,
-                fsp.product_id,
-                fsp.original_price,
-                fsp.sale_price,
-                p.name as product_name,
-                p.sku,
-                s.store_name as seller_name
-            FROM flash_sales fs
-            JOIN flash_sale_products fsp ON fs.id = fsp.flash_sale_id
-            JOIN products p ON fsp.product_id = p.id
-            JOIN sellers s ON fs.seller_id = s.id
-            WHERE fs.status = 'active'
-            AND fs.start_date <= NOW()
-            AND fs.end_date >= NOW()
-            AND p.is_active = TRUE
-            ORDER BY fs.discount_percentage DESC
-        ''')
-        
-        sales = cursor.fetchall()
-        
-        # Convert to JSON-serializable and organize by product
-        product_sales = {}
-        sale_info = {}
-        
-        for sale in sales:
-            product_id = sale['product_id']
-            flash_sale_id = sale['flash_sale_id']
-            
-            # Store sale information
-            if flash_sale_id not in sale_info:
-                sale_info[flash_sale_id] = {
-                    'id': flash_sale_id,
-                    'name': sale['sale_name'],
-                    'discount': float(sale['discount_percentage']),
-                    'start_date': sale['start_date'].isoformat(),
-                    'end_date': sale['end_date'].isoformat(),
-                    'seller': sale['seller_name']
-                }
-            
-            # Store product sale price
-            if product_id not in product_sales or float(sale['sale_price']) < float(product_sales[product_id]['sale_price']):
-                product_sales[product_id] = {
-                    'product_id': product_id,
-                    'product_name': sale['product_name'],
-                    'original_price': float(sale['original_price']),
-                    'sale_price': float(sale['sale_price']),
-                    'discount_percentage': float(sale['discount_percentage']),
-                    'flash_sale_id': flash_sale_id,
-                    'sale_name': sale['sale_name']
-                }
-        
-        cursor.close()
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'product_sales': product_sales,
-            'sales': list(sale_info.values())
-        })
-    
-    except Exception as e:
-        print(f"❌ Error getting active flash sales: {e}")
-        import traceback
-        traceback.print_exc()
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-# ============ END FLASH SALES & PROMOTIONS ============
-
 # ============ ORDER TRACKING ENDPOINTS FOR BUYERS ============
 @app.route('/api/order-status/<order_id>', methods=['GET'])
 def get_order_status(order_id):
@@ -4212,23 +3416,13 @@ def get_order_status(order_id):
         cursor = conn.cursor(dictionary=True)
         user_id = session.get('user_id')
         
-        # Get order details - verify ownership (with seller and rider info)
+        # Get order details - verify ownership
         cursor.execute('''
             SELECT 
                 o.id, o.order_number, o.order_status, o.created_at, o.updated_at,
-                o.total_amount, o.payment_method, o.seller_id,
-                o.buyer_received, o.buyer_received_at,
-                u.first_name, u.last_name,
-                s.store_name as seller_name, s.email as seller_email, s.phone as seller_phone,
-                sh.rider_id, sh.status as shipment_status, sh.tracking_number,
-                sh.shipped_at, sh.estimated_delivery, sh.delivered_at,
-                r.first_name as rider_first_name, r.last_name as rider_last_name,
-                r.phone as rider_phone, r.vehicle_type
+                o.total_amount, o.payment_method, u.first_name, u.last_name
             FROM orders o
             JOIN users u ON o.user_id = u.id
-            LEFT JOIN sellers s ON o.seller_id = s.id
-            LEFT JOIN shipments sh ON o.id = sh.order_id
-            LEFT JOIN riders r ON sh.rider_id = r.id
             WHERE o.id = %s AND o.user_id = %s
         ''', (order_id, user_id))
         
@@ -4265,35 +3459,6 @@ def get_order_status(order_id):
         current_status = order.get('order_status', 'pending')
         status_info = status_timeline.get(current_status, status_timeline['pending'])
         
-        # Build seller info
-        seller_info = None
-        if order.get('seller_name'):
-            seller_info = {
-                'name': order['seller_name'],
-                'email': order.get('seller_email'),
-                'phone': order.get('seller_phone')
-            }
-        
-        # Build rider info
-        rider_info = None
-        if order.get('rider_id'):
-            rider_info = {
-                'name': f"{order.get('rider_first_name', '')} {order.get('rider_last_name', '')}".strip(),
-                'phone': order.get('rider_phone'),
-                'vehicle': order.get('vehicle_type')
-            }
-        
-        # Build shipment info
-        shipment_info = None
-        if order.get('tracking_number'):
-            shipment_info = {
-                'tracking_number': order['tracking_number'],
-                'status': order.get('shipment_status'),
-                'shipped_at': order['shipped_at'].isoformat() if order.get('shipped_at') else None,
-                'estimated_delivery': order['estimated_delivery'].isoformat() if order.get('estimated_delivery') else None,
-                'delivered_at': order['delivered_at'].isoformat() if order.get('delivered_at') else None
-            }
-        
         return jsonify({
             'success': True,
             'order': {
@@ -4307,13 +3472,8 @@ def get_order_status(order_id):
                 'updated_at': order['updated_at'].isoformat() if order['updated_at'] else None,
                 'total_amount': float(order['total_amount']),
                 'payment_method': order['payment_method'],
-                'customer_name': f"{order['first_name']} {order['last_name']}",
-                'buyer_received': bool(order.get('buyer_received', False)),
-                'buyer_received_at': order['buyer_received_at'].isoformat() if order.get('buyer_received_at') else None
+                'customer_name': f"{order['first_name']} {order['last_name']}"
             },
-            'seller': seller_info,
-            'rider': rider_info,
-            'shipment': shipment_info,
             'items': items,
             'timeline': status_timeline
         })
@@ -4322,123 +3482,6 @@ def get_order_status(order_id):
         print(f"❌ Error getting order status: {str(e)}")
         cursor.close()
         conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/confirm-order/<order_id>', methods=['POST'])
-def confirm_order_status(order_id):
-    """API endpoint for buyers to confirm their order (change from pending to confirmed)"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
-    
-    try:
-        cursor = conn.cursor(dictionary=True)
-        user_id = session.get('user_id')
-        
-        # Verify order ownership and status
-        cursor.execute('''
-            SELECT o.id, o.order_status
-            FROM orders o
-            WHERE o.id = %s AND o.user_id = %s
-        ''', (order_id, user_id))
-        
-        order = cursor.fetchone()
-        
-        if not order:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Order not found'}), 404
-        
-        # Check if order is pending
-        if order['order_status'] != 'pending':
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Only pending orders can be confirmed'}), 400
-        
-        # Update order status to confirmed
-        cursor.execute('''
-            UPDATE orders 
-            SET order_status = 'confirmed', updated_at = NOW()
-            WHERE id = %s
-        ''', (order_id,))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Order confirmed successfully!'
-        })
-        
-    except Exception as e:
-        print(f"❌ Error confirming order: {str(e)}")
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/order-received/<order_id>', methods=['POST'])
-def mark_order_received(order_id):
-    """API endpoint for buyers to confirm they received their order"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
-    
-    conn = get_db()
-    if not conn:
-        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
-    
-    try:
-        cursor = conn.cursor(dictionary=True)
-        user_id = session.get('user_id')
-        
-        # Verify order ownership and status
-        cursor.execute('''
-            SELECT o.id, o.order_status, sh.status as shipment_status
-            FROM orders o
-            LEFT JOIN shipments sh ON o.id = sh.order_id
-            WHERE o.id = %s AND o.user_id = %s
-        ''', (order_id, user_id))
-        
-        order = cursor.fetchone()
-        
-        if not order:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Order not found'}), 404
-        
-        # Check if order is delivered
-        if order['order_status'] != 'delivered':
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': 'Order must be delivered before confirming receipt'}), 400
-        
-        # Update order to mark as received by buyer
-        cursor.execute('''
-            UPDATE orders 
-            SET buyer_received = TRUE, buyer_received_at = NOW(), updated_at = NOW()
-            WHERE id = %s
-        ''', (order_id,))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Order marked as received. Thank you!'
-        })
-        
-    except Exception as e:
-        print(f"❌ Error marking order as received: {str(e)}")
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/user-orders-detailed', methods=['GET'])
@@ -4509,6 +3552,7 @@ def get_user_orders_detailed():
         return jsonify({'success': False, 'error': str(e)}), 500
 # ============ END ORDER TRACKING ============
 
+<<<<<<< HEAD
 @app.route('/send-otp', methods=['POST'])
 def send_otp():
     """Send OTP for verification"""
@@ -5712,6 +4756,8 @@ def reset_password():
         print(f"Password reset error: {str(e)}")
         return jsonify({'success': False, 'error': 'Password reset failed'}), 500
 
+=======
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
 @app.route('/logout')
 def logout():
     session.clear()

@@ -318,13 +318,20 @@ function updateCartBadge(){
   if(cartCountEl) cartCountEl.textContent = n;
 }
 
+<<<<<<< HEAD
 async function addItemToCart(data){
   if(!data) return false;
+=======
+function addItemToCart(data){
+  if(!data) return;
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
   const name = data.title || 'Item';
   const price = typeof data.price === 'number' ? data.price : (parseFloat((data.priceText||'').replace(/[^0-9\.]/g,'')) || 0);
   const id = (data.id) || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   const image_url = data.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
+  const cart = readCart();
   
+<<<<<<< HEAD
   // Show loading feedback
   if(snackbar){
     snackbar.textContent = 'Adding to cart...';
@@ -346,6 +353,23 @@ async function addItemToCart(data){
       }, 3000);
     }
     return false;
+=======
+  // Check if item already exists
+  const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
+  
+  if (existingItemIndex > -1) {
+    cart[existingItemIndex].quantity += (data.qty || 1);
+  } else {
+    cart.push({ name, price, id, quantity: (data.qty || 1), image_url });
+  }
+  
+  writeCart(cart);
+  updateCartBadge();
+  if(snackbar){
+    snackbar.textContent = `${name} added to cart`;
+    snackbar.classList.add('show');
+    setTimeout(()=> snackbar.classList.remove('show'), 2200);
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
   }
 }
 
@@ -418,21 +442,14 @@ function applyAuthGate(){
 // Expose for manual re-application after dynamic DOM updates
 try{ window.applyAuthGate = applyAuthGate; }catch(e){}
 
-async function renderCartPage(){
+function renderCartPage(){
   const cartList = document.getElementById('cartList');
   const cartTotal = document.getElementById('cartTotal');
   const cartSubtotal = document.getElementById('cartSubtotal');
   
   if(!cartList) return;
   
-  // Fetch cart from database if VaronCart is available
-  let cart = [];
-  if(window.VaronCart) {
-    cart = await VaronCart.get();
-  } else {
-    cart = readCart();
-  }
-  
+  const cart = readCart();
   cartList.innerHTML = '';
   let total = 0;
   
@@ -455,24 +472,22 @@ async function renderCartPage(){
       const line = document.createElement('div');
       line.className = 'cart-item';
       const imageUrl = item.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
-      const price = parseFloat(item.price) || 0;
-      const quantity = parseInt(item.quantity) || 0;
       line.innerHTML = `
         <div class="cart-item-content">
           <div class="cart-item-left">
             <div class="cart-title">${item.name}</div>
-            <div class="cart-price muted">₱${price.toFixed(2)}</div>
-            <div class="qty" style="margin-top:8px">Qty: <button data-op="dec" data-cart-id="${item.cart_id}">-</button> <span class="q">${quantity}</span> <button data-op="inc" data-cart-id="${item.cart_id}">+</button></div>
+            <div class="cart-price muted">₱${item.price.toFixed(2)}</div>
+            <div class="qty" style="margin-top:8px">Qty: <button data-op="dec" data-index="${index}">-</button> <span class="q">${item.quantity}</span> <button data-op="inc" data-index="${index}">+</button></div>
           </div>
           <div class="cart-item-right">
             <img src="${imageUrl}" alt="${item.name}" class="cart-item-image" style="display:block" />
           </div>
         </div>
         <div class="cart-item-actions">
-          <button data-remove data-cart-id="${item.cart_id}" class="remove-btn">Remove</button>
+          <button data-remove data-index="${index}" class="remove-btn">Remove</button>
         </div>`;
       cartList.appendChild(line);
-      total += price * quantity;
+      total += item.price * item.quantity;
     });
   }
 
@@ -482,43 +497,26 @@ async function renderCartPage(){
   if(cartSubtotal) cartSubtotal.textContent = formattedTotal;
 
   // Add event listeners for quantity buttons
-  cartList.querySelectorAll('[data-op]').forEach(btn=>btn.addEventListener('click', async (e)=>{
-    const cartId = btn.dataset.cartId;
-    const op = btn.dataset.op;
-    const qtySpan = btn.parentElement.querySelector('.q');
-    let currentQty = parseInt(qtySpan.textContent);
-    
-    if(op==='inc') currentQty += 1;
-    else currentQty = Math.max(0, currentQty - 1);
-    
-    if(window.VaronCart) {
-      await VaronCart.update(cartId, currentQty);
-    }
-    renderCartPage();
+  cartList.querySelectorAll('[data-op]').forEach(btn=>btn.addEventListener('click', (e)=>{
+    const index = parseInt(btn.dataset.index); const op = btn.dataset.op;
+    const c = readCart(); if(!c[index]) return;
+    if(op==='inc') c[index].quantity += 1; else c[index].quantity = Math.max(0, c[index].quantity-1);
+    if(c[index].quantity===0) c.splice(index, 1);
+    writeCart(c); renderCartPage(); updateCartBadge();
   }));
 
-  cartList.querySelectorAll('[data-remove]').forEach(btn=>btn.addEventListener('click', async ()=>{
-    const cartId = btn.dataset.cartId;
-    if(window.VaronCart) {
-      await VaronCart.remove(cartId);
-    }
-    renderCartPage();
+  cartList.querySelectorAll('[data-remove]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const index = parseInt(btn.dataset.index); const c = readCart(); c.splice(index, 1); writeCart(c); renderCartPage(); updateCartBadge();
   }));
 }
 
-document.addEventListener('click', async (e)=>{
+document.addEventListener('click', (e)=>{
   if(e.target && e.target.id==='clearCart'){
     const clearModal = document.getElementById('clearModal'); if(clearModal) clearModal.setAttribute('aria-hidden','false');
   }
   if(e.target && e.target.id==='checkoutBtn'){
     // Check if cart is empty
-    let cart = [];
-    if(window.VaronCart) {
-      cart = await VaronCart.get();
-    } else {
-      cart = readCart();
-    }
-    
+    const cart = readCart();
     if(cart.length === 0){
       alert('Your cart is empty. Please add items before checking out.');
       return;
@@ -529,19 +527,9 @@ document.addEventListener('click', async (e)=>{
 });
 
 const confirmClearYes = document.getElementById('confirmClearYes');
-if(confirmClearYes) confirmClearYes.addEventListener('click', async ()=>{
-  if(window.VaronCart) {
-    await VaronCart.clear();
-  } else {
-    localStorage.removeItem('cart');
-  }
-  await renderCartPage();
-  if(window.VaronCart) {
-    await VaronCart.updateBadge();
-  } else {
-    updateCartBadge();
-  }
-  closeModal('clearModal');
+if(confirmClearYes) confirmClearYes.addEventListener('click', ()=>{
+  localStorage.removeItem('cart'); renderCartPage(); updateCartBadge();
+  const clearModal = document.getElementById('clearModal'); if(clearModal) clearModal.setAttribute('aria-hidden','true');
 });
 
 updateCartBadge();

@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<<<<<<< HEAD
     <style>
       .user-dropdown {
         position: relative;
@@ -111,12 +112,15 @@
         100% { transform: rotate(360deg); }
       }
     </style>
+=======
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
   </head>
   <body>
     <header class="site-header">
       <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
       <h1 class="brand"><a href="javascript:void(0)" onclick="showSection('home')" style="color:#fff;text-decoration:none">Varón</a></h1>
       <nav class="top-nav" id="topNav">
+<<<<<<< HEAD
         <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLink">My Orders</a>
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
@@ -129,13 +133,30 @@
             <a href="#" onclick="confirmLogout(event); return false;">Logout</a>
           </div>
         </div>
+=======
+        <a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Your Order</a>
+        <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLink" style="display:none">My Orders</a>
+        <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
+        <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
+        <a href="javascript:void(0)" onclick="showSection('about')">About</a>
+        <span class="welcome-msg">Welcome, <span id="buyerFirstName"></span></span>
+        <a href="javascript:void(0)" onclick="confirmLogout()" class="account">Logout</a>
+        <a href="#" onclick="openModal('cartModal')" id="cartToggle" class="account" style="position:relative;display:inline-flex;align-items:center;gap:8px">
+          Cart 
+          <span id="cartCount" style="background:#fff;color:#0a0a0a;border-radius:12px;padding:2px 8px;font-size:12px;font-weight:600;min-width:24px;text-align:center">0</span>
+        </a>
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
       </nav>
     </header>
 
     <!-- Hero Section (Home Only) -->
+<<<<<<< HEAD
 
     <!-- Hero Section (Home Only) -->
     <section class="hero" id="heroSection" style="display:none">
+=======
+    <section class="hero" id="heroSection">
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
       <div class="hero-inner container">
         <div class="hero-copy">
           <h2>Refined Elegance for the Modern Gentleman</h2>
@@ -145,31 +166,6 @@
         <div class="hero-media" aria-hidden="true"></div>
       </div>
     </section>
-
-    <!-- Flash Sales Table (Shopee Style) -->
-    <div id="flashSalesSection" class="container" style="display:none;margin-top:40px;margin-bottom:40px">
-      <div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);overflow:hidden">
-        <!-- Flash Sale Header -->
-        <div style="background:linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);padding:20px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-          <div style="display:flex;align-items:center;gap:12px">
-            <span style="font-size:28px">⚡</span>
-            <h2 style="margin:0;color:#fff;font-size:24px;font-weight:600">FLASH SALE</h2>
-          </div>
-          <div id="flashSaleTimer" style="background:rgba(255,255,255,0.2);padding:8px 16px;border-radius:8px;color:#fff;font-weight:600;font-size:14px">
-            ENDING SOON
-          </div>
-        </div>
-        
-        <!-- Flash Sale Products Grid -->
-        <div id="flashSaleGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1px;background:#f0f0f0;padding:1px">
-          <!-- Products will be loaded here -->
-        </div>
-        
-        <div style="text-align:center;padding:20px;background:#fff">
-          <button onclick="showSection('browse')" style="background:#ff6b6b;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-weight:600;cursor:pointer;font-size:16px;transition:background 0.2s" onmouseover="this.style.background='#ee5a6f'" onmouseout="this.style.background='#ff6b6b'">See All Products →</button>
-        </div>
-      </div>
-    </div>
 
     <!-- Featured Products Section (Home) -->
     <section id="home" class="content-section" style="display:none">
@@ -218,6 +214,31 @@
 
 
     <!-- Content Sections -->
+    <div id="trackOrder" class="content-section" style="display:none">
+      <div class="container" style="max-width:900px;margin:40px auto;padding:20px">
+        <h2 style="margin-bottom:24px;text-align:center">Track Your Orders</h2>
+        
+        <!-- Order Tracking Search -->
+        <div style="background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,0.1);margin-bottom:30px">
+          <form id="trackingForm" onsubmit="handleTrackOrder(event)" style="display:flex;gap:12px;align-items:flex-end">
+            <div style="flex:1">
+              <label style="display:block;margin-bottom:8px;font-weight:500">Order Number</label>
+              <input type="text" id="trackOrderNumber" placeholder="Enter your order number" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px" required>
+            </div>
+            <div>
+              <label style="display:block;margin-bottom:8px;font-weight:500">Email</label>
+              <input type="email" id="trackEmail" placeholder="Enter your email address" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:6px" required>
+            </div>
+            <button type="submit" class="btn-cta" style="width:100%">Track Order</button>
+          </form>
+          <div id="trackingResult" style="display:none;margin-top:20px;padding:20px;background:#f0f9ff;border-radius:8px;border-left:4px solid #3b82f6">
+            <h3 style="margin-top:0">Order Details</h3>
+            <div id="trackingResultContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="myOrders" class="content-section" style="display:none">
       <div class="container" style="max-width:900px;margin:40px auto;padding:20px">
         <h2 style="margin-bottom:24px;text-align:center">My Orders</h2>
@@ -411,8 +432,13 @@
             </div>
           </div>
           <div style="display:flex;gap:12px">
+<<<<<<< HEAD
             <button onclick="confirmClearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button onclick="proceedToCheckout()" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
+=======
+            <button onclick="clearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
+            <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
           </div>
         </div>
       </div>
@@ -447,6 +473,7 @@
 
     <div id="snackbar" class="snackbar" role="status" aria-live="polite">Added to cart</div>
     
+<<<<<<< HEAD
     <!-- Floating Cart Button -->
     <div class="floating-cart" onclick="console.log('Cart button clicked!'); openModal('cartModal')" title="View Cart">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -457,9 +484,12 @@
       <span class="floating-cart-badge" id="cartCount">0</span>
     </div>
     
+=======
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
     <div class="overlay" id="overlay"></div>
     <aside class="sidebar" id="sidebar">
       <nav class="sidebar-nav">
+        <a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Your Order</a>
         <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLinkSidebar" style="display:none">My Orders</a>
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
@@ -473,8 +503,8 @@
       </nav>
     </aside>
 
-    <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
     <script>
+<<<<<<< HEAD
     // User dropdown toggle
     function toggleUserDropdown(event) {
       if (event) {
@@ -502,6 +532,8 @@
       }
     });
 
+=======
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
     // Logout confirmation function
     function confirmLogout(event) {
       // Prevent default link behavior
@@ -531,6 +563,7 @@
     function proceedLogout() {
       window.location.href = '/logout';
     }
+<<<<<<< HEAD
     
     // Cart Modal Functions
     async function renderCartItems() {
@@ -782,6 +815,8 @@
         activeLink.style.color = '#ff6b6b';
       }
     }
+=======
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
 
     // Fetch the buyer's first name on page load
     window.addEventListener('DOMContentLoaded', (event) => {
@@ -800,6 +835,7 @@
             })
             .catch(error => console.error('Error fetching buyer name:', error));
         
+<<<<<<< HEAD
         // Load cart count from database
         if (window.VaronCart && typeof VaronCart.updateBadge === 'function') {
             VaronCart.updateBadge();
@@ -813,10 +849,15 @@
         
         // Load flash sales
         loadFlashSales();
+=======
+        // Load featured products on home
+        loadFeaturedProducts();
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
         
         // Load user's orders for My Orders section
         loadMyOrders();
         
+<<<<<<< HEAD
         // Explicitly show home section after everything is loaded
         setTimeout(() => {
           console.log('Initializing home section...');
@@ -891,6 +932,12 @@
         .catch(error => console.error('Error loading flash sales:', error));
     }
     
+=======
+        // Load browse products
+        loadBrowseProducts();
+    });
+
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
     // Load featured products from API (for home section)
     function loadFeaturedProducts() {
       console.log('Loading featured products...');
@@ -902,6 +949,7 @@
       fetch('/api/products?limit=8')
         .then(response => response.json())
         .then(data => {
+<<<<<<< HEAD
           console.log('Featured products data:', data);
           if (data.success && data.products && data.products.length > 0) {
             const filtered = data.products.slice(0, 8);
@@ -929,6 +977,23 @@
             }).join('');
           } else {
             featuredGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Products Available</h3><p style="color:#999;margin:0">Check back soon for new arrivals!</p></div>';
+=======
+          if (data.success && data.products) {
+            const featuredGrid = document.getElementById('featuredGrid');
+            // Filter out products with ID 1 and 2
+            const filtered = data.products.filter(p => p.id !== 1 && p.id !== 2).slice(0, 4);
+            featuredGrid.innerHTML = filtered.map(product => `
+              <article class="product" style="cursor:pointer" onclick="window.location.href='/product/${product.id}'">
+                <div class="product-image">
+                  <img src="${product.image_url || 'https://via.placeholder.com/400x500'}" alt="${product.name}" style="width:100%;height:100%;object-fit:cover;">
+                </div>
+                <div class="product-info">
+                  <h3>${product.name}</h3>
+                  <p class="price">₱${parseFloat(product.price).toFixed(2)}</p>
+                </div>
+              </article>
+            `).join('');
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
           }
         })
         .catch(error => {
@@ -944,7 +1009,8 @@
         .then(response => response.json())
         .then(data => {
           if (data.success && data.products) {
-            allProducts = data.products;
+            // Filter out products with ID 1 and 2
+            allProducts = data.products.filter(p => p.id !== 1 && p.id !== 2);
             displayProducts(allProducts);
           } else {
             document.getElementById('browseGrid').innerHTML = '<p style="color:#999;text-align:center;grid-column:1/-1;padding:40px">No products available</p>';
@@ -962,6 +1028,7 @@
       if (products.length === 0) {
         browseGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Products Available</h3><p style="color:#999;margin:0">Check back soon for new arrivals!</p></div>';
       } else {
+<<<<<<< HEAD
         browseGrid.innerHTML = products.map(product => {
           const hasSale = activeFlashSales[product.id];
           const originalPrice = parseFloat(product.price);
@@ -984,6 +1051,19 @@
             </article>
           `;
         }).join('');
+=======
+        browseGrid.innerHTML = products.map(product => `
+          <article class="product" style="cursor:pointer" onclick="window.location.href='/product/${product.id}'">
+            <div class="product-image">
+              <img src="${product.image_url || 'https://via.placeholder.com/400x500'}" alt="${product.name}" style="width:100%;height:100%;object-fit:cover">
+            </div>
+            <div class="product-info">
+              <h3>${product.name}</h3>
+              <p class="price">₱${parseFloat(product.price).toFixed(2)}</p>
+            </div>
+          </article>
+        `).join('');
+>>>>>>> parent of 1c35c95 (malapit na mga bes)
       }
     }
 
@@ -1030,6 +1110,66 @@
       console.log('Show product detail:', productId);
     }
 
+    // Handle order tracking form submission
+    function handleTrackOrder(event) {
+      event.preventDefault();
+      const orderNumber = document.getElementById('trackOrderNumber').value;
+      const email = document.getElementById('trackEmail').value;
+      
+      fetch('/api/search-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          order_number: orderNumber,
+          email: email
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        const resultDiv = document.getElementById('trackingResult');
+        const resultContent = document.getElementById('trackingResultContent');
+        
+        if (data.success) {
+          const order = data.order;
+          resultContent.innerHTML = `
+            <div style="display:grid;gap:12px">
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:#666">Order Number:</span>
+                <span style="font-weight:600">${order.order_number}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:#666">Status:</span>
+                <span style="font-weight:600;color:#3b82f6">${order.status}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:#666">Total Amount:</span>
+                <span style="font-weight:600">₱${parseFloat(order.total_amount).toFixed(2)}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span style="color:#666">Order Date:</span>
+                <span style="font-weight:600">${new Date(order.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+          `;
+          resultDiv.style.display = 'block';
+          resultDiv.style.borderLeftColor = '#10b981';
+          resultDiv.style.background = '#f0fdf4';
+        } else {
+          resultContent.innerHTML = `<p style="color:#ef4444;margin:0">${data.error || 'Order not found'}</p>`;
+          resultDiv.style.display = 'block';
+          resultDiv.style.borderLeftColor = '#ef4444';
+          resultDiv.style.background = '#fef2f2';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('trackingResult').style.display = 'block';
+        document.getElementById('trackingResultContent').innerHTML = '<p style="color:#ef4444;margin:0">Error tracking order. Please try again.</p>';
+      });
+    }
+
     // Load user's orders for "My Orders" section
     function loadMyOrders() {
       fetch('/api/user-orders-detailed')
@@ -1067,7 +1207,7 @@
                     
                     <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid #f3f4f6;margin-top:12px">
                       <span style="color:#666">Total: <strong>₱${parseFloat(order.total_amount).toFixed(2)}</strong></span>
-                      <a href="/order-details/${order.order_number}" style="color:#0a0a0a;font-size:13px;text-decoration:underline;cursor:pointer">View Details →</a>
+                      <a href="/order-confirmation/${order.order_number}" style="color:#0a0a0a;font-size:13px;text-decoration:underline;cursor:pointer">View Details →</a>
                     </div>
                   </div>
                 `;
