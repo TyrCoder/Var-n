@@ -367,7 +367,7 @@
               {{ user_first_name or session.get('first_name', 'User') }} ▾
             </button>
             <div id="userDropdown" class="dropdown-content">
-              <a href="#" onclick="confirmLogout(event); return false;">Logout</a>
+              <a href="{{ url_for('logout') }}">Logout</a>
             </div>
           </div>
 =======
@@ -413,8 +413,8 @@
           
           <div class="product-price">PHP {{ "{:,.2f}".format(product.price) }}</div>
           <div class="tax-info">Tax included</div>
-          <!-- Color Selection (Hidden for grooming products) -->
-          {% if product.category_slug != 'grooming' %}
+
+          <!-- Color Selection -->
           <div class="selection-group">
             <div class="selection-label">
               <strong>Color: <span id="selectedColorName">{% if colors %}Select a color{% else %}One Color{% endif %}</span></strong>
@@ -422,7 +422,7 @@
             <div class="color-swatches" id="colorSwatches">
               {% if colors and colors|length > 0 %}
                 {% for color in colors %}
-                  <button class="color-swatch" data-color="{{ color }}" title="{{ color }}" onclick="selectColor('{{ color }}', this)">
+                  <button class="color-swatch" data-color="{{ color }}" title="{{ color }}" onclick="selectColor('{{ color }}')">
                   </button>
                 {% endfor %}
               {% else %}
@@ -431,7 +431,7 @@
             </div>
           </div>
 
-          <!-- Size Selection (Hidden for grooming products) -->
+          <!-- Size Selection -->
           <div class="selection-group">
             <div class="selection-label">
               <strong>Size: <span id="selectedSizeName">{% if sizes %}Select a size{% else %}One Size{% endif %}</span></strong>
@@ -440,22 +440,11 @@
             <div class="size-grid" id="sizeGrid">
               {% if sizes and sizes|length > 0 %}
                 {% for size in sizes %}
-                  <button class="size-btn" onclick="selectSize('{{ size }}', this)">{{ size }}</button>
+                  <button class="size-btn" onclick="selectSize('{{ size }}')">{{ size }}</button>
                 {% endfor %}
               {% else %}
                 <span style="color: #999; font-size: 14px;">One Size Available</span>
               {% endif %}
-            </div>
-          </div>
-          {% endif %}
-
-          <!-- Stock Availability -->
-          <div class="selection-group" id="stockDisplay" style="display: none;">
-            <div class="selection-label">
-              <strong>Available Stock</strong>
-            </div>
-            <div style="font-size: 16px; font-weight: 600; color: #10b981;" id="stockCount">
-              Loading...
             </div>
           </div>
 
@@ -480,15 +469,9 @@
           </div>
 
           <!-- Add to Cart -->
-          {% if product.category_slug == 'grooming' %}
-          <button class="add-to-cart-btn" id="addToCartBtn" onclick="addToCartFromPage()">
-            Add to Cart
-          </button>
-          {% else %}
           <button class="add-to-cart-btn" id="addToCartBtn" onclick="addToCartFromPage()" disabled>
             Select Size and Color
           </button>
-          {% endif %}
 
           <!-- Product Details -->
           <div class="product-details">
@@ -523,6 +506,7 @@
     </footer>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     <!-- Logout Confirmation Modal -->
     <div id="logoutModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(10,10,10,0.45);align-items:center;justify-content:center;z-index:1000">
       <div style="background:#fff;padding:24px;border-radius:12px;max-width:400px;width:90%;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
@@ -536,113 +520,16 @@
       </div>
     </div>
 
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 =======
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <script>
-      const isGroomingProduct = {{ 'true' if product.category_slug == 'grooming' else 'false' }};
-      let selectedColor = {% if product.category_slug == 'grooming' or not colors %}'Standard'{% else %}null{% endif %};
-      let selectedSize = {% if product.category_slug == 'grooming' or not sizes %}'One Size'{% else %}null{% endif %};
-      let availableStock = 0;
-      let productVariants = [];
-
-      // Load all variants on page load
-      async function loadProductVariants() {
-        if (isGroomingProduct) return;
-        
-        try {
-          const productId = {{ product.id }};
-          const response = await fetch(`/api/product/${productId}/variants`);
-          const data = await response.json();
-          
-          if (data.success && data.variants) {
-            productVariants = data.variants;
-            
-            // Initialize with all available sizes (before any color is selected)
-            updateInitialSizes();
-          }
-        } catch (error) {
-          console.error('Error loading variants:', error);
-        }
-      }
-
-      // Update initial sizes to show only those with stock
-      function updateInitialSizes() {
-        const sizeContainer = document.getElementById('sizeGrid');
-        if (!sizeContainer || productVariants.length === 0) return;
-        
-        // Get all unique sizes that have stock
-        const availableSizes = [...new Set(productVariants.map(v => v.size))].sort();
-        
-        // Clear and rebuild size buttons
-        sizeContainer.innerHTML = '';
-        availableSizes.forEach(size => {
-          const button = document.createElement('button');
-          button.className = 'size-btn';
-          button.setAttribute('data-size', size);
-          button.textContent = size;
-          button.onclick = function() { selectSize(size); };
-          sizeContainer.appendChild(button);
-        });
-        
-        if (availableSizes.length === 0) {
-          sizeContainer.innerHTML = '<span style="color: #999; font-size: 14px;">No sizes available</span>';
-        }
-      }
-
-      // Call this when page loads
-      if (!isGroomingProduct) {
-        loadProductVariants();
-      }
-
-      // Function to fetch and display stock
-      async function updateStockDisplay() {
-        if (!selectedColor || !selectedSize) {
-          document.getElementById('stockDisplay').style.display = 'none';
-          return;
-        }
-
-        try {
-          const productId = {{ product.id }};
-          const response = await fetch(`/api/product/${productId}/stock?color=${encodeURIComponent(selectedColor)}&size=${encodeURIComponent(selectedSize)}`);
-          const data = await response.json();
-          
-          if (data.success) {
-            availableStock = data.stock;
-            const stockDisplay = document.getElementById('stockDisplay');
-            const stockCount = document.getElementById('stockCount');
-            
-            stockDisplay.style.display = 'block';
-            stockCount.textContent = `${availableStock} pieces`;
-            
-            // Update stock count color based on availability
-            if (availableStock === 0) {
-              stockCount.style.color = '#ef4444';
-              stockCount.textContent = 'Out of Stock';
-            } else if (availableStock <= 5) {
-              stockCount.style.color = '#f59e0b';
-              stockCount.textContent = `Only ${availableStock} left`;
-            } else {
-              stockCount.style.color = '#10b981';
-              stockCount.textContent = `${availableStock} pieces available`;
-            }
-            
-            // Update quantity input max
-            const qtyInput = document.getElementById('quantity');
-            qtyInput.max = availableStock;
-            if (parseInt(qtyInput.value) > availableStock) {
-              qtyInput.value = availableStock > 0 ? 1 : 0;
-            }
-          } else {
-            document.getElementById('stockDisplay').style.display = 'none';
-          }
-        } catch (error) {
-          console.error('Error fetching stock:', error);
-          document.getElementById('stockDisplay').style.display = 'none';
-        }
-      }
+      let selectedColor = {% if not colors %}'Standard'{% else %}null{% endif %};
+      let selectedSize = {% if not sizes %}'One Size'{% else %}null{% endif %};
 
       // Color hex mapping - expanded list
       const colorHex = {
@@ -714,139 +601,47 @@
         });
       }
 
-      async function selectColor(color, element) {
+      function selectColor(color) {
         selectedColor = color;
         document.getElementById('selectedColorName').textContent = color;
         
         document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-        if (element) element.classList.add('selected');
-        else {
-          // Fallback if element not passed
-          const swatch = document.querySelector(`.color-swatch[data-color="${color}"]`);
-          if (swatch) swatch.classList.add('selected');
-        }
-        
-        // Reset size selection
-        selectedSize = null;
-        document.getElementById('selectedSizeName').textContent = 'Select a size';
-        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+        event.target.classList.add('selected');
         
         checkSelection();
       }
-      
-      async function selectSize(size, element) {
+
+      function selectSize(size) {
         selectedSize = size;
         document.getElementById('selectedSizeName').textContent = size;
         
         document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
-        if (element) element.classList.add('selected');
-        else {
-          // Fallback if element not passed
-          const btn = Array.from(document.querySelectorAll('.size-btn')).find(b => b.textContent.trim() === size);
-          if (btn) btn.classList.add('selected');
-        }
+        event.target.classList.add('selected');
         
-        await updateStockDisplay();
         checkSelection();
       }
-      
+
       function checkSelection() {
-        const addBtn = document.getElementById('addToCartBtn');
-        if (!addBtn) return;
-        
-        if (isGroomingProduct) {
-          addBtn.disabled = false;
-          addBtn.textContent = 'Add to Cart';
-        } else {
-          if (selectedSize && selectedColor) {
-            addBtn.disabled = false;
-            addBtn.textContent = 'Add to Cart';
-          } else {
-            addBtn.disabled = true;
-            addBtn.textContent = 'Select Size and Color';
-          }
-        }
-      }
-
-      // Function to update available sizes based on selected color
-      async function updateAvailableSizes(color) {
-        if (!color || isGroomingProduct) return;
-        
-        try {
-          const productId = {{ product.id }};
-          const response = await fetch(`/api/product/${productId}/available-sizes?color=${encodeURIComponent(color)}`);
-          const data = await response.json();
-          
-          if (data.success && data.sizes) {
-            // Get the size buttons container
-            const sizeContainer = document.getElementById('sizeGrid');
-            if (!sizeContainer) return;
-            
-            // Clear existing size buttons
-            sizeContainer.innerHTML = '';
-            
-            // Add only available sizes
-            data.sizes.forEach(size => {
-              const button = document.createElement('button');
-              button.className = 'size-btn';
-              button.setAttribute('data-size', size);
-              button.textContent = size;
-              button.onclick = function() { selectSize(size, this); };
-              sizeContainer.appendChild(button);
-            });
-            
-            // Show message if no sizes available
-            if (data.sizes.length === 0) {
-              sizeContainer.innerHTML = '<span style="color: #ef4444; font-size: 14px;">No sizes available for this color</span>';
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching available sizes:', error);
-        }
-      }
-
-      async function updateStockDisplay() {
-        const stockInfo = document.getElementById('stockInfo');
-        const addBtn = document.getElementById('addToCartBtn');
-        
-        if (!addBtn) return;
-        
-        // For grooming products, button is always enabled
-        if (isGroomingProduct) {
-          addBtn.disabled = false;
-          addBtn.textContent = 'Add to Cart';
-          addBtn.style.opacity = '1';
-          addBtn.style.cursor = 'pointer';
-          return;
-        }
-        
-        // For other products, check size and color selection
+        const btn = document.getElementById('addToCartBtn');
         if (selectedSize && selectedColor) {
-          addBtn.disabled = false;
-          addBtn.textContent = 'Add to Cart';
-          addBtn.style.opacity = '1';
-          addBtn.style.cursor = 'pointer';
+          btn.disabled = false;
+          btn.textContent = 'Add to Cart';
+          btn.style.opacity = '1';
+          btn.style.cursor = 'pointer';
         } else {
-          addBtn.disabled = true;
+          btn.disabled = true;
           const missing = [];
           if (!selectedSize && {% if sizes and sizes|length > 0 %}true{% else %}false{% endif %}) missing.push('Size');
           if (!selectedColor && {% if colors and colors|length > 0 %}true{% else %}false{% endif %}) missing.push('Color');
-          addBtn.textContent = missing.length > 0 ? `Select ${missing.join(' and ')}` : 'Add to Cart';
-          addBtn.style.opacity = '0.6';
-          addBtn.style.cursor = 'not-allowed';
+          btn.textContent = missing.length > 0 ? `Select ${missing.join(' and ')}` : 'Add to Cart';
+          btn.style.opacity = '0.6';
+          btn.style.cursor = 'not-allowed';
         }
       }
 
       function increaseQuantity() {
         const input = document.getElementById('quantity');
-        const currentQty = parseInt(input.value);
-        const maxStock = availableStock > 0 ? availableStock : 999;
-        
-        if (currentQty < maxStock) {
-          input.value = currentQty + 1;
-        } else {
-          alert(`Maximum available stock is ${maxStock} pieces`);
-        }
+        input.value = parseInt(input.value) + 1;
       }
 
       function decreaseQuantity() {
@@ -859,6 +654,7 @@
       // Check if user is logged in (server-side check)
       const isUserLoggedIn = {{ 'true' if session.get('logged_in') else 'false' }};
       
+<<<<<<< HEAD
 <<<<<<< HEAD
       // Get variant ID based on color and size
       async function getVariantId(productId, color, size) {
@@ -889,24 +685,20 @@
         }
       }
       
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
       async function addToCartFromPage() {
 =======
       function addToCartFromPage() {
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
         // Check if user is logged in
         if (!isUserLoggedIn) {
-          const snackbar = document.getElementById('snackbar');
-          if(snackbar) {
-            snackbar.textContent = 'Please log in to add items to cart';
-            snackbar.classList.add('show', 'error');
-            setTimeout(() => snackbar.classList.remove('show', 'error'), 3000);
-          }
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 1500);
+          alert('You need to log in to add items to cart');
+          window.location.href = '/login';
           return;
         }
         
+<<<<<<< HEAD
 <<<<<<< HEAD
         // Validate selection for non-grooming products
         if (!isGroomingProduct && (!selectedSize || !selectedColor)) {
@@ -977,6 +769,43 @@
           for (let i = 0; i < quantity; i++) {
             addToCart(itemName, productPrice, productId, productImage);
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+        if (selectedSize && selectedColor) {
+          const quantity = parseInt(document.getElementById('quantity').value);
+          const productId = {{ product.id }};
+          const productName = '{{ product.name }}';
+          
+          // Use VaronCart if available (database cart)
+          if (window.VaronCart) {
+            const success = await VaronCart.add(productId, quantity);
+            if (success) {
+              // Update cart badge
+              await VaronCart.updateBadge();
+              
+              // Show success message
+              const snackbar = document.getElementById('snackbar');
+              snackbar.textContent = `Added ${quantity} item(s) to cart`;
+              snackbar.classList.add('show');
+              setTimeout(() => snackbar.classList.remove('show'), 3000);
+            } else {
+              alert('Failed to add item to cart. Please try again.');
+            }
+          } else {
+            // Fallback to localStorage cart
+            const productPrice = {{ product.price }};
+            const productImage = {% if images and images|length > 0 %}'{{ images[0].image_url }}'{% else %}'{{ product.image_url }}'{% endif %};
+            const itemName = `${productName} (${selectedSize}, ${selectedColor})`;
+            
+            for (let i = 0; i < quantity; i++) {
+              addToCart(itemName, productPrice, productId, productImage);
+            }
+            
+            // Show success message
+            const snackbar = document.getElementById('snackbar');
+            snackbar.textContent = `Added ${quantity} item(s) to cart`;
+            snackbar.classList.add('show');
+            setTimeout(() => snackbar.classList.remove('show'), 3000);
+>>>>>>> parent of 5ad2f62 (latest code)
           }
           
           // Show success message
@@ -990,6 +819,7 @@
       // Check initial selection state
       checkSelection();
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       // Logout confirmation function
       function confirmLogout(event) {
@@ -1014,6 +844,8 @@
         window.location.href = '/logout';
       }
 
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
       // User dropdown toggle
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
@@ -1033,41 +865,23 @@
 =======
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
       // Modal functionality
-      async function openCartModal() {
-          console.log('Opening cart modal...');
+      function openCartModal() {
           const modal = document.getElementById('cartModal');
           if (modal) {
-              console.log('Cart modal found, displaying...');
               modal.style.display = 'flex';
               modal.setAttribute('aria-hidden', 'false');
-              document.body.style.overflow = 'hidden';
-              
-              // Force reflow to ensure animation works
-              void modal.offsetWidth;
-              
-              // Load cart items when opening
-              console.log('Loading cart items...');
-              await renderCartItems();
-          } else {
-              console.error('Cart modal not found!');
           }
       }
 
       function closeModal(modalId) {
           const modal = document.getElementById(modalId);
           if (modal) {
+              modal.style.display = 'none';
               modal.setAttribute('aria-hidden', 'true');
-              document.body.style.overflow = '';
-              
-              // Wait for animation to complete before hiding
-              setTimeout(() => {
-                  if (modal.getAttribute('aria-hidden') === 'true') {
-                      modal.style.display = 'none';
-                  }
-              }, 300);
           }
       }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
       // Render cart items in modal
       async function renderCartItems() {
@@ -1196,6 +1010,8 @@
           window.location.href = '/checkout';
       }
 
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
       // Cart functionality - Use VaronCart if available (database), fallback to localStorage
 =======
       // Cart functionality
@@ -1345,7 +1161,7 @@
     </script>
 
     <!-- Cart Modal -->
-    <div id="cartModal" class="modal" aria-hidden="true" style="display:none">
+    <div id="cartModal" class="modal" aria-hidden="true">
       <div class="cart-card">
         <button onclick="closeModal('cartModal')" class="cart-close-btn" aria-label="Close cart">×</button>
         <h2 style="text-align:left;margin-bottom:20px">Your Cart</h2>
@@ -1376,12 +1192,17 @@
           </div>
           <div style="display:flex;gap:12px">
 <<<<<<< HEAD
+<<<<<<< HEAD
             <button onclick="clearEntireCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button onclick="proceedToCheckout()" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
 =======
             <button onclick="clearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+            <button id="clearCart" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
+            <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
+>>>>>>> parent of 5ad2f62 (latest code)
           </div>
         </div>
       </div>

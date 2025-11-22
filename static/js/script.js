@@ -320,11 +320,15 @@ function updateCartBadge(){
 
 <<<<<<< HEAD
 async function addItemToCart(data){
+<<<<<<< HEAD
   if(!data) return false;
 =======
 function addItemToCart(data){
   if(!data) return;
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+  if(!data) return;
+>>>>>>> parent of 5ad2f62 (latest code)
   const name = data.title || 'Item';
   const price = typeof data.price === 'number' ? data.price : (parseFloat((data.priceText||'').replace(/[^0-9\.]/g,'')) || 0);
   const id = (data.id) || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
@@ -332,26 +336,42 @@ function addItemToCart(data){
   const cart = readCart();
   
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Show loading feedback
   if(snackbar){
     snackbar.textContent = 'Adding to cart...';
     snackbar.classList.add('show');
   }
   
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
   // Use database cart if VaronCart is available
   if(window.VaronCart) {
     const success = await VaronCart.add(id, data.qty || 1);
-    // VaronCart.add now handles showing success/error messages
-    return success;
-  } else {
-    // Fallback - show error
-    if(snackbar){
-      snackbar.textContent = 'Cart system not loaded. Please refresh the page.';
-      snackbar.classList.add('show', 'error');
-      setTimeout(()=> {
-        snackbar.classList.remove('show', 'error');
-      }, 3000);
+    if(success && snackbar){
+      snackbar.textContent = `${name} added to cart`;
+      snackbar.classList.add('show');
+      setTimeout(()=> snackbar.classList.remove('show'), 2200);
     }
+  } else {
+    // Fallback to localStorage
+    const cart = readCart();
+    const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
+    
+    if (existingItemIndex > -1) {
+      cart[existingItemIndex].quantity += (data.qty || 1);
+    } else {
+      cart.push({ name, price, id, quantity: (data.qty || 1), image_url });
+    }
+    
+    writeCart(cart);
+    updateCartBadge();
+    if(snackbar){
+      snackbar.textContent = `${name} added to cart`;
+      snackbar.classList.add('show');
+      setTimeout(()=> snackbar.classList.remove('show'), 2200);
+    }
+<<<<<<< HEAD
     return false;
 =======
   // Check if item already exists
@@ -370,10 +390,12 @@ function addItemToCart(data){
     snackbar.classList.add('show');
     setTimeout(()=> snackbar.classList.remove('show'), 2200);
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
   }
 }
 
-async function handleAddCartClick(e, btn){
+function handleAddCartClick(e, btn){
   const card = btn.closest('.product');
   const title = card?.querySelector('.title')?.textContent || 'Item';
   const priceText = card?.querySelector('.price')?.textContent || '£0';
@@ -396,24 +418,23 @@ async function handleAddCartClick(e, btn){
     return;
   }
   
-  // Disable button during operation
-  const originalText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Adding...';
-  
-  // Add to cart using VaronCart
+  // Fetch product data from API to get the correct image
   if(productId && !isNaN(productId)){
-    try {
-      await addItemToCart({id: productId, title, price, qty:1, image_url});
-    } finally {
-      // Re-enable button
-      btn.disabled = false;
-      btn.textContent = originalText;
-    }
+    fetch(`/api/product/${productId}`)
+      .then(response => response.json())
+      .then(data => {
+        if(data.success && data.product){
+          const apiImage = data.product.image_url;
+          addItemToCart({id: productId, title, price, qty:1, image_url: apiImage || image_url});
+        } else {
+          addItemToCart({id: productId, title, price, qty:1, image_url});
+        }
+      })
+      .catch(() => {
+        addItemToCart({id: productId, title, price, qty:1, image_url});
+      });
   } else {
-    await addItemToCart({id: productId, title, price, qty:1, image_url});
-    btn.disabled = false;
-    btn.textContent = originalText;
+    addItemToCart({id: productId, title, price, qty:1, image_url});
   }
 }
 

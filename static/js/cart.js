@@ -2,43 +2,31 @@
 
 const VaronCart = {
   // Add item to cart
-  async add(productId, quantity = 1, variantId = null, color = null, size = null) {
+  async add(productId, quantity = 1, variantId = null) {
     try {
-      console.log('Adding to cart:', { productId, quantity, variantId, color, size });
+      console.log('Adding to cart:', { productId, quantity, variantId });
       const response = await fetch('/api/cart/add', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           product_id: productId,
           quantity: quantity,
-          variant_id: variantId,
-          color: color,
-          size: size
+          variant_id: variantId
         })
       });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        console.error('Failed to add to cart:', data.error);
-        this.showMessage(`Failed to add to cart: ${data.error || 'Unknown error'}`, 'error');
-        return false;
-      }
       
       const data = await response.json();
       console.log('Add to cart response:', data);
       
       if (data.success) {
         await this.updateBadge();
-        this.showMessage('Added to cart successfully!', 'success');
         return true;
       } else {
         console.error('Failed to add to cart:', data.error);
-        this.showMessage(data.error || 'Failed to add to cart', 'error');
       }
       return false;
     } catch (error) {
       console.error('Error adding to cart:', error);
-      this.showMessage('Network error. Please try again.', 'error');
       return false;
     }
   },
@@ -51,19 +39,6 @@ const VaronCart = {
       console.log('Cart items fetched:', data);
       
       if (data.success) {
-        // Log each item to see if variants are included
-        if (data.items && data.items.length > 0) {
-          console.log('Cart items details:');
-          data.items.forEach((item, index) => {
-            console.log(`  Item ${index + 1}:`, {
-              name: item.name,
-              color: item.color,
-              size: item.size,
-              variant_id: item.variant_id,
-              cart_id: item.cart_id
-            });
-          });
-        }
         return data.items || [];
       } else {
         console.error('Failed to get cart:', data.error);
@@ -160,20 +135,6 @@ const VaronCart = {
   async getTotal() {
     const items = await this.get();
     return items.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.quantity)), 0);
-  },
-  
-  // Show user feedback message
-  showMessage(message, type = 'success') {
-    const snackbar = document.getElementById('snackbar');
-    if (snackbar) {
-      snackbar.textContent = message;
-      // Remove all previous classes and set fresh ones
-      snackbar.className = 'snackbar';
-      snackbar.classList.add('show', type);
-      setTimeout(() => {
-        snackbar.classList.remove('show', 'success', 'error');
-      }, 3000);
-    }
   }
 };
 

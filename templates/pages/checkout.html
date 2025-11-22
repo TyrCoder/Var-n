@@ -263,7 +263,7 @@
               {{ session.get('first_name', 'User') }} ▾
             </button>
             <div id="userDropdown" class="dropdown-content">
-              <a href="#" onclick="confirmLogout(event); return false;">Logout</a>
+              <a href="{{ url_for('logout') }}">Logout</a>
             </div>
           </div>
 =======
@@ -305,6 +305,11 @@
             <div id="savedAddressesList" style="display:grid;gap:12px;margin-bottom:24px">
               <!-- Saved addresses will be loaded here -->
             </div>
+            
+            <!-- Place Order Button for Saved Addresses -->
+            <button type="button" onclick="placeOrder()" class="place-order-btn" id="placeOrderWithSaved">
+              Place Order
+            </button>
           </div>
           
           <!-- New Address Form -->
@@ -628,11 +633,14 @@
 
       function placeOrder() {
 <<<<<<< HEAD
+<<<<<<< HEAD
         console.log('🛒 Place Order clicked');
         console.log('📦 Validated cart:', validatedCart);
         console.log('🏠 Selected address ID:', selectedAddressId);
         console.log('💳 Selected payment method:', selectedPayment);
         
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
         // Check if cart is empty
         if (!validatedCart || validatedCart.length === 0) {
           alert('Your cart is empty. Please add items before placing an order.');
@@ -700,8 +708,6 @@
           total: total
         };
         
-        console.log('📤 Sending order data:', orderData);
-        
         // Disable button
         const btn = event.target;
         btn.disabled = true;
@@ -715,14 +721,9 @@
           },
           body: JSON.stringify(orderData)
         })
-        .then(response => {
-          console.log('📥 Order response status:', response.status);
-          return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-          console.log('📥 Order response data:', data);
           if (data.success) {
-            console.log('✅ Order placed successfully! Order number:', data.order_number);
             showSnackbar('Order placed successfully!', 'success');
             
 <<<<<<< HEAD
@@ -731,26 +732,15 @@
               showSaveAddressPrompt();
             }
             
+<<<<<<< HEAD
             // Clear cart from localStorage
 =======
             // Clear cart
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+            // Clear cart
+>>>>>>> parent of 5ad2f62 (latest code)
             localStorage.removeItem('varon_cart');
-            
-            // Clear cart from database
-            fetch('/api/cart/clear', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            })
-            .then(response => response.json())
-            .then(clearData => {
-              console.log('Cart cleared from database:', clearData);
-            })
-            .catch(error => {
-              console.error('Error clearing cart from database:', error);
-            });
             
             // Update cart badge
             if (typeof updateCartBadge === 'function') {
@@ -768,7 +758,7 @@
           }
         })
         .catch(error => {
-          console.error('❌ Error placing order:', error);
+          console.error('Error:', error);
           showSnackbar('An error occurred. Please try again.', 'error');
           btn.disabled = false;
           btn.textContent = 'Place Order';
@@ -778,29 +768,6 @@
       // Initialize
       displayOrderSummary();
 <<<<<<< HEAD
-
-      // Logout confirmation function
-      function confirmLogout(event) {
-        if (event) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        const modal = document.getElementById('logoutModal');
-        if (modal) {
-          modal.style.display = 'flex';
-        }
-      }
-
-      function closeLogoutModal() {
-        const modal = document.getElementById('logoutModal');
-        if (modal) {
-          modal.style.display = 'none';
-        }
-      }
-
-      function proceedLogout() {
-        window.location.href = '/logout';
-      }
 
       // User dropdown toggle
       function toggleUserDropdown() {
@@ -820,8 +787,5 @@
 =======
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
     </script>
-    
-    <!-- Cart System -->
-    <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
   </body>
 </html>

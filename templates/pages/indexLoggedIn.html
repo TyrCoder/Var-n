@@ -107,10 +107,6 @@
           height: 20px;
         }
       }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
     </style>
 =======
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
@@ -121,16 +117,20 @@
       <h1 class="brand"><a href="javascript:void(0)" onclick="showSection('home')" style="color:#fff;text-decoration:none">Varón</a></h1>
       <nav class="top-nav" id="topNav">
 <<<<<<< HEAD
+<<<<<<< HEAD
         <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLink">My Orders</a>
+=======
+        <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLink" style="display:none">My Orders</a>
+>>>>>>> parent of 5ad2f62 (latest code)
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
         <a href="javascript:void(0)" onclick="showSection('about')">About</a>
         <div class="user-dropdown">
-          <button class="user-button" onclick="toggleUserDropdown(event)" style="background:none;border:none;color:#fff;cursor:pointer;padding:8px 12px;font-size:14px;display:flex;align-items:center;gap:4px">
+          <button class="user-button" onclick="toggleUserDropdown()" style="background:none;border:none;color:#fff;cursor:pointer;padding:8px 12px;font-size:14px;display:flex;align-items:center;gap:4px">
             <span id="buyerFirstName">User</span> ▾
           </button>
           <div id="userDropdown" class="dropdown-content">
-            <a href="#" onclick="confirmLogout(event); return false;">Logout</a>
+            <a href="javascript:void(0)" onclick="confirmLogout()">Logout</a>
           </div>
         </div>
 =======
@@ -153,10 +153,14 @@
 <<<<<<< HEAD
 
     <!-- Hero Section (Home Only) -->
+<<<<<<< HEAD
     <section class="hero" id="heroSection" style="display:none">
 =======
     <section class="hero" id="heroSection">
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+    <section class="hero" id="heroSection">
+>>>>>>> parent of 5ad2f62 (latest code)
       <div class="hero-inner container">
         <div class="hero-copy">
           <h2>Refined Elegance for the Modern Gentleman</h2>
@@ -168,39 +172,8 @@
     </section>
 
     <!-- Featured Products Section (Home) -->
-    <section id="home" class="content-section" style="display:none">
+    <section id="home" class="content-section" style="display:block">
       <div class="container">
-        <!-- Categories Quick Access -->
-        <div style="margin:40px 0 30px">
-          <h3 style="text-align:center;margin-bottom:20px;font-size:18px;color:#666">Shop by Category</h3>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;max-width:900px;margin:0 auto 40px">
-            <button onclick="showSection('browse');setTimeout(() => filterByCategory('suits-blazers'), 100)" style="padding:16px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:all 0.2s;text-align:center" onmouseover="this.style.borderColor='#0a0a0a';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.transform='translateY(0)'">
-              <div style="font-size:24px;margin-bottom:8px">👔</div>
-              <div style="font-weight:600;font-size:14px;color:#0a0a0a">Suits & Blazers</div>
-            </button>
-            <button onclick="showSection('browse');setTimeout(() => filterByCategory('shoes-accessories'), 100)" style="padding:16px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:all 0.2s;text-align:center" onmouseover="this.style.borderColor='#0a0a0a';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.transform='translateY(0)'">
-              <div style="font-size:24px;margin-bottom:8px">👞</div>
-              <div style="font-weight:600;font-size:14px;color:#0a0a0a">Shoes & Accessories</div>
-            </button>
-            <button onclick="showSection('browse');setTimeout(() => filterByCategory('outerwear-jackets'), 100)" style="padding:16px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:all 0.2s;text-align:center" onmouseover="this.style.borderColor='#0a0a0a';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.transform='translateY(0)'">
-              <div style="font-size:24px;margin-bottom:8px">🧥</div>
-              <div style="font-weight:600;font-size:14px;color:#0a0a0a">Outerwear</div>
-            </button>
-            <button onclick="showSection('browse');setTimeout(() => filterByCategory('casual-shirts-pants'), 100)" style="padding:16px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:all 0.2s;text-align:center" onmouseover="this.style.borderColor='#0a0a0a';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.transform='translateY(0)'">
-              <div style="font-size:24px;margin-bottom:8px">👕</div>
-              <div style="font-weight:600;font-size:14px;color:#0a0a0a">Casual Wear</div>
-            </button>
-            <button onclick="showSection('browse');setTimeout(() => filterByCategory('activewear-fitness'), 100)" style="padding:16px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:all 0.2s;text-align:center" onmouseover="this.style.borderColor='#0a0a0a';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.transform='translateY(0)'">
-              <div style="font-size:24px;margin-bottom:8px">🏃</div>
-              <div style="font-weight:600;font-size:14px;color:#0a0a0a">Activewear</div>
-            </button>
-            <button onclick="showSection('browse');setTimeout(() => filterByCategory('grooming'), 100)" style="padding:16px;background:#fff;border:2px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:all 0.2s;text-align:center" onmouseover="this.style.borderColor='#0a0a0a';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#e5e7eb';this.style.transform='translateY(0)'">
-              <div style="font-size:24px;margin-bottom:8px">🧴</div>
-              <div style="font-weight:600;font-size:14px;color:#0a0a0a">Grooming</div>
-            </button>
-          </div>
-        </div>
-
         <h2 style="margin:40px 0 30px;text-align:center">Featured Collection</h2>
         <div id="featuredGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;margin-bottom:40px">
           <!-- Featured products will be loaded here from database -->
@@ -255,13 +228,15 @@
           <h2 style="margin:0 0 24px">Men</h2>
           <div style="display:flex;gap:12px;align-items:center;margin-bottom:24px;overflow-x:auto;padding-bottom:12px">
             <span style="color:#666;font-weight:500;white-space:nowrap">Genres:</span>
-            <button class="genre-filter" data-category="all" onclick="filterByCategory('all')" style="padding:8px 16px;border:2px solid #0a0a0a;background:#0a0a0a;color:#fff;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap;transition:all 0.2s">All</button>
-            <button class="genre-filter" data-category="suits-blazers" onclick="filterByCategory('suits-blazers')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap;transition:all 0.2s">Suits & Blazers</button>
-            <button class="genre-filter" data-category="shoes-accessories" onclick="filterByCategory('shoes-accessories')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap;transition:all 0.2s">Shoes & Accessories</button>
-            <button class="genre-filter" data-category="outerwear-jackets" onclick="filterByCategory('outerwear-jackets')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap;transition:all 0.2s">Outerwear & Jackets</button>
-            <button class="genre-filter" data-category="casual-shirts-pants" onclick="filterByCategory('casual-shirts-pants')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap;transition:all 0.2s">Casual Wear</button>
-            <button class="genre-filter" data-category="activewear-fitness" onclick="filterByCategory('activewear-fitness')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap;transition:all 0.2s">Activewear</button>
-            <button class="genre-filter" data-category="grooming" onclick="filterByCategory('grooming')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap;transition:all 0.2s">Grooming</button>
+            <button class="genre-filter" data-category="all" onclick="filterByCategory('all')" style="padding:8px 16px;border:2px solid #0a0a0a;background:#0a0a0a;color:#fff;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">All</button>
+            <button class="genre-filter" data-category="Shirts" onclick="filterByCategory('Shirts')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Shirts</button>
+            <button class="genre-filter" data-category="Pants" onclick="filterByCategory('Pants')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Pants</button>
+            <button class="genre-filter" data-category="Shorts" onclick="filterByCategory('Shorts')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Shorts</button>
+            <button class="genre-filter" data-category="Jackets" onclick="filterByCategory('Jackets')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Jackets</button>
+            <button class="genre-filter" data-category="Shoes" onclick="filterByCategory('Shoes')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Shoes</button>
+            <button class="genre-filter" data-category="Accessories" onclick="filterByCategory('Accessories')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Accessories</button>
+            <button class="genre-filter" data-category="Formal" onclick="filterByCategory('Formal')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Formal</button>
+            <button class="genre-filter" data-category="Casual" onclick="filterByCategory('Casual')" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:#0a0a0a;border-radius:6px;cursor:pointer;font-size:14px;white-space:nowrap">Casual</button>
           </div>
         </div>
         <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
@@ -390,8 +365,8 @@
         <div>
           <h5>Partners</h5>
           <ul>
-            <li><a href="{{ url_for('signup_seller') }}" id="footerSeller">Register as a seller</a></li>
-            <li><a href="{{ url_for('signup_rider') }}" id="footerRider">Register as a rider</a></li>
+            <li><a href="signupSeller.html" id="footerSeller">Register as a seller</a></li>
+            <li><a href="signupRider.html" id="footerRider">Register as a rider</a></li>
           </ul>
         </div>
       </div>
@@ -402,8 +377,8 @@
     </footer>
 
     <!-- Cart Modal -->
-    <div id="cartModal" class="modal" aria-hidden="true" style="display:none;z-index:9999">
-      <div class="cart-card" style="z-index:10000">
+    <div id="cartModal" class="modal" aria-hidden="true">
+      <div class="cart-card">
         <button onclick="closeModal('cartModal')" class="cart-close-btn" aria-label="Close cart">×</button>
         <h2 style="text-align:left;margin-bottom:20px">Your Cart</h2>
         <div id="cartList" class="cart-list">
@@ -433,39 +408,57 @@
           </div>
           <div style="display:flex;gap:12px">
 <<<<<<< HEAD
+<<<<<<< HEAD
             <button onclick="confirmClearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button onclick="proceedToCheckout()" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
 =======
             <button onclick="clearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+            <button id="clearCart" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
+            <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
+>>>>>>> parent of 5ad2f62 (latest code)
           </div>
         </div>
       </div>
     </div>
 
     <!-- Confirm Clear Cart Modal -->
-    <div id="clearModal" class="modal" aria-hidden="true" style="display:none">
+    <div id="clearModal" class="modal" aria-hidden="true">
       <div class="modal-panel">
         <button class="modal-close" onclick="closeModal('clearModal')">×</button>
         <h2 style="margin:0 0 8px">Clear Cart?</h2>
         <p style="margin:0 0 18px;color:var(--muted)">Are you sure you want to remove all items from your cart?</p>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button onclick="closeModal('clearModal');setTimeout(() => openModal('cartModal'), 350)" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a">Cancel</button>
-          <button onclick="clearCartConfirmed()" class="btn-cta" style="background:#ef4444">Yes, Clear Cart</button>
+          <button onclick="closeModal('clearModal')" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a">Cancel</button>
+          <button id="confirmClearYes" class="btn-cta">Yes, Clear Cart</button>
         </div>
       </div>
     </div>
 
+    <!-- Checkout Modal -->
+    <div id="checkoutModal" class="modal" aria-hidden="true">
+      <div class="modal-panel checkout">
+        <button class="modal-close" onclick="closeModal('checkoutModal')" style="color:#fff">×</button>
+        <h2 style="color:#fff;margin:0 0 8px">Checkout</h2>
+        <p class="muted" style="margin:0 0 18px">Review your order before proceeding to payment</p>
+        <div id="checkoutSummary" style="margin-bottom:18px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="closeModal('checkoutModal')" class="secondary">Cancel</button>
+          <button id="proceedCheckout" class="btn-cta">Proceed to Payment</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Logout Confirmation Modal -->
-    <div id="logoutModal" class="modal" aria-hidden="true" style="display:none">
+    <div id="logoutModal" class="modal" aria-hidden="true">
       <div class="modal-panel">
-        <button class="modal-close" onclick="closeLogoutModal()">×</button>
+        <button class="modal-close" onclick="closeModal('logoutModal')">×</button>
         <h2 style="margin:0 0 8px">Confirm Logout</h2>
         <p style="margin:0 0 18px;color:var(--muted)">Are you sure you want to logout? You will need to log in again to access your account.</p>
         <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button onclick="closeLogoutModal()" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a">Cancel</button>
+          <button onclick="closeModal('logoutModal')" class="btn-cta" style="background:#f6f6f6;color:#0a0a0a">Cancel</button>
           <button onclick="proceedLogout()" class="btn-cta" style="background:#ef4444;color:#fff">Yes, Logout</button>
         </div>
       </div>
@@ -475,7 +468,7 @@
     
 <<<<<<< HEAD
     <!-- Floating Cart Button -->
-    <div class="floating-cart" onclick="console.log('Cart button clicked!'); openModal('cartModal')" title="View Cart">
+    <div class="floating-cart" onclick="openModal('cartModal')" title="View Cart">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="9" cy="21" r="1"/>
         <circle cx="20" cy="21" r="1"/>
@@ -495,7 +488,7 @@
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
         <a href="javascript:void(0)" onclick="showSection('about')">About</a>
         <span class="welcome-msg">Welcome, <span id="buyerFirstNameSidebar"></span></span>
-        <a href="#" onclick="confirmLogout(event); return false;" class="account">Logout</a>
+        <a href="javascript:void(0)" onclick="confirmLogout()" class="account">Logout</a>
         <a href="#" onclick="openModal('cartModal')" class="account" style="position:relative;display:inline-flex;align-items:center;gap:8px">
           Cart 
           <span id="cartCountSidebar" style="background:#fff;color:#0a0a0a;border-radius:12px;padding:2px 8px;font-size:12px;font-weight:600;min-width:24px;text-align:center">0</span>
@@ -506,58 +499,26 @@
     <script>
 <<<<<<< HEAD
     // User dropdown toggle
-    function toggleUserDropdown(event) {
-      if (event) {
-        event.stopPropagation();
-      }
+    function toggleUserDropdown() {
       const dropdown = document.getElementById('userDropdown');
-      if (dropdown) {
-        dropdown.classList.toggle('show');
-      }
+      dropdown.classList.toggle('show');
     }
 
     // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-      const dropdown = document.getElementById('userDropdown');
-      const userButton = e.target.closest('.user-button');
-      
-      // Don't close if clicking the button (toggle handles that)
-      if (userButton) {
-        return;
-      }
-      
-      // Close if clicking outside and dropdown is open
-      if (dropdown && dropdown.classList.contains('show')) {
-        dropdown.classList.remove('show');
+    window.addEventListener('click', function(e) {
+      if (!e.target.matches('.user-button')) {
+        const dropdown = document.getElementById('userDropdown');
+        if (dropdown && dropdown.classList.contains('show')) {
+          dropdown.classList.remove('show');
+        }
       }
     });
 
 =======
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
     // Logout confirmation function
-    function confirmLogout(event) {
-      // Prevent default link behavior
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      
-      // Show logout modal
-      const modal = document.getElementById('logoutModal');
-      if (modal) {
-        modal.style.display = 'flex';
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-      }
-    }
-
-    function closeLogoutModal() {
-      const modal = document.getElementById('logoutModal');
-      if (modal) {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-      }
+    function confirmLogout() {
+      openModal('logoutModal');
     }
 
     function proceedLogout() {
@@ -565,254 +526,19 @@
     }
 <<<<<<< HEAD
     
-    // Cart Modal Functions
-    async function renderCartItems() {
-        console.log('renderCartItems called');
-        if (!window.VaronCart) {
-            console.error('VaronCart not loaded');
-            alert('Cart system not loaded. Please refresh the page.');
-            return;
-        }
-
-        console.log('VaronCart is available:', window.VaronCart);
-        const cartList = document.getElementById('cartList');
-        console.log('Cart list element:', cartList);
-        
-        const items = await VaronCart.get();
-        console.log('Cart items retrieved:', items);
-        
-        if (!items || items.length === 0) {
-            cartList.innerHTML = `
-                <div class="empty-cart-state" style="text-align:center;padding:60px 20px">
-                    <div style="font-size:80px;color:#ddd;margin-bottom:16px">
-                        <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:inline-block">
-                            <path d="M9 2L7.17 4H3c-.55 0-1 .45-1 1s.45 1 1 1h1l1.6 8.6c.18 1 1.05 1.73 2.06 1.73h7.72c1.01 0 1.88-.73 2.06-1.73L19 6h1c.55 0 1-.45 1-1s-.45-1-1-1h-4.17L14 2H9z"/>
-                            <circle cx="9" cy="20" r="1"/>
-                            <circle cx="16" cy="20" r="1"/>
-                        </svg>
-                    </div>
-                    <h3 style="font-size:18px;font-weight:400;color:#999;margin:0 0 8px">Your cart is empty</h3>
-                    <p style="font-size:14px;color:#bbb;margin:0">Add some products to get started!</p>
-                </div>
-            `;
-            updateCartTotals(0);
-            return;
-        }
-
-        let html = '';
-        items.forEach(item => {
-            const imageUrl = item.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
-            const itemTotal = (parseFloat(item.price) * parseInt(item.quantity)).toFixed(2);
-            const sizeColor = [];
-            if (item.size) sizeColor.push(`Size: ${item.size}`);
-            if (item.color) sizeColor.push(`Color: ${item.color}`);
-            const variant = sizeColor.length > 0 ? sizeColor.join(', ') : '';
-
-            html += `
-                <div class="cart-item" style="display:flex;gap:16px;padding:16px;border-bottom:1px solid #f0f0f0;align-items:center">
-                    <img src="${imageUrl}" alt="${item.name}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;flex-shrink:0">
-                    <div style="flex:1;min-width:0">
-                        <h4 style="margin:0 0 4px;font-size:15px;font-weight:500;color:#0a0a0a">${item.name}</h4>
-                        ${variant ? `<p style="margin:0 0 8px;font-size:13px;color:#666">${variant}</p>` : ''}
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <div style="display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden">
-                                <button onclick="updateCartQuantity(${item.cart_id}, ${item.quantity - 1})" style="padding:6px 12px;background:#fff;border:none;cursor:pointer;font-size:18px;color:#666;transition:background 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">−</button>
-                                <span style="padding:6px 16px;font-size:14px;font-weight:500;min-width:40px;text-align:center">${item.quantity}</span>
-                                <button onclick="updateCartQuantity(${item.cart_id}, ${item.quantity + 1})" style="padding:6px 12px;background:#fff;border:none;cursor:pointer;font-size:18px;color:#666;transition:background 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">+</button>
-                            </div>
-                            <button onclick="removeCartItem(${item.cart_id})" style="padding:6px 12px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;cursor:pointer;font-size:13px;color:#ef4444;transition:all 0.2s" onmouseover="this.style.background='#fef2f2';this.style.borderColor='#ef4444'" onmouseout="this.style.background='#fff';this.style.borderColor='#e0e0e0'">Remove</button>
-                        </div>
-                    </div>
-                    <div style="text-align:right;flex-shrink:0">
-                        <p style="margin:0;font-size:16px;font-weight:600;color:#0a0a0a">₱${itemTotal}</p>
-                    </div>
-                </div>
-            `;
-        });
-
-        cartList.innerHTML = html;
-        const total = items.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.quantity)), 0);
-        updateCartTotals(total);
-    }
-
-    function updateCartTotals(total) {
-        const subtotalEl = document.getElementById('cartSubtotal');
-        const totalEl = document.getElementById('cartTotal');
-        if (subtotalEl) subtotalEl.textContent = `₱${total.toFixed(2)}`;
-        if (totalEl) totalEl.textContent = `₱${total.toFixed(2)}`;
-    }
-
-    async function updateCartQuantity(cartId, newQuantity) {
-        if (newQuantity < 1) {
-            await removeCartItem(cartId);
-            return;
-        }
-        if (window.VaronCart) {
-            const success = await VaronCart.update(cartId, newQuantity);
-            if (success) await renderCartItems();
-        }
-    }
-
-    async function removeCartItem(cartId) {
-        if (window.VaronCart) {
-            const success = await VaronCart.remove(cartId);
-            if (success) {
-                VaronCart.showMessage('Item removed from cart', 'success');
-                await renderCartItems();
-            }
-        }
-    }
-
-    async function confirmClearCart() {
-        if (!window.VaronCart) return;
-        const items = await VaronCart.get();
-        if (!items || items.length === 0) {
-            VaronCart.showMessage('Cart is already empty', 'error');
-            return;
-        }
-        closeModal('cartModal');
-        await openModal('clearModal');
-    }
-
-    async function clearCartConfirmed() {
-        if (window.VaronCart) {
-            const success = await VaronCart.clear();
-            if (success) {
-                VaronCart.showMessage('Cart cleared successfully', 'success');
-                closeModal('clearModal');
-                await openModal('cartModal');
-            } else {
-                closeModal('clearModal');
-            }
-        }
-    }
-
-    function proceedToCheckout() {
-        window.location.href = '/checkout';
-    }
-
-    // Modal functions
-    async function openModal(modalId) {
-        console.log('Opening modal:', modalId);
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            console.log('Modal element found, displaying...');
-            console.log('Modal current display:', modal.style.display);
-            console.log('Modal current aria-hidden:', modal.getAttribute('aria-hidden'));
-            
-            modal.style.display = 'flex';
-            modal.style.opacity = '1';
-            modal.setAttribute('aria-hidden', 'false');
-            document.body.style.overflow = 'hidden';
-            
-            console.log('Modal after display:', modal.style.display);
-            console.log('Modal visibility:', window.getComputedStyle(modal).display);
-            
-            // Force reflow to ensure animation works
-            void modal.offsetWidth;
-            
-            // Load cart items when opening cart modal
-            if (modalId === 'cartModal') {
-                console.log('Loading cart items...');
-                await renderCartItems();
-            }
-        } else {
-            console.error('Modal not found:', modalId);
-        }
-    }
-
-    function closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.setAttribute('aria-hidden', 'true');
-            document.body.style.overflow = '';
-            
-            // Wait for animation to complete before hiding
-            setTimeout(() => {
-                if (modal.getAttribute('aria-hidden') === 'true') {
-                    modal.style.display = 'none';
-                }
-            }, 300);
-        }
-    }
-
     // Add quick add to cart functionality for products
-    async function quickAddToCart(productId, productName, productPrice, productImage) {
-      // Show loading feedback
-      const snackbar = document.getElementById('snackbar');
-      if(snackbar) {
-        snackbar.textContent = 'Adding to cart...';
-        snackbar.classList.add('show');
-      }
-      
+    function quickAddToCart(productId, productName, productPrice, productImage) {
       if(window.VaronCart) {
-        const success = await VaronCart.add(productId, 1);
-        // VaronCart.add now handles showing success/error messages
-      } else {
-        // Fallback if VaronCart not loaded
-        if(snackbar) {
-          snackbar.textContent = 'Cart system not loaded. Please refresh the page.';
-          setTimeout(() => snackbar.classList.remove('show'), 3000);
-        }
-      }
-    }
-
-    // Function to show different sections
-    function showSection(sectionId) {
-      console.log('Showing section:', sectionId);
-      
-      // Hide all content sections
-      document.querySelectorAll('.content-section').forEach(section => {
-        section.style.display = 'none';
-      });
-      
-      // Hide hero section
-      const heroSection = document.getElementById('heroSection');
-      if (heroSection) {
-        heroSection.style.display = 'none';
-      }
-      
-      // Hide flash sales section
-      const flashSalesSection = document.getElementById('flashSalesSection');
-      if (flashSalesSection) {
-        flashSalesSection.style.display = 'none';
-      }
-      
-      // Show selected section
-      if (sectionId === 'home') {
-        // Show hero, flash sales (if active), and featured products
-        if (heroSection) {
-          heroSection.style.display = 'block';
-        }
-        if (flashSalesSection && activeFlashSales && Object.keys(activeFlashSales).length > 0) {
-          flashSalesSection.style.display = 'block';
-        }
-        const homeSection = document.getElementById('home');
-        if (homeSection) {
-          homeSection.style.display = 'block';
-        }
-      } else {
-        const targetSection = document.getElementById(sectionId);
-        if (targetSection) {
-          targetSection.style.display = 'block';
-        }
-      }
-      
-      // Load data for specific sections
-      if (sectionId === 'browse') {
-        // Reset to "All" category when opening browse
-        filterByCategory('all');
-      } else if (sectionId === 'myOrders') {
-        loadMyOrders();
-      }
-      
-      // Update navigation active state
-      document.querySelectorAll('.top-nav a').forEach(link => {
-        link.style.color = '';
-      });
-      const activeLink = document.getElementById(`${sectionId}Link`);
-      if (activeLink) {
-        activeLink.style.color = '#ff6b6b';
+        VaronCart.add(productId, 1).then(success => {
+          if(success) {
+            const snackbar = document.getElementById('snackbar');
+            if(snackbar) {
+              snackbar.textContent = `${productName} added to cart`;
+              snackbar.classList.add('show');
+              setTimeout(() => snackbar.classList.remove('show'), 2200);
+            }
+          }
+        });
       }
     }
 =======
@@ -820,13 +546,6 @@
 
     // Fetch the buyer's first name on page load
     window.addEventListener('DOMContentLoaded', (event) => {
-        // Close all modals on page load to prevent black overlay
-        const allModals = document.querySelectorAll('.modal');
-        allModals.forEach(modal => {
-            modal.setAttribute('aria-hidden', 'true');
-            modal.style.display = 'none';
-        });
-
         fetch('/get_buyer_name')
             .then(response => response.json())
             .then(data => {
@@ -837,17 +556,14 @@
         
 <<<<<<< HEAD
         // Load cart count from database
-        if (window.VaronCart && typeof VaronCart.updateBadge === 'function') {
+        if (window.VaronCart) {
             VaronCart.updateBadge();
         }
         
-        // Load featured products first
-        loadFeaturedProducts();
+        // Show home section by default
+        showSection('home');
         
-        // Load browse products
-        loadBrowseProducts();
-        
-        // Load flash sales
+        // Load flash sales first
         loadFlashSales();
 =======
         // Load featured products on home
@@ -856,6 +572,7 @@
         
         // Load user's orders for My Orders section
         loadMyOrders();
+<<<<<<< HEAD
         
 <<<<<<< HEAD
         // Explicitly show home section after everything is loaded
@@ -863,6 +580,8 @@
           console.log('Initializing home section...');
           showSection('home');
         }, 200);
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
     });
 
     // Flash sales support
@@ -875,58 +594,19 @@
           if (data.success && data.product_sales) {
             activeFlashSales = data.product_sales;
             
-            const section = document.getElementById('flashSalesSection');
-            const grid = document.getElementById('flashSaleGrid');
-            
-            if (Object.keys(activeFlashSales).length > 0 && section && grid) {
-              section.style.display = 'block';
-              
-              // Load products that are on flash sale
-              fetch('/api/products')
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success && data.products) {
-                    const saleProducts = data.products.filter(p => activeFlashSales[p.id]);
-                    
-                    // Limit to first 6 products for table display
-                    const displayProducts = saleProducts.slice(0, 6);
-                    
-                    grid.innerHTML = displayProducts.map(product => {
-                      const sale = activeFlashSales[product.id];
-                      const originalPrice = parseFloat(product.price);
-                      const salePrice = parseFloat(sale.sale_price);
-                      const discount = Math.round(sale.discount_percentage);
-                      
-                      return `
-                        <div style="background:#fff;padding:16px;text-align:center;cursor:pointer;transition:transform 0.2s" 
-                             onclick="window.location.href='/product/${product.id}'" 
-                             onmouseover="this.style.transform='translateY(-4px)'" 
-                             onmouseout="this.style.transform='translateY(0)'">
-                          <div style="position:relative;margin-bottom:12px">
-                            <img src="${product.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop'}" 
-                                 alt="${product.name}" 
-                                 style="width:100%;height:150px;object-fit:cover;border-radius:8px">
-                            <span style="position:absolute;top:8px;left:8px;background:#ff6b6b;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">
-                              ${discount}% OFF
-                            </span>
-                          </div>
-                          <h4 style="margin:0 0 8px 0;font-size:14px;color:#333;height:40px;overflow:hidden;line-height:1.4">${product.name}</h4>
-                          <div style="margin-bottom:4px">
-                            <span style="color:#ff6b6b;font-size:18px;font-weight:700">₱${salePrice.toFixed(2)}</span>
-                          </div>
-                          <div>
-                            <span style="text-decoration:line-through;color:#999;font-size:14px">₱${originalPrice.toFixed(2)}</span>
-                          </div>
-                          <div style="margin-top:8px;padding:6px;background:#fff5f5;border-radius:4px;font-size:12px;color:#ff6b6b;font-weight:600">
-                            ⚡ FLASH SALE
-                          </div>
-                        </div>
-                      `;
-                    }).join('');
-                  }
-                })
-                .catch(err => console.error('Error loading flash sale products:', err));
+            if (Object.keys(activeFlashSales).length > 0) {
+              const banner = document.getElementById('flashSalesBanner');
+              if (banner) {
+                banner.style.display = 'block';
+                const count = Object.keys(activeFlashSales).length;
+                const maxDiscount = Math.max(...Object.values(activeFlashSales).map(s => s.discount_percentage));
+                document.getElementById('flashSalesCount').textContent = `Save up to ${Math.round(maxDiscount)}% on ${count} products!`;
+              }
             }
+            
+            // Reload featured and browse products to show sale prices
+            loadFeaturedProducts();
+            loadBrowseProducts();
           }
         })
         .catch(error => console.error('Error loading flash sales:', error));
@@ -940,41 +620,42 @@
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
     // Load featured products from API (for home section)
     function loadFeaturedProducts() {
-      console.log('Loading featured products...');
-      const featuredGrid = document.getElementById('featuredGrid');
-      
-      // Show loading state
-      featuredGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999"><div style="display:inline-block;width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #0a0a0a;border-radius:50%;animation:spin 1s linear infinite"></div><p style="margin-top:16px">Loading products...</p></div>';
-      
-      fetch('/api/products?limit=8')
+      fetch('/api/products?limit=4')
         .then(response => response.json())
         .then(data => {
+<<<<<<< HEAD
 <<<<<<< HEAD
           console.log('Featured products data:', data);
           if (data.success && data.products && data.products.length > 0) {
             const filtered = data.products.slice(0, 8);
+=======
+          if (data.success && data.products) {
+            const featuredGrid = document.getElementById('featuredGrid');
+            const filtered = data.products.slice(0, 4);
+>>>>>>> parent of 5ad2f62 (latest code)
             featuredGrid.innerHTML = filtered.map(product => {
               const hasSale = activeFlashSales[product.id];
               const originalPrice = parseFloat(product.price);
-              const salePrice = hasSale ? parseFloat(hasSale.sale_price) : originalPrice;
-              const discount = hasSale ? parseFloat(hasSale.discount_percentage) : 0;
+              const salePrice = hasSale ? hasSale.sale_price : originalPrice;
+              const discount = hasSale ? hasSale.discount_percentage : 0;
               
               return `
-                <article class="product" style="cursor:pointer;position:relative;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s,box-shadow 0.2s" onclick="window.location.href='/product/${product.id}'" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'">
-                  ${hasSale ? `<div style="position:absolute;top:12px;left:12px;background:#ff6b6b;color:#fff;padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;z-index:2;box-shadow:0 2px 8px rgba(255,107,107,0.4)">⚡ ${Math.round(discount)}% OFF</div>` : ''}
-                  <div class="product-image" style="position:relative;width:100%;height:300px;overflow:hidden;background:#f5f5f5">
-                    <img src="${product.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=400&auto=format&fit=crop'}" alt="${product.name}" style="width:100%;height:100%;object-fit:cover;">
+                <article class="product" style="cursor:pointer;position:relative" onclick="window.location.href='/product/${product.id}'">
+                  ${hasSale ? `<div style="position:absolute;top:8px;left:8px;background:#ff6b6b;color:#fff;padding:6px 12px;border-radius:6px;font-weight:700;font-size:12px;z-index:2;box-shadow:0 2px 8px rgba(255,107,107,0.4)">⚡ ${Math.round(discount)}% OFF</div>` : ''}
+                  <div class="product-image">
+                    <img src="${product.image_url || 'https://via.placeholder.com/400x500'}" alt="${product.name}" style="width:100%;height:100%;object-fit:cover;">
                   </div>
-                  <div class="product-info" style="padding:16px">
-                    <h3 style="margin:0 0 8px;font-size:16px;font-weight:500;color:#0a0a0a;min-height:44px;line-height:1.4">${product.name}</h3>
-                    <div class="price" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                      ${hasSale ? `<span style="text-decoration:line-through;color:#999;font-size:14px">₱${originalPrice.toFixed(2)}</span>` : ''}
-                      <span style="font-size:18px;font-weight:700;${hasSale ? 'color:#ff6b6b' : 'color:#0a0a0a'}">₱${salePrice.toFixed(2)}</span>
+                  <div class="product-info">
+                    <h3>${product.name}</h3>
+                    <div class="price">
+                      ${hasSale ? `<span style="text-decoration:line-through;color:#999;font-size:13px;margin-right:8px">₱${originalPrice.toFixed(2)}</span>` : ''}
+                      <span style="${hasSale ? 'color:#ff6b6b;font-weight:700' : ''}">₱${salePrice.toFixed(2)}</span>
                     </div>
                   </div>
                 </article>
               `;
             }).join('');
+<<<<<<< HEAD
           } else {
             featuredGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Products Available</h3><p style="color:#999;margin:0">Check back soon for new arrivals!</p></div>';
 =======
@@ -994,12 +675,11 @@
               </article>
             `).join('');
 >>>>>>> parent of 1c35c95 (malapit na mga bes)
+=======
+>>>>>>> parent of 5ad2f62 (latest code)
           }
         })
-        .catch(error => {
-          console.error('Error loading featured products:', error);
-          featuredGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#ef4444">Error Loading Products</h3><p style="color:#999;margin:0">Please refresh the page to try again.</p></div>';
-        });
+        .catch(error => console.error('Error loading featured products:', error));
     }
 
     // Load browse products from API
@@ -1026,26 +706,26 @@
     function displayProducts(products) {
       const browseGrid = document.getElementById('browseGrid');
       if (products.length === 0) {
-        browseGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Products Available</h3><p style="color:#999;margin:0">Check back soon for new arrivals!</p></div>';
+        browseGrid.innerHTML = '<p style="color:#999;text-align:center;grid-column:1/-1;padding:40px">No products available</p>';
       } else {
 <<<<<<< HEAD
         browseGrid.innerHTML = products.map(product => {
           const hasSale = activeFlashSales[product.id];
           const originalPrice = parseFloat(product.price);
-          const salePrice = hasSale ? parseFloat(hasSale.sale_price) : originalPrice;
-          const discount = hasSale ? parseFloat(hasSale.discount_percentage) : 0;
+          const salePrice = hasSale ? hasSale.sale_price : originalPrice;
+          const discount = hasSale ? hasSale.discount_percentage : 0;
           
           return `
-            <article class="product" style="cursor:pointer;position:relative;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:transform 0.2s,box-shadow 0.2s" onclick="window.location.href='/product/${product.id}'" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'">
-              ${hasSale ? `<div style="position:absolute;top:12px;left:12px;background:#ff6b6b;color:#fff;padding:8px 14px;border-radius:8px;font-weight:700;font-size:13px;z-index:2;box-shadow:0 2px 8px rgba(255,107,107,0.4)">⚡ ${Math.round(discount)}% OFF</div>` : ''}
-              <div class="product-image" style="position:relative;width:100%;height:300px;overflow:hidden;background:#f5f5f5">
-                <img src="${product.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=400&auto=format&fit=crop'}" alt="${product.name}" style="width:100%;height:100%;object-fit:cover">
+            <article class="product" style="cursor:pointer;position:relative" onclick="window.location.href='/product/${product.id}'">
+              ${hasSale ? `<div style="position:absolute;top:8px;left:8px;background:#ff6b6b;color:#fff;padding:6px 12px;border-radius:6px;font-weight:700;font-size:12px;z-index:2;box-shadow:0 2px 8px rgba(255,107,107,0.4)">⚡ ${Math.round(discount)}% OFF</div>` : ''}
+              <div class="product-image">
+                <img src="${product.image_url || 'https://via.placeholder.com/400x500'}" alt="${product.name}" style="width:100%;height:100%;object-fit:cover">
               </div>
-              <div class="product-info" style="padding:16px">
-                <h3 style="margin:0 0 8px;font-size:16px;font-weight:500;color:#0a0a0a;min-height:44px;line-height:1.4">${product.name}</h3>
-                <div class="price" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                  ${hasSale ? `<span style="text-decoration:line-through;color:#999;font-size:14px">₱${originalPrice.toFixed(2)}</span>` : ''}
-                  <span style="font-size:18px;font-weight:700;${hasSale ? 'color:#ff6b6b' : 'color:#0a0a0a'}">₱${salePrice.toFixed(2)}</span>
+              <div class="product-info">
+                <h3>${product.name}</h3>
+                <div class="price">
+                  ${hasSale ? `<span style="text-decoration:line-through;color:#999;font-size:13px;margin-right:8px">₱${originalPrice.toFixed(2)}</span>` : ''}
+                  <span style="${hasSale ? 'color:#ff6b6b;font-weight:700' : ''}">₱${salePrice.toFixed(2)}</span>
                 </div>
               </div>
             </article>
@@ -1068,7 +748,7 @@
     }
 
     // Filter products by category
-    async function filterByCategory(category) {
+    function filterByCategory(category) {
       // Update button styles
       document.querySelectorAll('.genre-filter').forEach(btn => {
         if (btn.dataset.category === category) {
@@ -1082,25 +762,12 @@
         }
       });
 
-      // Show loading state
-      const browseGrid = document.getElementById('browseGrid');
-      browseGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999"><div style="display:inline-block;width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid #0a0a0a;border-radius:50%;animation:spin 1s linear infinite"></div><p style="margin-top:16px">Loading products...</p></div>';
-
-      try {
-        // Fetch products by category
-        const url = category === 'all' ? '/api/products' : `/api/products?category=${category}`;
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.success && data.products) {
-          allProducts = data.products;
-          displayProducts(data.products);
-        } else {
-          browseGrid.innerHTML = '<p style="color:#999;text-align:center;grid-column:1/-1;padding:40px">No products available in this category</p>';
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        browseGrid.innerHTML = '<p style="color:#ef4444;text-align:center;grid-column:1/-1;padding:40px">Error loading products. Please try again.</p>';
+      // Filter products
+      if (category === 'all') {
+        displayProducts(allProducts);
+      } else {
+        const filtered = allProducts.filter(p => p.category_name === category);
+        displayProducts(filtered);
       }
     }
 

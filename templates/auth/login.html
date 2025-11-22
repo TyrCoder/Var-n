@@ -14,18 +14,6 @@
   border-radius: 6px;
   margin-bottom: 16px;
   font-size: 14px;
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .flash-message.error {
@@ -419,8 +407,7 @@ h1, h2, h3, h4, h5, h6, .brand {
                 {% endif %}
               {% endwith %}
               
-              <div id="loginError" style="display: none; color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;"></div>
-              <div id="loginSuccess" style="display: none; color: #198754; background: #d1e7dd; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;"></div>
+              <div id="error-message" style="display: none; color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;"></div>
 
               <div class="form-group">
                 <label class="form-label" for="loginEmail">
@@ -452,7 +439,7 @@ h1, h2, h3, h4, h5, h6, .brand {
               <button type="submit" class="btn-submit">Login to Your Account</button>
 
               <div class="form-footer">
-                <a href="#" class="forgot-link" onclick="openForgotPasswordModal(); return false;">Forgot your password?</a>
+                <a href="#" class="forgot-link">Forgot your password?</a>
               </div>
             </form>
 
@@ -460,9 +447,6 @@ h1, h2, h3, h4, h5, h6, .brand {
             <form id="signupForm" class="auth-form">
               <h2 class="auth-title">Create Account</h2>
               <p class="auth-subtitle">Join Varón to start shopping premium apparel</p>
-              
-              <div id="signupError" style="display: none; color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;"></div>
-              <div id="signupSuccess" style="display: none; color: #198754; background: #d1e7dd; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;"></div>
 
               <div class="form-group">
                 <label class="form-label" for="signupFirstName">
@@ -507,7 +491,7 @@ h1, h2, h3, h4, h5, h6, .brand {
                 </div>
               </div>
 
-              <div class="form-group" style="margin-bottom:8px;">
+              <div class="form-group">
                 <div class="password-wrapper">
                   <input class="form-input" id="signupPassword" name="password" type="password" placeholder="Password" required />
                   <label class="form-label" for="signupPassword">
@@ -523,7 +507,6 @@ h1, h2, h3, h4, h5, h6, .brand {
                   </button>
                 </div>
               </div>
-              <p style="margin:-4px 0 20px;font-size:12px;color:#999;">Must be at least 6 characters with letters and numbers</p>
 
               <div class="form-group">
                 <div class="password-wrapper">
@@ -559,85 +542,6 @@ h1, h2, h3, h4, h5, h6, .brand {
         </div>
     </main>
 
-    <!-- Forgot Password Modal -->
-    <div id="forgotPasswordModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target.id==='forgotPasswordModal') closeForgotPasswordModal();">
-      <div style="background:#fff;border-radius:20px;padding:40px;max-width:480px;width:90%;max-height:90vh;overflow-y:auto;position:relative;" onclick="event.stopPropagation();">
-        <button onclick="closeForgotPasswordModal()" style="position:absolute;top:20px;right:20px;background:none;border:none;font-size:28px;cursor:pointer;color:#999;line-height:1;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">&times;</button>
-        
-        <!-- Step 1: Enter Email -->
-        <div id="resetStep1" style="display:block;">
-          <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:24px;margin:0 0 8px;font-weight:500;">Reset Password</h2>
-          <p style="color:#777;font-size:14px;margin:0 0 24px;">Enter your email address and we'll send you a verification code</p>
-          
-          <div id="resetEmailError" style="display:none;color:#dc3545;background:#fde8e8;padding:12px;border-radius:6px;margin-bottom:16px;font-size:14px;"></div>
-          
-          <div style="margin-bottom:24px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#666;margin-bottom:8px;">
-              <svg style="width:16px;height:16px;" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/>
-              </svg>
-              Email Address
-            </label>
-            <input id="resetEmail" type="email" placeholder="Enter your email" style="width:100%;padding:14px 0;border:none;border-bottom:1.5px solid #ddd;font-size:15px;background:transparent;" required>
-          </div>
-          
-          <button onclick="sendResetOTP()" style="width:100%;padding:16px;background:#000;color:#fff;border:none;border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;">Send Verification Code</button>
-        </div>
-        
-        <!-- Step 2: Verify OTP -->
-        <div id="resetStep2" style="display:none;">
-          <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:24px;margin:0 0 8px;font-weight:500;">Verify Code</h2>
-          <p style="color:#777;font-size:14px;margin:0 0 24px;">Enter the 6-digit code sent to <strong id="resetEmailDisplay"></strong></p>
-          
-          <div id="resetOtpError" style="display:none;color:#dc3545;background:#fde8e8;padding:12px;border-radius:6px;margin-bottom:16px;font-size:14px;"></div>
-          
-          <div style="margin-bottom:24px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#666;margin-bottom:8px;">
-              <svg style="width:16px;height:16px;" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
-              </svg>
-              Verification Code
-            </label>
-            <input id="resetOtp" type="text" maxlength="6" placeholder="Enter 6-digit code" style="width:100%;padding:14px 0;border:none;border-bottom:1.5px solid #ddd;font-size:15px;background:transparent;letter-spacing:4px;text-align:center;font-family:'Courier New',monospace;font-size:20px;" required>
-          </div>
-          
-          <button onclick="verifyResetOTP()" style="width:100%;padding:16px;background:#000;color:#fff;border:none;border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;">Verify Code</button>
-          <button onclick="backToEmailStep()" style="width:100%;padding:12px;margin-top:10px;background:transparent;color:#666;border:none;font-size:14px;cursor:pointer;text-decoration:underline;">Back to email</button>
-        </div>
-        
-        <!-- Step 3: New Password -->
-        <div id="resetStep3" style="display:none;">
-          <h2 style="font-family:'Playfair Display',Georgia,serif;font-size:24px;margin:0 0 8px;font-weight:500;">New Password</h2>
-          <p style="color:#777;font-size:14px;margin:0 0 24px;">Enter your new password</p>
-          
-          <div id="resetPasswordError" style="display:none;color:#dc3545;background:#fde8e8;padding:12px;border-radius:6px;margin-bottom:16px;font-size:14px;"></div>
-          <div id="resetPasswordSuccess" style="display:none;color:#198754;background:#d1e7dd;padding:12px;border-radius:6px;margin-bottom:16px;font-size:14px;"></div>
-          
-          <div style="margin-bottom:20px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#666;margin-bottom:8px;">
-              <svg style="width:16px;height:16px;" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
-              </svg>
-              New Password
-            </label>
-            <input id="newPassword" type="password" placeholder="Enter new password" style="width:100%;padding:14px 0;border:none;border-bottom:1.5px solid #ddd;font-size:15px;background:transparent;" required>
-          </div>
-          
-          <div style="margin-bottom:24px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#666;margin-bottom:8px;">
-              <svg style="width:16px;height:16px;" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
-              </svg>
-              Confirm Password
-            </label>
-            <input id="confirmNewPassword" type="password" placeholder="Confirm new password" style="width:100%;padding:14px 0;border:none;border-bottom:1.5px solid #ddd;font-size:15px;background:transparent;" required>
-          </div>
-          
-          <button onclick="resetPassword()" style="width:100%;padding:16px;background:#000;color:#fff;border:none;border-radius:12px;font-weight:600;font-size:15px;cursor:pointer;">Reset Password</button>
-        </div>
-      </div>
-    </div>
-
     <script>
       // Tab switching functionality
       document.querySelectorAll('.auth-tab').forEach(tab => {
@@ -652,100 +556,22 @@ h1, h2, h3, h4, h5, h6, .brand {
         });
       });
 
-      // Helper function to show messages
-      function showMessage(elementId, message, duration = 5000) {
-        const element = document.getElementById(elementId);
-        element.textContent = message;
-        element.style.display = 'block';
-        if (duration > 0) {
-          setTimeout(() => {
-            element.style.display = 'none';
-          }, duration);
-        }
-      }
-
-      function hideMessage(elementId) {
-        document.getElementById(elementId).style.display = 'none';
-      }
-
-      // Login form submission with AJAX
+      // Login form submission - use standard form submission instead of AJAX
       document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+        // Let the form submit normally to Flask
+        // Flask will handle the redirect based on user role
         
-        const loginBtn = this.querySelector('.btn-submit');
-        const originalText = loginBtn.textContent;
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
+        // Just add the action and method attributes if needed
+        this.action = '/login';
+        this.method = 'POST';
         
-        // Hide previous messages
-        hideMessage('loginError');
-        hideMessage('loginSuccess');
-        
-        // Collect all validation errors
-        const errors = [];
-        
-        if (!email) errors.push('Email is required');
-        if (!password) errors.push('Password is required');
-        
-        if (errors.length > 0) {
-          showMessage('loginError', errors.join('. '));
-          return;
-        }
-        
-        // Disable button and show loading
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Logging in...';
-        
-        const formData = new FormData();
-        formData.append('email', email);
-        formData.append('password', password);
-        
-        fetch('/login', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => {
-          if (response.redirected) {
-            // Show success message before redirect
-            showMessage('loginSuccess', 'Login successful! Redirecting...', 0);
-            setTimeout(() => {
-              window.location.href = response.url;
-            }, 800);
-          } else {
-            return response.text();
-          }
-        })
-        .then(text => {
-          if (text) {
-            // Parse response for error messages
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const flashMessage = doc.querySelector('.flash-message.error');
-            
-            if (flashMessage) {
-              showMessage('loginError', flashMessage.textContent.trim());
-            } else {
-              showMessage('loginError', 'Invalid email or password');
-            }
-            
-            loginBtn.disabled = false;
-            loginBtn.textContent = originalText;
-          }
-        })
-        .catch(error => {
-          console.error('Login error:', error);
-          showMessage('loginError', 'An error occurred. Please try again.');
-          loginBtn.disabled = false;
-          loginBtn.textContent = originalText;
-        });
+        // Don't prevent default - let it submit normally
+        // e.preventDefault();
       });
 
       // Signup form submission
       document.getElementById('signupForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const signupBtn = this.querySelector('.btn-submit');
-        const originalText = signupBtn.textContent;
+        e.preventDefault(); // Prevent the default form submission
         
         // Get form values
         const email = document.getElementById('signupEmail').value;
@@ -756,59 +582,14 @@ h1, h2, h3, h4, h5, h6, .brand {
         const phone = document.getElementById('signupPhone').value;
         const terms = document.querySelector('input[name="terms"]').checked;
 
-        // Hide previous messages
-        hideMessage('signupError');
-        hideMessage('signupSuccess');
-
-        // Collect all validation errors
-        const errors = [];
-        
-        // Check required fields
-        if (!firstName) errors.push('First name is required');
-        if (!lastName) errors.push('Last name is required');
-        if (!email) errors.push('Email is required');
-        if (!phone) errors.push('Phone number is required');
-        if (!password) errors.push('Password is required');
-        if (!confirmPassword) errors.push('Confirm password is required');
-        
-        // Validate email format
-        if (email && (!email.includes('@') || !email.includes('.'))) {
-          errors.push('Please enter a valid email address');
-        }
-        
-        // Validate password requirements
-        if (password) {
-          if (password.length < 6) {
-            errors.push('Password must be at least 6 characters long');
-          }
-          
-          const hasLetter = /[a-zA-Z]/.test(password);
-          const hasNumber = /[0-9]/.test(password);
-          
-          if (!hasLetter || !hasNumber) {
-            errors.push('Password must contain both letters and numbers');
-          }
-        }
-        
         // Validate passwords match
-        if (password && confirmPassword && password !== confirmPassword) {
-          errors.push('Passwords do not match');
+        if (password !== confirmPassword) {
+            const errorMessage = document.createElement('div');
+            errorMessage.style.cssText = 'color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
+            errorMessage.textContent = 'Passwords do not match';
+            document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('.btn-submit'));
+            return;
         }
-        
-        // Validate terms
-        if (!terms) {
-          errors.push('Please agree to the Terms & Conditions');
-        }
-        
-        // Show all errors if any
-        if (errors.length > 0) {
-          showMessage('signupError', errors.join('. '));
-          return;
-        }
-
-        // Disable button and show loading
-        signupBtn.disabled = true;
-        signupBtn.textContent = 'Creating account...';
 
         // Create form data
         const formData = new FormData();
@@ -826,37 +607,30 @@ h1, h2, h3, h4, h5, h6, .brand {
         })
         .then(response => {
           if (response.redirected) {
-            // Show success message before redirect
-            showMessage('signupSuccess', 'Account created successfully! Redirecting to verification...', 0);
-            setTimeout(() => {
-              window.location.href = response.url;
-            }, 1000);
+            // Follow the redirect from Flask
+            window.location.href = response.url;
           } else {
-            return response.text();
-          }
-        })
-        .then(text => {
-          if (text) {
-            // Parse response for error message
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const flashMessage = doc.querySelector('.flash-message.error');
-            
-            if (flashMessage) {
-              showMessage('signupError', flashMessage.textContent.trim());
-            } else {
-              showMessage('signupError', 'Registration failed. Please try again.');
-            }
-            
-            signupBtn.disabled = false;
-            signupBtn.textContent = originalText;
+            // If not redirected, parse the response for error message
+            return response.text().then(text => {
+              // Check if response contains error message
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(text, 'text/html');
+              const flashMessages = doc.querySelectorAll('.flash-message');
+              if (flashMessages.length > 0) {
+                const errorMessage = document.createElement('div');
+                errorMessage.style.cssText = 'color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
+                errorMessage.textContent = flashMessages[0].textContent;
+                document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('.btn-submit'));
+              }
+            });
           }
         })
         .catch(error => {
-          console.error('Signup error:', error);
-          showMessage('signupError', 'An error occurred. Please try again.');
-          signupBtn.disabled = false;
-          signupBtn.textContent = originalText;
+          console.error('Error:', error);
+          const errorMessage = document.createElement('div');
+          errorMessage.style.cssText = 'color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
+          errorMessage.textContent = 'An error occurred. Please try again later.';
+          document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('.btn-submit'));
         });
       });
 
@@ -871,202 +645,6 @@ h1, h2, h3, h4, h5, h6, .brand {
           button.innerHTML = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>';
         }
       }
-
-      // Forgot Password Modal Functions
-      function openForgotPasswordModal() {
-        document.getElementById('forgotPasswordModal').style.display = 'flex';
-        resetForgotPasswordForm();
-      }
-
-      function closeForgotPasswordModal() {
-        document.getElementById('forgotPasswordModal').style.display = 'none';
-        resetForgotPasswordForm();
-      }
-
-      function resetForgotPasswordForm() {
-        // Hide all error messages
-        document.getElementById('resetEmailError').style.display = 'none';
-        document.getElementById('resetOtpError').style.display = 'none';
-        document.getElementById('resetPasswordError').style.display = 'none';
-        document.getElementById('resetPasswordSuccess').style.display = 'none';
-        
-        // Clear inputs
-        document.getElementById('resetEmail').value = '';
-        document.getElementById('resetOtp').value = '';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmNewPassword').value = '';
-        
-        // Show step 1
-        document.getElementById('resetStep1').style.display = 'block';
-        document.getElementById('resetStep2').style.display = 'none';
-        document.getElementById('resetStep3').style.display = 'none';
-      }
-
-      function sendResetOTP() {
-        const email = document.getElementById('resetEmail').value.trim();
-        const errorDiv = document.getElementById('resetEmailError');
-        
-        if (!email) {
-          errorDiv.textContent = 'Please enter your email address';
-          errorDiv.style.display = 'block';
-          return;
-        }
-        
-        if (!email.includes('@') || !email.includes('.')) {
-          errorDiv.textContent = 'Please enter a valid email address';
-          errorDiv.style.display = 'block';
-          return;
-        }
-        
-        errorDiv.style.display = 'none';
-        
-        const formData = new FormData();
-        formData.append('email', email);
-        
-        fetch('/forgot-password', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            document.getElementById('resetEmailDisplay').textContent = email;
-            document.getElementById('resetStep1').style.display = 'none';
-            document.getElementById('resetStep2').style.display = 'block';
-          } else {
-            errorDiv.textContent = data.error || 'Failed to send verification code';
-            errorDiv.style.display = 'block';
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          errorDiv.textContent = 'An error occurred. Please try again.';
-          errorDiv.style.display = 'block';
-        });
-      }
-
-      function backToEmailStep() {
-        document.getElementById('resetStep2').style.display = 'none';
-        document.getElementById('resetStep1').style.display = 'block';
-        document.getElementById('resetOtpError').style.display = 'none';
-      }
-
-      function verifyResetOTP() {
-        const otp = document.getElementById('resetOtp').value.trim();
-        const errorDiv = document.getElementById('resetOtpError');
-        
-        if (!otp || otp.length !== 6) {
-          errorDiv.textContent = 'Please enter the 6-digit verification code';
-          errorDiv.style.display = 'block';
-          return;
-        }
-        
-        errorDiv.style.display = 'none';
-        
-        const formData = new FormData();
-        formData.append('otp', otp);
-        
-        fetch('/verify-reset-otp', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            document.getElementById('resetStep2').style.display = 'none';
-            document.getElementById('resetStep3').style.display = 'block';
-          } else {
-            errorDiv.textContent = data.error || 'Invalid or expired verification code';
-            errorDiv.style.display = 'block';
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          errorDiv.textContent = 'Verification failed. Please try again.';
-          errorDiv.style.display = 'block';
-        });
-      }
-
-      function resetPassword() {
-        const password = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmNewPassword').value;
-        const errorDiv = document.getElementById('resetPasswordError');
-        const successDiv = document.getElementById('resetPasswordSuccess');
-        
-        errorDiv.style.display = 'none';
-        successDiv.style.display = 'none';
-        
-        if (!password || password.length < 6) {
-          errorDiv.textContent = 'Password must be at least 6 characters';
-          errorDiv.style.display = 'block';
-          return;
-        }
-        
-        // Validate password contains letters and numbers
-        const hasLetter = /[a-zA-Z]/.test(password);
-        const hasNumber = /[0-9]/.test(password);
-        
-        if (!hasLetter || !hasNumber) {
-          errorDiv.textContent = 'Password must contain both letters and numbers';
-          errorDiv.style.display = 'block';
-          return;
-        }
-        
-        if (password !== confirmPassword) {
-          errorDiv.textContent = 'Passwords do not match';
-          errorDiv.style.display = 'block';
-          return;
-        }
-        
-        const formData = new FormData();
-        formData.append('password', password);
-        
-        fetch('/reset-password', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            successDiv.textContent = 'Password reset successfully! Redirecting to login...';
-            successDiv.style.display = 'block';
-            
-            setTimeout(() => {
-              closeForgotPasswordModal();
-              window.location.reload();
-            }, 2000);
-          } else {
-            errorDiv.textContent = data.error || 'Failed to reset password';
-            errorDiv.style.display = 'block';
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          errorDiv.textContent = 'An error occurred. Please try again.';
-          errorDiv.style.display = 'block';
-        });
-      }
-
-      // Allow Enter key submission in OTP input
-      document.addEventListener('DOMContentLoaded', function() {
-        const otpInput = document.getElementById('resetOtp');
-        if (otpInput) {
-          otpInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-              verifyResetOTP();
-            }
-          });
-        }
-        
-        const emailInput = document.getElementById('resetEmail');
-        if (emailInput) {
-          emailInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-              sendResetOTP();
-            }
-          });
-        }
-      });
     </script>
   </body>
   </html>

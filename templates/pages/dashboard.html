@@ -213,15 +213,6 @@
               <div id="pending-products-list">Loading pending products...</div>
             </div>
           </div>
-          <div id="product-detail-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
-            <div style="background:#fff;border-radius:12px;padding:24px;max-width:900px;width:90%;max-height:85vh;overflow-y:auto">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e0e0e0">
-                <h2 style="margin:0;font-size:20px;font-weight:700">Product Details</h2>
-                <button onclick="closeProductDetailModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#999;padding:0;width:32px;height:32px">&times;</button>
-              </div>
-              <div id="product-detail-body">Loading...</div>
-            </div>
-          </div>
         `,
         'product-edits': `
           <div class="card">
@@ -363,7 +354,10 @@
                     <td>${product.stock} pcs</td>
                     <td>${date}</td>
                     <td>
-                      <button class="tag" onclick="viewProductDetails(${product.id})" style="background: #3b82f6; cursor: pointer; border: none;">View Details</button>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="tag" onclick="approveProduct(${product.id})" style="background: #10b981; cursor: pointer; border: none;">Approve</button>
+                        <button class="tag" onclick="rejectProduct(${product.id})" style="background: #ef4444; cursor: pointer; border: none;">Reject</button>
+                      </div>
                     </td>
                   </tr>
                 `;
@@ -432,147 +426,6 @@
         .catch(error => {
           alert('Error rejecting product');
         });
-      }
-
-      function viewProductDetails(productId) {
-        const modal = document.getElementById('product-detail-modal');
-        const modalBody = document.getElementById('product-detail-body');
-        
-        modal.style.display = 'flex';
-        modalBody.innerHTML = '<p style="text-align:center;padding:40px;color:#999">Loading product details...</p>';
-        
-        fetch(`/admin/product-details/${productId}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.error) {
-              modalBody.innerHTML = `<p style="color:#ef4444;text-align:center;padding:40px">${data.error}</p>`;
-              return;
-            }
-            
-            const product = data.product;
-            const images = data.images || [];
-            const variants = data.variants || [];
-            
-            // Group variants by color
-            const colorGroups = {};
-            variants.forEach(v => {
-              if (!colorGroups[v.color]) {
-                colorGroups[v.color] = [];
-              }
-              colorGroups[v.color].push(v);
-            });
-            
-            let html = `
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px">
-                <div>
-                  <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#0a0a0a">Product Information</h3>
-                  <div style="background:#f9fafb;padding:16px;border-radius:8px;font-size:14px">
-                    <p style="margin:0 0 8px"><strong>Name:</strong> ${product.name}</p>
-                    <p style="margin:0 0 8px"><strong>Price:</strong> ₱${parseFloat(product.price).toFixed(2)}</p>
-                    <p style="margin:0 0 8px"><strong>Brand:</strong> ${product.brand || 'N/A'}</p>
-                    <p style="margin:0 0 8px"><strong>SKU:</strong> ${product.sku || 'N/A'}</p>
-                    <p style="margin:0 0 8px"><strong>Category:</strong> ${product.category_name || 'N/A'}</p>
-                    <p style="margin:0"><strong>Description:</strong></p>
-                    <p style="margin:4px 0 0;color:#666;line-height:1.6">${product.description || 'No description provided'}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#0a0a0a">Seller Information</h3>
-                  <div style="background:#f9fafb;padding:16px;border-radius:8px;font-size:14px">
-                    <p style="margin:0 0 8px"><strong>Store:</strong> ${product.store_name}</p>
-                    <p style="margin:0 0 8px"><strong>Seller Name:</strong> ${product.seller_first_name} ${product.seller_last_name}</p>
-                    <p style="margin:0 0 8px"><strong>Email:</strong> ${product.seller_email}</p>
-                    ${product.store_description ? `<p style="margin:8px 0 0;color:#666;line-height:1.6">${product.store_description}</p>` : ''}
-                  </div>
-                </div>
-              </div>
-            `;
-            
-            // Product Images
-            if (images.length > 0) {
-              html += `
-                <div style="margin-bottom:24px">
-                  <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#0a0a0a">Product Images (${images.length})</h3>
-                  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
-              `;
-              
-              images.forEach((img, idx) => {
-                html += `
-                  <div style="position:relative;border:2px solid ${img.is_primary ? '#3b82f6' : '#e0e0e0'};border-radius:8px;overflow:hidden;aspect-ratio:1">
-                    <img src="${img.image_url}" alt="Product image ${idx + 1}" style="width:100%;height:100%;object-fit:cover">
-                    ${img.is_primary ? '<span style="position:absolute;top:4px;left:4px;background:#3b82f6;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">PRIMARY</span>' : ''}
-                  </div>
-                `;
-              });
-              
-              html += '</div></div>';
-            }
-            
-            // Product Variants (Size & Color with Stock)
-            if (product.category_slug !== 'grooming' && variants.length > 0) {
-              html += `
-                <div style="margin-bottom:24px">
-                  <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#0a0a0a">Available Sizes & Colors</h3>
-                  <div style="background:#f9fafb;padding:16px;border-radius:8px">
-              `;
-              
-              Object.keys(colorGroups).forEach(color => {
-                html += `
-                  <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #e0e0e0">
-                    <h4 style="margin:0 0 8px;font-size:14px;font-weight:600;color:#0a0a0a">🎨 ${color}</h4>
-                    <div style="display:flex;flex-wrap:wrap;gap:8px">
-                `;
-                
-                colorGroups[color].forEach(v => {
-                  html += `
-                    <div style="background:#fff;border:1px solid #e0e0e0;padding:8px 12px;border-radius:6px;font-size:13px">
-                      <strong>${v.size}</strong> - ${v.stock_quantity} pcs
-                      ${v.sku ? `<br><span style="color:#999;font-size:11px">${v.sku}</span>` : ''}
-                    </div>
-                  `;
-                });
-                
-                html += '</div></div>';
-              });
-              
-              html += '</div></div>';
-            } else if (product.category_slug === 'grooming') {
-              html += `
-                <div style="background:#fef3c7;border:1px solid #fbbf24;padding:12px;border-radius:8px;font-size:13px;color:#92400e;margin-bottom:24px">
-                  ℹ️ This is a grooming product - no size/color variants
-                </div>
-              `;
-            }
-            
-            // Action buttons
-            html += `
-              <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:16px;border-top:2px solid #e0e0e0">
-                <button onclick="closeProductDetailModal()" style="padding:10px 20px;border:1px solid #ddd;background:#f9fafb;color:#0a0a0a;border-radius:6px;cursor:pointer;font-weight:500">Close</button>
-                <button onclick="approveProductFromModal(${product.id})" style="padding:10px 20px;border:none;background:#10b981;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">✓ Approve Product</button>
-                <button onclick="rejectProductFromModal(${product.id})" style="padding:10px 20px;border:none;background:#ef4444;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">✗ Reject Product</button>
-              </div>
-            `;
-            
-            modalBody.innerHTML = html;
-          })
-          .catch(error => {
-            modalBody.innerHTML = '<p style="color:#ef4444;text-align:center;padding:40px">Error loading product details</p>';
-          });
-      }
-      
-      function closeProductDetailModal() {
-        document.getElementById('product-detail-modal').style.display = 'none';
-      }
-      
-      function approveProductFromModal(productId) {
-        closeProductDetailModal();
-        approveProduct(productId);
-      }
-      
-      function rejectProductFromModal(productId) {
-        closeProductDetailModal();
-        rejectProduct(productId);
       }
 
       function loadPendingSellers() {

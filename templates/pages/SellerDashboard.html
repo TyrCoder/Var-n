@@ -60,15 +60,9 @@
         border-radius: 8px;
         cursor: pointer;
         font-size: 14px;
-        transition: all 0.2s ease;
       }
       .action-btn:hover {
         background: #2d2d2d;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      }
-      .action-btn:active {
-        transform: translateY(0);
       }
       .status-badge {
         padding: 4px 8px;
@@ -266,7 +260,7 @@
               <div class="inner">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <div class="metric">Low Stock Alert</div>
-                  <a href="#" class="action-btn" onclick="loadPage('inventory'); return false;">Restock Now</a>
+                  <a href="#" class="action-btn">Restock Now</a>
                 </div>
                 <div style="margin-top:10px">
                   <table>
@@ -324,12 +318,17 @@
                   <label style="display: block; margin-bottom: 6px; font-weight: 500;">Category/Genre *</label>
                   <select id="categorySelect" name="category" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" onchange="toggleSizeColorSections()">
                     <option value="">Select a category</option>
-                    <option value="suits-blazers">Suits & Blazers</option>
-                    <option value="shoes-accessories">Shoes & Accessories</option>
-                    <option value="outerwear-jackets">Outerwear & Jackets</option>
+                    <option value="shirts">Shirts & T-Shirts</option>
+                    <option value="pants">Pants & Jeans</option>
+                    <option value="shorts">Shorts</option>
+                    <option value="jackets">Jackets & Coats</option>
+                    <option value="shoes">Shoes & Footwear</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="underwear">Underwear & Socks</option>
+                    <option value="activewear">Activewear & Sports</option>
+                    <option value="formal">Formal Wear</option>
+                    <option value="casual">Casual Wear</option>
                     <option value="grooming">Grooming Products</option>
-                    <option value="casual-shirts-pants">Casual Shirts & Pants</option>
-                    <option value="activewear-fitness">Activewear & Fitness</option>
                   </select>
                 </div>
                 
@@ -363,68 +362,97 @@
                   </div>
                 </div>
                 
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="sizesSection">
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Available Sizes *</h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all sizes available for this product</small>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="XS" style="margin-right: 6px;">
+                      <span>XS</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="S" style="margin-right: 6px;">
+                      <span>S</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="M" style="margin-right: 6px;">
+                      <span>M</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="L" style="margin-right: 6px;">
+                      <span>L</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="XL" style="margin-right: 6px;">
+                      <span>XL</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="2XL" style="margin-right: 6px;">
+                      <span>2XL</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="3XL" style="margin-right: 6px;">
+                      <span>3XL</span>
+                    </label>
+                  </div>
+                  <div style="margin-top: 12px;">
+                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s)</label>
+                    <input type="text" id="custom-sizes" placeholder="e.g. 4XL, 5XL, 28W, 32W (comma-separated)" 
+                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;">
+                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom sizes separated by commas if not listed above</small>
+                  </div>
+                </div>
+                
                 <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="colorsSection">
                   <h3 style="margin: 0 0 12px; font-size: 16px;">Available Colors *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select colors available for this product. Each color can have its own sizes.</small>
-                  <div id="colorSelectors" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all colors available for this product</small>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Black" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Black" style="margin-right: 6px;">
                       <span>Black</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="White" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="White" style="margin-right: 6px;">
                       <span>White</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Gray" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Gray" style="margin-right: 6px;">
                       <span>Gray</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Navy" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Navy" style="margin-right: 6px;">
                       <span>Navy</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Blue" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Blue" style="margin-right: 6px;">
                       <span>Blue</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Red" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Red" style="margin-right: 6px;">
                       <span>Red</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Green" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Green" style="margin-right: 6px;">
                       <span>Green</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Brown" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Brown" style="margin-right: 6px;">
                       <span>Brown</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Beige" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Beige" style="margin-right: 6px;">
                       <span>Beige</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Khaki" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <input type="checkbox" name="colors" value="Khaki" style="margin-right: 6px;">
                       <span>Khaki</span>
                     </label>
                   </div>
                   <div style="margin-top: 12px;">
                     <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Color(s)</label>
                     <input type="text" id="custom-colors" placeholder="e.g. Burgundy, Olive, Charcoal (comma-separated)" 
-                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" onchange="updateStockInputs()">
+                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;">
                     <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom colors separated by commas if not listed above</small>
-                  </div>
-                </div>
-                
-                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="sizesSection">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Sizes per Color</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">For each color, select which sizes are available. Each color can have different sizes.</small>
-                  <div id="colorSizesList"></div>
-                  <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s) (for all colors)</label>
-                    <input type="text" id="custom-sizes" placeholder="e.g. 4XL, 5XL, 28W, 32W (comma-separated)" 
-                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" onchange="updateStockInputs()">
-                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom sizes separated by commas. These will be available as options for all colors.</small>
                   </div>
                 </div>
                 
@@ -620,19 +648,6 @@
               ingredientsSection.style.display = 'none';
               if (ingredientsInput) ingredientsInput.required = false;
             }
-            
-            // Update custom sizes placeholder based on category
-            const customSizesInput = document.getElementById('custom-sizes');
-            if (customSizesInput) {
-              if (categorySelect.value === 'shoes-accessories') {
-                customSizesInput.placeholder = 'e.g. 5, 5.5, 13.5, 14, 15 (comma-separated)';
-              } else {
-                customSizesInput.placeholder = 'e.g. 4XL, 5XL, 28W, 32W (comma-separated)';
-              }
-            }
-            
-            // Refresh size options when category changes
-            updateStockInputs();
           }
         }
       }
@@ -663,34 +678,15 @@
         
         // Validate required fields
         if (!form.checkValidity()) {
-          alert('❌ Please fill in all required fields');
+          alert('Please fill in all required fields');
           return;
-        }
-        
-        // For non-grooming products, validate stock combinations
-        if (categorySelect.value !== 'grooming') {
-          const validation = validateStockQuantities();
-          if (!validation.valid) {
-            alert(validation.errors.join('\n'));
-            return;
-          }
         }
         
         const productName = nameInput.value.trim();
         const productPrice = parseFloat(priceInput.value);
         const category = categorySelect.options[categorySelect.selectedIndex].text;
         
-        let confirmMsg = `Are you sure you want to add this product?\n\n`;
-        confirmMsg += `📦 Product Name: ${productName}\n`;
-        confirmMsg += `🏷️ Category: ${category}\n`;
-        confirmMsg += `💰 Price: ₱${productPrice.toFixed(2)}\n`;
-        
-        if (categorySelect.value !== 'grooming') {
-          const validation = validateStockQuantities();
-          confirmMsg += `📊 Total Stock: ${validation.totalStock} units\n`;
-        }
-        
-        confirmMsg += `\nThis product will be submitted for admin approval.`;
+        const confirmMsg = `Are you sure you want to add this product?\n\nProduct Name: ${productName}\nCategory: ${category}\nPrice: ₱${productPrice.toFixed(2)}\n\nThis product will be submitted for admin approval.`;
         
         if (confirm(confirmMsg)) {
           submitProductViaAJAX();
@@ -700,23 +696,12 @@
       // Function to submit product via AJAX
       function submitProductViaAJAX() {
         const form = document.getElementById('addProductForm');
-        const categorySelect = document.getElementById('categorySelect');
+        const formData = new FormData(form);
         
         // Validate form before submitting
         if (!form.checkValidity()) {
           alert('❌ Please fill in all required fields correctly');
           return;
-        }
-        
-        // For non-grooming products, validate stock
-        if (categorySelect.value !== 'grooming') {
-          const validation = validateStockQuantities();
-          if (!validation.valid) {
-            alert(validation.errors.join('\n'));
-            return;
-          }
-          // Serialize stock data to hidden field
-          serializeStockData();
         }
         
         // Copy custom sizes and colors to hidden inputs first
@@ -728,24 +713,21 @@
         submitBtn.disabled = true;
         submitBtn.textContent = '⏳ Adding Product...';
         
-        const formData = new FormData(form);
-        
-        console.log('📤 Submitting product form...');
-        console.log('Form fields:', Array.from(formData.entries()));
+        console.log('Submitting product form...');
         
         fetch('/seller/add-product', {
           method: 'POST',
           body: formData
         })
         .then(response => {
-          console.log('📥 Response status:', response.status);
+          console.log('Response status:', response.status);
           return response.json().then(data => ({
             status: response.status,
             data: data
           }));
         })
         .then(({ status, data }) => {
-          console.log('✅ Response data:', data);
+          console.log('Response data:', data);
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
           
@@ -772,369 +754,59 @@
         .catch(error => {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
-          console.error('❌ Request error:', error);
+          console.error('Request error:', error);
           alert('❌ Network error: ' + error.message + '\n\nPlease check your connection and try again.');
         });
       }
       
-      // ============ STOCK COMBINATIONS DATA STRUCTURE ============
-      // Global storage for size-color-stock combinations
-      // Data structure: Map<color, {sizes: [], stocks: {sizeKey: qty}}>
-      // This enables independent color-to-sizes mapping
-      window.productStockData = {};
-      
-      /**
-       * Get all available sizes (predefined + custom)
-       * These are the pool of sizes that can be selected for each color
-       */
-      function getAllAvailableSizes() {
-        // Check if Shoes & Accessories category is selected
-        const categorySelect = document.getElementById('categorySelect');
-        const isShoeCategory = categorySelect && categorySelect.value === 'shoes-accessories';
-        
-        // Use US shoe sizes for shoes, clothing sizes for other categories
-        const predefinedSizes = isShoeCategory 
-          ? ['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13']
-          : ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
-        
-        const customSizesInput = document.getElementById('custom-sizes');
-        let customSizes = [];
-        
-        if (customSizesInput && customSizesInput.value.trim()) {
-          customSizes = customSizesInput.value
-            .split(',')
-            .map(s => s.trim())
-            .filter(s => s && s.length > 0);
-        }
-        
-        return [...new Set([...predefinedSizes, ...customSizes])];
-      }
-      
-      /**
-       * Get all selected colors (predefined + custom)
-       * @returns {string[]} Array of unique color values
-       */
-      function getAllSelectedColors() {
-        // Predefined colors
+      // Function to update stock inputs based on selected sizes and colors
+      function updateStockInputs() {
+        const sizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value);
         const colors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
         
-        // Custom colors
+        // Add custom sizes if provided
+        const customSizesInput = document.getElementById('custom-sizes');
+        if (customSizesInput && customSizesInput.value.trim()) {
+          const customSizes = customSizesInput.value.split(',').map(s => s.trim()).filter(s => s);
+          sizes.push(...customSizes);
+        }
+        
+        // Add custom colors if provided
         const customColorsInput = document.getElementById('custom-colors');
         if (customColorsInput && customColorsInput.value.trim()) {
-          const customColors = customColorsInput.value
-            .split(',')
-            .map(c => c.trim())
-            .filter(c => c && c.length > 0);
+          const customColors = customColorsInput.value.split(',').map(c => c.trim()).filter(c => c);
           colors.push(...customColors);
         }
         
-        // Remove duplicates and return
-        return [...new Set(colors)];
-      }
-      
-      /**
-       * Get sizes selected for a specific color
-       */
-      function getSizesForColor(color) {
-        const sizeCheckboxes = document.querySelectorAll(`input[data-color-size="${color}"]:checked`);
-        return Array.from(sizeCheckboxes).map(cb => cb.value);
-      }
-      
-      /**
-       * Generate a unique key for size-color combination
-       * @param {string} size - Size value
-       * @param {string} color - Color value
-       * @returns {string} Unique key
-       */
-      function generateCombinationKey(size, color) {
-        return `${size}|${color}`;
-      }
-      
-      /**
-       * Serialize stock data to hidden input for form submission
-       * Converts to array of objects: [{size, color, stock_qty}, ...]
-       */
-      function serializeStockData() {
-        const stockArray = [];
-        const stockInputs = document.querySelectorAll('input[data-combination]');
-        
-        stockInputs.forEach(input => {
-          const qty = parseInt(input.value) || 0;
-          if (qty > 0) {
-            const key = input.dataset.combination;
-            const [size, color] = key.split('|');
-            stockArray.push({
-              size: size,
-              color: color,
-              stock_qty: qty
-            });
-          }
-        });
-        
-        // Store in hidden field
-        const hiddenInput = document.getElementById('stock-data-hidden') || createHiddenStockInput();
-        hiddenInput.value = JSON.stringify(stockArray);
-        
-        console.log('📦 Stock Data Serialized:', stockArray);
-        return stockArray;
-      }
-      
-      /**
-       * Create hidden input for stock data if it doesn't exist
-       */
-      function createHiddenStockInput() {
-        const existingInput = document.getElementById('stock-data-hidden');
-        if (existingInput) return existingInput;
-        
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.id = 'stock-data-hidden';
-        hiddenInput.name = 'stock_data';
-        hiddenInput.value = '[]';
-        
-        const form = document.getElementById('addProductForm');
-        if (form) {
-          form.appendChild(hiddenInput);
-        }
-        
-        return hiddenInput;
-      }
-      
-      /**
-       * Render size selectors for each selected color
-       * This shows a per-color UI where users can pick different sizes for each color
-       */
-      function renderColorSizeSelectors() {
-        const colors = getAllSelectedColors();
-        const allAvailableSizes = getAllAvailableSizes();
-        const colorSizesList = document.getElementById('colorSizesList');
-        
-        if (!colorSizesList) return;
-        
-        if (colors.length === 0) {
-          colorSizesList.innerHTML = '<p style="color: var(--muted); font-style: italic;">Select at least one color above</p>';
-          return;
-        }
-        
-        // PRESERVE CHECKED STATE: Save which checkboxes are currently checked before re-rendering
-        const checkedState = {};
-        const existingCheckboxes = colorSizesList.querySelectorAll('input[data-color-size]');
-        existingCheckboxes.forEach(checkbox => {
-          const color = checkbox.getAttribute('data-color-size');
-          const size = checkbox.value;
-          const key = `${color}|${size}`;
-          checkedState[key] = checkbox.checked;
-        });
-        
-        let html = '';
-        
-        colors.forEach(color => {
-          html += `
-            <div style="margin-bottom: 16px; padding: 12px; background: white; border: 1px solid var(--line); border-radius: 6px;">
-              <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">📍 ${color}</label>
-              <small style="color: var(--muted); font-size: 11px; display: block; margin-bottom: 8px;">Select which sizes are available in ${color}</small>
-              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px;">
-          `;
-          
-          allAvailableSizes.forEach(size => {
-            const key = `${color}|${size}`;
-            const isChecked = checkedState[key] || false;
-            const checkedAttr = isChecked ? 'checked' : '';
-            
-            html += `
-              <label style="display: flex; align-items: center; cursor: pointer; padding: 6px; border-radius: 4px; background: #f5f5f5;">
-                <input 
-                  type="checkbox" 
-                  data-color-size="${color}" 
-                  value="${size}" 
-                  style="margin-right: 4px;"
-                  ${checkedAttr}
-                  onchange="updateStockInputs()"
-                >
-                <span style="font-size: 13px;">${size}</span>
-              </label>
-            `;
-          });
-          
-          html += `
-              </div>
-            </div>
-          `;
-        });
-        
-        colorSizesList.innerHTML = html;
-        
-        // Attach event listeners to dynamically created checkboxes
-        const sizeCheckboxes = colorSizesList.querySelectorAll('input[data-color-size]');
-        sizeCheckboxes.forEach(checkbox => {
-          checkbox.addEventListener('change', updateStockInputs);
-        });
-      }
-      
-      /**
-       * Validate that all combinations have stock quantities > 0
-       * @returns {object} {valid: boolean, errors: string[]}
-       */
-      function validateStockQuantities() {
-        const errors = [];
-        const colors = getAllSelectedColors();
-        
-        if (colors.length === 0) {
-          errors.push('❌ Please select at least one color');
-        }
-        
-        // Check that each color has at least one size
-        colors.forEach(color => {
-          const colorSizes = getSizesForColor(color);
-          if (colorSizes.length === 0) {
-            errors.push(`❌ Please select at least one size for ${color}`);
-          }
-        });
-        
-        if (errors.length > 0) {
-          return { valid: false, errors };
-        }
-        
-        // Check that all combinations have stock > 0
-        let totalStock = 0;
-        const missingStocks = [];
-        
-        colors.forEach(color => {
-          const colorSizes = getSizesForColor(color);
-          colorSizes.forEach(size => {
-            const key = generateCombinationKey(size, color);
-            const input = document.querySelector(`input[data-combination="${key}"]`);
-            
-            if (!input) {
-              missingStocks.push(`${size} - ${color}`);
-            } else {
-              const qty = parseInt(input.value) || 0;
-              if (qty <= 0) {
-                missingStocks.push(`${size} - ${color} (qty: ${qty})`);
-              } else {
-                totalStock += qty;
-              }
-            }
-          });
-        });
-        
-        if (missingStocks.length > 0) {
-          errors.push(`❌ Stock quantity required for: ${missingStocks.join(', ')}`);
-        }
-        
-        if (totalStock === 0) {
-          errors.push('❌ Total stock must be greater than 0');
-        }
-        
-        console.log('✅ Stock Validation Complete | Total Stock:', totalStock, '| Errors:', errors.length);
-        
-        return {
-          valid: errors.length === 0,
-          errors: errors,
-          totalStock: totalStock
-        };
-      }
-      
-      /**
-       * Update stock table based on selected sizes and colors
-       * MAIN FUNCTION - Handles all dynamic updates
-       * Now generates combinations based on per-color size selections
-       */
-      function updateStockInputs() {
-        console.log('🔄 Updating stock inputs table...');
-        
-        // First render the per-color size selectors
-        renderColorSizeSelectors();
-        
-        const colors = getAllSelectedColors();
         const stockInputsDiv = document.getElementById('stock-inputs');
         
-        if (!stockInputsDiv) {
-          console.warn('⚠️ stock-inputs div not found');
+        if (!stockInputsDiv) return;
+        
+        if (sizes.length === 0 || colors.length === 0) {
+          stockInputsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">Select sizes and colors above to set stock quantities</p>';
           return;
         }
         
-        // No color selections
-        if (colors.length === 0) {
-          stockInputsDiv.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: var(--muted);">
-              <p style="margin: 0; font-style: italic;">📦 Select at least one color above to get started</p>
-            </div>
-          `;
-          return;
-        }
+        let html = '<div style="max-height: 300px; overflow-y: auto;">';
+        html += '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead><tr style="background: #e5e7eb; position: sticky; top: 0;"><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Size</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Color</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Stock Qty</th></tr></thead>';
+        html += '<tbody>';
         
-        // Build table with per-color sizes
-        let html = `
-          <div style="max-height: 500px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-              <thead>
-                <tr style="background: #e5e7eb; position: sticky; top: 0; z-index: 10;">
-                  <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--line); font-weight: 600;">Size</th>
-                  <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--line); font-weight: 600;">Color</th>
-                  <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--line); font-weight: 600;">Stock Qty</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-        
-        let combinationCount = 0;
-        
-        // Generate combinations based on per-color size selections
-        colors.forEach(color => {
-          const colorSizes = getSizesForColor(color);
-          
-          // Each color only shows its own sizes
-          colorSizes.forEach(size => {
-            const key = generateCombinationKey(size, color);
-            combinationCount++;
-            
-            // Preserve existing value if it exists
-            let existingValue = 0;
-            const existingInput = document.querySelector(`input[data-combination="${key}"]`);
-            if (existingInput) {
-              existingValue = existingInput.value;
-            }
-            
-            html += `
-              <tr style="border-bottom: 1px solid var(--line); transition: background 0.2s;">
-                <td style="padding: 10px; border-right: 1px solid var(--line);">
-                  <span style="font-weight: 500;">${size}</span>
-                </td>
-                <td style="padding: 10px; border-right: 1px solid var(--line);">
-                  <span style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">${color}</span>
-                </td>
-                <td style="padding: 10px;">
-                  <input 
-                    type="number" 
-                    data-combination="${key}"
-                    name="stock_quantity"
-                    min="0" 
-                    max="9999"
-                    value="${existingValue}" 
-                    placeholder="0"
-                    style="width: 70px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px;"
-                    onchange="validateStockQuantities()"
-                  >
-                </td>
-              </tr>
-            `;
+        sizes.forEach(size => {
+          colors.forEach(color => {
+            html += `<tr>
+              <td style="padding: 8px; border: 1px solid var(--line);">${size}</td>
+              <td style="padding: 8px; border: 1px solid var(--line);">${color}</td>
+              <td style="padding: 8px; border: 1px solid var(--line);">
+                <input type="number" name="stock_${size}_${color}" min="0" value="0" required 
+                  style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+              </td>
+            </tr>`;
           });
         });
         
-        html += `
-              </tbody>
-            </table>
-          </div>
-          <div style="margin-top: 10px; padding: 10px; background: #f0f9ff; border-radius: 6px; border-left: 4px solid #3b82f6;">
-            <small style="color: #1e40af; font-weight: 500;">
-              📊 ${combinationCount} combination(s) • Enter stock qty for each combination above
-            </small>
-          </div>
-        `;
-        
+        html += '</tbody></table></div>';
         stockInputsDiv.innerHTML = html;
-        console.log(`✅ Generated ${combinationCount} size-color combinations`);
       }
 
       function loadPage(page) {
@@ -1431,8 +1103,6 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
                   <thead>
                     <tr>
                       <th>Product</th>
-                      <th>Category</th>
-                      <th>Brand</th>
                       <th>SKU</th>
                       <th>Price</th>
                       <th>Stock</th>
@@ -1456,12 +1126,9 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
                 html += `
                   <tr>
                     <td>
-                      <div style="font-weight: 600;">${product.name}</div>
-                      ${product.description ? '<div style="font-size: 11px; color: #666; margin-top: 2px;">' + (product.description.length > 50 ? product.description.substring(0, 50) + '...' : product.description) + '</div>' : ''}
+                      ${product.name}
                       ${product.pending_edits > 0 ? '<span style="color: #f59e0b; font-size: 11px; margin-left: 6px;">⏳ Edit review</span>' : ''}
                     </td>
-                    <td>${product.category_name || 'N/A'}</td>
-                    <td>${product.brand || 'N/A'}</td>
                     <td>${product.sku || 'N/A'}</td>
                     <td>₱${parseFloat(product.price).toFixed(2)}</td>
                     <td>${product.stock} pcs</td>
@@ -1544,21 +1211,11 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
           .then(data => {
             if (data.product) {
               const product = data.product;
-              const variants = data.variants || [];
               originalProductData = JSON.parse(JSON.stringify(product)); // Deep copy
-              
-              // Extract existing colors and sizes from variants
-              const existingColors = [...new Set(variants.map(v => v.color))];
-              const colorSizeMap = {};
-              variants.forEach(v => {
-                if (!colorSizeMap[v.color]) colorSizeMap[v.color] = [];
-                colorSizeMap[v.color].push({size: v.size, stock: v.stock_quantity});
-              });
               
               const formHtml = `
                 <form id="editProductForm" style="display: flex; flex-direction: column; gap: 16px;">
                   <input type="hidden" name="product_id" value="${product.id}">
-                  <input type="hidden" id="edit_stock_data" name="stock_data" value='${JSON.stringify(variants.map(v => ({size: v.size, color: v.color, stock_qty: v.stock_quantity})))}'>
                   
                   <div style="background: #fffbeb; border: 1px solid #fbbf24; padding: 12px; border-radius: 8px; font-size: 14px;">
                     ℹ️ <strong>Note:</strong> Changes require admin approval before they appear on your store.
@@ -1588,49 +1245,10 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
                   
                   <div>
                     <label style="display: block; margin-bottom: 6px; font-weight: 600;">Category</label>
-                    <select id="edit_category_id" name="category_id" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" required onchange="toggleEditSizeColorSections()">
+                    <select id="edit_category_id" name="category_id" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" required>
                       <option value="">Select Category</option>
-                      ${data.categories ? data.categories.map(cat => `<option value="${cat.id}" data-slug="${cat.slug}" ${cat.id == product.category_id ? 'selected' : ''}>${cat.name}</option>`).join('') : ''}
+                      ${data.categories ? data.categories.map(cat => `<option value="${cat.id}" ${cat.id == product.category_id ? 'selected' : ''}>${cat.name}</option>`).join('') : ''}
                     </select>
-                  </div>
-                  
-                  <!-- Available Colors -->
-                  <div id="edit-colors-section" style="display: ${product.category_slug !== 'grooming' ? 'block' : 'none'}">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Available Colors</label>
-                    <small style="display: block; color: var(--muted); margin-bottom: 10px;">Select colors available for this product.</small>
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
-                      ${['Black', 'White', 'Gray', 'Navy', 'Blue', 'Green', 'Brown', 'Beige', 'Khaki'].map(color => `
-                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                          <input type="checkbox" name="colors" value="${color}" onchange="updateEditStockInputs()" ${existingColors.includes(color) ? 'checked' : ''}>
-                          <span style="font-size: 14px;">${color}</span>
-                        </label>
-                      `).join('')}
-                    </div>
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--muted);">Add Custom Color(s)</label>
-                      <input type="text" id="edit-custom-colors" placeholder="e.g., Burgundy, Olive" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px;" oninput="updateEditStockInputs()">
-                      <small style="color: var(--muted); font-size: 11px;">Separate multiple colors with commas</small>
-                    </div>
-                  </div>
-                  
-                  <!-- Sizes per Color -->
-                  <div id="edit-sizes-section" style="display: ${product.category_slug !== 'grooming' ? 'block' : 'none'}">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Sizes per Color</label>
-                    <small style="display: block; color: var(--muted); margin-bottom: 10px;">For each color selected above, choose which sizes are available.</small>
-                    <div id="edit-colorSizesList"></div>
-                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);">
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s) (for all colors)</label>
-                      <input type="text" id="edit-custom-sizes" placeholder="e.g. 4XL, 5XL, 28W, 32W (comma-separated)" 
-                        style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" oninput="updateEditStockInputs()">
-                      <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom sizes separated by commas. These will be available as options for all colors.</small>
-                    </div>
-                  </div>
-                  
-                  <!-- Stock Quantities -->
-                  <div id="edit-stock-section" style="display: ${product.category_slug !== 'grooming' ? 'block' : 'none'}">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Stock Quantities</label>
-                    <small style="display: block; color: var(--muted); margin-bottom: 10px;">Enter stock quantity for each size-color combination.</small>
-                    <div id="edit-stock-inputs"></div>
                   </div>
                   
                   <div style="display: flex; gap: 12px; margin-top: 10px;">
@@ -1641,11 +1259,6 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
               `;
               
               document.getElementById('edit-product-form').innerHTML = formHtml;
-              
-              // Initialize stock inputs for edit form
-              if (product.category_slug !== 'grooming') {
-                updateEditStockInputs();
-              }
             } else {
               document.getElementById('edit-product-form').innerHTML = '<p style="color: #ef4444;">Error loading product</p>';
             }
@@ -1654,248 +1267,10 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
             document.getElementById('edit-product-form').innerHTML = '<p style="color: #ef4444;">Error loading product</p>';
           });
       }
-      
-      // Function to toggle size and color sections in edit form based on category
-      function toggleEditSizeColorSections() {
-        const categorySelect = document.getElementById('edit_category_id');
-        const colorsSection = document.getElementById('edit-colors-section');
-        const sizesSection = document.getElementById('edit-sizes-section');
-        const stockSection = document.getElementById('edit-stock-section');
-        
-        if (!categorySelect) return;
-        
-        // Get the selected option's slug
-        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-        const categorySlug = selectedOption.getAttribute('data-slug');
-        
-        if (categorySlug === 'grooming') {
-          // Hide sizes, colors, and stock sections for grooming products
-          if (colorsSection) colorsSection.style.display = 'none';
-          if (sizesSection) sizesSection.style.display = 'none';
-          if (stockSection) stockSection.style.display = 'none';
-        } else {
-          // Show sections for other categories
-          if (colorsSection) colorsSection.style.display = 'block';
-          if (sizesSection) sizesSection.style.display = 'block';
-          if (stockSection) stockSection.style.display = 'block';
-          
-          // Update custom sizes placeholder based on category
-          const customSizesInput = document.getElementById('edit-custom-sizes');
-          if (customSizesInput) {
-            if (categorySlug === 'shoes-accessories') {
-              customSizesInput.placeholder = 'e.g. 5, 5.5, 13.5, 14, 15 (comma-separated)';
-            } else {
-              customSizesInput.placeholder = 'e.g. 4XL, 5XL, 28W, 32W (comma-separated)';
-            }
-          }
-          
-          // Update the stock inputs when showing sections
-          updateEditStockInputs();
-        }
-      }
-      
-      // Edit product stock management functions (similar to add product)
-      function getAllEditAvailableSizes() {
-        // Check if Shoes & Accessories category is selected
-        const categorySelect = document.getElementById('edit_category_id');
-        let predefinedSizes = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
-        
-        if (categorySelect) {
-          const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-          const categorySlug = selectedOption.getAttribute('data-slug');
-          const isShoeCategory = categorySlug === 'shoes-accessories';
-          
-          // Use US shoe sizes for shoes, clothing sizes for other categories
-          predefinedSizes = isShoeCategory 
-            ? ['6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13']
-            : ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
-        }
-        
-        // Add custom sizes
-        const customSizesInput = document.getElementById('edit-custom-sizes');
-        let customSizes = [];
-        
-        if (customSizesInput && customSizesInput.value.trim()) {
-          customSizes = customSizesInput.value
-            .split(',')
-            .map(s => s.trim())
-            .filter(s => s && s.length > 0);
-        }
-        
-        return [...new Set([...predefinedSizes, ...customSizes])];
-      }
-      
-      function getAllEditSelectedColors() {
-        const colors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
-        const customColorsInput = document.getElementById('edit-custom-colors');
-        if (customColorsInput && customColorsInput.value.trim()) {
-          const customColors = customColorsInput.value.split(',').map(c => c.trim()).filter(c => c);
-          colors.push(...customColors);
-        }
-        return colors;
-      }
-      
-      function getSizesForEditColor(color) {
-        return Array.from(document.querySelectorAll(`input[data-color-size="${color}"]:checked`)).map(cb => cb.value);
-      }
-      
-      function renderEditColorSizeSelectors() {
-        const colors = getAllEditSelectedColors();
-        const allAvailableSizes = getAllEditAvailableSizes();
-        const colorSizesList = document.getElementById('edit-colorSizesList');
-        
-        if (!colorSizesList) return;
-        
-        if (colors.length === 0) {
-          colorSizesList.innerHTML = '<p style="color: var(--muted); font-style: italic;">Select at least one color above</p>';
-          return;
-        }
-        
-        // Preserve checked state
-        const checkedState = {};
-        const existingCheckboxes = colorSizesList.querySelectorAll('input[data-color-size]');
-        existingCheckboxes.forEach(checkbox => {
-          const color = checkbox.getAttribute('data-color-size');
-          const size = checkbox.value;
-          const key = `${color}|${size}`;
-          checkedState[key] = checkbox.checked;
-        });
-        
-        let html = '';
-        
-        colors.forEach(color => {
-          html += `
-            <div style="margin-bottom: 16px; padding: 12px; background: white; border: 1px solid var(--line); border-radius: 6px;">
-              <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">📍 ${color}</label>
-              <small style="color: var(--muted); font-size: 11px; display: block; margin-bottom: 8px;">Select which sizes are available in ${color}</small>
-              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px;">
-          `;
-          
-          allAvailableSizes.forEach(size => {
-            const key = `${color}|${size}`;
-            const isChecked = checkedState[key] || false;
-            const checkedAttr = isChecked ? 'checked' : '';
-            
-            html += `
-              <label style="display: flex; align-items: center; cursor: pointer; padding: 6px; border-radius: 4px; background: #f5f5f5;">
-                <input 
-                  type="checkbox" 
-                  data-color-size="${color}" 
-                  value="${size}" 
-                  style="margin-right: 4px;"
-                  ${checkedAttr}
-                  onchange="updateEditStockInputs()"
-                >
-                <span style="font-size: 13px;">${size}</span>
-              </label>
-            `;
-          });
-          
-          html += `
-              </div>
-            </div>
-          `;
-        });
-        
-        colorSizesList.innerHTML = html;
-        
-        // Attach event listeners
-        const sizeCheckboxes = colorSizesList.querySelectorAll('input[data-color-size]');
-        sizeCheckboxes.forEach(checkbox => {
-          checkbox.addEventListener('change', updateEditStockInputs);
-        });
-      }
-      
-      function updateEditStockInputs() {
-        renderEditColorSizeSelectors();
-        
-        const colors = getAllEditSelectedColors();
-        const stockInputsDiv = document.getElementById('edit-stock-inputs');
-        
-        if (!stockInputsDiv) return;
-        
-        if (colors.length === 0) {
-          stockInputsDiv.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--muted);"><p style="margin: 0; font-style: italic;">📦 Select at least one color above to get started</p></div>`;
-          return;
-        }
-        
-        const combinations = [];
-        colors.forEach(color => {
-          const sizes = getSizesForEditColor(color);
-          sizes.forEach(size => {
-            combinations.push({ color, size });
-          });
-        });
-        
-        if (combinations.length === 0) {
-          stockInputsDiv.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--muted);"><p style="margin: 0; font-style: italic;">🎨 Select sizes for each color to continue</p></div>`;
-          return;
-        }
-        
-        // Get existing stock values
-        const existingStockData = JSON.parse(document.getElementById('edit_stock_data')?.value || '[]');
-        const stockMap = {};
-        existingStockData.forEach(item => {
-          stockMap[`${item.size}|${item.color}`] = item.stock_qty;
-        });
-        
-        let html = `<div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px;"><table style="width: 100%; border-collapse: collapse;">
-          <thead style="position: sticky; top: 0; background: #f8f8f8; z-index: 1;">
-            <tr>
-              <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--line);">Color</th>
-              <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--line);">Size</th>
-              <th style="padding: 10px; text-align: left; border-bottom: 2px solid var(--line);">Stock Quantity</th>
-            </tr>
-          </thead>
-          <tbody>`;
-        
-        combinations.forEach(combo => {
-          const key = `${combo.size}|${combo.color}`;
-          const existingStock = stockMap[key] || 0;
-          html += `
-            <tr>
-              <td style="padding: 10px; border-bottom: 1px solid var(--line);">${combo.color}</td>
-              <td style="padding: 10px; border-bottom: 1px solid var(--line);">${combo.size}</td>
-              <td style="padding: 10px; border-bottom: 1px solid var(--line);">
-                <input 
-                  type="number" 
-                  data-combination="${combo.size}|${combo.color}" 
-                  value="${existingStock}"
-                  min="0" 
-                  style="width: 100px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;"
-                  required
-                >
-              </td>
-            </tr>
-          `;
-        });
-        
-        html += '</tbody></table></div>';
-        stockInputsDiv.innerHTML = html;
-      }
 
       function submitProductEdit() {
         const form = document.getElementById('editProductForm');
         const formData = new FormData(form);
-        
-        // Serialize stock data from edit form
-        const stockInputs = document.querySelectorAll('#edit-stock-inputs input[data-combination]');
-        const stockArray = [];
-        stockInputs.forEach(input => {
-          const qty = parseInt(input.value) || 0;
-          if (qty > 0) {
-            const key = input.dataset.combination;
-            const [size, color] = key.split('|');
-            stockArray.push({
-              size: size,
-              color: color,
-              stock_qty: qty
-            });
-          }
-        });
-        
-        // Update the hidden stock_data field
-        formData.set('stock_data', JSON.stringify(stockArray));
         
         // Compare with original data to find changes
         const changes = {};
@@ -1920,7 +1295,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
           }
         }
         
-        if (Object.keys(changes).length === 0 && stockArray.length === 0) {
+        if (Object.keys(changes).length === 0) {
           alert('No changes detected');
           return;
         }
@@ -1929,9 +1304,6 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         let confirmMsg = 'You are requesting to change:\\n\\n';
         for (let [key, change] of Object.entries(changes)) {
           confirmMsg += `${change.label}: "${change.old}" → "${change.new}"\\n`;
-        }
-        if (stockArray.length > 0) {
-          confirmMsg += `Stock Variants: ${stockArray.length} combinations\\n`;
         }
         confirmMsg += '\\nThese changes will require admin approval. Continue?';
         
@@ -2020,21 +1392,10 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
                     <td style="font-size:13px;color:var(--muted)">${archivedDate}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                     <td>
-                      <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-start; min-height: 36px;">
-                        ${product.archive_status === 'archived' ? 
-                          `<button class="action-btn" onclick="requestRecovery(${product.id}, '${product.name.replace(/'/g, "\\'")}')" 
-                            style="padding: 8px 14px; font-size: 13px; background: #10b981; border-radius: 6px; font-weight: 500; transition: all 0.2s; min-width: 140px; white-space: nowrap;">
-                            🔄 Request Recovery
-                          </button>` :
-                          `<div style="display: flex; align-items: center; padding: 8px 14px; background: #fef3c7; border-radius: 6px; font-size: 12px; color: #92400e; font-weight: 500; min-width: 140px; justify-content: center;">
-                            ⏳ Pending Approval
-                          </div>`
-                        }
-                        <button class="action-btn" onclick="deleteArchivedProduct(${product.id}, '${product.name.replace(/'/g, "\\'")}')" 
-                          style="padding: 8px 14px; font-size: 13px; background: #ef4444; border-radius: 6px; font-weight: 500; transition: all 0.2s; min-width: 100px; white-space: nowrap;">
-                          🗑️ Delete
-                        </button>
-                      </div>
+                      ${product.archive_status === 'archived' ? 
+                        `<button class="action-btn" onclick="requestRecovery(${product.id}, '${product.name}')" style="padding: 6px 12px; font-size: 12px; background: #10b981;">Request Recovery</button>` :
+                        '<span style="color: #f59e0b; font-size: 12px;">⏳ Awaiting admin approval</span>'
+                      }
                     </td>
                   </tr>
                 `;
@@ -2077,39 +1438,6 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         })
         .catch(error => {
           alert('Error submitting recovery request');
-        });
-      }
-      
-      function deleteArchivedProduct(productId, productName) {
-        if (!confirm(`⚠️ PERMANENT DELETE\n\nAre you sure you want to permanently delete "${productName}"?\n\nThis action CANNOT be undone. The product and all its data will be removed from the database.`)) {
-          return;
-        }
-        
-        // Double confirmation for safety
-        const confirmation = prompt(`Type "DELETE" to confirm permanent deletion of "${productName}":`, '');
-        if (confirmation !== 'DELETE') {
-          if (confirmation !== null) alert('Deletion cancelled. You must type "DELETE" exactly to confirm.');
-          return;
-        }
-        
-        const formData = new FormData();
-        formData.append('product_id', productId);
-        
-        fetch('/seller/delete-archived-product', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('✓ Product permanently deleted!');
-            loadArchivedProducts();
-          } else {
-            alert('Error: ' + data.error);
-          }
-        })
-        .catch(error => {
-          alert('Error deleting product');
         });
       }
 
@@ -2206,76 +1534,6 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         </div>
       </div>
     </div>
-
-    <!-- Debug & Helper Script -->
-    <script>
-      /**
-       * DEBUG TOOLS - Remove or comment out in production
-       * Access via browser console: debugStockForm()
-       */
-      window.debugStockForm = function() {
-        console.log('='.repeat(60));
-        console.log('🔍 STOCK FORM DEBUG REPORT');
-        console.log('='.repeat(60));
-        
-        const sizes = getAllSelectedSizes();
-        const colors = getAllSelectedColors();
-        const validation = validateStockQuantities();
-        
-        console.log('\n📏 SIZES SELECTED:', sizes);
-        console.log('   Count:', sizes.length);
-        
-        console.log('\n🎨 COLORS SELECTED:', colors);
-        console.log('   Count:', colors.length);
-        
-        console.log('\n📦 COMBINATIONS:');
-        console.log('   Total:', sizes.length * colors.length);
-        
-        console.log('\n✓ VALIDATION RESULT:');
-        console.log('   Valid:', validation.valid);
-        console.log('   Total Stock:', validation.totalStock);
-        console.log('   Errors:', validation.errors);
-        
-        console.log('\n📊 FORM DATA:');
-        const form = document.getElementById('addProductForm');
-        if (form) {
-          const formData = new FormData(form);
-          for (let [key, value] of formData.entries()) {
-            if (key.includes('stock') || key.includes('size') || key.includes('color')) {
-              console.log(`   ${key}:`, value);
-            }
-          }
-        }
-        
-        console.log('\n' + '='.repeat(60));
-        return { sizes, colors, validation };
-      };
-      
-      /**
-       * Export stock data to console (useful for testing)
-       */
-      window.getStockData = function() {
-        return serializeStockData();
-      };
-      
-      /**
-       * Clear all stock inputs (for testing)
-       */
-      window.clearStockInputs = function() {
-        const inputs = document.querySelectorAll('input[data-combination]');
-        inputs.forEach(input => input.value = 0);
-        console.log('✓ Cleared', inputs.length, 'stock inputs');
-      };
-      
-      /**
-       * Fill all stock inputs with a test value (for testing)
-       */
-      window.fillStockInputs = function(qty = 10) {
-        const inputs = document.querySelectorAll('input[data-combination]');
-        inputs.forEach(input => input.value = qty);
-        console.log('✓ Filled', inputs.length, 'stock inputs with qty:', qty);
-      };
-    </script>
 
     <script>
       function confirmLogout(event) {
