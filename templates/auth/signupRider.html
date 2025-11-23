@@ -604,51 +604,90 @@
 
 			// Form validation
 			document.getElementById('riderSignup').addEventListener('submit', function(e) {
+				e.preventDefault();
 				const form = e.target;
-				const tnc = form.querySelector('[name="tnc"]');
-				const vehicleType = form.querySelector('input[name="vehicle_type"]:checked');
-				const email = form.querySelector('[name="email"]').value;
-				const phone = form.querySelector('[name="phone"]').value;
-				
-				let hasError = false;
+				const formData = new FormData(form);
 
-				if (!tnc.checked) {
-					e.preventDefault();
-					showError('Please agree to the Terms & Conditions to continue.');
-					tnc.focus();
-					hasError = true;
+				// Validate required fields
+				const firstName = formData.get('first_name');
+				const lastName = formData.get('last_name');
+				const email = formData.get('email');
+				const phone = formData.get('phone');
+				const password = formData.get('password');
+				const vehicleType = formData.get('vehicle_type');
+				const serviceArea = formData.get('service_area');
+				const tnc = formData.get('tnc');
+
+				// Create error message div if it doesn't exist
+				let errorDiv = document.getElementById('errorDisplay');
+				errorDiv.style.display = 'none';
+
+				// Validate all required fields
+				if (!firstName || !lastName || !email || !phone || !password || !vehicleType || !serviceArea) {
+					errorDiv.textContent = 'All fields are required';
+					errorDiv.style.display = 'block';
 					return;
 				}
 
+				// Validate email format
+				if (!email.includes('@') || !email.includes('.')) {
+					errorDiv.textContent = 'Please enter a valid email address';
+					errorDiv.style.display = 'block';
+					return;
+				}
+
+				// Validate phone number
+				const cleanPhone = phone.replace(/[\+\-\s]/g, '');
+				if (!cleanPhone.match(/^\d+$/)) {
+					errorDiv.textContent = 'Please enter a valid phone number';
+					errorDiv.style.display = 'block';
+					return;
+				}
+
+				// Check vehicle type selection
 				if (!vehicleType) {
-					e.preventDefault();
-					showError('Please select a vehicle type.');
-					hasError = true;
+					errorDiv.textContent = 'Please select a vehicle type';
+					errorDiv.style.display = 'block';
 					return;
 				}
 
-				if (!validateEmail(email)) {
-					e.preventDefault();
-					showError('Please enter a valid email address.');
-					form.querySelector('[name="email"]').focus();
-					hasError = true;
+				// Check Terms & Conditions
+				if (!tnc) {
+					errorDiv.textContent = 'Please agree to the Terms & Conditions to continue';
+					errorDiv.style.display = 'block';
 					return;
 				}
 
-				if (!validatePhoneNumber(phone)) {
-					e.preventDefault();
-					showError('Please enter a valid Philippine phone number starting with +63.');
-					form.querySelector('[name="phone"]').focus();
-					hasError = true;
-					return;
-				}
+				// Disable submit button
+				const submitBtn = form.querySelector('button[type="submit"]');
+				const originalText = submitBtn.textContent;
+				submitBtn.disabled = true;
+				submitBtn.textContent = 'Sending OTP...';
 
-				if (!hasError) {
-					// Disable submit button to prevent double submission
-					const submitBtn = form.querySelector('button[type="submit"]');
-					submitBtn.disabled = true;
-					submitBtn.textContent = 'Creating account...';
-				}
+				// Submit the form via AJAX
+				fetch('/signup/rider', {
+					method: 'POST',
+					body: formData
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						// Redirect to OTP verification page
+						window.location.href = data.redirect;
+					} else {
+						errorDiv.textContent = data.message;
+						errorDiv.style.display = 'block';
+						submitBtn.disabled = false;
+						submitBtn.textContent = originalText;
+					}
+				})
+				.catch(error => {
+					errorDiv.textContent = 'An error occurred. Please try again later.';
+					errorDiv.style.display = 'block';
+					console.error('Error:', error);
+					submitBtn.disabled = false;
+					submitBtn.textContent = originalText;
+				});
 			});
 
 			// Live validation feedback

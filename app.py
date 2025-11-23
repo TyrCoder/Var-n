@@ -1,30 +1,23 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 import os
 import mysql.connector
+import time
+from dotenv import load_dotenv
+from utils.otp_service import OTPService
+
+# Load environment variables
+load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, template_folder='templates', static_folder='static', static_url_path='/static')
-app.secret_key = 'your-secret-key'
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-please')
 
-# Set locale for Philippine Peso formatting
-import locale
-try:
-    locale.setlocale(locale.LC_ALL, 'en_PH.UTF-8')
-except:
-    # Fallback if Philippine locale is not available
-    locale.setlocale(locale.LC_ALL, '')
-
-def format_peso(amount):
-    """Format amount to Philippine Peso"""
-    try:
-        return locale.currency(float(amount), symbol='₱', grouping=True)
-    except:
-        return f"₱{float(amount):,.2f}"
+# Database configuration from environment
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '',
-    'database': 'varon'
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASSWORD', ''),
+    'database': os.getenv('DB_NAME', 'varon')
 }
 
 def get_db():
@@ -982,23 +975,19 @@ def signup():
         terms = request.form.get('terms')
         
         if not all([email, password, first_name, last_name, phone, terms]):
-            flash('All fields are required, including terms acceptance', 'error')
-            return render_template('auth/signup.html')
+            return jsonify({'success': False, 'message': 'All fields are required, including terms acceptance'}), 400
             
         # Validate email format
         if '@' not in email or '.' not in email:
-            flash('Please enter a valid email address', 'error')
-            return render_template('auth/signup.html')
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
             
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
-            flash('Please enter a valid phone number', 'error')
-            return render_template('auth/signup.html')
+            return jsonify({'success': False, 'message': 'Please enter a valid phone number'}), 400
             
         conn = get_db()
         if not conn:
-            flash('Database connection failed', 'error')
-            return render_template('auth/signup.html')
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
             
         try:
             cursor = conn.cursor()
@@ -1006,21 +995,50 @@ def signup():
             # Check if email already exists
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
-                flash('Email already registered', 'error')
-                return render_template('auth/signup.html')
+                conn.close()
+                return jsonify({'success': False, 'message': 'Email already registered'}), 400
             
-            cursor.execute('INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
-                           (email, password, first_name, last_name, phone, role))
-            conn.commit()
-            cursor.close()
+            # Store signup data in session for later use
+            session['pending_signup'] = {
+                'email': email,
+                'password': password,
+                'first_name': first_name,
+                'last_name': last_name,
+                'phone': phone,
+                'role': role
+            }
+            
+            # Send OTP
+            ip_address = request.remote_addr
+            otp_code, otp_id = OTPService.create_otp_record(
+                conn, 
+                email=email,
+                otp_type='email',
+                purpose='registration',
+                ip_address=ip_address
+            )
+            
+            if not otp_code:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Failed to generate OTP'}), 500
+            
+            success = OTPService.send_email_otp(email, otp_code, 'registration')
+            
             conn.close()
             
-            flash('Registration successful! Please log in.', 'success')
-            return redirect(url_for('login'))
-            
+            if success:
+                session['pending_otp_verification'] = {
+                    'email': email,
+                    'phone': phone,
+                    'verification_type': 'email',
+                    'purpose': 'registration'
+                }
+                return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
+            else:
+                return jsonify({'success': False, 'message': 'Failed to send OTP'}), 500
+                
         except Exception as err:
-            flash('Registration failed: {str(err)}', 'error')
-            return render_template('auth/signup.html')
+            return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
             
     return render_template('auth/signup.html')
 
@@ -1059,23 +1077,19 @@ def signup_rider():
         # Check required fields
         missing_fields = [field for field, value in required_fields.items() if not value]
         if missing_fields:
-            flash(f'Missing required fields: {", ".join(missing_fields)}', 'error')
-            return render_template('auth/signupRider.html')
+            return jsonify({'success': False, 'message': f'Missing required fields: {", ".join(missing_fields)}'}), 400
 
         # Validate email format
         if '@' not in email or '.' not in email:
-            flash('Please enter a valid email address', 'error')
-            return render_template('auth/signupRider.html')
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
 
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
-            flash('Please enter a valid phone number', 'error')
-            return render_template('auth/signupRider.html')
+            return jsonify({'success': False, 'message': 'Please enter a valid phone number'}), 400
 
         conn = get_db()
         if not conn:
-            flash('Database connection failed', 'error')
-            return render_template('auth/signupRider.html')
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
         try:
             cursor = conn.cursor(dictionary=True)
@@ -1083,32 +1097,53 @@ def signup_rider():
             # Check if email already exists
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
-                flash('Email already registered', 'error')
-                return render_template('auth/signupRider.html')
+                conn.close()
+                return jsonify({'success': False, 'message': 'Email already registered'}), 400
 
-            # Create user account
-            cursor.execute('''
-                INSERT INTO users (first_name, last_name, email, password, phone, role) 
-                VALUES (%s, %s, %s, %s, %s, 'rider')
-            ''', (first_name, last_name, email, password, phone))
-            user_id = cursor.lastrowid
-
-            # Create rider profile
-            cursor.execute('''
-                INSERT INTO riders (user_id, vehicle_type, license_number, vehicle_plate, service_area) 
-                VALUES (%s, %s, %s, %s, %s)
-            ''', (user_id, vehicle_type, license_number, vehicle_plate, service_area))
-
-            conn.commit()
-            cursor.close()
+            # Store rider signup data in session for later use
+            session['pending_rider_signup'] = {
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'phone': phone,
+                'password': password,
+                'vehicle_type': vehicle_type,
+                'vehicle_plate': vehicle_plate,
+                'license_number': license_number,
+                'service_area': service_area
+            }
+            
+            # Send OTP
+            ip_address = request.remote_addr
+            otp_code, otp_id = OTPService.create_otp_record(
+                conn, 
+                email=email,
+                otp_type='email',
+                purpose='registration',
+                ip_address=ip_address
+            )
+            
+            if not otp_code:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Failed to generate OTP'}), 500
+            
+            success = OTPService.send_email_otp(email, otp_code, 'registration')
+            
             conn.close()
-
-            flash('Registration successful! Please log in.', 'success')
-            return redirect(url_for('login'))
-
+            
+            if success:
+                session['pending_otp_verification'] = {
+                    'email': email,
+                    'phone': phone,
+                    'verification_type': 'email',
+                    'purpose': 'registration'
+                }
+                return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
+            else:
+                return jsonify({'success': False, 'message': 'Failed to send OTP'}), 500
+                
         except Exception as err:
-            flash(f'Registration failed: {str(err)}', 'error')
-            return render_template('auth/signupRider.html')
+            return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
 
     return render_template('auth/signupRider.html')
 
@@ -1125,23 +1160,19 @@ def signup_seller():
 
         # Validate required fields
         if not all([email, password, phone, shop_name, tnc]):
-            flash('All fields are required, including terms acceptance', 'error')
-            return render_template('auth/signupSeller.html')
+            return jsonify({'success': False, 'message': 'All fields are required, including terms acceptance'}), 400
 
         # Validate email format
         if '@' not in email or '.' not in email:
-            flash('Please enter a valid email address', 'error')
-            return render_template('auth/signupSeller.html')
+            return jsonify({'success': False, 'message': 'Please enter a valid email address'}), 400
 
         # Validate phone number
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
-            flash('Please enter a valid phone number', 'error')
-            return render_template('auth/signupSeller.html')
+            return jsonify({'success': False, 'message': 'Please enter a valid phone number'}), 400
 
         conn = get_db()
         if not conn:
-            flash('Database connection failed', 'error')
-            return render_template('auth/signupSeller.html')
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
         try:
             cursor = conn.cursor(dictionary=True)
@@ -1149,42 +1180,54 @@ def signup_seller():
             # Check if email already exists
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
-                flash('Email already registered', 'error')
-                return render_template('auth/signupSeller.html')
+                conn.close()
+                return jsonify({'success': False, 'message': 'Email already registered'}), 400
 
             # Check if shop name exists
             cursor.execute('SELECT id FROM sellers WHERE store_name = %s', (shop_name,))
             if cursor.fetchone():
-                flash('Shop name already taken', 'error')
-                return render_template('auth/signupSeller.html')
+                conn.close()
+                return jsonify({'success': False, 'message': 'Shop name already taken'}), 400
 
-            # Create user account (use shop name as first/last name for sellers)
-            # Split shop name into first and last name parts
-            name_parts = shop_name.split(' ', 1)
-            first_name = name_parts[0] if len(name_parts) > 0 else shop_name
-            last_name = name_parts[1] if len(name_parts) > 1 else 'Shop'
+            # Store seller signup data in session for later use
+            session['pending_seller_signup'] = {
+                'email': email,
+                'password': password,
+                'phone': phone,
+                'shop_name': shop_name
+            }
             
-            cursor.execute('INSERT INTO users (first_name, last_name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
-                         (first_name, last_name, email, password, phone, 'seller'))
-            user_id = cursor.lastrowid
-
-            # Create store slug from shop name
-            store_slug = shop_name.lower().replace(' ', '-').replace("'", '')
-
-            # Create seller profile with pending status
-            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, status) VALUES (%s, %s, %s, %s)',
-                         (user_id, shop_name, store_slug, 'pending'))
-
-            conn.commit()
-            cursor.close()
+            # Send OTP
+            ip_address = request.remote_addr
+            otp_code, otp_id = OTPService.create_otp_record(
+                conn, 
+                email=email,
+                otp_type='email',
+                purpose='registration',
+                ip_address=ip_address
+            )
+            
+            if not otp_code:
+                conn.close()
+                return jsonify({'success': False, 'message': 'Failed to generate OTP'}), 500
+            
+            success = OTPService.send_email_otp(email, otp_code, 'registration')
+            
             conn.close()
-
-            flash('Seller account created successfully! Please log in.', 'success')
-            return redirect(url_for('login'))
-
+            
+            if success:
+                session['pending_otp_verification'] = {
+                    'email': email,
+                    'phone': phone,
+                    'verification_type': 'email',
+                    'purpose': 'registration'
+                }
+                return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
+            else:
+                return jsonify({'success': False, 'message': 'Failed to send OTP'}), 500
+                
         except Exception as err:
-            flash(f'Registration failed: {str(err)}', 'error')
-            return render_template('auth/signupSeller.html')
+            return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
 
     return render_template('auth/signupSeller.html')
 
@@ -2734,6 +2777,17 @@ def api_products():
         cursor.execute(query)
         products = cursor.fetchall()
         
+        # For each product, get available colors
+        for product in products:
+            cursor.execute("""
+                SELECT DISTINCT color 
+                FROM product_variants 
+                WHERE product_id = %s AND color IS NOT NULL AND color != '' AND stock_quantity > 0
+                ORDER BY color
+            """, (product['id'],))
+            colors = cursor.fetchall()
+            product['colors'] = [c['color'] for c in colors] if colors else []
+        
         cursor.close()
         conn.close()
         
@@ -2869,6 +2923,13 @@ def buyer_dashboard():
         flash('Access denied. Please log in first.', 'error')
         return redirect(url_for('login'))
     return render_template('pages/indexLoggedIn.html')
+
+@app.route('/cart')
+def cart():
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        flash('Access denied. Please log in first.', 'error')
+        return redirect(url_for('login'))
+    return render_template('pages/cart.html')
 
 @app.route('/admin/recent-orders')
 def admin_recent_orders():
@@ -3342,14 +3403,115 @@ def verify_otp():
         session.pop('pending_otp_verification', None)
         
         if purpose == 'registration':
-            session['email_verified'] = True
-            redirect_url = url_for('login')
+            # Check for regular signup
+            pending_signup = session.get('pending_signup')
+            if pending_signup:
+                conn = get_db()
+                if conn:
+                    try:
+                        cursor = conn.cursor()
+                        cursor.execute('INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
+                                       (pending_signup['email'], pending_signup['password'], pending_signup['first_name'], 
+                                        pending_signup['last_name'], pending_signup['phone'], pending_signup['role']))
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                        session.pop('pending_signup', None)
+                        session['email_verified'] = True
+                        return jsonify({
+                            'success': True, 
+                            'message': 'Registration successful! Welcome to Varón.',
+                            'redirect': url_for('login')
+                        })
+                    except Exception as e:
+                        conn.close()
+                        return jsonify({'success': False, 'message': f'Failed to complete registration: {str(e)}'}), 500
+                else:
+                    return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+            
+            # Check for rider signup
+            pending_rider_signup = session.get('pending_rider_signup')
+            if pending_rider_signup:
+                conn = get_db()
+                if conn:
+                    try:
+                        cursor = conn.cursor(dictionary=True)
+                        cursor.execute('''
+                            INSERT INTO users (first_name, last_name, email, password, phone, role) 
+                            VALUES (%s, %s, %s, %s, %s, 'rider')
+                        ''', (pending_rider_signup['first_name'], pending_rider_signup['last_name'], 
+                              pending_rider_signup['email'], pending_rider_signup['password'], pending_rider_signup['phone']))
+                        user_id = cursor.lastrowid
+
+                        # Create rider profile
+                        cursor.execute('''
+                            INSERT INTO riders (user_id, vehicle_type, license_number, vehicle_plate, service_area) 
+                            VALUES (%s, %s, %s, %s, %s)
+                        ''', (user_id, pending_rider_signup['vehicle_type'], pending_rider_signup['license_number'], 
+                              pending_rider_signup['vehicle_plate'], pending_rider_signup['service_area']))
+
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                        session.pop('pending_rider_signup', None)
+                        session['email_verified'] = True
+                        return jsonify({
+                            'success': True, 
+                            'message': 'Rider registration successful! Welcome to Varón.',
+                            'redirect': url_for('login')
+                        })
+                    except Exception as e:
+                        conn.close()
+                        return jsonify({'success': False, 'message': f'Failed to complete rider registration: {str(e)}'}), 500
+                else:
+                    return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+            
+            # Check for seller signup
+            pending_seller_signup = session.get('pending_seller_signup')
+            if pending_seller_signup:
+                conn = get_db()
+                if conn:
+                    try:
+                        cursor = conn.cursor(dictionary=True)
+                        
+                        # Create user account (use shop name as first/last name for sellers)
+                        name_parts = pending_seller_signup['shop_name'].split(' ', 1)
+                        first_name = name_parts[0] if len(name_parts) > 0 else pending_seller_signup['shop_name']
+                        last_name = name_parts[1] if len(name_parts) > 1 else 'Shop'
+                        
+                        cursor.execute('INSERT INTO users (first_name, last_name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
+                                     (first_name, last_name, pending_seller_signup['email'], pending_seller_signup['password'], 
+                                      pending_seller_signup['phone'], 'seller'))
+                        user_id = cursor.lastrowid
+
+                        # Create store slug from shop name
+                        store_slug = pending_seller_signup['shop_name'].lower().replace(' ', '-').replace("'", '')
+
+                        # Create seller profile with pending status
+                        cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, status) VALUES (%s, %s, %s, %s)',
+                                     (user_id, pending_seller_signup['shop_name'], store_slug, 'pending'))
+
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                        session.pop('pending_seller_signup', None)
+                        session['email_verified'] = True
+                        return jsonify({
+                            'success': True, 
+                            'message': 'Seller account created successfully! Please log in.',
+                            'redirect': url_for('login')
+                        })
+                    except Exception as e:
+                        conn.close()
+                        return jsonify({'success': False, 'message': f'Failed to complete seller registration: {str(e)}'}), 500
+                else:
+                    return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+            
+            return jsonify({'success': False, 'message': 'No pending signup data found'}), 400
         elif purpose == 'login':
             redirect_url = url_for('buyer_dashboard')
         else:
             redirect_url = url_for('index')
-        
-        conn.close()
         
         return jsonify({
             'success': True, 

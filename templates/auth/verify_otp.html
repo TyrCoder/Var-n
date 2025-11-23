@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Verify OTP — Varón</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+      .auth-container {
+        max-width: 400px;
+        margin: 80px auto 60px;
+        padding: 0 20px;
+      }
+      .auth-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 40px 32px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      .auth-header {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      .auth-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 28px;
+        font-weight: 600;
+        color: #0a0a0a;
+        margin: 0 0 8px 0;
+      }
+      .auth-subtitle {
+        color: #6b7280;
+        font-size: 16px;
+        margin: 0;
+        line-height: 1.5;
+      }
+      .otp-form {
+        margin-bottom: 24px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+      }
+      .otp-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        letter-spacing: 0.5em;
+        transition: border-color 0.2s;
+      }
+      .otp-input:focus {
+        outline: none;
+        border-color: #0a0a0a;
+      }
+      .otp-input.error {
+        border-color: #ef4444;
+      }
+      .btn-primary {
+        width: 100%;
+        padding: 12px 24px;
+        background: #0a0a0a;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn-primary:hover {
+        background: #374151;
+      }
+      .btn-primary:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+      .resend-section {
+        text-align: center;
+        margin-top: 24px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e7eb;
+      }
+      .resend-text {
+        color: #6b7280;
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+      .btn-link {
+        background: none;
+        border: none;
+        color: #0a0a0a;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .btn-link:hover {
+        color: #374151;
+      }
+      .btn-link:disabled {
+        color: #9ca3af;
+        cursor: not-allowed;
+        text-decoration: none;
+      }
+      .error-message {
+        background: #fef2f2;
+        color: #dc2626;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        margin-bottom: 16px;
+        display: none;
+      }
+      .success-message {
+        background: #f0fdf4;
+        color: #16a34a;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        margin-bottom: 16px;
+        display: none;
+      }
+      .back-link {
+        text-align: center;
+        margin-top: 24px;
+      }
+      .back-link a {
+        color: #6b7280;
+        font-size: 14px;
+        text-decoration: none;
+      }
+      .back-link a:hover {
+        color: #374151;
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="auth-header">
+          <h1 class="auth-title">Verify Your Account</h1>
+          <p class="auth-subtitle">
+            {% if verification_type == 'email' %}
+              We've sent a 6-digit code to <strong>{{ verification_target }}</strong>
+            {% else %}
+              We've sent a 6-digit code to <strong>{{ verification_target }}</strong>
+            {% endif %}
+          </p>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+
+        <form class="otp-form" id="otpForm">
+          <div class="form-group">
+            <label for="otpCode" class="form-label">Enter verification code</label>
+            <input
+              type="text"
+              id="otpCode"
+              name="otp_code"
+              class="otp-input"
+              placeholder="000000"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              required
+              autocomplete="one-time-code"
+            />
+          </div>
+
+          <button type="submit" class="btn-primary" id="verifyBtn">
+            Verify Code
+          </button>
+        </form>
+
+        <div class="resend-section">
+          <p class="resend-text">Didn't receive the code?</p>
+          <button type="button" class="btn-link" id="resendBtn">
+            Resend Code
+          </button>
+          <div id="resendTimer" style="display: none; color: #6b7280; font-size: 12px; margin-top: 8px;">
+            Resend available in <span id="countdown">30</span> seconds
+          </div>
+        </div>
+
+        <div class="back-link">
+          <a href="{{ url_for('login') }}">← Back to Login</a>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const otpForm = document.getElementById('otpForm');
+        const otpInput = document.getElementById('otpCode');
+        const verifyBtn = document.getElementById('verifyBtn');
+        const resendBtn = document.getElementById('resendBtn');
+        const resendTimer = document.getElementById('resendTimer');
+        const countdownEl = document.getElementById('countdown');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        let countdown = 30;
+        let timerInterval;
+
+        // Auto-focus OTP input
+        otpInput.focus();
+
+        // Format OTP input (only allow numbers)
+        otpInput.addEventListener('input', function(e) {
+          // Remove non-numeric characters
+          this.value = this.value.replace(/[^0-9]/g, '');
+
+          // Auto-submit when 6 digits entered
+          if (this.value.length === 6) {
+            verifyBtn.click();
+          }
+        });
+
+        // Handle form submission
+        otpForm.addEventListener('submit', async function(e) {
+          e.preventDefault();
+
+          const otpCode = otpInput.value.trim();
+
+          if (otpCode.length !== 6) {
+            showError('Please enter a valid 6-digit code');
+            otpInput.classList.add('error');
+            return;
+          }
+
+          // Disable button and show loading
+          verifyBtn.disabled = true;
+          verifyBtn.textContent = 'Verifying...';
+
+          try {
+            const response = await fetch('/verify-otp', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                otp_code: otpCode,
+                email: '{{ email }}',
+                phone: '{{ phone }}',
+                purpose: '{{ purpose }}'
+              })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              showSuccess(data.message || 'Verification successful!');
+              setTimeout(() => {
+                window.location.href = data.redirect || '{{ url_for("login") }}';
+              }, 1500);
+            } else {
+              showError(data.message || 'Invalid verification code');
+              otpInput.classList.add('error');
+              setTimeout(() => otpInput.classList.remove('error'), 3000);
+            }
+          } catch (error) {
+            showError('Network error. Please try again.');
+            console.error('Verification error:', error);
+          } finally {
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Verify Code';
+          }
+        });
+
+        // Handle resend
+        resendBtn.addEventListener('click', async function() {
+          resendBtn.disabled = true;
+          resendBtn.textContent = 'Sending...';
+
+          try {
+            const response = await fetch('/resend-otp', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: '{{ email }}',
+                phone: '{{ phone }}',
+                verification_type: '{{ verification_type }}',
+                purpose: '{{ purpose }}'
+              })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              showSuccess('New code sent successfully!');
+              startResendTimer();
+            } else {
+              showError(data.message || 'Failed to resend code');
+            }
+          } catch (error) {
+            showError('Network error. Please try again.');
+            console.error('Resend error:', error);
+          } finally {
+            resendBtn.disabled = false;
+            resendBtn.textContent = 'Resend Code';
+          }
+        });
+
+        function showError(message) {
+          errorMessage.textContent = message;
+          errorMessage.style.display = 'block';
+          successMessage.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+          successMessage.textContent = message;
+          successMessage.style.display = 'block';
+          errorMessage.style.display = 'none';
+        }
+
+        function startResendTimer() {
+          countdown = 30;
+          resendBtn.style.display = 'none';
+          resendTimer.style.display = 'block';
+          countdownEl.textContent = countdown;
+
+          timerInterval = setInterval(() => {
+            countdown--;
+            countdownEl.textContent = countdown;
+
+            if (countdown <= 0) {
+              clearInterval(timerInterval);
+              resendTimer.style.display = 'none';
+              resendBtn.style.display = 'inline-block';
+              resendBtn.disabled = false;
+            }
+          }, 1000);
+        }
+
+        // Start initial timer
+        startResendTimer();
+      });
+    </script>
+  </body>
+</html>

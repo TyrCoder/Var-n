@@ -343,33 +343,35 @@
 					return;
 				}
 
-				// Submit the form
+				// Disable submit button
+				const submitBtn = form.querySelector('button[type="submit"]');
+				const originalText = submitBtn.textContent;
+				submitBtn.disabled = true;
+				submitBtn.textContent = 'Sending OTP...';
+
+				// Submit the form via AJAX
 				fetch('/signupSeller', {
 					method: 'POST',
 					body: formData
 				})
-				.then(response => {
-					if (response.redirected) {
-						window.location.href = response.url;
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						// Redirect to OTP verification page
+						window.location.href = data.redirect;
 					} else {
-						return response.text().then(text => {
-							// Parse the response to check for flash messages
-							const parser = new DOMParser();
-							const doc = parser.parseFromString(text, 'text/html');
-							const flashMessage = doc.querySelector('.alert');
-							if (flashMessage) {
-								errorDiv.className = flashMessage.className;
-								errorDiv.style.cssText = flashMessage.style.cssText;
-								errorDiv.textContent = flashMessage.textContent;
-								errorDiv.style.display = 'block';
-							}
-						});
+						errorDiv.textContent = data.message;
+						errorDiv.style.display = 'block';
+						submitBtn.disabled = false;
+						submitBtn.textContent = originalText;
 					}
 				})
 				.catch(error => {
 					errorDiv.textContent = 'An error occurred. Please try again later.';
 					errorDiv.style.display = 'block';
 					console.error('Error:', error);
+					submitBtn.disabled = false;
+					submitBtn.textContent = originalText;
 				});
 			});
 		</script>

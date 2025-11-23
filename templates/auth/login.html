@@ -584,10 +584,7 @@ h1, h2, h3, h4, h5, h6, .brand {
 
         // Validate passwords match
         if (password !== confirmPassword) {
-            const errorMessage = document.createElement('div');
-            errorMessage.style.cssText = 'color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
-            errorMessage.textContent = 'Passwords do not match';
-            document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('.btn-submit'));
+            showError('Passwords do not match');
             return;
         }
 
@@ -600,39 +597,49 @@ h1, h2, h3, h4, h5, h6, .brand {
         formData.append('phone', phone);
         formData.append('terms', terms);
 
+        // Disable submit button
+        const submitBtn = document.querySelector('#signupForm button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending OTP...';
+
         // Send request to app.py
         fetch('/signup', {
           method: 'POST',
           body: formData
         })
-        .then(response => {
-          if (response.redirected) {
-            // Follow the redirect from Flask
-            window.location.href = response.url;
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Redirect to OTP verification page
+            window.location.href = data.redirect;
           } else {
-            // If not redirected, parse the response for error message
-            return response.text().then(text => {
-              // Check if response contains error message
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(text, 'text/html');
-              const flashMessages = doc.querySelectorAll('.flash-message');
-              if (flashMessages.length > 0) {
-                const errorMessage = document.createElement('div');
-                errorMessage.style.cssText = 'color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
-                errorMessage.textContent = flashMessages[0].textContent;
-                document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('.btn-submit'));
-              }
-            });
+            showError(data.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
           }
         })
         .catch(error => {
           console.error('Error:', error);
-          const errorMessage = document.createElement('div');
-          errorMessage.style.cssText = 'color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
-          errorMessage.textContent = 'An error occurred. Please try again later.';
-          document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('.btn-submit'));
+          showError('An error occurred. Please try again later.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
         });
       });
+
+      function showError(message) {
+        // Remove any existing error messages
+        const existingError = document.querySelector('#signupForm .error-message');
+        if (existingError) {
+          existingError.remove();
+        }
+
+        const errorMessage = document.createElement('div');
+        errorMessage.className = 'error-message';
+        errorMessage.style.cssText = 'color: #dc3545; background: #fde8e8; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px;';
+        errorMessage.textContent = message;
+        document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('#signupForm button[type="submit"]'));
+      }
 
       // Password toggle functionality
       function togglePassword(inputId, button) {

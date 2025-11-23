@@ -432,6 +432,28 @@ CREATE TABLE IF NOT EXISTS coupons (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
+-- OTP Verifications Table
+-- =============================================
+CREATE TABLE IF NOT EXISTS otp_verifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(190),
+    phone VARCHAR(20),
+    otp_code VARCHAR(10) NOT NULL,
+    otp_type ENUM('email', 'sms') NOT NULL DEFAULT 'email',
+    purpose ENUM('registration', 'login', 'password_reset', 'verification') NOT NULL DEFAULT 'registration',
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP NULL,
+    attempts INT DEFAULT 0,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_phone (phone),
+    INDEX idx_code (otp_code),
+    INDEX idx_expires (expires_at),
+    INDEX idx_purpose (purpose)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
 -- INSERT SAMPLE DATA
 -- =============================================
 

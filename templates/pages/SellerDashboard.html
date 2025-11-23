@@ -172,7 +172,8 @@
                 <div class="chart">
                   <div class="bars">
                     {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
-                    <div class="bar" style="height:{{ ((weekly_sales[day] / max_weekly_sales) * 100)|int if weekly_sales[day] > 0 else 5 }}%"></div>
+                    {% set bar_height = ((weekly_sales[day] / max_weekly_sales) * 100)|int if weekly_sales[day] > 0 else 5 %}
+                    <div class="bar" style="height:{{ bar_height }}%"></div>
                     {% endfor %}
                   </div>
                   <div class="legend">
@@ -205,7 +206,8 @@
                         <div class="tag" style="background:#efefef;color:#0a0a0a">{{ product.sales_count or 0 }} sold</div>
                       </div>
                       <div style="height:6px;background:#efefef;border-radius:999px;overflow:hidden">
-                        <div style="height:6px;background:#0a0a0a;border-radius:999px;width:{{ ((product.sales_count / max_sales if max_sales > 0 else 0) * 100)|int ~ '%' }};"></div>
+                        {% set progress_width = ((product.sales_count / max_sales if max_sales > 0 else 0) * 100)|int %}
+                        <div style="height:6px;background:#0a0a0a;border-radius:999px;width:{{ progress_width }}%;"></div>
                       </div>
                     {% endfor %}
                   {% else %}
