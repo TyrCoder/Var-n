@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-<<<<<<< HEAD
     <style>
       .user-dropdown {
         position: relative;
@@ -108,20 +107,14 @@
         }
       }
     </style>
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
   </head>
   <body>
     <header class="site-header">
       <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
       <h1 class="brand"><a href="javascript:void(0)" onclick="showSection('home')" style="color:#fff;text-decoration:none">Varón</a></h1>
       <nav class="top-nav" id="topNav">
-<<<<<<< HEAD
-<<<<<<< HEAD
         <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLink">My Orders</a>
-=======
         <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLink" style="display:none">My Orders</a>
->>>>>>> parent of 5ad2f62 (latest code)
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
         <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
         <a href="javascript:void(0)" onclick="showSection('about')">About</a>
@@ -133,7 +126,6 @@
             <a href="javascript:void(0)" onclick="confirmLogout()">Logout</a>
           </div>
         </div>
-=======
         <a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Your Order</a>
         <a href="javascript:void(0)" onclick="showSection('myOrders')" id="myOrdersLink" style="display:none">My Orders</a>
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
@@ -145,22 +137,15 @@
           Cart 
           <span id="cartCount" style="background:#fff;color:#0a0a0a;border-radius:12px;padding:2px 8px;font-size:12px;font-weight:600;min-width:24px;text-align:center">0</span>
         </a>
->>>>>>> parent of 1c35c95 (malapit na mga bes)
       </nav>
     </header>
 
     <!-- Hero Section (Home Only) -->
-<<<<<<< HEAD
 
     <!-- Hero Section (Home Only) -->
-<<<<<<< HEAD
     <section class="hero" id="heroSection" style="display:none">
-=======
     <section class="hero" id="heroSection">
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
     <section class="hero" id="heroSection">
->>>>>>> parent of 5ad2f62 (latest code)
       <div class="hero-inner container">
         <div class="hero-copy">
           <h2>Refined Elegance for the Modern Gentleman</h2>
@@ -407,18 +392,12 @@
             </div>
           </div>
           <div style="display:flex;gap:12px">
-<<<<<<< HEAD
-<<<<<<< HEAD
             <button onclick="confirmClearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button onclick="proceedToCheckout()" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
-=======
             <button onclick="clearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
             <button id="clearCart" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
->>>>>>> parent of 5ad2f62 (latest code)
           </div>
         </div>
       </div>
@@ -466,7 +445,6 @@
 
     <div id="snackbar" class="snackbar" role="status" aria-live="polite">Added to cart</div>
     
-<<<<<<< HEAD
     <!-- Floating Cart Button -->
     <div class="floating-cart" onclick="openModal('cartModal')" title="View Cart">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -477,8 +455,6 @@
       <span class="floating-cart-badge" id="cartCount">0</span>
     </div>
     
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
     <div class="overlay" id="overlay"></div>
     <aside class="sidebar" id="sidebar">
       <nav class="sidebar-nav">
@@ -497,7 +473,6 @@
     </aside>
 
     <script>
-<<<<<<< HEAD
     // User dropdown toggle
     function toggleUserDropdown() {
       const dropdown = document.getElementById('userDropdown');
@@ -514,8 +489,6 @@
       }
     });
 
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
     // Logout confirmation function
     function confirmLogout() {
       openModal('logoutModal');
@@ -524,7 +497,6 @@
     function proceedLogout() {
       window.location.href = '/logout';
     }
-<<<<<<< HEAD
     
     // Add quick add to cart functionality for products
     function quickAddToCart(productId, productName, productPrice, productImage) {
@@ -541,8 +513,6 @@
         });
       }
     }
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
 
     // Fetch the buyer's first name on page load
     window.addEventListener('DOMContentLoaded', (event) => {
@@ -554,7 +524,6 @@
             })
             .catch(error => console.error('Error fetching buyer name:', error));
         
-<<<<<<< HEAD
         // Load cart count from database
         if (window.VaronCart) {
             VaronCart.updateBadge();
@@ -565,23 +534,17 @@
         
         // Load flash sales first
         loadFlashSales();
-=======
         // Load featured products on home
         loadFeaturedProducts();
->>>>>>> parent of 1c35c95 (malapit na mga bes)
         
         // Load user's orders for My Orders section
         loadMyOrders();
-<<<<<<< HEAD
         
-<<<<<<< HEAD
         // Explicitly show home section after everything is loaded
         setTimeout(() => {
           console.log('Initializing home section...');
           showSection('home');
         }, 200);
-=======
->>>>>>> parent of 5ad2f62 (latest code)
     });
 
     // Flash sales support
@@ -612,27 +575,21 @@
         .catch(error => console.error('Error loading flash sales:', error));
     }
     
-=======
         // Load browse products
         loadBrowseProducts();
     });
 
->>>>>>> parent of 1c35c95 (malapit na mga bes)
     // Load featured products from API (for home section)
     function loadFeaturedProducts() {
       fetch('/api/products?limit=4')
         .then(response => response.json())
         .then(data => {
-<<<<<<< HEAD
-<<<<<<< HEAD
           console.log('Featured products data:', data);
           if (data.success && data.products && data.products.length > 0) {
             const filtered = data.products.slice(0, 8);
-=======
           if (data.success && data.products) {
             const featuredGrid = document.getElementById('featuredGrid');
             const filtered = data.products.slice(0, 4);
->>>>>>> parent of 5ad2f62 (latest code)
             featuredGrid.innerHTML = filtered.map(product => {
               const hasSale = activeFlashSales[product.id];
               const originalPrice = parseFloat(product.price);
@@ -655,10 +612,8 @@
                 </article>
               `;
             }).join('');
-<<<<<<< HEAD
           } else {
             featuredGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Products Available</h3><p style="color:#999;margin:0">Check back soon for new arrivals!</p></div>';
-=======
           if (data.success && data.products) {
             const featuredGrid = document.getElementById('featuredGrid');
             // Filter out products with ID 1 and 2
@@ -674,9 +629,6 @@
                 </div>
               </article>
             `).join('');
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
->>>>>>> parent of 5ad2f62 (latest code)
           }
         })
         .catch(error => console.error('Error loading featured products:', error));
@@ -708,7 +660,6 @@
       if (products.length === 0) {
         browseGrid.innerHTML = '<p style="color:#999;text-align:center;grid-column:1/-1;padding:40px">No products available</p>';
       } else {
-<<<<<<< HEAD
         browseGrid.innerHTML = products.map(product => {
           const hasSale = activeFlashSales[product.id];
           const originalPrice = parseFloat(product.price);
@@ -731,7 +682,6 @@
             </article>
           `;
         }).join('');
-=======
         browseGrid.innerHTML = products.map(product => `
           <article class="product" style="cursor:pointer" onclick="window.location.href='/product/${product.id}'">
             <div class="product-image">
@@ -743,7 +693,6 @@
             </div>
           </article>
         `).join('');
->>>>>>> parent of 1c35c95 (malapit na mga bes)
       }
     }
 

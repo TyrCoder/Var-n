@@ -3240,7 +3240,6 @@ def get_user_orders_detailed():
         return jsonify({'success': False, 'error': str(e)}), 500
 # ============ END ORDER TRACKING ============
 
-<<<<<<< HEAD
 @app.route('/send-otp', methods=['POST'])
 def send_otp():
     """Send OTP for verification"""
@@ -4255,7 +4254,6 @@ def api_rider_update_delivery_status():
             conn.close()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-<<<<<<< HEAD
 @app.route('/forgot-password', methods=['POST'])
 def forgot_password():
     """Send OTP to email for password reset"""
@@ -4426,10 +4424,6 @@ def reset_password():
         print(f"Password reset error: {str(e)}")
         return jsonify({'success': False, 'error': 'Password reset failed'}), 500
 
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
->>>>>>> parent of 5ad2f62 (latest code)
 @app.route('/logout')
 def logout():
     session.clear()

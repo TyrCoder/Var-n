@@ -257,7 +257,6 @@
       <nav class="top-nav" id="topNav">
         <a href="{{ url_for('buyer_dashboard') if session.get('logged_in') and session.get('role') == 'buyer' else url_for('index') }}">Shop</a>
         {% if session.get('logged_in') %}
-<<<<<<< HEAD
           <div class="user-dropdown">
             <button class="user-button" onclick="toggleUserDropdown()">
               {{ session.get('first_name', 'User') }} ▾
@@ -266,10 +265,8 @@
               <a href="{{ url_for('logout') }}">Logout</a>
             </div>
           </div>
-=======
           <span class="welcome-msg" style="color: #fff; font-size: 14px;">Welcome, {{ session.get('first_name', 'User') }}</span>
           <a href="{{ url_for('logout') }}" class="account">Logout</a>
->>>>>>> parent of 1c35c95 (malapit na mga bes)
         {% else %}
           <a href="{{ url_for('login') }}" class="account">Login</a>
         {% endif %}
@@ -288,7 +285,6 @@
         
         <div class="checkout-section">
           <h2>Shipping Information</h2>
-<<<<<<< HEAD
           
           <!-- Saved Addresses Section -->
           <div id="savedAddressesSection" style="display:none;margin-bottom:24px">
@@ -321,9 +317,7 @@
               </button>
             </div>
             
-=======
           <form id="checkoutForm">
->>>>>>> parent of 1c35c95 (malapit na mga bes)
             <div class="form-row">
               <div class="form-group">
                 <label for="firstName">First Name *</label>
@@ -632,25 +626,19 @@
       }
 
       function placeOrder() {
-<<<<<<< HEAD
-<<<<<<< HEAD
         console.log('🛒 Place Order clicked');
         console.log('📦 Validated cart:', validatedCart);
         console.log('🏠 Selected address ID:', selectedAddressId);
         console.log('💳 Selected payment method:', selectedPayment);
         
-=======
->>>>>>> parent of 5ad2f62 (latest code)
         // Check if cart is empty
         if (!validatedCart || validatedCart.length === 0) {
           alert('Your cart is empty. Please add items before placing an order.');
-=======
         const form = document.getElementById('checkoutForm');
         
         // Validate form
         if (!form.checkValidity()) {
           form.reportValidity();
->>>>>>> parent of 1c35c95 (malapit na mga bes)
           return;
         }
         
@@ -726,20 +714,14 @@
           if (data.success) {
             showSnackbar('Order placed successfully!', 'success');
             
-<<<<<<< HEAD
             // Show save address prompt if using manual entry and no saved addresses
             if (usingManualEntry && savedAddresses.length === 0) {
               showSaveAddressPrompt();
             }
             
-<<<<<<< HEAD
             // Clear cart from localStorage
-=======
             // Clear cart
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
             // Clear cart
->>>>>>> parent of 5ad2f62 (latest code)
             localStorage.removeItem('varon_cart');
             
             // Update cart badge
@@ -767,7 +749,6 @@
 
       // Initialize
       displayOrderSummary();
-<<<<<<< HEAD
 
       // User dropdown toggle
       function toggleUserDropdown() {
@@ -784,8 +765,6 @@
           }
         }
       });
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
     </script>
   </body>
 </html>

@@ -361,7 +361,6 @@
       <nav class="top-nav" id="topNav">
         <a href="{{ url_for('buyer_dashboard') if session.get('logged_in') and session.get('role') == 'buyer' else url_for('index') }}">Shop</a>
         {% if session.get('logged_in') %}
-<<<<<<< HEAD
           <div class="user-dropdown">
             <button class="user-button" onclick="toggleUserDropdown()">
               {{ user_first_name or session.get('first_name', 'User') }} ▾
@@ -370,14 +369,6 @@
               <a href="{{ url_for('logout') }}">Logout</a>
             </div>
           </div>
-=======
-          {% if session.get('role') == 'buyer' %}
-            <span class="welcome-msg" style="color: #fff; font-size: 14px;">Welcome, {{ user_first_name or 'User' }}</span>
-            <a href="{{ url_for('logout') }}" class="account">Logout</a>
-          {% else %}
-            <a href="{{ url_for('logout') }}" class="account">Logout</a>
-          {% endif %}
->>>>>>> parent of 1c35c95 (malapit na mga bes)
         {% else %}
           <a href="{{ url_for('login') }}" id="accountLink" class="account">Login</a>
         {% endif %}
@@ -505,8 +496,6 @@
       </div>
     </footer>
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     <!-- Logout Confirmation Modal -->
     <div id="logoutModal" class="modal" style="display:none;position:fixed;inset:0;background:rgba(10,10,10,0.45);align-items:center;justify-content:center;z-index:1000">
       <div style="background:#fff;padding:24px;border-radius:12px;max-width:400px;width:90%;box-shadow:0 4px 6px rgba(0,0,0,0.1)">
@@ -520,12 +509,7 @@
       </div>
     </div>
 
-=======
->>>>>>> parent of 5ad2f62 (latest code)
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <script>
       let selectedColor = {% if not colors %}'Standard'{% else %}null{% endif %};
@@ -654,8 +638,6 @@
       // Check if user is logged in (server-side check)
       const isUserLoggedIn = {{ 'true' if session.get('logged_in') else 'false' }};
       
-<<<<<<< HEAD
-<<<<<<< HEAD
       // Get variant ID based on color and size
       async function getVariantId(productId, color, size) {
         try {
@@ -685,12 +667,8 @@
         }
       }
       
-=======
->>>>>>> parent of 5ad2f62 (latest code)
       async function addToCartFromPage() {
-=======
       function addToCartFromPage() {
->>>>>>> parent of 1c35c95 (malapit na mga bes)
         // Check if user is logged in
         if (!isUserLoggedIn) {
           alert('You need to log in to add items to cart');
@@ -698,8 +676,6 @@
           return;
         }
         
-<<<<<<< HEAD
-<<<<<<< HEAD
         // Validate selection for non-grooming products
         if (!isGroomingProduct && (!selectedSize || !selectedColor)) {
           const snackbar = document.getElementById('snackbar');
@@ -756,7 +732,6 @@
           if(addButton) {
             addButton.disabled = false;
             addButton.textContent = 'Add to Cart';
-=======
         if (selectedSize && selectedColor) {
           const quantity = parseInt(document.getElementById('quantity').value);
           const productName = '{{ product.name }}';
@@ -768,8 +743,6 @@
           
           for (let i = 0; i < quantity; i++) {
             addToCart(itemName, productPrice, productId, productImage);
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
         if (selectedSize && selectedColor) {
           const quantity = parseInt(document.getElementById('quantity').value);
           const productId = {{ product.id }};
@@ -805,7 +778,6 @@
             snackbar.textContent = `Added ${quantity} item(s) to cart`;
             snackbar.classList.add('show');
             setTimeout(() => snackbar.classList.remove('show'), 3000);
->>>>>>> parent of 5ad2f62 (latest code)
           }
           
           // Show success message
@@ -819,8 +791,6 @@
       // Check initial selection state
       checkSelection();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
       // Logout confirmation function
       function confirmLogout(event) {
         if (event) {
@@ -844,8 +814,6 @@
         window.location.href = '/logout';
       }
 
-=======
->>>>>>> parent of 5ad2f62 (latest code)
       // User dropdown toggle
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
@@ -862,8 +830,6 @@
         }
       });
 
-=======
->>>>>>> parent of 1c35c95 (malapit na mga bes)
       // Modal functionality
       function openCartModal() {
           const modal = document.getElementById('cartModal');
@@ -881,8 +847,6 @@
           }
       }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
       // Render cart items in modal
       async function renderCartItems() {
           if (!window.VaronCart) {
@@ -1010,12 +974,8 @@
           window.location.href = '/checkout';
       }
 
-=======
->>>>>>> parent of 5ad2f62 (latest code)
       // Cart functionality - Use VaronCart if available (database), fallback to localStorage
-=======
       // Cart functionality
->>>>>>> parent of 1c35c95 (malapit na mga bes)
       let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
       function updateCartDisplay() {
@@ -1191,18 +1151,12 @@
             </div>
           </div>
           <div style="display:flex;gap:12px">
-<<<<<<< HEAD
-<<<<<<< HEAD
             <button onclick="clearEntireCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button onclick="proceedToCheckout()" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
-=======
             <button onclick="clearCart()" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
             <button id="clearCart" class="btn-secondary" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#0a0a0a;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='#fff'">CLEAR CART</button>
             <button id="checkoutBtn" class="btn-cta" style="flex:1;padding:14px;font-size:15px;font-weight:500;border-radius:6px;background:#0a0a0a;color:#fff;border:none;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">PROCEED TO CHECKOUT</button>
->>>>>>> parent of 5ad2f62 (latest code)
           </div>
         </div>
       </div>

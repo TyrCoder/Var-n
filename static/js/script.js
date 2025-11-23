@@ -318,33 +318,23 @@ function updateCartBadge(){
   if(cartCountEl) cartCountEl.textContent = n;
 }
 
-<<<<<<< HEAD
 async function addItemToCart(data){
-<<<<<<< HEAD
   if(!data) return false;
-=======
 function addItemToCart(data){
   if(!data) return;
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
   if(!data) return;
->>>>>>> parent of 5ad2f62 (latest code)
   const name = data.title || 'Item';
   const price = typeof data.price === 'number' ? data.price : (parseFloat((data.priceText||'').replace(/[^0-9\.]/g,'')) || 0);
   const id = (data.id) || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   const image_url = data.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
   const cart = readCart();
   
-<<<<<<< HEAD
-<<<<<<< HEAD
   // Show loading feedback
   if(snackbar){
     snackbar.textContent = 'Adding to cart...';
     snackbar.classList.add('show');
   }
   
-=======
->>>>>>> parent of 5ad2f62 (latest code)
   // Use database cart if VaronCart is available
   if(window.VaronCart) {
     const success = await VaronCart.add(id, data.qty || 1);
@@ -371,9 +361,7 @@ function addItemToCart(data){
       snackbar.classList.add('show');
       setTimeout(()=> snackbar.classList.remove('show'), 2200);
     }
-<<<<<<< HEAD
     return false;
-=======
   // Check if item already exists
   const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
   
@@ -389,9 +377,6 @@ function addItemToCart(data){
     snackbar.textContent = `${name} added to cart`;
     snackbar.classList.add('show');
     setTimeout(()=> snackbar.classList.remove('show'), 2200);
->>>>>>> parent of 1c35c95 (malapit na mga bes)
-=======
->>>>>>> parent of 5ad2f62 (latest code)
   }
 }
 
