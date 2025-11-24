@@ -912,11 +912,6 @@
                 <button type="button" id="verifyPhoneButton" class="input-button" onclick="handlePhoneButtonClick(event)">{{ 'Change' if user.phone_verified else 'Verify' }}</button>
               </div>
             </div>
-
-            <div class="form-actions">
-              <button type="submit" class="btn-primary">Save Changes</button>
-              <a href="{{ url_for('buyer_dashboard') }}" class="btn-secondary">Cancel</a>
-            </div>
           </form>
         </div>
 
@@ -1097,6 +1092,9 @@
               }
               showAlert('Profile picture saved successfully!', 'success');
               console.log('Profile picture saved to database:', data.image_url);
+              
+              // Refresh navbar profile picture
+              refreshNavbarProfile();
             } else {
               showAlert(data.message || 'Error uploading profile picture', 'error');
               console.error('Profile picture upload error:', data.message);
@@ -1108,6 +1106,28 @@
         });
       } else {
         console.error('Profile image input not found');
+      }
+      
+      // Function to refresh navbar profile picture
+      function refreshNavbarProfile() {
+        fetch('/api/user-profile-navbar')
+          .then(response => response.json())
+          .then(data => {
+            console.log('Navbar profile refreshed:', data);
+            if (data.success && data.profile_image) {
+              const profileImg = document.getElementById('profileImg');
+              const initialText = document.getElementById('initialText');
+              const buyerInitial = document.getElementById('buyerInitial');
+              
+              if (profileImg) {
+                profileImg.src = data.profile_image + '?t=' + Date.now();
+                profileImg.style.display = 'block';
+                if (initialText) initialText.style.display = 'none';
+                if (buyerInitial) buyerInitial.classList.remove('default-avatar');
+              }
+            }
+          })
+          .catch(error => console.error('Error refreshing navbar profile:', error));
       }
 
         // Email button handler (already defined globally above)
@@ -2617,9 +2637,9 @@
             </label>
           </div>
 
-          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
-            <button type="button" onclick="closeAddressFormModal()" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">Cancel</button>
-            <button type="submit" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Save Address</button>
+          <div style="display: flex; gap: 12px; justify-content: flex-start; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+            <button type="submit" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Save Changes</button>
+            <a href="{{ url_for('buyer_dashboard') }}" class="btn-secondary" style="padding: 12px 24px; font-size: 14px; display: inline-flex; align-items: center;">Cancel</a>
           </div>
         </form>
       </div>

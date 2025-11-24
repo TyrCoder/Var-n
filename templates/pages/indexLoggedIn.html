@@ -14,6 +14,8 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+        margin: 0;
+        padding: 0;
       }
 
       /* Top Bar */
@@ -354,7 +356,7 @@
         <button class="user-button" onclick="toggleUserDropdown()">
           <div class="user-button-icon default-avatar" id="buyerInitial">
             <span id="initialText">U</span>
-            <img id="profileImg" style="display:none;" alt="Profile">
+            <img id="profileImg" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="Profile">
           </div>
           <div class="user-button-text">
             <span id="buyerFirstName" style="font-weight: 600;">User</span>
@@ -728,9 +730,36 @@
           <h4>Varón</h4>
           <p class="muted">Minimal, responsibly-made apparel. Clean silhouettes and timeless staples.</p>
         </div>
+        <div>
+          <h5>Shop</h5>
+          <ul>
+            <li><a href="#">All Products</a></li>
+            <li><a href="#">New Arrivals</a></li>
+            <li><a href="#">Best Sellers</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Genres</h5>
+          <ul>
+            <li><a href="#">Tops</a></li>
+            <li><a href="#">Bottoms</a></li>
+            <li><a href="#">Outerwear</a></li>
+            <li><a href="#">Accessories</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Partners</h5>
+          <ul>
+            <li><a href="{{ url_for('signup_seller') }}" id="footerSeller">Register as a seller</a></li>
+            <li><a href="{{ url_for('signup_rider') }}" id="footerRider">Register as a rider</a></li>
+          </ul>
+        </div>
       </div>
-
-      <!-- Order Details Modal -->
+      <div class="footer-bottom">
+        <div class="footer-brand">Varón — Minimal Apparel</div>
+        <small>© <span class="muted">2025</span></small>
+      </div>
+    </footer>
       <div id="orderDetailsModal" class="modal" aria-hidden="true">
         <div style="background:#fff;border-radius:12px;width:90%;max-width:900px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative">
           <!-- Modal Header -->
@@ -748,7 +777,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;grid-auto-flow:dense">
               <div style="background:#f9fafb;padding:16px;border-radius:8px">
                 <div style="color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Order Status</div>
-                <div id="orderDetailStatus" style="font-size:18px;font-weight:600;color:#0a0a0a">Pending</div>
+                <div id="orderDetailStatus" style="font-size:14px;font-weight:600;color:#0a0a0a;display:inline-block;padding:6px 12px;border-radius:6px">Pending</div>
               </div>
               <div style="background:#f9fafb;padding:16px;border-radius:8px">
                 <div style="color:#999;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Order Date</div>
@@ -824,37 +853,6 @@
           </div>
         </div>
       </div>
-
-        <div>
-          <h5>Shop</h5>
-          <ul>
-            <li><a href="#">All Products</a></li>
-            <li><a href="#">New Arrivals</a></li>
-            <li><a href="#">Best Sellers</a></li>
-          </ul>
-        </div>
-        <div>
-          <h5>Genres</h5>
-          <ul>
-            <li><a href="#">Tops</a></li>
-            <li><a href="#">Bottoms</a></li>
-            <li><a href="#">Outerwear</a></li>
-            <li><a href="#">Accessories</a></li>
-          </ul>
-        </div>
-        <div>
-          <h5>Partners</h5>
-          <ul>
-            <li><a href="{{ url_for('signup_seller') }}" id="footerSeller">Register as a seller</a></li>
-            <li><a href="{{ url_for('signup_rider') }}" id="footerRider">Register as a rider</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <div class="footer-brand">Varón — Minimal Apparel</div>
-        <small>© <span class="muted">2025</span></small>
-      </div>
-    </footer>
 
     <!-- Cart Modal -->
     <div id="cartModal" class="modal" aria-hidden="true">
@@ -1031,28 +1029,50 @@
         fetch('/api/user-profile-navbar')
           .then(response => response.json())
           .then(data => {
+            console.log('Profile data received:', data);
             if (data.success) {
               const firstName = data.first_name || 'User';
               const profileImage = data.profile_image;
+              
+              console.log('Profile image URL:', profileImage);
               
               // Update name and initial
               document.getElementById('buyerFirstName').textContent = firstName;
               document.getElementById('initialText').textContent = firstName.charAt(0).toUpperCase();
               
               // Update profile picture if available
-              if (profileImage) {
+              if (profileImage && profileImage.trim() !== '') {
                 const profileImg = document.getElementById('profileImg');
                 const initialText = document.getElementById('initialText');
                 const buyerInitial = document.getElementById('buyerInitial');
                 
+                console.log('Setting profile image...');
                 profileImg.src = profileImage;
                 profileImg.style.display = 'block';
                 initialText.style.display = 'none';
-                buyerInitial.classList.remove('default-avatar');
+                
+                // Update image on load to ensure it displays
+                profileImg.onload = function() {
+                  console.log('Profile image loaded successfully');
+                  buyerInitial.classList.remove('default-avatar');
+                };
+                profileImg.onerror = function() {
+                  console.log('Profile image failed to load');
+                  // If image fails to load, show initial instead
+                  profileImg.style.display = 'none';
+                  initialText.style.display = 'block';
+                  buyerInitial.classList.add('default-avatar');
+                };
+              } else {
+                console.log('No profile image available');
               }
+            } else {
+              console.log('Profile fetch failed:', data);
             }
           })
-          .catch(error => console.error('Error fetching navbar profile:', error));
+          .catch(error => {
+            console.error('Error fetching navbar profile:', error);
+          });
 
         // Load cart count from database
         if (window.VaronCart) {
@@ -1608,7 +1628,9 @@
         const statusInfo = statusColors[status] || statusColors.pending;
 
         // Update order header
-        document.getElementById('orderDetailStatus').innerHTML = `<span style="color:${statusInfo.color};background:${statusInfo.bg};padding:8px 12px;border-radius:6px;display:inline-block">${statusInfo.label}</span>`;
+        document.getElementById('orderDetailStatus').textContent = statusInfo.label;
+        document.getElementById('orderDetailStatus').style.color = statusInfo.color;
+        document.getElementById('orderDetailStatus').style.background = statusInfo.bg;
         document.getElementById('orderDetailDate').textContent = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         document.getElementById('orderDetailTotal').textContent = `₱${parseFloat(order.total_amount || 0).toFixed(2)}`;
         document.getElementById('orderDetailPayment').textContent = order.payment_status ? order.payment_status.toUpperCase() : 'PENDING';

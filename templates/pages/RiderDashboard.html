@@ -255,6 +255,30 @@
                   <div class="metric">My Active Deliveries</div>
                   <div class="tag" style="background:#10b981;color:#fff" id="active-count">0 Active</div>
                 </div>
+
+                <!-- Region/Area Filter Controls -->
+                <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;padding:12px;background:#f8fafc;border-radius:8px">
+                  <div style="flex:1;min-width:150px">
+                    <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600">Filter by Province</label>
+                    <input type="text" id="filterProvince" placeholder="Enter province" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadMyActiveDeliveries()">
+                  </div>
+                  <div style="flex:1;min-width:150px">
+                    <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600">Filter by City</label>
+                    <input type="text" id="filterCity" placeholder="Enter city" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadMyActiveDeliveries()">
+                  </div>
+                  <div style="flex:1;min-width:150px">
+                    <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600">Filter by Postal Code</label>
+                    <input type="text" id="filterPostalCode" placeholder="Enter postal code" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadMyActiveDeliveries()">
+                  </div>
+                  <div style="display:flex;align-items:flex-end;gap:6px">
+                    <button onclick="clearFilters()" style="padding:8px 14px;background:#efefef;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;transition:all 0.2s" onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background='#efefef'">Clear Filters</button>
+                  </div>
+                </div>
+
+                <div style="font-size:12px;color:#666;margin-bottom:10px">
+                  📍 Your Service Area: <strong id="riderServiceArea">Loading...</strong>
+                </div>
+
                 <div style="overflow:auto">
                   <table id="active-deliveries-table">
                     <thead>
@@ -267,7 +291,7 @@
                         <th>Action</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="active-deliveries-tbody" style="color:#0a0a0a">
                       <tr>
                         <td colspan="6" style="text-align:center;color:#999">Loading your deliveries...</td>
                       </tr>
@@ -294,6 +318,7 @@
                         <th>Orders</th>
                         <th>Earnings</th>
                         <th>Rating</th>
+                        <th style="text-align:center">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -438,8 +463,17 @@
                   </div>
                   <div style="display:grid;gap:10px">
                     <div style="display:flex;justify-content:space-between">
-                      <div>Vehicle Type</div>
-                      <div>{{ rider.vehicle_type|title if rider and rider.vehicle_type else 'Not specified' }}</div>
+                      <div>Vehicle Type(s)</div>
+                      <div>
+                        {% if rider and rider.vehicle_type %}
+                          {% set vehicles = rider.vehicle_type.split(',') %}
+                          {% for vehicle in vehicles %}
+                            <span class="tag" style="background:#efefef;color:#0a0a0a;margin-right:6px">{{ vehicle.strip()|title }}</span>
+                          {% endfor %}
+                        {% else %}
+                          <span>Not specified</span>
+                        {% endif %}
+                      </div>
                     </div>
                     <div style="display:flex;justify-content:space-between">
                       <div>License Number</div>
@@ -596,10 +630,16 @@
           .then(response => response.json())
           .then(data => {
             const tbody = document.querySelector('#available-orders-table tbody');
+            
+            console.log('[DEBUG] Available Orders Response:', data);
+            
             if (data.success && data.orders && data.orders.length > 0) {
-              tbody.innerHTML = data.orders
-                .filter(order => order.shipment_status === 'pending')
-                .map(order => {
+              const availableOrders = data.orders.filter(order => 
+                order.shipment_status === 'pending' && !order.assigned_rider_id
+              );
+              
+              if (availableOrders.length > 0) {
+                tbody.innerHTML = availableOrders.map(order => {
                   const earning = (parseFloat(order.total_amount) * 0.15).toFixed(2);
                   const orderDate = new Date(order.created_at).toLocaleString('en-US', { 
                     month: 'short', 
@@ -607,6 +647,7 @@
                     hour: '2-digit', 
                     minute: '2-digit' 
                   });
+                  const location = `${order.delivery_city}, ${order.delivery_province} ${order.delivery_postal_code}`.trim();
                   return `
                     <tr>
                       <td>
@@ -617,7 +658,10 @@
                         <div>${order.customer_name}</div>
                         <div style="font-size:11px;color:#999">${order.customer_phone || 'N/A'}</div>
                       </td>
-                      <td style="max-width:200px">${order.delivery_address}</td>
+                      <td style="max-width:200px">
+                        <div>${order.delivery_address}</div>
+                        <div style="font-size:11px;color:#10b981;margin-top:2px">📍 ${location}</div>
+                      </td>
                       <td style="font-weight:600">₱${parseFloat(order.total_amount).toFixed(2)}</td>
                       <td style="color:#10b981;font-weight:600">₱${earning}</td>
                       <td>
@@ -630,8 +674,15 @@
                     </tr>
                   `;
                 }).join('');
+              } else {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">All available orders in your area are already accepted</td></tr>';
+              }
             } else {
-              tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">No available orders in your area</td></tr>';
+              const message = data.service_area ? 
+                'No available orders in your area. New orders will appear here.' :
+                'No service area assigned. Please contact support.';
+              tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">${message}</td></tr>`;
+              console.log('[DEBUG] Data:', data);
             }
           })
           .catch(error => {
@@ -641,17 +692,43 @@
           });
       }
 
-      // Load rider's active deliveries
+      // Load rider's active deliveries with regional filtering
       function loadMyActiveDeliveries() {
-        fetch('/api/rider/active-deliveries')
+        // Get filter values from inputs
+        const filterProvince = document.getElementById('filterProvince')?.value.trim() || '';
+        const filterCity = document.getElementById('filterCity')?.value.trim() || '';
+        const filterPostalCode = document.getElementById('filterPostalCode')?.value.trim() || '';
+        
+        // Build query parameters
+        let url = '/api/rider/active-deliveries';
+        const params = new URLSearchParams();
+        if (filterProvince) params.append('province', filterProvince);
+        if (filterCity) params.append('city', filterCity);
+        if (filterPostalCode) params.append('postal_code', filterPostalCode);
+        if (params.toString()) url += '?' + params.toString();
+        
+        fetch(url)
           .then(response => response.json())
           .then(data => {
             const tbody = document.querySelector('#active-deliveries-table tbody');
             // Include all active deliveries: pending (waiting approval), picked_up, in_transit, out_for_delivery
             const activeOrders = data.deliveries || [];
             
-            // Update count badge
-            document.getElementById('active-count').textContent = `${activeOrders.length} Active`;
+            // Display rider's service area
+            if (data.service_area) {
+              document.getElementById('riderServiceArea').textContent = data.service_area || 'Not assigned';
+            }
+            
+            // Update count badge with filter info
+            let countText = `${activeOrders.length} Active`;
+            if (filterProvince || filterCity || filterPostalCode) {
+              const filters = [];
+              if (filterProvince) filters.push(filterProvince);
+              if (filterCity) filters.push(filterCity);
+              if (filterPostalCode) filters.push(filterPostalCode);
+              countText = `${activeOrders.length} Found (${filters.join(', ')})`;
+            }
+            document.getElementById('active-count').textContent = countText;
             
             if (activeOrders.length > 0) {
               tbody.innerHTML = activeOrders.map(order => {
@@ -670,45 +747,50 @@
                                order.shipment_status === 'in_transit' ? '#8b5cf6' : '#6b7280';
                 }
                 
-                // Only show status update dropdown if seller has approved
-                const statusDropdown = order.seller_confirmed ? `
-                  <select onchange="updateDeliveryStatus(${order.shipment_id}, this.value)" 
-                          class="tag" 
-                          style="background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer">
-                    <option value="">Update Status...</option>
-                    <option value="in_transit">In Transit</option>
-                    <option value="out_for_delivery">Out for Delivery</option>
-                    <option value="delivered">Delivered ✓</option>
-                    <option value="failed">Failed</option>
-                  </select>
+                // Display order location
+                const orderLocation = `${order.city}, ${order.province} ${order.postal_code}`.trim();
+                
+                // Only show status update buttons if seller has approved
+                const statusButtons = order.seller_confirmed ? `
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    ${order.shipment_status !== 'in_transit' ? `<button onclick="updateDeliveryStatus(${order.shipment_id}, 'in_transit')" class="tag" style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">In Transit</button>` : ''}
+                    ${order.shipment_status !== 'out_for_delivery' && order.shipment_status !== 'delivered' ? `<button onclick="updateDeliveryStatus(${order.shipment_id}, 'out_for_delivery')" class="tag" style="background:#8b5cf6;color:#fff;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#7c3aed'" onmouseout="this.style.background='#8b5cf6'">Out for Delivery</button>` : ''}
+                    ${order.shipment_status !== 'delivered' ? `<button onclick="updateDeliveryStatus(${order.shipment_id}, 'delivered')" class="tag" style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">✓ Delivered</button>` : '<span style="background:#10b981;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600">✓ Delivered</span>'}
+                  </div>
                 ` : `
                   <span style="color:#f59e0b;font-size:12px;font-weight:500">⏳ Waiting for seller approval</span>
                 `;
                 
                 return `
-                  <tr>
-                    <td>
-                      <div style="font-weight:600">#${order.order_number}</div>
+                  <tr style="color:#0a0a0a">
+                    <td style="color:#0a0a0a">
+                      <div style="font-weight:600;color:#0a0a0a">#${order.order_number}</div>
                     </td>
-                    <td>
-                      <div>${order.customer_name}</div>
+                    <td style="color:#0a0a0a">
+                      <div style="color:#0a0a0a">${order.customer_name}</div>
                       <div style="font-size:11px;color:#999">${order.customer_phone || 'N/A'}</div>
                     </td>
-                    <td style="max-width:200px">${order.delivery_address}</td>
-                    <td>
+                    <td style="max-width:200px;color:#0a0a0a">
+                      <div>${order.delivery_address}</div>
+                      <div style="font-size:11px;color:#10b981;margin-top:2px">📍 ${orderLocation}</div>
+                    </td>
+                    <td style="color:#0a0a0a">
                       <span class="status ${statusClass}" style="background:${statusColor};color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">
                         ${statusText}
                       </span>
                     </td>
                     <td style="color:#10b981;font-weight:600">₱${earning}</td>
-                    <td>
-                      ${statusDropdown}
+                    <td style="color:#0a0a0a">
+                      ${statusButtons}
                     </td>
                   </tr>
                 `;
               }).join('');
             } else {
-              tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">No active deliveries</td></tr>';
+              const filterText = (filterProvince || filterCity || filterPostalCode) ? 
+                'No deliveries found in this area. Try adjusting your filters.' : 
+                'No active deliveries. New orders will appear here.';
+              tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">${filterText}</td></tr>`;
             }
           })
           .catch(error => {
@@ -716,6 +798,14 @@
             document.querySelector('#active-deliveries-table tbody').innerHTML = 
               '<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:40px">Error loading deliveries</td></tr>';
           });
+      }
+
+      // Clear all filters
+      function clearFilters() {
+        document.getElementById('filterProvince').value = '';
+        document.getElementById('filterCity').value = '';
+        document.getElementById('filterPostalCode').value = '';
+        loadMyActiveDeliveries();
       }
 
       // Accept an order
@@ -793,7 +883,7 @@
           .then(data => {
             const tbody = document.querySelector('#history-table tbody');
             if (data.success && data.history && data.history.length > 0) {
-              tbody.innerHTML = data.history.map(day => {
+              tbody.innerHTML = data.history.map((day, index) => {
                 const date = new Date(day.delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 const rating = day.avg_rating ? parseFloat(day.avg_rating).toFixed(1) : '5.0';
                 return `
@@ -802,17 +892,38 @@
                     <td>${day.order_count} deliveries</td>
                     <td>₱${parseFloat(day.daily_earnings).toFixed(2)}</td>
                     <td>${rating} ⭐</td>
+                    <td style="text-align:center">
+                      <div style="display:flex;gap:6px;justify-content:center">
+                        <button onclick="viewHistoryDetails(${index}, '${date}', ${day.order_count}, ${day.daily_earnings})" class="tag" style="background:#0a0a0a;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">View</button>
+                        <button onclick="updateHistoryRecord(${index}, '${date}')" class="tag" style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">Update</button>
+                      </div>
+                    </td>
                   </tr>
                 `;
               }).join('');
             } else {
-              tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999">No delivery history found</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999">No delivery history found</td></tr>';
             }
           })
           .catch(error => {
             console.error('Error loading delivery history:', error);
-            document.querySelector('#history-table tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Error loading history</td></tr>';
+            document.querySelector('#history-table tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444">Error loading history</td></tr>';
           });
+      }
+
+      // View history details
+      function viewHistoryDetails(index, date, orderCount, earnings) {
+        const details = `
+Delivery Date: ${date}
+Total Deliveries: ${orderCount}
+Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
+        `;
+        alert(details);
+      }
+
+      // Update history record (for future enhancements)
+      function updateHistoryRecord(index, date) {
+        alert('Edit delivery record for ' + date + '\n(To be implemented)');
       }
 
       // Load earnings data from database

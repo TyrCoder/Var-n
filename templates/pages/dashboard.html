@@ -83,13 +83,11 @@
           <a class="side-link" href="#" data-page="riders">Riders</a>
           <a class="side-link" href="#" data-page="sellers">Sellers</a>
           <a class="side-link" href="#" data-page="journal">Journal Management</a>
-                    <a class="side-link" href="#" onclick="confirmLogout(event)">Logout</a>
         </div>
         <div class="side-group">
           <div class="side-title">Support</div>
           <a class="side-link" href="#" data-page="setting">Setting</a>
           <a class="side-link" href="#" data-page="help">Help</a>
-          <a class="side-link" href="#" data-page="darkmode">Dark Mode</a>
         </div>
       </aside>
 
@@ -136,21 +134,12 @@
               <div class="inner">
                 <div class="metric">Customer Growth (Philippines)</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
-                  <div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:6px 0"><span>NCR (Metro Manila)</span><span>28%</span></div>
-                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:28%;background:#0a0a0a;border-radius:999px"></div></div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 6px"><span>CALABARZON</span><span>22%</span></div>
-                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:22%;background:#0a0a0a;border-radius:999px"></div></div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 6px"><span>Central Visayas</span><span>18%</span></div>
-                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:18%;background:#0a0a0a;border-radius:999px"></div></div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 0"><span>Central Luzon</span><span>12%</span></div>
-                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:12%;background:#0a0a0a;border-radius:999px"></div></div>
-                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:10px 0 0"><span>Davao Region</span><span>8%</span></div>
-                    <div style="height:8px;background:#efefef;border-radius:999px"><div style="height:8px;width:8%;background:#0a0a0a;border-radius:999px"></div></div>
+                  <div id="overview-customer-growth">
+                    <p style="text-align:center;color:#999;padding:20px">Loading regional data...</p>
                   </div>
                   <div class="promo">
                     <div style="font-weight:700;margin-bottom:8px">See more detail statistic to analyze your decision</div>
-                    <a href="#" class="tag" style="display:inline-block;background:#fff;color:#0a0a0a;margin-top:8px">See more</a>
+                    <a href="#" onclick="loadPage('statistics'); return false;" class="tag" style="display:inline-block;background:#fff;color:#0a0a0a;margin-top:8px">See more</a>
                   </div>
                 </div>
               </div>
@@ -255,16 +244,76 @@
         'sellers': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 16px;">Pending Seller Verifications</h2>
-              <div id="pending-sellers-list">Loading pending sellers...</div>
+              <h2 style="margin: 0 0 16px;">👥 Active Sellers</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">View all active sellers in the system</p>
+              <div id="active-sellers-list">Loading sellers...</div>
             </div>
           </div>
         `,
         'riders': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 16px;">Pending Rider Verifications</h2>
-              <div id="pending-riders-list">Loading pending riders...</div>
+              <h2 style="margin: 0 0 16px;">🚗 Active Riders</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">View all active riders in the system</p>
+              <div id="active-riders-list">Loading riders...</div>
+            </div>
+          </div>
+        `,
+        'product': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">📦 All Products</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">Browse and manage all products in the system</p>
+              <div id="all-products-list">Loading products...</div>
+            </div>
+          </div>
+        `,
+        'customer': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">👥 Customer Management</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">View and manage customer accounts</p>
+              <div id="customers-list">Loading customers...</div>
+            </div>
+          </div>
+        `,
+        'transactions': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">💳 Transactions</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">View all transactions and payment history</p>
+              <div id="transactions-list">Loading transactions...</div>
+            </div>
+          </div>
+        `,
+        'statistics': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">📊 Statistics</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">View detailed analytics and statistics</p>
+              <div id="statistics-content">Loading statistics...</div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 20px;">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">📈 Customer Growth (Philippines)</h2>
+              <div id="customer-growth-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div id="regional-growth">Loading regional data...</div>
+                <div style="background: #0a0a0a; color: #fff; border-radius: 10px; padding: 24px; display: flex; flex-direction: column; justify-content: center;">
+                  <h3 style="margin: 0 0 16px; font-size: 18px;">See more detail statistic to analyze your decision</h3>
+                  <button onclick="document.getElementById('detailed-stats-modal').style.display='flex'" class="tag" style="background:#fff;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px;width:fit-content">See more</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Detailed Statistics Modal -->
+          <div id="detailed-stats-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:24px;max-width:800px;width:90%;max-height:80vh;overflow-y:auto">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line)">
+                <h2 style="margin:0;font-size:20px;font-weight:700">Detailed Statistics</h2>
+                <button onclick="document.getElementById('detailed-stats-modal').style.display='none'" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
+              </div>
+              <div id="detailed-stats-body">Loading...</div>
             </div>
           </div>
         `,
@@ -309,6 +358,138 @@
               </form>
             </div>
           </div>
+        `,
+        'setting': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 24px;">⚙️ System Settings</h2>
+              <div style="display: grid; gap: 24px;">
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 20px;">
+                  <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 600;">General Settings</h3>
+                  <div style="display: grid; gap: 16px;">
+                    <div>
+                      <label style="display: block; margin-bottom: 8px; font-weight: 500;">System Name</label>
+                      <input type="text" id="system-name" placeholder="e.g., Var-n E-Commerce" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                      <label style="display: block; margin-bottom: 8px; font-weight: 500;">Support Email</label>
+                      <input type="email" id="support-email" placeholder="support@example.com" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div>
+                      <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone Number</label>
+                      <input type="tel" id="support-phone" placeholder="+63 9XX XXX XXXX" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                  </div>
+                </div>
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 20px;">
+                  <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 600;">Maintenance Mode</h3>
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="checkbox" id="maintenance-mode" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="maintenance-mode" style="font-weight: 500; cursor: pointer;">Enable Maintenance Mode</label>
+                  </div>
+                  <p style="margin: 12px 0 0; font-size: 13px; color: var(--muted);">When enabled, the store will be unavailable to customers.</p>
+                </div>
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 20px;">
+                  <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 600;">Notification Settings</h3>
+                  <div style="display: grid; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <input type="checkbox" id="email-notifications" checked style="width: 20px; height: 20px; cursor: pointer;">
+                      <label for="email-notifications" style="font-weight: 500; cursor: pointer;">Email Notifications</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <input type="checkbox" id="order-alerts" checked style="width: 20px; height: 20px; cursor: pointer;">
+                      <label for="order-alerts" style="font-weight: 500; cursor: pointer;">Order Alerts</label>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <input type="checkbox" id="seller-alerts" checked style="width: 20px; height: 20px; cursor: pointer;">
+                      <label for="seller-alerts" style="font-weight: 500; cursor: pointer;">Seller Management Alerts</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line);">
+                <button onclick="location.reload()" class="tag" style="background: #f3f4f6; color: #0a0a0a; cursor: pointer; border: none; padding: 10px 16px;">Cancel</button>
+                <button onclick="saveSystemSettings()" class="tag" style="background: #0a0a0a; color: #fff; cursor: pointer; border: none; padding: 10px 16px;">Save Settings</button>
+              </div>
+            </div>
+          </div>
+        `,
+        'help': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 24px;">📚 Help & Support</h2>
+              <div style="display: grid; gap: 24px;">
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 20px;">
+                  <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">❓ Frequently Asked Questions</h3>
+                  <div style="display: grid; gap: 12px;" id="faq-list">
+                    <div style="padding: 12px; background: #f9f9f9; border-radius: 6px; cursor: pointer;" onclick="toggleFAQ(this)">
+                      <div style="font-weight: 500; display: flex; justify-content: space-between; align-items: center;">
+                        <span>How do I approve new products?</span>
+                        <span style="font-size: 20px; color: var(--muted);">+</span>
+                      </div>
+                      <div style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); line-height: 1.6;">
+                        Navigate to "Pending Products", review the product details, and click the approve button. The seller will be notified immediately.
+                      </div>
+                    </div>
+                    <div style="padding: 12px; background: #f9f9f9; border-radius: 6px; cursor: pointer;" onclick="toggleFAQ(this)">
+                      <div style="font-weight: 500; display: flex; justify-content: space-between; align-items: center;">
+                        <span>How do I manage sellers?</span>
+                        <span style="font-size: 20px; color: var(--muted);">+</span>
+                      </div>
+                      <div style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); line-height: 1.6;">
+                        Visit the "Active Sellers" section to view all registered sellers, their store information, and product counts. You can take action on seller accounts from here.
+                      </div>
+                    </div>
+                    <div style="padding: 12px; background: #f9f9f9; border-radius: 6px; cursor: pointer;" onclick="toggleFAQ(this)">
+                      <div style="font-weight: 500; display: flex; justify-content: space-between; align-items: center;">
+                        <span>How do I view transaction history?</span>
+                        <span style="font-size: 20px; color: var(--muted);">+</span>
+                      </div>
+                      <div style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); line-height: 1.6;">
+                        Go to the "Transactions" section to see all orders, payment status, and delivery information. You can filter by date or customer.
+                      </div>
+                    </div>
+                    <div style="padding: 12px; background: #f9f9f9; border-radius: 6px; cursor: pointer;" onclick="toggleFAQ(this)">
+                      <div style="font-weight: 500; display: flex; justify-content: space-between; align-items: center;">
+                        <span>What do the statistics show?</span>
+                        <span style="font-size: 20px; color: var(--muted);">+</span>
+                      </div>
+                      <div style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); line-height: 1.6;">
+                        The statistics page displays total revenue, order count, active users, and products. You can also see customer growth by region to analyze market trends.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 20px;">
+                  <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">📖 Documentation</h3>
+                  <ul style="margin: 0; padding-left: 20px; list-style: disc;">
+                    <li style="margin-bottom: 8px;"><a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500;">Admin Dashboard Guide</a></li>
+                    <li style="margin-bottom: 8px;"><a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500;">Product Management Tutorial</a></li>
+                    <li style="margin-bottom: 8px;"><a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500;">Order Processing Workflow</a></li>
+                    <li style="margin-bottom: 8px;"><a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500;">Seller Verification Process</a></li>
+                    <li style="margin-bottom: 8px;"><a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500;">Rider Assignment & Tracking</a></li>
+                  </ul>
+                </div>
+                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 20px;">
+                  <h3 style="margin: 0 0 16px; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px;">📞 Contact Support</h3>
+                  <div style="display: grid; gap: 12px; font-size: 14px;">
+                    <div>
+                      <strong>Email:</strong>
+                      <p style="margin: 4px 0 0; color: var(--muted);" id="support-contact-email">support@varn.com</p>
+                    </div>
+                    <div>
+                      <strong>Phone:</strong>
+                      <p style="margin: 4px 0 0; color: var(--muted);" id="support-contact-phone">+63 977 XXX XXXX</p>
+                    </div>
+                    <div>
+                      <strong>Hours:</strong>
+                      <p style="margin: 4px 0 0; color: var(--muted);">Monday - Friday: 9:00 AM - 6:00 PM (PST)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         `
       };
 
@@ -339,11 +520,23 @@
           } else if (page === 'recovery-requests') {
             loadRecoveryRequests();
           } else if (page === 'sellers') {
-            loadPendingSellers();
+            loadActiveSellers();
           } else if (page === 'riders') {
-            loadPendingRiders();
+            loadActiveRiders();
           } else if (page === 'journal') {
             loadJournalEntries();
+          } else if (page === 'product') {
+            loadAllProducts();
+          } else if (page === 'customer') {
+            loadCustomers();
+          } else if (page === 'transactions') {
+            loadTransactions();
+          } else if (page === 'statistics') {
+            loadStatistics();
+          } else if (page === 'setting') {
+            loadSettings();
+          } else if (page === 'help') {
+            loadHelp();
           }
         } else {
           content.innerHTML = `
@@ -364,9 +557,11 @@
           'customer': 'Customers',
           'transactions': 'Transactions',
           'statistics': 'Statistics',
-          'riders': 'Rider Verifications',
-          'sellers': 'Seller Verifications',
+          'riders': 'Active Riders',
+          'sellers': 'Active Sellers',
           'journal': 'Journal Management',
+          'setting': 'System Settings',
+          'help': 'Help & Support',
           'log': 'Activity Log'
         };
         document.querySelector('.page-title').textContent = pageNames[page] || 'Dashboard';
@@ -1094,6 +1289,9 @@
         fetch(`/admin/product-details/${productId}`)
           .then(response => response.json())
           .then(data => {
+            console.log('Product details data:', data);
+            console.log('Variants:', data.variants);
+            console.log('Product stock:', data.product?.stock);
             if (data.success && data.product) {
               const p = data.product;
               // Format category name
@@ -1169,13 +1367,14 @@
                         </table>
                       </div>
                       <div style="margin-top:12px;padding-top:12px;border-top:2px solid #fbbf24;">
-                        <strong>Total Stock:</strong> ${data.variants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0)} pcs
+                        <strong>Total Stock:</strong> ${data.variants.reduce((sum, v) => sum + (parseInt(v.stock_quantity) || 0), 0)} pcs
                       </div>
                     </div>
                   ` : `
                     <div style="background:#fef3c7;padding:16px;border-radius:8px;">
                       <h3 style="margin:0 0 12px;color:#0a0a0a;">📦 Stock Information</h3>
-                      <div><strong>Total Stock:</strong> ${p.stock || 0} pcs</div>
+                      <div><strong>Total Stock:</strong> ${parseInt(p.stock) || 0} pcs</div>
+                      ${!data.variants || data.variants.length === 0 ? '<p style="color:#666;font-size:14px;margin-top:8px;">No variant information available</p>' : ''}
                     </div>
                   `}
                   
@@ -1307,8 +1506,294 @@
         document.getElementById('journal-form').reset();
       }
 
+      // Load All Products
+      function loadAllProducts() {
+        fetch('/admin/all-products')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('all-products-list');
+            if (data.products && data.products.length > 0) {
+              let html = `<table><thead><tr><th>Product</th><th>Seller</th><th>Price</th><th>Stock</th><th>Status</th></tr></thead><tbody>`;
+              data.products.forEach(product => {
+                html += `<tr><td><strong>${product.name}</strong></td><td>${product.store_name}</td><td>₱${parseFloat(product.price).toFixed(2)}</td><td>${product.stock}</td><td><span class="tag" style="background:#10b981">${product.status || 'Active'}</span></td></tr>`;
+              });
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No products found</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('all-products-list').innerHTML = '<p style="color:#ef4444">Error loading products</p>';
+          });
+      }
+
+      // Load Customers
+      function loadCustomers() {
+        fetch('/admin/all-customers')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('customers-list');
+            if (data.customers && data.customers.length > 0) {
+              let html = `<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Orders</th></tr></thead><tbody>`;
+              data.customers.forEach(customer => {
+                const date = new Date(customer.created_at).toLocaleDateString();
+                html += `<tr><td><strong>${customer.first_name} ${customer.last_name}</strong></td><td>${customer.email}</td><td>${customer.phone || 'N/A'}</td><td>${date}</td><td>${customer.order_count || 0}</td></tr>`;
+              });
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No customers found</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('customers-list').innerHTML = '<p style="color:#ef4444">Error loading customers</p>';
+          });
+      }
+
+      // Load Transactions
+      function loadTransactions() {
+        fetch('/admin/all-transactions')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('transactions-list');
+            if (data.transactions && data.transactions.length > 0) {
+              let html = `<table><thead><tr><th>Order ID</th><th>Customer</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>`;
+              data.transactions.forEach(transaction => {
+                const date = new Date(transaction.created_at).toLocaleDateString();
+                html += `<tr><td>${transaction.order_number}</td><td>${transaction.customer_name}</td><td>₱${parseFloat(transaction.amount).toFixed(2)}</td><td><span class="tag" style="background:#10b981">${transaction.status}</span></td><td>${date}</td></tr>`;
+              });
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No transactions found</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('transactions-list').innerHTML = '<p style="color:#ef4444">Error loading transactions</p>';
+          });
+      }
+
+      // Load Statistics
+      function loadStatistics() {
+        fetch('/admin/statistics')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('statistics-content');
+            if (data.success) {
+              let html = `
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+                  <div class="card" style="text-align:center">
+                    <div class="inner">
+                      <div class="metric">Total Revenue</div>
+                      <div class="value" style="color:#3b82f6">₱${data.total_revenue ? parseFloat(data.total_revenue).toFixed(2) : '0.00'}</div>
+                    </div>
+                  </div>
+                  <div class="card" style="text-align:center">
+                    <div class="inner">
+                      <div class="metric">Total Orders</div>
+                      <div class="value">${data.total_orders || 0}</div>
+                    </div>
+                  </div>
+                  <div class="card" style="text-align:center">
+                    <div class="inner">
+                      <div class="metric">Active Users</div>
+                      <div class="value">${data.active_users || 0}</div>
+                    </div>
+                  </div>
+                  <div class="card" style="text-align:center">
+                    <div class="inner">
+                      <div class="metric">Active Products</div>
+                      <div class="value">${data.active_products || 0}</div>
+                    </div>
+                  </div>
+                </div>
+              `;
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="color:#ef4444">Error loading statistics</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('statistics-content').innerHTML = '<p style="color:#ef4444">Error loading statistics</p>';
+          });
+
+        // Load customer growth by region
+        fetch('/admin/customer-growth-by-region')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('regional-growth');
+            if (data.success && data.regions && data.regions.length > 0) {
+              let html = '<div style="display:flex;flex-direction:column;gap:16px">';
+              const total = data.regions.reduce((sum, r) => sum + r.count, 0);
+              
+              data.regions.forEach(region => {
+                const percentage = total > 0 ? Math.round((region.count / total) * 100) : 0;
+                html += `
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                      <span style="font-weight:500">${region.region}</span>
+                      <span style="color:#3b82f6;font-weight:600">${percentage}%</span>
+                    </div>
+                    <div style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden">
+                      <div style="height:100%;background:#0a0a0a;width:${percentage}%;transition:width 0.3s"></div>
+                    </div>
+                  </div>
+                `;
+              });
+              
+              html += '</div>';
+              container.innerHTML = html;
+              
+              // Also populate detailed stats
+              let detailedHtml = '<table style="width:100%;border-collapse:separate;border-spacing:0"><thead><tr><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line);font-weight:600">Region</th><th style="text-align:center;padding:10px;border-bottom:1px solid var(--line);font-weight:600">Customers</th><th style="text-align:center;padding:10px;border-bottom:1px solid var(--line);font-weight:600">Percentage</th></tr></thead><tbody>';
+              
+              data.regions.forEach(region => {
+                const percentage = total > 0 ? Math.round((region.count / total) * 100) : 0;
+                detailedHtml += `<tr><td style="padding:12px;border-bottom:1px solid var(--line)">${region.region}</td><td style="padding:12px;border-bottom:1px solid var(--line);text-align:center;font-weight:600">${region.count}</td><td style="padding:12px;border-bottom:1px solid var(--line);text-align:center">${percentage}%</td></tr>`;
+              });
+              
+              detailedHtml += '</tbody></table>';
+              document.getElementById('detailed-stats-body').innerHTML = detailedHtml;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999">No regional data available</p>';
+            }
+          })
+          .catch(error => {
+            console.error('Error loading regional data:', error);
+          });
+      }
+
+      // Load Active Sellers
+      function loadActiveSellers() {
+        fetch('/admin/active-sellers')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('active-sellers-list');
+            if (data.sellers && data.sellers.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Store Name</th>
+                      <th>Owner</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Products</th>
+                      <th>Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              data.sellers.forEach(seller => {
+                const date = new Date(seller.created_at).toLocaleDateString();
+                html += `
+                  <tr>
+                    <td><strong>${seller.store_name}</strong></td>
+                    <td>${seller.first_name} ${seller.last_name}</td>
+                    <td>${seller.email}</td>
+                    <td>${seller.phone || 'N/A'}</td>
+                    <td>${seller.product_count || 0}</td>
+                    <td>${date}</td>
+                  </tr>
+                `;
+              });
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No active sellers found</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('active-sellers-list').innerHTML = '<p style="color:#ef4444">Error loading sellers</p>';
+          });
+      }
+
+      // Load Active Riders
+      function loadActiveRiders() {
+        fetch('/admin/active-riders')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('active-riders-list');
+            if (data.riders && data.riders.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Vehicle Type</th>
+                      <th>License Number</th>
+                      <th>Service Area</th>
+                      <th>Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              data.riders.forEach(rider => {
+                const date = new Date(rider.created_at).toLocaleDateString();
+                html += `
+                  <tr>
+                    <td><strong>${rider.first_name} ${rider.last_name}</strong></td>
+                    <td>${rider.email}</td>
+                    <td>${rider.phone || 'N/A'}</td>
+                    <td>${rider.vehicle_type || 'N/A'}</td>
+                    <td>${rider.license_number || 'N/A'}</td>
+                    <td>${rider.service_area || 'N/A'}</td>
+                    <td>${date}</td>
+                  </tr>
+                `;
+              });
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No active riders found</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('active-riders-list').innerHTML = '<p style="color:#ef4444">Error loading riders</p>';
+          });
+      }
+
+      // Load Overview Customer Growth Data
+      function loadOverviewCustomerGrowth() {
+        fetch('/admin/customer-growth-by-region')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('overview-customer-growth');
+            if (data.success && data.regions && data.regions.length > 0) {
+              let html = '';
+              const total = data.regions.reduce((sum, r) => sum + r.count, 0);
+              
+              data.regions.slice(0, 5).forEach(region => {
+                const percentage = total > 0 ? Math.round((region.count / total) * 100) : 0;
+                html += `
+                  <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;margin:${html === '' ? '6px' : '10px'} 0">
+                    <span>${region.region}</span>
+                    <span>${percentage}%</span>
+                  </div>
+                  <div style="height:8px;background:#efefef;border-radius:999px;margin-bottom:${html !== '' ? '0' : '10px'}">
+                    <div style="height:8px;width:${percentage}%;background:#0a0a0a;border-radius:999px"></div>
+                  </div>
+                `;
+              });
+              
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:20px">No regional data available</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('overview-customer-growth').innerHTML = '<p style="color:#ef4444">Error loading regional data</p>';
+          });
+      }
+
       // Handle journal form submission
       document.addEventListener('DOMContentLoaded', function() {
+        // Load overview customer growth data
+        loadOverviewCustomerGrowth();
+        
         const journalForm = document.getElementById('journal-form');
         if (journalForm) {
           journalForm.addEventListener('submit', function(e) {
@@ -1338,6 +1823,77 @@
           });
         }
       });
+
+      // Load System Settings
+      function loadSettings() {
+        fetch('/admin/settings')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.settings) {
+              document.getElementById('system-name').value = data.settings.system_name || 'Var-n E-Commerce';
+              document.getElementById('support-email').value = data.settings.support_email || 'support@varn.com';
+              document.getElementById('support-phone').value = data.settings.support_phone || '+63 977 XXX XXXX';
+              document.getElementById('maintenance-mode').checked = data.settings.maintenance_mode === 1;
+              document.getElementById('email-notifications').checked = data.settings.email_notifications !== 0;
+              document.getElementById('order-alerts').checked = data.settings.order_alerts !== 0;
+              document.getElementById('seller-alerts').checked = data.settings.seller_alerts !== 0;
+            }
+          })
+          .catch(error => console.log('Using default settings'));
+      }
+
+      // Save System Settings
+      function saveSystemSettings() {
+        const formData = new FormData();
+        formData.append('system_name', document.getElementById('system-name').value);
+        formData.append('support_email', document.getElementById('support-email').value);
+        formData.append('support_phone', document.getElementById('support-phone').value);
+        formData.append('maintenance_mode', document.getElementById('maintenance-mode').checked ? 1 : 0);
+        formData.append('email_notifications', document.getElementById('email-notifications').checked ? 1 : 0);
+        formData.append('order_alerts', document.getElementById('order-alerts').checked ? 1 : 0);
+        formData.append('seller_alerts', document.getElementById('seller-alerts').checked ? 1 : 0);
+
+        fetch('/admin/settings', { method: 'POST', body: formData })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Settings saved successfully');
+              loadSettings();
+            } else {
+              alert('Error: ' + (data.error || 'Could not save settings'));
+            }
+          })
+          .catch(error => alert('Error saving settings: ' + error.message));
+      }
+
+      // Load Help Content
+      function loadHelp() {
+        // Fetch support contact information from settings
+        fetch('/admin/settings')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.settings) {
+              document.getElementById('support-contact-email').textContent = data.settings.support_email || 'support@varn.com';
+              document.getElementById('support-contact-phone').textContent = data.settings.support_phone || '+63 977 XXX XXXX';
+            }
+          })
+          .catch(error => console.log('Using default contact info'));
+      }
+
+      // Toggle FAQ Items
+      function toggleFAQ(element) {
+        const answerDiv = element.querySelector('div:last-child');
+        const toggleIcon = element.querySelector('span:last-child');
+        
+        if (answerDiv.style.display === 'none') {
+          answerDiv.style.display = 'block';
+          toggleIcon.textContent = '−';
+        } else {
+          answerDiv.style.display = 'none';
+          toggleIcon.textContent = '+';
+        }
+      }
     </script>
   </body>
 </html>
+

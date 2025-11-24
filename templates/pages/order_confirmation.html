@@ -914,12 +914,11 @@
             // Build progress timeline
             const progressTimeline = document.getElementById('progressTimeline');
             const steps = [
-              { key: 'pending', label: 'Pending' },
-              { key: 'confirmed', label: 'Confirmed' },
-              { key: 'processing', label: 'Processing' },
-              { key: 'released_to_rider', label: 'Released to Rider' },
-              { key: 'shipped', label: 'Shipped' },
-              { key: 'delivered', label: 'Delivered' }
+              { key: 'confirmed', label: 'Confirmed', emoji: '✓' },
+              { key: 'picked_up', label: 'Picked Up', emoji: '📦' },
+              { key: 'in_transit', label: 'In Transit', emoji: '🚚' },
+              { key: 'out_for_delivery', label: 'Out for Delivery', emoji: '📍' },
+              { key: 'delivered', label: 'Delivered', emoji: '✅' }
             ];
             
             const currentStepIndex = steps.findIndex(s => s.key === order.status);
@@ -934,7 +933,7 @@
               html += `
                 <div class="progress-step">
                   <div class="progress-step-circle ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}">
-                    ${statusInfo.emoji}
+                    ${step.emoji}
                   </div>
                   <div class="progress-step-label ${isActive ? 'active' : ''}">
                     ${step.label}
@@ -952,11 +951,11 @@
             
             // Update status message
             const statusMessages = {
-              'pending': '⏳ Your order has been received. Waiting for seller confirmation...',
-              'confirmed': '✔️ Seller has confirmed your order! Waiting for a rider to accept...',
-              'processing': '🔄 Your order is being prepared for shipment...',
-              'released_to_rider': '🚚 Your order has been released to rider for delivery!',
-              'shipped': '📦 Your order has been shipped! Track it on the way...',
+              'pending': '⏳ Your order is being confirmed by the seller...',
+              'confirmed': '✓ Seller has confirmed your order! Waiting for a rider to accept...',
+              'picked_up': '📦 Rider has picked up your order!',
+              'in_transit': '🚚 Your order is on the way...',
+              'out_for_delivery': '📍 Your order is out for delivery! Will arrive soon...',
               'delivered': '✅ Your order has been delivered! Thank you for shopping with us!',
               'cancelled': '❌ Your order has been cancelled.',
               'returned': '↩️ Your order has been returned.'

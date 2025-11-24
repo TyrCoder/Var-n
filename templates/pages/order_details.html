@@ -349,26 +349,19 @@
         {% endif %}
         
         <div class="timeline">
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-line"></div>
-            <strong>Order Placed</strong>
-            <p style="margin:4px 0 0;color:#666;font-size:14px">{{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
-          </div>
-          
           {% if order.order_status in ['confirmed', 'processing', 'shipped', 'delivered'] %}
           <div class="timeline-item">
             <div class="timeline-dot"></div>
             <div class="timeline-line"></div>
             <strong>Order Confirmed</strong>
-            <p style="margin:4px 0 0;color:#666;font-size:14px">Seller confirmed your order</p>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">✓ Seller confirmed your order</p>
           </div>
           {% else %}
           <div class="timeline-item">
             <div class="timeline-dot inactive"></div>
             <div class="timeline-line"></div>
             <strong style="color:#999">Order Confirmed</strong>
-            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Waiting for seller approval</p>
           </div>
           {% endif %}
           
@@ -386,7 +379,7 @@
             <div class="timeline-dot inactive"></div>
             <div class="timeline-line"></div>
             <strong style="color:#999">Order Picked Up</strong>
-            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Waiting for rider pickup</p>
           </div>
           {% endif %}
           
@@ -395,14 +388,14 @@
             <div class="timeline-dot"></div>
             <div class="timeline-line"></div>
             <strong>In Transit</strong>
-            <p style="margin:4px 0 0;color:#666;font-size:14px">On the way to you</p>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">🚚 On the way to you</p>
           </div>
           {% else %}
           <div class="timeline-item">
             <div class="timeline-dot inactive"></div>
             <div class="timeline-line"></div>
             <strong style="color:#999">In Transit</strong>
-            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Pending rider update</p>
           </div>
           {% endif %}
           
@@ -411,21 +404,21 @@
             <div class="timeline-dot"></div>
             <div class="timeline-line"></div>
             <strong>Out for Delivery</strong>
-            <p style="margin:4px 0 0;color:#666;font-size:14px">Your package is nearby</p>
+            <p style="margin:4px 0 0;color:#666;font-size:14px">🚚 Your package is nearby</p>
           </div>
           {% else %}
           <div class="timeline-item">
             <div class="timeline-dot inactive"></div>
             <div class="timeline-line"></div>
             <strong style="color:#999">Out for Delivery</strong>
-            <p style="margin:4px 0 0;color:#999;font-size:14px">Pending</p>
+            <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Waiting for rider update</p>
           </div>
           {% endif %}
           
           {% if shipment.status == 'delivered' %}
           <div class="timeline-item">
             <div class="timeline-dot" style="background:#10b981;box-shadow:0 0 0 2px #10b981"></div>
-            <strong style="color:#10b981">Delivered</strong>
+            <strong style="color:#10b981">✓ Delivered</strong>
             <p style="margin:4px 0 0;color:#666;font-size:14px">
               {% if shipment.delivered_at %}{{ shipment.delivered_at.strftime('%B %d, %Y at %I:%M %p') }}{% endif %}
             </p>
@@ -438,7 +431,7 @@
             <div class="timeline-dot inactive"></div>
             <strong style="color:#999">Delivered</strong>
             <p style="margin:4px 0 0;color:#999;font-size:14px">
-              {% if shipment.estimated_delivery %}Est. {{ shipment.estimated_delivery.strftime('%B %d, %Y') }}{% else %}Pending{% endif %}
+              {% if shipment.estimated_delivery %}Est. {{ shipment.estimated_delivery.strftime('%B %d, %Y') }}{% else %}⏳ Pending rider delivery{% endif %}
             </p>
           </div>
           {% endif %}

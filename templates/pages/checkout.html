@@ -900,7 +900,20 @@
 
       // Load a specific saved address into the form
       function loadSavedAddress(addressId) {
-        if (!addressId) return;
+        if (!addressId) {
+          // Clear all fields when "Select a saved address or enter new" is chosen
+          document.getElementById('firstName').value = '';
+          document.getElementById('lastName').value = '';
+          document.getElementById('email').value = '';
+          document.getElementById('phone').value = '';
+          document.getElementById('address').value = '';
+          document.getElementById('city').value = '';
+          document.getElementById('province').value = '';
+          document.getElementById('postalCode').value = '';
+          document.getElementById('country').value = 'Philippines';
+          document.getElementById('notes').value = '';
+          return;
+        }
         
         fetch(`/get-address/${addressId}`)
           .then(response => response.json())
