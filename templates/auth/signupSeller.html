@@ -265,10 +265,8 @@
 
 					<div class="form-group">
 						<label for="sellerEmail">Email address</label>
-						<input id="sellerEmail" name="email" class="form-input" type="email" placeholder="you@business.com" value="{{ user_email or '' }}" {% if user_email %}readonly style="background-color: #f3f4f6; cursor: not-allowed;"{% endif %} required />
-						{% if user_email %}
-						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">Using your logged-in email address</small>
-						{% endif %}
+						<input id="sellerEmail" name="email" class="form-input" type="email" placeholder="you@business.com" required />
+						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">Enter a unique email address for your seller account</small>
 					</div>
 
 					<div class="form-group">
@@ -324,11 +322,11 @@
 				if (input.type === 'password') {
 					input.type = 'text';
 					// Change to eye-off icon
-					icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+					icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>';
 				} else {
 					input.type = 'password';
 					// Change back to eye icon
-					icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+					icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle>';
 				}
 			}
 
@@ -359,7 +357,7 @@
 				const form = e.target;
 				const formData = new FormData(form);
 
-				// Validate required fields
+				// Get all required fields
 				const email = formData.get('email');
 				const password = formData.get('password');
 				const confirmPassword = formData.get('confirm_password');
@@ -367,26 +365,11 @@
 				const shopName = formData.get('shop_name');
 				const tnc = formData.get('tnc');
 				
-				// Check if passwords match
-				const errorDiv = document.getElementById('errorDisplay');
-				if (password !== confirmPassword) {
-					errorDiv.textContent = 'Passwords do not match';
-					errorDiv.style.display = 'block';
-					return;
-				}
-				
-				// Validate password strength (at least 6 characters with letters and numbers)
-				const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
-				if (!passwordRegex.test(password)) {
-					errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
-					errorDiv.style.display = 'block';
-					return;
-				}
-
-				// Create error message div if it doesn't exist
-				let errorDiv = document.querySelector('.alert-error');
+				// Create error display div if it doesn't exist
+				let errorDiv = document.getElementById('errorDisplay');
 				if (!errorDiv) {
 					errorDiv = document.createElement('div');
+					errorDiv.id = 'errorDisplay';
 					errorDiv.className = 'alert alert-error';
 					errorDiv.style.cssText = 'padding: 12px; margin-bottom: 20px; border-radius: 8px; background: #fee2e2; color: #991b1b;';
 					form.insertBefore(errorDiv, form.firstChild);
@@ -394,9 +377,15 @@
 				errorDiv.style.display = 'none';
 
 				// Validate all required fields
-				if (!email || !password || !phone || !shopName) {
+				if (!email || !password || !confirmPassword || !phone || !shopName) {
 					errorDiv.textContent = 'All fields are required';
 					errorDiv.style.display = 'block';
+					return;
+				}
+
+				// Check Terms & Conditions
+				if (!tnc) {
+					alert('Please agree to the Terms & Conditions to continue');
 					return;
 				}
 
@@ -415,9 +404,18 @@
 					return;
 				}
 
-				// Check Terms & Conditions
-				if (!tnc) {
-					alert('Please agree to the Terms & Conditions to continue');
+				// Check if passwords match
+				if (password !== confirmPassword) {
+					errorDiv.textContent = 'Passwords do not match';
+					errorDiv.style.display = 'block';
+					return;
+				}
+				
+				// Validate password strength (at least 6 characters with letters and numbers)
+				const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+				if (!passwordRegex.test(password)) {
+					errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
+					errorDiv.style.display = 'block';
 					return;
 				}
 

@@ -12,7 +12,9 @@
       a{text-decoration:none;color:inherit}
       /* Layout */
       .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+      .app.add-product-mode{grid-template-columns:1fr}
       .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px}
+      .app.add-product-mode .sidebar{display:none}
       .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px}
       .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
       .side-group{margin-top:8px}
@@ -29,6 +31,7 @@
       .tag{background:#0a0a0a;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
 
       .main{padding:18px 18px 26px}
+      .app.add-product-mode .main{max-width:1000px;margin:0 auto;padding:24px}
       .page-title{font-size:22px;margin:8px 0 14px}
 
       /* Cards */
@@ -398,8 +401,12 @@
                     </label>
                   </div>
                   
-                  <!-- Shoe Sizes (hidden by default) -->
+                  <!-- Shoe Sizes (hidden by default) - US Sizes -->
                   <div id="shoeSizes" style="display: none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="5" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>5</span>
+                    </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
                       <input type="checkbox" name="sizes" value="6" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>6</span>
@@ -957,28 +964,36 @@
         const sizes = [];
         const colors = [];
         
-        // Get checked sizes
+        // Get checked sizes ONLY - do NOT add all available sizes
         const checkedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value);
         sizes.push(...checkedSizes);
         
-        // Get checked colors
+        // Get checked colors ONLY - do NOT add all available colors
         const checkedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
         colors.push(...checkedColors);
         
-        // Add custom sizes if provided
+        // Add custom sizes ONLY if they are the only sizes selected
         const customSizesInput = document.getElementById('custom-sizes');
-        if (customSizesInput && customSizesInput.value.trim()) {
-          const customSizes = customSizesInput.value.split(',').map(s => s.trim()).filter(s => s);
-          console.log('Custom sizes found:', customSizes);
+        const customSizes = customSizesInput && customSizesInput.value.trim() 
+          ? customSizesInput.value.split(',').map(s => s.trim()).filter(s => s)
+          : [];
+        
+        // Add custom colors ONLY if they are the only colors selected
+        const customColorsInput = document.getElementById('custom-colors');
+        const customColors = customColorsInput && customColorsInput.value.trim()
+          ? customColorsInput.value.split(',').map(c => c.trim()).filter(c => c)
+          : [];
+        
+        // If custom sizes exist and no checkboxes are checked, use only custom sizes
+        if (checkedSizes.length === 0 && customSizes.length > 0) {
           sizes.push(...customSizes);
+          console.log('Using only custom sizes:', customSizes);
         }
         
-        // Add custom colors if provided
-        const customColorsInput = document.getElementById('custom-colors');
-        if (customColorsInput && customColorsInput.value.trim()) {
-          const customColors = customColorsInput.value.split(',').map(c => c.trim()).filter(c => c);
-          console.log('Custom colors found:', customColors);
+        // If custom colors exist and no checkboxes are checked, use only custom colors
+        if (checkedColors.length === 0 && customColors.length > 0) {
           colors.push(...customColors);
+          console.log('Using only custom colors:', customColors);
         }
         
         console.log('Total sizes:', sizes);
@@ -1036,6 +1051,14 @@
 
       function loadPage(page) {
         const content = document.getElementById('dashboardContent');
+        const app = document.querySelector('.app');
+        
+        // Toggle full-width mode for add-product page
+        if (page === 'add-product') {
+          app.classList.add('add-product-mode');
+        } else {
+          app.classList.remove('add-product-mode');
+        }
         
         // Immediate UI updates first
         const links = document.querySelectorAll('.side-link');
@@ -1244,6 +1267,7 @@
             'confirmed': '#2196f3',
             'processing': '#ff5722',
             'shipped': '#4caf50',
+            'released_to_rider': '#8bc34a',
             'delivered': '#9c27b0',
             'cancelled': '#f44336',
             'returned': '#795548'
@@ -1254,6 +1278,7 @@
             'confirmed': '✔️',
             'processing': '🔄',
             'shipped': '📦',
+            'released_to_rider': '🚚',
             'delivered': '✅',
             'cancelled': '❌',
             'returned': '↩️'
@@ -1281,11 +1306,12 @@
               <td style="padding:10px; font-size:12px; color:#666;">${orderDate}</td>
               <td style="padding:10px; text-align:center;">
                 <button class="action-btn" onclick="viewOrderDetails(${order.id})" style="font-size:12px; padding:4px 8px; margin-right:4px;">View</button>
-                ${order.order_status !== 'delivered' && order.order_status !== 'cancelled' ? 
-                  (order.shipment_status === 'pending' && order.rider_id && !order.seller_confirmed ? 
-                    `<button class="action-btn" onclick="approveRider(${order.id}, ${order.shipment_id || 'null'})" style="font-size:12px; padding:4px 8px; background:#10b981; color:#fff;">Approve Rider</button>` :
-                    `<button class="action-btn" onclick="openStatusModal(${order.id}, '${order.order_status}')" style="font-size:12px; padding:4px 8px;">Update</button>`
-                  ) : ''}
+                ${order.order_status === 'pending' ? 
+                  `<button class="action-btn" onclick="confirmOrder(${order.id})" style="font-size:12px; padding:4px 8px; background:#2196f3; color:#fff;">Confirm Order</button>` :
+                order.order_status === 'confirmed' && order.rider_id && !order.seller_confirmed_rider ? 
+                  `<button class="action-btn" onclick="approveRiderForDelivery(${order.id}, ${order.rider_id})" style="font-size:12px; padding:4px 8px; background:#10b981; color:#fff;">Approve Rider</button>` :
+                order.order_status !== 'delivered' && order.order_status !== 'cancelled' ? 
+                  `<button class="action-btn" onclick="openStatusModal(${order.id}, '${order.order_status}')" style="font-size:12px; padding:4px 8px;">Update</button>` : ''}
               </td>
             </tr>
           `;
@@ -1320,28 +1346,103 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         alert(details);
       }
 
+      // ===== ORDER STATUS MANAGEMENT STATE MACHINE =====
+      // Define valid status transitions (forward-only, no backwards allowed)
+      const orderStatusFlow = {
+        'pending': ['confirmed'],
+        'confirmed': ['processing'],
+        'processing': ['shipped'],
+        'shipped': ['delivered'],
+        'delivered': [], // Final state
+        'cancelled': [], // Final state
+        'returned': []   // Final state
+      };
+
+      function getNextAllowedStatuses(currentStatus) {
+        return orderStatusFlow[currentStatus] || [];
+      }
+
       function openStatusModal(orderId, currentStatus) {
-        console.log('🔄 Opening status modal for order:', orderId);
+        console.log('🔄 Opening order management modal for order:', orderId, 'Current status:', currentStatus);
         
-        // Only show 'confirmed' and 'release_to_rider' options
-        const statuses = ['confirmed', 'release_to_rider'];
-        let statusOptions = statuses.map(s => {
-          const displayName = s === 'release_to_rider' ? 'Release to Rider' : s.replace(/_/g, ' ').toUpperCase();
-          return `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${displayName}</option>`;
+        // Get the order details
+        const order = allOrders.find(o => o.id === orderId);
+        if (!order) {
+          alert('Order not found');
+          return;
+        }
+        
+        // Get allowed next statuses (prevent backwards transitions)
+        const allowedStatuses = getNextAllowedStatuses(currentStatus);
+        
+        if (allowedStatuses.length === 0) {
+          alert(`⚠️ This order is in a final state (${currentStatus.toUpperCase()}) and cannot be modified further.`);
+          return;
+        }
+        
+        // Create status transition options with descriptions and emojis
+        const statusDescriptions = {
+          'confirmed': { desc: 'Start preparing the order for shipment', icon: '📦', color: '#3b82f6' },
+          'processing': { desc: 'Package is ready and awaiting shipment', icon: '📋', color: '#8b5cf6' },
+          'shipped': { desc: 'Order dispatched to delivery address', icon: '🚚', color: '#06b6d4' },
+          'delivered': { desc: 'Order successfully delivered to customer', icon: '✅', color: '#10b981' },
+          'cancelled': { desc: 'Cancel this order (cannot be reopened)', icon: '❌', color: '#ef4444' }
+        };
+        
+        let statusOptions = allowedStatuses.map(s => {
+          const info = statusDescriptions[s] || {};
+          return `<option value="${s}" data-description="${info.desc}">${info.icon} ${s.replace(/_/g, ' ').toUpperCase()}</option>`;
         }).join('');
         
+        const currentStatusInfo = statusDescriptions[currentStatus] || {};
+        
         const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000;';
         modal.innerHTML = `
-          <div style="background:#fff; padding:20px; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-width:400px;">
-            <h3>Update Order Status</h3>
-            <label style="display:block; margin:15px 0; font-weight:600;">New Status</label>
-            <select id="new-status-select" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; font-size:14px;">
-              ${statusOptions}
-            </select>
-            <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
-              <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 16px; border:1px solid #ddd; border-radius:4px; cursor:pointer;">Cancel</button>
-              <button onclick="updateOrderStatus(${orderId})" style="padding:8px 16px; background:#0a0a0a; color:#fff; border:none; border-radius:4px; cursor:pointer;">Update</button>
+          <div style="background:#fff; padding:32px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); max-width:550px; width:90%;">
+            <button onclick="this.closest('[style*=fixed]').remove()" style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:#999;">×</button>
+            
+            <h2 style="margin:0 0 24px; font-size:22px; font-weight:600; color:#0a0a0a;">📋 Order Management</h2>
+            
+            <!-- Current Status Section -->
+            <div style="background:#f3f4f6; padding:16px; border-radius:8px; margin-bottom:20px; border-left:4px solid #3b82f6;">
+              <p style="margin:0 0 8px; font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase;">Current Status</p>
+              <div style="font-size:18px; font-weight:600; color:#0a0a0a;">
+                ${currentStatusInfo.icon} ${currentStatus.replace(/_/g, ' ').toUpperCase()}
+              </div>
+              <p style="margin:8px 0 0; font-size:13px; color:#6b7280;">${currentStatusInfo.desc || ''}</p>
+            </div>
+            
+            <!-- Order Details Summary -->
+            <div style="background:#f9fafb; padding:16px; border-radius:8px; margin-bottom:20px; border-left:4px solid #3b82f6;">
+              <p style="margin:0; font-size:12px; color:#6b7280; font-weight:600;">📦 Order #${order.order_number || order.id}</p>
+              <p style="margin:4px 0 0; font-size:12px; color:#6b7280;color:12px;>💰 Total: ₱${parseFloat(order.total_amount || 0).toFixed(2)} | 👤 ${order.customer_name || 'N/A'}</p>
+              <p style="margin:4px 0 0; font-size:12px; color:#6b7280;">📅 Placed: ${new Date(order.created_at).toLocaleDateString()}</p>
+            </div>
+            
+            <!-- Status Transition Section -->
+            <div style="margin-bottom:20px;">
+              <label style="display:block; margin-bottom:8px; font-weight:600; font-size:14px; color:#0a0a0a;">Next Status</label>
+              <select id="new-status-select" style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:8px; font-size:14px; cursor:pointer; color:#0a0a0a;" onchange="updateStatusDescription(this)">
+                <option value="">-- Select next status --</option>
+                ${statusOptions}
+              </select>
+              <p id="status-description" style="margin:12px 0 0; padding:12px; background:#f0f9ff; border-left:3px solid #3b82f6; border-radius:4px; color:#0c4a6e; font-size:13px; display:none;"></p>
+            </div>
+            
+            <!-- Warning Section -->
+            <div id="status-warning" style="display:none; margin-bottom:20px; padding:12px; background:#fef3c7; border-left:3px solid #f59e0b; border-radius:4px;">
+              <p style="margin:0; color:#92400e; font-size:13px; font-weight:600;">⚠️ <span id="warning-text"></span></p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+              <button onclick="this.closest('[style*=fixed]').remove()" style="padding:12px 24px; border:1px solid #e5e7eb; background:#f6f6f6; color:#0a0a0a; border-radius:8px; cursor:pointer; font-weight:600;">
+                Cancel
+              </button>
+              <button onclick="updateOrderStatus(${orderId})" style="padding:12px 24px; border:none; background:#0a0a0a; color:#fff; border-radius:8px; cursor:pointer; font-weight:600;" id="update-btn" disabled>
+                Update Status
+              </button>
             </div>
           </div>
         `;
@@ -1349,10 +1450,71 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         document.body.appendChild(modal);
       }
 
-      function updateOrderStatus(orderId) {
-        console.log('📊 Updating order status:', orderId);
+      function updateStatusDescription(selectElement) {
+        const selectedStatus = selectElement.value;
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const description = selectedOption.getAttribute('data-description');
         
+        const descDiv = document.getElementById('status-description');
+        const updateBtn = document.getElementById('update-btn');
+        
+        if (selectedStatus) {
+          descDiv.textContent = description;
+          descDiv.style.display = 'block';
+          updateBtn.disabled = false;
+          updateBtn.style.opacity = '1';
+          updateBtn.style.cursor = 'pointer';
+          
+          // Show warning for final statuses
+          if (selectedStatus === 'delivered') {
+            document.getElementById('status-warning').style.display = 'block';
+            document.getElementById('warning-text').textContent = 'Once marked as delivered, this order cannot be modified.';
+          } else if (selectedStatus === 'cancelled') {
+            document.getElementById('status-warning').style.display = 'block';
+            document.getElementById('warning-text').textContent = 'Cancelled orders cannot be reopened.';
+          } else {
+            document.getElementById('status-warning').style.display = 'none';
+          }
+        } else {
+          descDiv.style.display = 'none';
+          updateBtn.disabled = true;
+          updateBtn.style.opacity = '0.5';
+          updateBtn.style.cursor = 'not-allowed';
+          document.getElementById('status-warning').style.display = 'none';
+        }
+      }
+
+      function updateOrderStatus(orderId) {
         const newStatus = document.getElementById('new-status-select').value;
+        
+        if (!newStatus) {
+          alert('Please select a valid status');
+          return;
+        }
+        
+        // Get current order to validate transition
+        const order = allOrders.find(o => o.id === orderId);
+        if (!order) {
+          alert('Order not found');
+          return;
+        }
+        
+        const currentStatus = order.order_status;
+        const allowedStatuses = getNextAllowedStatuses(currentStatus);
+        
+        // Check if transition is allowed (prevent backwards transitions)
+        if (!allowedStatuses.includes(newStatus)) {
+          alert(`❌ Invalid status transition:\nCannot go from "${currentStatus.toUpperCase()}" to "${newStatus.toUpperCase()}"\n\nForward-only transitions are allowed.`);
+          return;
+        }
+        
+        const updateBtn = document.getElementById('update-btn');
+        const originalText = updateBtn.textContent;
+        updateBtn.disabled = true;
+        updateBtn.textContent = '⏳ Updating...';
+        
+        console.log('📊 Updating order status: orderId=' + orderId + ', from=' + currentStatus + ', to=' + newStatus);
+        
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('new_status', newStatus);
@@ -1362,27 +1524,36 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
           body: formData
         })
           .then(response => {
-            console.log('📥 Status update response:', response.status);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
           })
           .then(data => {
-            console.log('✅ Order status updated:', data);
-            
             if (data.success) {
-              alert('✅ Order status updated successfully!');
-              // Remove modal
+              const statusEmojis = {
+                'confirmed': '✅',
+                'processing': '🔄',
+                'shipped': '📦',
+                'delivered': '✅',
+                'cancelled': '❌'
+              };
+              
+              alert(`${statusEmojis[newStatus] || '✅'} Order status updated!\n\n📋 Order #${order.order_number}\n⏱️ New Status: ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
+              
+              // Remove modal and reload
               document.querySelectorAll('[style*="position:fixed"]').forEach(el => el.remove());
-              // Reload orders and update count
               loadOrders(currentOrderFilter);
               fetchOrderCount();
             } else {
-              alert('❌ Failed to update order status: ' + (data.message || 'Unknown error'));
+              alert('❌ Failed to update order status:\n' + (data.message || data.error || 'Unknown error'));
+              updateBtn.disabled = false;
+              updateBtn.textContent = originalText;
             }
           })
           .catch(error => {
             console.error('❌ Error updating order status:', error);
             alert('Error updating order status: ' + error.message);
+            updateBtn.disabled = false;
+            updateBtn.textContent = originalText;
           });
       }
 
@@ -1414,6 +1585,120 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         .catch(error => {
           console.error('❌ Error approving rider:', error);
           alert('Error approving rider: ' + error.message);
+        });
+      }
+
+      function confirmOrder(orderId) {
+        console.log('📋 Confirming order:', orderId);
+        
+        if (!confirm('Confirm this order?')) return;
+        
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        
+        fetch('/seller/confirm-order', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Order confirmed! Waiting for rider to accept.');
+            loadOrders(currentOrderFilter);
+            fetchOrderCount();
+          } else {
+            alert('❌ Failed to confirm order: ' + (data.error || data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error confirming order:', error);
+          alert('Error confirming order: ' + error.message);
+        });
+      }
+
+      function approveRiderForDelivery(orderId, riderId) {
+        console.log('✅ Approving rider for delivery:', orderId, 'rider:', riderId);
+        
+        // Fetch rider details and show modal
+        fetch(`/api/rider-details/${riderId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.rider) {
+              const rider = data.rider;
+              const profileImage = rider.profile_image_url || '/static/images/default-avatar.jpg';
+              
+              // Create and show modal
+              const modal = document.createElement('div');
+              modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:2000';
+              modal.innerHTML = `
+                <div style="background:#fff;padding:32px;border-radius:16px;max-width:500px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
+                  <button onclick="this.closest('[style*=fixed]').remove()" style="float:right;background:none;border:none;font-size:28px;cursor:pointer;color:#999">×</button>
+                  <h2 style="margin:0 0 24px;font-size:22px;font-weight:600">Rider Details</h2>
+                  
+                  <div style="background:#f9fafb;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
+                    <div style="width:100px;height:100px;border-radius:50%;margin:0 auto 16px;overflow:hidden;background:#e5e7eb;display:flex;align-items:center;justify-content:center;border:3px solid #10b981">
+                      <img src="${profileImage}" alt="${rider.first_name}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='/static/images/default-avatar.jpg'">
+                    </div>
+                    <h3 style="margin:0 0 8px;font-size:20px;font-weight:600">${rider.first_name} ${rider.last_name}</h3>
+                    <p style="margin:0 0 16px;color:#6b7280;font-size:14px">Assigned delivery rider</p>
+                    
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;padding-top:20px;border-top:1px solid #e5e7eb">
+                      <div>
+                        <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;font-weight:600">Phone</p>
+                        <p style="margin:0;font-size:16px;font-weight:600">${rider.phone || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;font-weight:600">Rating</p>
+                        <p style="margin:0;font-size:16px;font-weight:600">⭐ ${parseFloat(rider.rating || 0).toFixed(1)}</p>
+                      </div>
+                    </div>
+                    
+                    <div style="margin-top:16px;padding:12px;background:#dcfce7;border-radius:8px;border-left:4px solid #10b981">
+                      <p style="margin:0;color:#15803d;font-size:13px;font-weight:500">✓ This rider is verified and ready to deliver</p>
+                    </div>
+                  </div>
+                  
+                  <div style="display:flex;gap:12px;justify-content:flex-end">
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="padding:12px 24px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:8px;cursor:pointer;font-weight:600">Cancel</button>
+                    <button onclick="completeRiderApproval(${orderId}, ${riderId}); this.closest('[style*=fixed]').remove();" style="padding:12px 24px;border:none;background:#10b981;color:#fff;border-radius:8px;cursor:pointer;font-weight:600">Approve for Delivery</button>
+                  </div>
+                </div>
+              `;
+              document.body.appendChild(modal);
+            } else {
+              alert('Error loading rider details');
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching rider details:', error);
+            alert('Error loading rider details');
+          });
+      }
+
+      function completeRiderApproval(orderId, riderId) {
+        console.log('✅ Completing rider approval:', orderId, riderId);
+        
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        formData.append('rider_id', riderId);
+        
+        fetch('/seller/approve-rider-for-delivery', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Rider approved for delivery! Order will be picked up for delivery.');
+            loadOrders(currentOrderFilter);
+            fetchOrderCount();
+          } else {
+            alert('❌ Failed to approve rider: ' + (data.error || data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error approving rider:', error);
+          alert('Error: ' + error.message);
         });
       }
       // ============ END ORDER MANAGEMENT ============

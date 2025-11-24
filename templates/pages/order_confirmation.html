@@ -855,6 +855,7 @@
         <div class="action-buttons">
           <a href="{{ url_for('buyer_dashboard') }}" class="btn btn-secondary">Continue Shopping</a>
           <a href="javascript:window.print()" class="btn btn-primary">Print Receipt</a>
+          <button id="approveRiderButtonContainer" style="display:none;padding:16px;border:none;background:#10b981;color:#fff;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.2s" onclick="handleApproveRiderClick()">Approve Rider for Delivery</button>
         </div>
         
         <p style="margin-top: 32px; font-size: 14px;">
@@ -916,6 +917,7 @@
               { key: 'pending', label: 'Pending' },
               { key: 'confirmed', label: 'Confirmed' },
               { key: 'processing', label: 'Processing' },
+              { key: 'released_to_rider', label: 'Released to Rider' },
               { key: 'shipped', label: 'Shipped' },
               { key: 'delivered', label: 'Delivered' }
             ];
@@ -951,8 +953,9 @@
             // Update status message
             const statusMessages = {
               'pending': '⏳ Your order has been received. Waiting for seller confirmation...',
-              'confirmed': '✔️ Seller has confirmed your order! Preparing for shipment...',
+              'confirmed': '✔️ Seller has confirmed your order! Waiting for a rider to accept...',
               'processing': '🔄 Your order is being prepared for shipment...',
+              'released_to_rider': '🚚 Your order has been released to rider for delivery!',
               'shipped': '📦 Your order has been shipped! Track it on the way...',
               'delivered': '✅ Your order has been delivered! Thank you for shopping with us!',
               'cancelled': '❌ Your order has been cancelled.',
@@ -961,6 +964,15 @@
             
             const statusMessage = document.getElementById('statusMessage');
             statusMessage.textContent = statusMessages[order.status] || 'Order status: ' + order.status;
+            
+            // Show/hide approve rider button based on order status and rider acceptance
+            const approveRiderBtn = document.getElementById('approveRiderButtonContainer');
+            if (order.status === 'confirmed' && order.rider_id && !order.seller_confirmed_rider) {
+              approveRiderBtn.style.display = 'block';
+              approveRiderBtn.textContent = 'Approve Rider for Delivery';
+            } else {
+              approveRiderBtn.style.display = 'none';
+            }
             
             // Change color based on status
             const progressBox = document.getElementById('orderProgress');
@@ -993,6 +1005,150 @@
         }
       });
       // ============ END ORDER STATUS TRACKING ============
+    </script>
+
+    <!-- Rider Approval Modal -->
+    <div id="riderApprovalModal" style="display:none;position:fixed;inset:0;background:rgba(10,10,10,0.6);align-items:center;justify-content:center;z-index:2000">
+      <div style="background:#fff;padding:32px;border-radius:16px;max-width:500px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.2);animation:slideUp 0.3s ease">
+        <button onclick="closeRiderModal()" style="float:right;background:none;border:none;font-size:28px;cursor:pointer;color:#999">×</button>
+        <h2 style="margin:0 0 24px;font-size:22px;font-family:'Playfair Display',serif">Rider Details</h2>
+        
+        <div id="riderDetailsContent" style="margin-bottom:24px">
+          <!-- Rider details will be loaded here -->
+        </div>
+        
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:32px">
+          <button onclick="closeRiderModal()" style="padding:12px 24px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:8px;cursor:pointer;font-weight:600;transition:all 0.2s">Cancel</button>
+          <button id="approveDeliveryBtn" onclick="approveDelivery()" style="padding:12px 24px;border:none;background:#10b981;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;transition:all 0.2s">Approve for Delivery</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global state for rider modal
+      let currentRiderId = null;
+      let currentOrderIdForRider = null;
+
+      function closeRiderModal() {
+        document.getElementById('riderApprovalModal').style.display = 'none';
+        document.getElementById('riderDetailsContent').innerHTML = '';
+      }
+
+      function showRiderApprovalModal(riderId, orderId) {
+        currentRiderId = riderId;
+        currentOrderIdForRider = orderId;
+        
+        console.log('📍 Fetching rider details for rider:', riderId);
+        
+        fetch(`/api/rider-details/${riderId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.rider) {
+              const rider = data.rider;
+              const profileImage = rider.profile_image_url || '/static/images/default-avatar.jpg';
+              
+              const riderHtml = `
+                <div style="background:#f9fafb;padding:24px;border-radius:12px;text-align:center">
+                  <div style="width:100px;height:100px;border-radius:50%;margin:0 auto 16px;overflow:hidden;background:#e5e7eb;display:flex;align-items:center;justify-content:center;border:3px solid #10b981">
+                    <img src="${profileImage}" alt="${rider.first_name}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='/static/images/default-avatar.jpg'">
+                  </div>
+                  <h3 style="margin:0 0 8px;font-size:20px;font-weight:600">${rider.first_name} ${rider.last_name}</h3>
+                  <p style="margin:0 0 16px;color:#6b7280;font-size:14px">Your assigned delivery rider</p>
+                  
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;padding-top:20px;border-top:1px solid #e5e7eb">
+                    <div>
+                      <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;font-weight:600">Phone</p>
+                      <p style="margin:0;font-size:16px;font-weight:600">${rider.phone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;text-transform:uppercase;font-weight:600">Rating</p>
+                      <p style="margin:0;font-size:16px;font-weight:600">⭐ ${parseFloat(rider.rating || 0).toFixed(1)}</p>
+                    </div>
+                  </div>
+                  
+                  <div style="margin-top:16px;padding:12px;background:#dcfce7;border-radius:8px;border-left:4px solid #10b981">
+                    <p style="margin:0;color:#15803d;font-size:13px;font-weight:500">✓ This rider has been verified and is ready to deliver your order</p>
+                  </div>
+                </div>
+              `;
+              
+              document.getElementById('riderDetailsContent').innerHTML = riderHtml;
+              document.getElementById('riderApprovalModal').style.display = 'flex';
+            } else {
+              alert('Error loading rider details: ' + (data.message || 'Unknown error'));
+              closeRiderModal();
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching rider details:', error);
+            alert('Error loading rider details');
+            closeRiderModal();
+          });
+      }
+
+      function approveDelivery() {
+        if (!currentOrderIdForRider || !currentRiderId) {
+          alert('Missing order or rider information');
+          return;
+        }
+        
+        console.log('✅ Approving delivery for order:', currentOrderIdForRider, 'rider:', currentRiderId);
+        
+        const approveBtn = document.getElementById('approveDeliveryBtn');
+        const originalText = approveBtn.textContent;
+        approveBtn.disabled = true;
+        approveBtn.textContent = '⏳ Approving...';
+        
+        fetch('/api/approve-rider-delivery', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            order_id: currentOrderIdForRider,
+            rider_id: currentRiderId
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Rider approved for delivery! Your order will be delivered soon.');
+            closeRiderModal();
+            // Refresh the order status
+            updateOrderStatus();
+          } else {
+            alert('Error approving rider: ' + (data.message || 'Unknown error'));
+          }
+          
+          approveBtn.disabled = false;
+          approveBtn.textContent = originalText;
+        })
+        .catch(error => {
+          console.error('Error approving delivery:', error);
+          alert('Error approving rider delivery');
+          approveBtn.disabled = false;
+          approveBtn.textContent = originalText;
+        });
+      }
+
+      function handleApproveRiderClick() {
+        // Find the order ID and rider ID from the page or API
+        const orderId = '{{ order.id }}';
+        // We'll fetch the rider info from the API
+        fetch(`/api/order-rider-info/${orderId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.rider_id) {
+              showRiderApprovalModal(data.rider_id, orderId);
+            } else {
+              alert('Rider information not available');
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching rider info:', error);
+            alert('Error loading rider information');
+          });
+      }
     </script>
   </body>
 </html>

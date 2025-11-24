@@ -541,6 +541,16 @@
           <!-- Shipping Information -->
           <div class="checkout-section">
             <h2>Shipping Information</h2>
+            
+            <!-- Saved Addresses Selection -->
+            <div class="form-group" id="savedAddressesContainer" style="display:none">
+              <label for="savedAddressSelect">Use Saved Address (Optional) *</label>
+              <select id="savedAddressSelect" name="savedAddressSelect" onchange="loadSavedAddress(this.value)">
+                <option value="">-- Select a saved address or enter new --</option>
+              </select>
+              <small style="color:#999;margin-top:4px;display:block">Or fill in the form below to use a new address</small>
+            </div>
+            
             <div class="form-row">
               <div class="form-group">
                 <label for="firstName">First Name *</label>
@@ -655,7 +665,7 @@
             <span>Total</span>
             <span id="total">₱0.00</span>
           </div>
-          <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()">Place Order</button>
+          <button class="place-order-btn" id="placeOrderBtn" onclick="confirmAndPlaceOrder()">Confirm Order</button>
           <p style="text-align:center;color:#666;font-size:13px;margin-top:16px;line-height:1.6">
             By placing your order, you agree to our Terms of Service and Privacy Policy
           </p>
@@ -774,6 +784,9 @@
         // Setup phone number prefix
         setupPhonePrefix();
 
+        // Load saved addresses
+        await loadSavedAddresses();
+
         // Fetch buyer name
         fetch('/get_buyer_name')
           .then(response => response.json())
@@ -852,8 +865,69 @@
         }
       }
 
+      // Load saved addresses from database
+      async function loadSavedAddresses() {
+        try {
+          const response = await fetch('/get-shipping-addresses');
+          const data = await response.json();
+          
+          if (data.success && data.addresses && data.addresses.length > 0) {
+            const container = document.getElementById('savedAddressesContainer');
+            const select = document.getElementById('savedAddressSelect');
+            
+            // Show the saved addresses section
+            container.style.display = 'block';
+            
+            // Add addresses to dropdown
+            data.addresses.forEach(addr => {
+              const option = document.createElement('option');
+              option.value = addr.id;
+              option.textContent = `${addr.address_type || 'Address'} - ${addr.street_address}, ${addr.city}${addr.is_default ? ' (Default)' : ''}`;
+              select.appendChild(option);
+            });
+            
+            // Auto-select default address
+            const defaultAddr = data.addresses.find(addr => addr.is_default);
+            if (defaultAddr) {
+              select.value = defaultAddr.id;
+              loadSavedAddress(defaultAddr.id);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading saved addresses:', error);
+        }
+      }
+
+      // Load a specific saved address into the form
+      function loadSavedAddress(addressId) {
+        if (!addressId) return;
+        
+        fetch(`/get-address/${addressId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.address) {
+              const addr = data.address;
+              // Split full_name into first and last name
+              const nameParts = (addr.full_name || '').split(' ');
+              const firstName = nameParts[0] || '';
+              const lastName = nameParts.slice(1).join(' ') || '';
+              
+              // Fill form fields
+              document.getElementById('firstName').value = firstName;
+              document.getElementById('lastName').value = lastName;
+              document.getElementById('phone').value = addr.phone || '+63';
+              document.getElementById('address').value = addr.street_address || '';
+              document.getElementById('city').value = addr.city || '';
+              document.getElementById('province').value = addr.province || '';
+              document.getElementById('postalCode').value = addr.postal_code || '';
+              document.getElementById('country').value = addr.country || 'Philippines';
+            }
+          })
+          .catch(error => console.error('Error loading address:', error));
+      }
+
       // Place order function
-      async function placeOrder() {
+      async function confirmAndPlaceOrder() {
         const form = document.getElementById('checkoutForm');
         if (!form.checkValidity()) {
           form.reportValidity();
@@ -938,21 +1012,26 @@
             
             // Show success alert with order number
             const orderNumber = result.order_number || 'your order';
-            alert(`✅ Order Placed Successfully!\n\nOrder Number: ${orderNumber}\n\nA confirmation email has been sent to your email address.\n\nYou will be redirected to your order confirmation page.`);
+            alert(`✅ Order Confirmed!\n\nOrder Number: ${orderNumber}\n\nYour order is now confirmed. Waiting for a rider to accept and deliver it.\n\nYou will be redirected to your order confirmation page.`);
             
             // Redirect to order confirmation after alert
             window.location.href = `/order-confirmation/${result.order_number}`;
           } else {
-            alert('❌ Error placing order: ' + (result.message || 'Unknown error'));
+            alert('❌ Error confirming order: ' + (result.message || 'Unknown error'));
           }
         } catch (error) {
-          console.error('Error placing order:', error);
-          alert('Error placing order. Please try again.');
+          console.error('Error confirming order:', error);
+          alert('Error confirming order. Please try again.');
         } finally {
           // Re-enable button
           placeOrderBtn.disabled = false;
           placeOrderBtn.textContent = originalText;
         }
+      }
+
+      // Old placeOrder function - kept for reference but not used
+      async function placeOrder() {
+        return confirmAndPlaceOrder();
       }
     </script>
   </body>

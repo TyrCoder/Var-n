@@ -186,8 +186,11 @@ def init_db():
             order_number VARCHAR(50) UNIQUE NOT NULL,
             user_id INT NOT NULL,
             seller_id INT NOT NULL,
+            rider_id INT NULL,
             shipping_address_id INT NOT NULL,
             billing_address_id INT,
+            seller_confirmed_rider BOOLEAN DEFAULT FALSE,
+            buyer_approved_rider BOOLEAN DEFAULT FALSE,
             subtotal DECIMAL(10,2) NOT NULL,
             shipping_fee DECIMAL(10,2) DEFAULT 0.00,
             tax_amount DECIMAL(10,2) DEFAULT 0.00,
@@ -201,10 +204,12 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
             FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE RESTRICT,
+            FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE SET NULL,
             FOREIGN KEY (shipping_address_id) REFERENCES addresses(id) ON DELETE RESTRICT,
             FOREIGN KEY (billing_address_id) REFERENCES addresses(id) ON DELETE RESTRICT,
             INDEX idx_user (user_id),
             INDEX idx_seller (seller_id),
+            INDEX idx_rider (rider_id),
             INDEX idx_status (order_status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
@@ -1333,6 +1338,11 @@ def signup():
         # Validate phone number format
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             return jsonify({'success': False, 'message': 'Please enter a valid phone number'}), 400
+        
+        # Validate password strength (minimum 6 characters with letters and numbers)
+        import re
+        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$', password):
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters and contain both letters and numbers'}), 400
             
         conn = get_db()
         if not conn:
@@ -1341,11 +1351,11 @@ def signup():
         try:
             cursor = conn.cursor()
             
-            # Check if email already exists
+            # Check if email already exists (prevent duplicates)
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
                 conn.close()
-                return jsonify({'success': False, 'message': 'Email already registered'}), 400
+                return jsonify({'success': False, 'message': 'This email is already registered. Please use a different email or try logging in.'}), 400
             
             # Store signup data in session for later use
             session['pending_signup'] = {
@@ -1470,7 +1480,7 @@ def signup_rider():
         if not license_number:
             return jsonify({'success': False, 'message': 'Please provide your driver\'s license number'}), 400
         
-        # Validate password strength
+        # Validate password strength (minimum 6 characters with letters and numbers)
         import re
         if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$', password):
             return jsonify({'success': False, 'message': 'Password must be at least 6 characters and contain both letters and numbers'}), 400
@@ -1490,11 +1500,11 @@ def signup_rider():
         try:
             cursor = conn.cursor(dictionary=True)
 
-            # Check if email already exists
+            # Check if email already exists (prevent duplicates)
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
             if cursor.fetchone():
                 conn.close()
-                return jsonify({'success': False, 'message': 'Email already registered'}), 400
+                return jsonify({'success': False, 'message': 'This email is already registered. Please use a different email or try logging in.'}), 400
 
             # Store rider signup data in session for later use
             session['pending_rider_signup'] = {
@@ -1579,7 +1589,7 @@ def signup_seller():
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             return jsonify({'success': False, 'message': 'Please enter a valid phone number'}), 400
         
-        # Validate password strength
+        # Validate password strength (minimum 6 characters with letters and numbers)
         import re
         if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$', password):
             return jsonify({'success': False, 'message': 'Password must be at least 6 characters and contain both letters and numbers'}), 400
@@ -1591,36 +1601,21 @@ def signup_seller():
         try:
             cursor = conn.cursor(dictionary=True)
             
-            # Check if user is already logged in
-            logged_in_user_id = session.get('user_id')
-            logged_in_email = session.get('email')
-            
-            # Check if email already exists
+            # Check if email already exists in the system (strict one-email-per-account policy)
             cursor.execute('SELECT id, email, role FROM users WHERE email = %s', (email,))
             existing_user = cursor.fetchone()
             
-            # If user is logged in and using their own email, allow it
+            # No account can use an email that's already registered
             if existing_user:
-                if logged_in_user_id and existing_user['id'] == logged_in_user_id and existing_user['email'] == logged_in_email:
-                    # User is logged in and using their own email - allow seller registration
-                    pass
-                elif existing_user['role'] == 'seller':
-                    # Email already has a seller account
-                    conn.close()
-                    return jsonify({'success': False, 'message': 'This email already has a seller account. Please log in instead.'}), 400
-                elif not logged_in_user_id:
-                    # Email exists but user is not logged in - don't allow
-                    conn.close()
-                    return jsonify({'success': False, 'message': 'Email already registered. Please log in first, then register as a seller.'}), 400
+                conn.close()
+                return jsonify({'success': False, 'message': 'This email is already registered in the system. Please use a different email address.'}), 400
 
             # Check if phone number already exists
             cursor.execute('SELECT id FROM users WHERE phone = %s', (phone,))
             existing_phone_user = cursor.fetchone()
             if existing_phone_user:
-                # Allow if it's the same logged-in user
-                if not (logged_in_user_id and existing_phone_user['id'] == logged_in_user_id):
-                    conn.close()
-                    return jsonify({'success': False, 'message': 'This phone number is already registered. Please use a different number.'}), 400
+                conn.close()
+                return jsonify({'success': False, 'message': 'This phone number is already registered. Please use a different number.'}), 400
 
             # Check if shop name exists
             cursor.execute('SELECT id FROM sellers WHERE store_name = %s', (shop_name,))
@@ -1628,20 +1623,17 @@ def signup_seller():
                 conn.close()
                 return jsonify({'success': False, 'message': 'Shop name already taken'}), 400
 
-            # Store seller signup data in session for later use
-            is_existing = bool(logged_in_user_id and existing_user and existing_user['id'] == logged_in_user_id)
-            existing_id = logged_in_user_id if (logged_in_user_id and existing_user and existing_user['id'] == logged_in_user_id) else None
-            
+            # Store seller signup data in session for later use (always create new account)
             session['pending_seller_signup'] = {
                 'email': email,
                 'password': password,
                 'phone': phone,
                 'shop_name': shop_name,
-                'is_existing_user': is_existing,
-                'existing_user_id': existing_id
+                'is_existing_user': False,
+                'existing_user_id': None
             }
             
-            print(f"[SELLER SIGNUP] Stored in session - Email: {email}, Shop: {shop_name}, Is Existing: {is_existing}, User ID: {existing_id}")
+            print(f"[SELLER SIGNUP] Stored in session - Email: {email}, Shop: {shop_name}, Creating new seller account")
             print(f"[SELLER SIGNUP] Session keys: {list(session.keys())}")
             
             # Send OTP
@@ -1693,9 +1685,8 @@ def signup_seller():
         except Exception as err:
             return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
 
-    # Pre-fill email if user is logged in
-    user_email = session.get('email') if session.get('logged_in') else None
-    return render_template('auth/signupSeller.html', user_email=user_email)
+    # Do not pre-fill email anymore - users must enter their own
+    return render_template('auth/signupSeller.html')
 
 @app.route('/dashboard')
 def dashboard():
@@ -3468,6 +3459,43 @@ def get_buyer_name():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/user-profile-navbar')
+def api_user_profile_navbar():
+    """Get user profile for navbar display (including profile picture)"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Not logged in'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
+        has_profile_image = cursor.fetchone()
+        
+        if has_profile_image:
+            cursor.execute('SELECT first_name, last_name, email, profile_image FROM users WHERE id = %s', (user_id,))
+        else:
+            cursor.execute('SELECT first_name, last_name, email FROM users WHERE id = %s', (user_id,))
+        
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if user:
+            return jsonify({
+                'success': True,
+                'first_name': user.get('first_name', ''),
+                'last_name': user.get('last_name', ''),
+                'email': user.get('email', ''),
+                'profile_image': user.get('profile_image') if has_profile_image else None
+            }), 200
+        else:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+    except Exception as e:
+        print(f"Error fetching navbar profile: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/products')
 def api_products():
     """Get all active products for browsing with optional search and category filter"""
@@ -3672,6 +3700,27 @@ def api_my_orders():
             # Ensure id is an integer
             if 'id' in order and order['id']:
                 order['id'] = int(order['id'])
+            
+            # Fetch order items with images
+            cursor.execute('''
+                SELECT oi.id, oi.product_id, oi.quantity, oi.unit_price, oi.subtotal,
+                       p.name as product_name, pi.image_url
+                FROM order_items oi
+                LEFT JOIN products p ON oi.product_id = p.id
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                WHERE oi.order_id = %s
+            ''', (order['id'],))
+            
+            items = cursor.fetchall()
+            
+            # Convert Decimal to float for items
+            for item in items:
+                if item.get('unit_price'):
+                    item['unit_price'] = float(item['unit_price'])
+                if item.get('subtotal'):
+                    item['subtotal'] = float(item['subtotal'])
+            
+            order['items'] = items
         
         cursor.close()
         conn.close()
@@ -3724,6 +3773,102 @@ def api_search_order():
         }), 200
         
     except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/order-details/<int:order_id>')
+def api_order_details(order_id):
+    """Get detailed order information for modal display"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get order details
+        cursor.execute('''
+            SELECT o.*, u.first_name, u.email
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.id = %s AND o.user_id = %s
+        ''', (order_id, user_id))
+        
+        order = cursor.fetchone()
+        
+        if not order:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+        
+        # Convert Decimal to float
+        for key in ['total_amount', 'subtotal', 'shipping_fee', 'tax_amount', 'discount_amount']:
+            if order.get(key):
+                order[key] = float(order[key])
+        
+        # Get order items
+        cursor.execute('''
+            SELECT oi.*, pi.image_url, p.name as product_name
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE oi.order_id = %s
+        ''', (order_id,))
+        
+        items = cursor.fetchall()
+        
+        # Convert Decimal to float for items
+        for item in items:
+            if item.get('unit_price'):
+                item['unit_price'] = float(item['unit_price'])
+            if item.get('subtotal'):
+                item['subtotal'] = float(item['subtotal'])
+        
+        # Get shipment information
+        cursor.execute('''
+            SELECT * FROM shipments WHERE order_id = %s
+        ''', (order_id,))
+        
+        shipment = cursor.fetchone()
+        if shipment:
+            # Convert datetime objects to ISO strings for JSON
+            for key in ['shipped_at', 'estimated_delivery', 'delivered_at', 'created_at', 'updated_at', 'seller_confirmed_at']:
+                if shipment.get(key):
+                    shipment[key] = shipment[key].isoformat() if hasattr(shipment[key], 'isoformat') else str(shipment[key])
+        
+        # Get shipping address
+        cursor.execute('''
+            SELECT * FROM addresses WHERE id = %s
+        ''', (order.get('shipping_address_id'),)) if order.get('shipping_address_id') else None
+        
+        shipping_address = cursor.fetchone() if order.get('shipping_address_id') else None
+        
+        # Get billing address
+        cursor.execute('''
+            SELECT * FROM addresses WHERE id = %s
+        ''', (order.get('billing_address_id'),)) if order.get('billing_address_id') else None
+        
+        billing_address = cursor.fetchone() if order.get('billing_address_id') else None
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'order': order,
+            'items': items,
+            'shipment': shipment,
+            'shipping_address': shipping_address,
+            'billing_address': billing_address
+        }), 200
+        
+    except Exception as e:
+        print(f"[ERROR] api_order_details: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -4364,21 +4509,24 @@ def seller_orders():
         
         # Fetch orders for this seller, including shipment status
         # Note: Orders can have products from multiple sellers, so we need to check order_items
-        # We'll use DISTINCT to avoid duplicates when an order has multiple items from this seller
+        # We'll use GROUP BY to get unique orders and avoid duplicates
         query = """
-            SELECT DISTINCT
+            SELECT
                 o.id,
                 o.order_number,
                 o.user_id,
+                o.rider_id,
                 o.total_amount,
                 o.order_status,
+                o.seller_confirmed_rider,
+                o.buyer_approved_rider,
                 o.created_at,
                 o.updated_at,
                 CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                 (SELECT COUNT(*) FROM order_items oi2 
                  WHERE oi2.order_id = o.id) as item_count,
                 IFNULL(s.status, 'pending') as shipment_status,
-                IFNULL(s.rider_id, 0) as rider_id,
+                IFNULL(s.rider_id, 0) as shipment_rider_id,
                 IFNULL(s.seller_confirmed, FALSE) as seller_confirmed,
                 s.id as shipment_id
             FROM orders o
@@ -4387,6 +4535,7 @@ def seller_orders():
             LEFT JOIN users u ON o.user_id = u.id
             LEFT JOIN shipments s ON s.order_id = o.id
             WHERE p.seller_id = %s
+            GROUP BY o.id
             ORDER BY o.created_at DESC
         """
         
@@ -4448,7 +4597,13 @@ def seller_orders():
 
 @app.route('/seller/update-order-status', methods=['POST'])
 def update_order_status():
-    """Update the status of an order (for seller fulfillment)"""
+    """Update the status of an order (for seller fulfillment)
+    
+    FORWARD-ONLY STATE MACHINE:
+    pending → confirmed → processing → shipped → delivered (FINAL)
+                                                ↘ cancelled (FINAL)
+                                                ↘ returned (FINAL)
+    """
     try:
         if 'user_id' not in session:
             return jsonify({'success': False, 'error': 'Not logged in'}), 401
@@ -4461,7 +4616,8 @@ def update_order_status():
         if not order_id or not new_status:
             return jsonify({'success': False, 'error': 'Missing order_id or new_status'}), 400
         
-        valid_statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned', 'release_to_rider']
+        # Define valid statuses
+        valid_statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned']
         if new_status not in valid_statuses:
             return jsonify({'success': False, 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}), 400
         
@@ -4472,13 +4628,15 @@ def update_order_status():
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
         seller_result = cursor.fetchone()
         if not seller_result:
+            cursor.close()
+            conn.close()
             return jsonify({'success': False, 'error': 'Not a seller'}), 403
         
         seller_id = seller_result['id']
         
         # Verify that this seller owns the products in this order
         verify_query = """
-            SELECT o.id
+            SELECT o.id, o.order_status as current_status
             FROM orders o
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN products p ON oi.product_id = p.id
@@ -4494,7 +4652,42 @@ def update_order_status():
             conn.close()
             return jsonify({'success': False, 'error': 'Order not found or you do not have permission to update it'}), 403
         
-        # Update the order status
+        current_status = order_check['current_status']
+        
+        # ===== FORWARD-ONLY STATE MACHINE VALIDATION =====
+        # Define valid transitions (no backwards allowed)
+        valid_transitions = {
+            'pending': ['confirmed'],
+            'confirmed': ['processing'],
+            'processing': ['shipped'],
+            'shipped': ['delivered'],
+            'delivered': [],  # Final state - no transitions
+            'cancelled': [],  # Final state - no transitions
+            'returned': []    # Final state - no transitions
+        }
+        
+        # Check if transition is allowed
+        allowed_next_statuses = valid_transitions.get(current_status, [])
+        if new_status not in allowed_next_statuses:
+            cursor.close()
+            conn.close()
+            
+            if allowed_next_statuses:
+                return jsonify({
+                    'success': False,
+                    'error': f'❌ Invalid status transition. Cannot go from "{current_status.upper()}" to "{new_status.upper()}". Forward-only transitions allowed. Next valid status: {", ".join([s.upper() for s in allowed_next_statuses])}',
+                    'current_status': current_status,
+                    'requested_status': new_status,
+                    'allowed_next': allowed_next_statuses
+                }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'❌ Order is in final state "{current_status.upper()}" and cannot be modified.',
+                    'current_status': current_status
+                }), 400
+        
+        # ===== UPDATE ORDER STATUS =====
         update_query = """
             UPDATE orders
             SET order_status = %s, updated_at = NOW()
@@ -4503,24 +4696,44 @@ def update_order_status():
         
         cursor.execute(update_query, (new_status, order_id))
         
-        # If status is 'release_to_rider', update shipment status to 'picked_up'
-        if new_status == 'release_to_rider':
+        # Special handling for specific status transitions
+        if new_status == 'shipped':
+            # When marking as shipped, update shipment status
             cursor.execute('''
                 UPDATE shipments 
-                SET status = 'picked_up', updated_at = NOW()
+                SET status = 'in_transit', updated_at = NOW()
+                WHERE order_id = %s
+            ''', (order_id,))
+        
+        elif new_status == 'delivered':
+            # When marking as delivered, update shipment status
+            cursor.execute('''
+                UPDATE shipments 
+                SET status = 'delivered', updated_at = NOW()
+                WHERE order_id = %s
+            ''', (order_id,))
+        
+        elif new_status == 'cancelled':
+            # When cancelling, update shipment status
+            cursor.execute('''
+                UPDATE shipments 
+                SET status = 'cancelled', updated_at = NOW()
                 WHERE order_id = %s
             ''', (order_id,))
         
         conn.commit()
         
-        print(f"[✅] Order {order_id} status updated to {new_status} by seller {seller_id}")
+        print(f"[✅] ORDER STATUS UPDATE: Order {order_id} transitioned from '{current_status}' → '{new_status}' by seller {seller_id}")
         
         cursor.close()
         conn.close()
         
         return jsonify({
             'success': True,
-            'message': f'Order status updated to {new_status}'
+            'message': f'✅ Order status successfully updated: {current_status.upper()} → {new_status.upper()}',
+            'order_id': order_id,
+            'previous_status': current_status,
+            'new_status': new_status
         }), 200
     except Exception as e:
         print(f"[ERROR] update_order_status: {e}")
@@ -4583,15 +4796,27 @@ def seller_approve_rider():
             conn.close()
             return jsonify({'success': False, 'error': 'No rider found for this order'}), 400
         
-        # Rider is approved - shipment status remains 'pending' until seller releases
-        # This allows seller to see the order is ready for release
+        # Update order status to "released_to_rider" when seller approves the rider
+        cursor.execute('''
+            UPDATE orders 
+            SET order_status = 'released_to_rider', updated_at = NOW()
+            WHERE id = %s
+        ''', (order_id,))
+        
+        # Update shipment status to reflect the release
+        cursor.execute('''
+            UPDATE shipments 
+            SET status = 'approved', seller_confirmed = TRUE
+            WHERE id = %s
+        ''', (shipment['id'],))
+        
         conn.commit()
         cursor.close()
         conn.close()
         
         return jsonify({
             'success': True,
-            'message': 'Rider approved. You can now release the order to rider.'
+            'message': 'Rider approved! Order released to rider for delivery.'
         }), 200
     except Exception as e:
         print(f"[ERROR] seller_approve_rider: {e}")
@@ -4619,7 +4844,8 @@ def get_order_status(order_id):
         cursor.execute('''
             SELECT 
                 o.id, o.order_number, o.order_status, o.created_at, o.updated_at,
-                o.total_amount, o.payment_method, u.first_name, u.last_name
+                o.total_amount, o.payment_method, o.rider_id, o.seller_confirmed_rider,
+                o.buyer_approved_rider, u.first_name, u.last_name
             FROM orders o
             JOIN users u ON o.user_id = u.id
             WHERE o.id = %s AND o.user_id = %s
@@ -4671,7 +4897,10 @@ def get_order_status(order_id):
                 'updated_at': order['updated_at'].isoformat() if order['updated_at'] else None,
                 'total_amount': float(order['total_amount']),
                 'payment_method': order['payment_method'],
-                'customer_name': f"{order['first_name']} {order['last_name']}"
+                'customer_name': f"{order['first_name']} {order['last_name']}",
+                'rider_id': order['rider_id'],
+                'seller_confirmed_rider': order['seller_confirmed_rider'],
+                'buyer_approved_rider': order['buyer_approved_rider']
             },
             'items': items,
             'timeline': status_timeline
@@ -6109,6 +6338,681 @@ def reset_password():
     except Exception as e:
         print(f"Password reset error: {str(e)}")
         return jsonify({'success': False, 'message': 'Password reset failed'}), 500
+
+# ===== PASSWORD CHANGE ROUTES =====
+@app.route('/initiate-password-change', methods=['POST'])
+def initiate_password_change():
+    """Initiate password change by sending OTP"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        otp_method = data.get('otp_method')  # 'sms' or 'email'
+        
+        if otp_method not in ['sms', 'email']:
+            return jsonify({'success': False, 'message': 'Invalid OTP method'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Get user info
+        cursor.execute('SELECT email, phone FROM users WHERE id = %s', (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        # Create OTP record
+        ip_address = request.remote_addr
+        
+        if otp_method == 'email':
+            otp_code, otp_id = OTPService.create_otp_record(
+                conn,
+                email=user['email'],
+                otp_type='email',
+                purpose='password_change',
+                ip_address=ip_address
+            )
+            
+            if otp_code:
+                email_sent = OTPService.send_email_otp(user['email'], otp_code, 'password_change')
+                if email_sent:
+                    print(f"✅ Password change OTP sent to {user['email']}")
+                else:
+                    print(f"⚠️ Email sending failed for password change OTP")
+                
+                print(f"\n{'='*60}")
+                print(f"📧 PASSWORD CHANGE OTP FOR {user['email']}")
+                print(f"OTP CODE: {otp_code}")
+                print(f"{'='*60}\n")
+        else:  # SMS
+            otp_code, otp_id = OTPService.create_otp_record(
+                conn,
+                phone=user['phone'],
+                otp_type='sms',
+                purpose='password_change',
+                ip_address=ip_address
+            )
+            
+            if otp_code:
+                print(f"\n{'='*60}")
+                print(f"📱 PASSWORD CHANGE OTP FOR {user['phone']}")
+                print(f"OTP CODE: {otp_code}")
+                print(f"{'='*60}\n")
+        
+        cursor.close()
+        conn.close()
+        
+        if otp_code:
+            session['password_change'] = {
+                'otp_id': otp_id,
+                'otp_method': otp_method,
+                'verified': False
+            }
+            
+            return jsonify({
+                'success': True,
+                'message': f'Verification code sent to your {otp_method}',
+                'otp_id': otp_id
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Failed to generate verification code'}), 500
+            
+    except Exception as e:
+        print(f"Error in initiate password change: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error sending verification code'}), 500
+
+@app.route('/confirm-password-change', methods=['POST'])
+def confirm_password_change():
+    """Confirm password change with OTP verification"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        otp_code = data.get('otp', '')
+        new_password = data.get('new_password', '')
+        otp_id = data.get('otp_id')
+        
+        if not otp_code or not new_password or 'password_change' not in session:
+            return jsonify({'success': False, 'message': 'Invalid request'}), 400
+        
+        # Validate password
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters'}), 400
+        
+        if not any(c.isalpha() for c in new_password) or not any(c.isdigit() for c in new_password):
+            return jsonify({'success': False, 'message': 'Password must contain both letters and numbers'}), 400
+        
+        conn = get_db()
+        
+        # Verify OTP
+        otp_method = session['password_change'].get('otp_method')
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT email, phone FROM users WHERE id = %s', (session.get('user_id'),))
+        user = cursor.fetchone()
+        
+        if otp_method == 'email':
+            is_valid, message = OTPService.verify_otp(conn, otp_code, email=user['email'], purpose='password_change')
+        else:  # SMS
+            is_valid, message = OTPService.verify_otp(conn, otp_code, phone=user['phone'], purpose='password_change')
+        
+        if is_valid:
+            # Update password
+            user_id = session.get('user_id')
+            cursor.execute('UPDATE users SET password = %s WHERE id = %s', (new_password, user_id))
+            conn.commit()
+            
+            cursor.close()
+            conn.close()
+            
+            # Clear session
+            session.pop('password_change', None)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Password changed successfully'
+            })
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': message}), 400
+            
+    except Exception as e:
+        print(f"Error confirming password change: {str(e)}")
+        return jsonify({'success': False, 'message': 'Password change failed'}), 500
+
+# ===== SHIPPING ADDRESS ROUTES =====
+@app.route('/get-shipping-addresses')
+def get_shipping_addresses():
+    """Get all shipping addresses for logged-in buyer"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        cursor.execute('''SELECT id, full_name, phone, street_address, barangay, 
+                         city, province, postal_code, country, address_type, is_default 
+                         FROM addresses WHERE user_id = %s ORDER BY is_default DESC, created_at DESC''', 
+                      (user_id,))
+        addresses = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'addresses': addresses or []
+        })
+    except Exception as e:
+        print(f"Error getting addresses: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error loading addresses'}), 500
+
+@app.route('/get-address/<int:address_id>')
+def get_address(address_id):
+    """Get a specific address"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        cursor.execute('''SELECT id, full_name, phone, street_address, barangay, 
+                         city, province, postal_code, country, address_type, is_default 
+                         FROM addresses WHERE id = %s AND user_id = %s''', 
+                      (address_id, user_id))
+        address = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if not address:
+            return jsonify({'success': False, 'message': 'Address not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'address': address
+        })
+    except Exception as e:
+        print(f"Error getting address: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error loading address'}), 500
+
+@app.route('/save-shipping-address', methods=['POST'])
+def save_shipping_address():
+    """Save a new shipping address"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        
+        # Validate required fields
+        required_fields = ['full_name', 'phone', 'street_address', 'barangay', 'city', 'province', 'address_type']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} is required'}), 400
+        
+        full_name = data.get('full_name', '').strip()
+        phone = data.get('phone', '').strip()
+        street_address = data.get('street_address', '').strip()
+        barangay = data.get('barangay', '').strip()
+        city = data.get('city', '').strip()
+        province = data.get('province', '').strip()
+        postal_code = data.get('postal_code', '').strip()
+        address_type = data.get('address_type', 'shipping')
+        is_default = data.get('is_default', False)
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # If this is to be default, unset other defaults
+        if is_default:
+            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+        
+        cursor.execute('''INSERT INTO addresses 
+                         (user_id, full_name, phone, street_address, barangay, city, 
+                          province, postal_code, country, address_type, is_default)
+                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                      (user_id, full_name, phone, street_address, barangay, city, 
+                       province, postal_code, 'Philippines', address_type, is_default))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Address saved successfully'
+        })
+    except Exception as e:
+        print(f"Error saving address: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error saving address'}), 500
+
+@app.route('/update-shipping-address/<int:address_id>', methods=['PUT'])
+def update_shipping_address(address_id):
+    """Update an existing shipping address"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        
+        # Validate required fields
+        required_fields = ['full_name', 'phone', 'street_address', 'barangay', 'city', 'province', 'address_type']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'message': f'{field} is required'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Check if address belongs to user
+        cursor.execute('SELECT id FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Address not found'}), 404
+        
+        full_name = data.get('full_name', '').strip()
+        phone = data.get('phone', '').strip()
+        street_address = data.get('street_address', '').strip()
+        barangay = data.get('barangay', '').strip()
+        city = data.get('city', '').strip()
+        province = data.get('province', '').strip()
+        postal_code = data.get('postal_code', '').strip()
+        address_type = data.get('address_type', 'shipping')
+        is_default = data.get('is_default', False)
+        
+        # If this is to be default, unset other defaults
+        if is_default:
+            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+        
+        cursor.execute('''UPDATE addresses SET 
+                         full_name = %s, phone = %s, street_address = %s, barangay = %s,
+                         city = %s, province = %s, postal_code = %s, address_type = %s, is_default = %s
+                         WHERE id = %s AND user_id = %s''',
+                      (full_name, phone, street_address, barangay, city, province, 
+                       postal_code, address_type, is_default, address_id, user_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Address updated successfully'
+        })
+    except Exception as e:
+        print(f"Error updating address: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error updating address'}), 500
+
+@app.route('/delete-shipping-address/<int:address_id>', methods=['DELETE'])
+def delete_shipping_address(address_id):
+    """Delete a shipping address"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        user_id = session.get('user_id')
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Check if address belongs to user
+        cursor.execute('SELECT is_default FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
+        address = cursor.fetchone()
+        
+        if not address:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Address not found'}), 404
+        
+        # Delete the address
+        cursor.execute('DELETE FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
+        
+        # If deleted address was default, set another as default
+        if address[0]:  # is_default was True
+            cursor.execute('''UPDATE addresses SET is_default = TRUE 
+                             WHERE user_id = %s ORDER BY created_at DESC LIMIT 1''', (user_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Address deleted successfully'
+        })
+    except Exception as e:
+        print(f"Error deleting address: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error deleting address'}), 500
+
+@app.route('/set-default-address/<int:address_id>', methods=['PUT'])
+def set_default_address(address_id):
+    """Set an address as default"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        user_id = session.get('user_id')
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Check if address belongs to user
+        cursor.execute('SELECT id FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Address not found'}), 404
+        
+        # Unset all defaults for this user
+        cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+        
+        # Set this address as default
+        cursor.execute('UPDATE addresses SET is_default = TRUE WHERE id = %s', (address_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Default address updated successfully'
+        })
+    except Exception as e:
+        print(f"Error setting default address: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error updating default address'}), 500
+
+# ============ NEW ORDER CONFIRMATION FLOW ENDPOINTS ============
+
+@app.route('/seller/confirm-order', methods=['POST'])
+def seller_confirm_order():
+    """Seller confirms an order (initial confirmation)"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session['user_id']
+        order_id = request.form.get('order_id')
+        
+        if not order_id:
+            return jsonify({'success': False, 'error': 'Missing order_id'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get the seller_id for this user
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+        
+        seller_id = seller_result['id']
+        
+        # Verify that this seller owns the products in this order
+        verify_query = """
+            SELECT o.id
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE o.id = %s AND p.seller_id = %s
+            LIMIT 1
+        """
+        
+        cursor.execute(verify_query, (order_id, seller_id))
+        order_check = cursor.fetchone()
+        
+        if not order_check:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found or you do not have permission'}), 403
+        
+        # Update order status to 'confirmed'
+        cursor.execute('''
+            UPDATE orders
+            SET order_status = 'confirmed', updated_at = NOW()
+            WHERE id = %s
+        ''', (order_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"[✅] Order {order_id} confirmed by seller {seller_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Order confirmed! Waiting for a rider to accept.'
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] seller_confirm_order: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/seller/approve-rider-for-delivery', methods=['POST'])
+def seller_approve_rider_for_delivery():
+    """Seller approves the assigned rider for delivery"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session['user_id']
+        order_id = request.form.get('order_id')
+        rider_id = request.form.get('rider_id')
+        
+        if not order_id or not rider_id:
+            return jsonify({'success': False, 'error': 'Missing order_id or rider_id'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get the seller_id for this user
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+        
+        seller_id = seller_result['id']
+        
+        # Verify that this seller owns the products in this order
+        verify_query = """
+            SELECT o.id
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE o.id = %s AND p.seller_id = %s
+            LIMIT 1
+        """
+        
+        cursor.execute(verify_query, (order_id, seller_id))
+        order_check = cursor.fetchone()
+        
+        if not order_check:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found or you do not have permission'}), 403
+        
+        # Update order to mark seller confirmed rider
+        cursor.execute('''
+            UPDATE orders
+            SET seller_confirmed_rider = TRUE, updated_at = NOW()
+            WHERE id = %s
+        ''', (order_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"[✅] Seller {seller_id} approved rider {rider_id} for order {order_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Rider approved for delivery!'
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] seller_approve_rider_for_delivery: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/rider-details/<rider_id>', methods=['GET'])
+def get_rider_details(rider_id):
+    """Get rider details for display in approval modal"""
+    try:
+        if not session.get('logged_in'):
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get rider information
+        cursor.execute('''
+            SELECT 
+                u.id, u.first_name, u.last_name, u.phone,
+                r.rating, r.profile_image_url
+            FROM users u
+            LEFT JOIN riders r ON u.id = r.user_id
+            WHERE u.id = %s AND u.role = 'rider'
+        ''', (rider_id,))
+        
+        rider = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not rider:
+            return jsonify({'success': False, 'error': 'Rider not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'rider': {
+                'id': rider['id'],
+                'first_name': rider['first_name'],
+                'last_name': rider['last_name'],
+                'phone': rider['phone'],
+                'rating': rider['rating'] or 0,
+                'profile_image_url': rider['profile_image_url']
+            }
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] get_rider_details: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/order-rider-info/<order_id>', methods=['GET'])
+def get_order_rider_info(order_id):
+    """Get rider info for an order"""
+    try:
+        if not session.get('logged_in'):
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session.get('user_id')
+        
+        conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Verify order ownership
+        cursor.execute('''
+            SELECT rider_id FROM orders
+            WHERE id = %s AND user_id = %s
+        ''', (order_id, user_id))
+        
+        order = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not order:
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+        
+        if not order.get('rider_id'):
+            return jsonify({'success': False, 'error': 'No rider assigned'}), 400
+        
+        return jsonify({
+            'success': True,
+            'rider_id': order['rider_id']
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] get_order_rider_info: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/approve-rider-delivery', methods=['POST'])
+def approve_rider_delivery():
+    """Buyer approves rider for delivery"""
+    try:
+        if not session.get('logged_in'):
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session.get('user_id')
+        data = request.json
+        order_id = data.get('order_id')
+        rider_id = data.get('rider_id')
+        
+        if not order_id or not rider_id:
+            return jsonify({'success': False, 'error': 'Missing order_id or rider_id'}), 400
+        
+        conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Verify order ownership
+        cursor.execute('''
+            SELECT id FROM orders
+            WHERE id = %s AND user_id = %s
+        ''', (order_id, user_id))
+        
+        order = cursor.fetchone()
+        if not order:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+        
+        # Mark order as approved for rider delivery
+        cursor.execute('''
+            UPDATE orders
+            SET buyer_approved_rider = TRUE, updated_at = NOW()
+            WHERE id = %s
+        ''', (order_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"[✅] Buyer {user_id} approved rider {rider_id} for order {order_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Rider approved for delivery!'
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] approve_rider_delivery: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============ END ORDER CONFIRMATION FLOW ENDPOINTS ============
 
 @app.route('/logout')
 def logout():
