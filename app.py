@@ -260,11 +260,33 @@ def init_db():
             delivery_proof_url VARCHAR(500),
             delivery_notes TEXT,
             status ENUM('pending', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned') DEFAULT 'pending',
+            seller_confirmed BOOLEAN DEFAULT FALSE,
+            seller_confirmed_at TIMESTAMP NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
             FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        
+        # Add seller_confirmed column if it doesn't exist (for existing databases)
+        try:
+            cursor.execute('ALTER TABLE shipments ADD COLUMN seller_confirmed BOOLEAN DEFAULT FALSE')
+            print("[INFO] Added seller_confirmed column to shipments table")
+        except Exception as e:
+            if 'Duplicate column name' in str(e) or '1060' in str(e):
+                pass  # Column already exists
+            else:
+                print(f"[WARNING] Could not add seller_confirmed column: {e}")
+        
+        # Add seller_confirmed_at column if it doesn't exist
+        try:
+            cursor.execute('ALTER TABLE shipments ADD COLUMN seller_confirmed_at TIMESTAMP NULL')
+            print("[INFO] Added seller_confirmed_at column to shipments table")
+        except Exception as e:
+            if 'Duplicate column name' in str(e) or '1060' in str(e):
+                pass  # Column already exists
+            else:
+                print(f"[WARNING] Could not add seller_confirmed_at column: {e}")
         
         # Shopping cart
         cursor.execute('''CREATE TABLE IF NOT EXISTS cart (
@@ -348,6 +370,76 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # OTP Verifications table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS otp_verifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(190),
+            phone VARCHAR(20),
+            otp_code VARCHAR(10) NOT NULL,
+            otp_type ENUM('email', 'sms') NOT NULL DEFAULT 'email',
+            purpose ENUM('registration', 'login', 'password_reset', 'verification', 'email_change', 'phone_verification') NOT NULL DEFAULT 'registration',
+            expires_at TIMESTAMP NOT NULL,
+            used_at TIMESTAMP NULL,
+            attempts INT DEFAULT 0,
+            ip_address VARCHAR(45),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_email (email),
+            INDEX idx_phone (phone),
+            INDEX idx_code (otp_code),
+            INDEX idx_expires (expires_at),
+            INDEX idx_purpose (purpose)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        
+        # Update purpose enum if needed (add new purposes)
+        try:
+            cursor.execute("ALTER TABLE otp_verifications MODIFY COLUMN purpose ENUM('registration', 'login', 'password_reset', 'verification', 'email_change', 'phone_verification') NOT NULL DEFAULT 'registration'")
+            print("[DB INIT] Updated purpose enum to include email_change and phone_verification")
+        except Exception as e:
+            # Enum might already be updated or table doesn't exist yet
+            print(f"[DB INIT] Purpose enum check: {str(e)}")
+        
+        # Check and add missing columns if table exists but is missing columns
+        try:
+            cursor.execute("SHOW COLUMNS FROM otp_verifications LIKE 'phone'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN phone VARCHAR(20) AFTER email")
+                print("[DB INIT] Added missing 'phone' column to otp_verifications table")
+        except Exception as e:
+            print(f"[DB INIT] Error checking/adding phone column: {e}")
+        
+        try:
+            cursor.execute("SHOW COLUMNS FROM otp_verifications LIKE 'used_at'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN used_at TIMESTAMP NULL AFTER expires_at")
+                print("[DB INIT] Added missing 'used_at' column to otp_verifications table")
+        except Exception as e:
+            print(f"[DB INIT] Error checking/adding used_at column: {e}")
+        
+        # Add indexes if they don't exist
+        try:
+            cursor.execute("SHOW INDEX FROM otp_verifications WHERE Key_name = 'idx_phone'")
+            if not cursor.fetchone():
+                cursor.execute("CREATE INDEX idx_phone ON otp_verifications(phone)")
+                print("[DB INIT] Added missing 'idx_phone' index")
+        except Exception as e:
+            print(f"[DB INIT] Error checking/adding idx_phone index: {e}")
+        
+        # Journal entries table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS journal_entries (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(200) NOT NULL,
+            description TEXT,
+            image_url VARCHAR(500),
+            link_url VARCHAR(500),
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_by INT,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+            INDEX idx_active (is_active),
+            INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        
         conn.commit()
         print("[DB] All tables created successfully!")
         cursor.close()
@@ -356,6 +448,94 @@ def init_db():
         print(f"[DB INIT ERROR] {err}")
 
 init_db()
+
+@app.route('/admin/create-tables', methods=['POST'])
+def admin_create_tables():
+    """Manually create missing tables and fix existing ones (for admin use)"""
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        messages = []
+        
+        # Create OTP Verifications table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS otp_verifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(190),
+            phone VARCHAR(20),
+            otp_code VARCHAR(10) NOT NULL,
+            otp_type ENUM('email', 'sms') NOT NULL DEFAULT 'email',
+            purpose ENUM('registration', 'login', 'password_reset', 'verification', 'email_change', 'phone_verification') NOT NULL DEFAULT 'registration',
+            expires_at TIMESTAMP NOT NULL,
+            used_at TIMESTAMP NULL,
+            attempts INT DEFAULT 0,
+            ip_address VARCHAR(45),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_email (email),
+            INDEX idx_phone (phone),
+            INDEX idx_code (otp_code),
+            INDEX idx_expires (expires_at),
+            INDEX idx_purpose (purpose)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        messages.append("OTP verifications table created/verified")
+        
+        # Check and add missing columns
+        try:
+            cursor.execute("SHOW COLUMNS FROM otp_verifications LIKE 'phone'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN phone VARCHAR(20) AFTER email")
+                messages.append("Added missing 'phone' column")
+        except Exception as e:
+            messages.append(f"Phone column check: {str(e)}")
+        
+        try:
+            cursor.execute("SHOW COLUMNS FROM otp_verifications LIKE 'used_at'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN used_at TIMESTAMP NULL AFTER expires_at")
+                messages.append("Added missing 'used_at' column")
+        except Exception as e:
+            messages.append(f"Used_at column check: {str(e)}")
+        
+        # Add indexes if they don't exist
+        try:
+            cursor.execute("SHOW INDEX FROM otp_verifications WHERE Key_name = 'idx_phone'")
+            if not cursor.fetchone():
+                cursor.execute("CREATE INDEX idx_phone ON otp_verifications(phone)")
+                messages.append("Added missing 'idx_phone' index")
+        except Exception as e:
+            messages.append(f"Index check: {str(e)}")
+        
+        # Create Journal entries table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS journal_entries (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(200) NOT NULL,
+            description TEXT,
+            image_url VARCHAR(500),
+            link_url VARCHAR(500),
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_by INT,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+            INDEX idx_active (is_active),
+            INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        messages.append("Journal entries table created/verified")
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Tables created/fixed successfully', 'details': messages}), 200
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'success': False, 'error': str(err)}), 500
 
 @app.route('/')
 def index():
@@ -378,7 +558,7 @@ def index():
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
-                WHERE p.is_active = 1 AND p.archive_status = 'active'
+                WHERE p.is_active = 1
                 ORDER BY p.created_at DESC
                 LIMIT 20
             ''')
@@ -461,9 +641,9 @@ def product_page(product_id):
                 
                 images = cursor.fetchall()
                 
-                # Get available sizes and colors from variants
+                # Get available sizes and colors from variants with stock info
                 cursor.execute('''
-                    SELECT DISTINCT size, color
+                    SELECT size, color, stock_quantity
                     FROM product_variants
                     WHERE product_id = %s AND stock_quantity > 0
                     ORDER BY size, color
@@ -474,6 +654,12 @@ def product_page(product_id):
                 # Extract unique sizes and colors
                 sizes = sorted(list(set([v['size'] for v in variants if v['size']])))
                 colors = sorted(list(set([v['color'] for v in variants if v['color']])))
+                
+                # Create a stock map for quick lookup
+                stock_map = {}
+                for v in variants:
+                    key = f"{v['size']}_{v['color']}"
+                    stock_map[key] = v['stock_quantity']
             
             cursor.close()
             conn.close()
@@ -491,6 +677,7 @@ def product_page(product_id):
                          sizes=sizes, 
                          colors=colors, 
                          images=images,
+                         stock_map=stock_map,
                          user_first_name=user_first_name)
 
 @app.route('/api/product/<int:product_id>')
@@ -679,8 +866,9 @@ def place_order():
         shipping_fee = float(data.get('shipping_fee', 0))
         total_amount = float(data.get('total', 0))
         notes = shipping.get('notes', '')
+        save_address = data.get('save_address', False)
         
-        # First, create or get shipping address
+        # Create shipping address for this order (always needed for order)
         cursor.execute('''
             INSERT INTO addresses (
                 user_id, full_name, phone, street_address, 
@@ -701,6 +889,24 @@ def place_order():
         
         shipping_address_id = cursor.lastrowid
         billing_address_id = shipping_address_id  # Using same address for billing
+        
+        # If user wants to save the address for future use, update it
+        if save_address:
+            # Check if user wants this as default address
+            cursor.execute('SELECT COUNT(*) as count FROM addresses WHERE user_id = %s AND is_default = TRUE', (user_id,))
+            has_default = cursor.fetchone()['count'] > 0
+            is_default = not has_default  # Set as default if no default exists
+            
+            if is_default:
+                # Unset other defaults
+                cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+            
+            # Update the address to be saved (set is_default if needed)
+            cursor.execute('''
+                UPDATE addresses 
+                SET is_default = %s
+                WHERE id = %s
+            ''', (is_default, shipping_address_id))
         
         # Get first product's seller_id (assuming all items from same seller for now)
         # In a multi-vendor system, you'd create separate orders per seller
@@ -838,7 +1044,35 @@ def place_order():
             f'Order {order_number} placed with {len(items)} items'
         ))
         
+        # Commit all database changes
         conn.commit()
+        
+        # Get buyer email for order confirmation
+        buyer_email = shipping.get('email', '')
+        if not buyer_email:
+            # Try to get email from user account
+            cursor.execute('SELECT email FROM users WHERE id = %s', (user_id,))
+            user_result = cursor.fetchone()
+            if user_result:
+                buyer_email = user_result.get('email', '')
+        
+        # Send order confirmation email
+        if buyer_email:
+            try:
+                from utils.otp_service import OTPService
+                order_email_data = {
+                    'items': items,
+                    'subtotal': subtotal,
+                    'shipping_fee': shipping_fee,
+                    'total': total_amount,
+                    'shipping': shipping,
+                    'payment_method': payment_method_text
+                }
+                OTPService.send_order_confirmation_email(buyer_email, order_number, order_email_data)
+            except Exception as email_error:
+                print(f"Warning: Could not send order confirmation email: {email_error}")
+                # Don't fail the order if email fails
+        
         cursor.close()
         conn.close()
         
@@ -855,6 +1089,107 @@ def place_order():
             conn.rollback()
             conn.close()
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+@app.route('/order/<int:order_id>')
+def order_details(order_id):
+    """View order details by order ID"""
+    # Check if user is logged in
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    conn = get_db()
+    if not conn:
+        flash('Database connection failed', 'error')
+        return redirect('/indexLoggedIn.html#myOrders')
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Debug logging
+        print(f"[ORDER DETAILS] Fetching order {order_id} (type: {type(order_id)}) for user {user_id}")
+        
+        # Get order details with addresses
+        cursor.execute('''
+            SELECT o.*, 
+                   CONCAT(a.street_address, ', ', COALESCE(a.barangay, ''), ', ', 
+                          a.city, ', ', a.province, ' ', COALESCE(a.postal_code, ''), ', ', 
+                          a.country) as shipping_address,
+                   a.full_name, a.phone as shipping_phone,
+                   s.store_name
+            FROM orders o
+            LEFT JOIN addresses a ON o.shipping_address_id = a.id
+            LEFT JOIN sellers s ON o.seller_id = s.id
+            WHERE o.id = %s AND o.user_id = %s
+        ''', (order_id, user_id))
+        
+        order = cursor.fetchone()
+        
+        print(f"[ORDER DETAILS] Order found: {order is not None}")
+        
+        if not order:
+            cursor.close()
+            conn.close()
+            print(f"[ORDER DETAILS] Order {order_id} not found for user {user_id}")
+            flash('Order not found', 'error')
+            return redirect('/indexLoggedIn.html#myOrders')
+        
+        # Get order items with product images
+        cursor.execute('''
+            SELECT oi.*, pi.image_url, p.name as product_name
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE oi.order_id = %s
+        ''', (order_id,))
+        
+        items = cursor.fetchall()
+        
+        # Convert Decimal to float for template
+        if order.get('total_amount'):
+            order['total_amount'] = float(order['total_amount'])
+        if order.get('subtotal'):
+            order['subtotal'] = float(order['subtotal'])
+        if order.get('shipping_fee'):
+            order['shipping_fee'] = float(order['shipping_fee'])
+        
+        for item in items:
+            if item.get('unit_price'):
+                item['unit_price'] = float(item['unit_price'])
+            if item.get('subtotal'):
+                item['subtotal'] = float(item['subtotal'])
+        
+        # Status colors and emojis
+        status_colors = {
+            'pending': {'bg': '#fef3c7', 'color': '#92400e', 'emoji': '⏳'},
+            'confirmed': {'bg': '#dbeafe', 'color': '#1e40af', 'emoji': '✔️'},
+            'processing': {'bg': '#fed7aa', 'color': '#9a3412', 'emoji': '🔄'},
+            'shipped': {'bg': '#e9d5ff', 'color': '#6b21a8', 'emoji': '📦'},
+            'delivered': {'bg': '#d1fae5', 'color': '#065f46', 'emoji': '✅'},
+            'cancelled': {'bg': '#fee2e2', 'color': '#991b1b', 'emoji': '❌'},
+            'returned': {'bg': '#f3e8ff', 'color': '#6b21a8', 'emoji': '↩️'}
+        }
+        
+        # Ensure order_status exists and has a default value
+        if not order.get('order_status'):
+            order['order_status'] = 'pending'
+        
+        cursor.close()
+        conn.close()
+        
+        return render_template('pages/order_details.html', 
+                             order=order, 
+                             items=items,
+                             status_colors=status_colors)
+        
+    except Exception as e:
+        print(f"[ORDER DETAILS] Error loading order details: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        if conn:
+            conn.close()
+        flash('Error loading order', 'error')
+        return redirect('/indexLoggedIn.html#myOrders')
 
 @app.route('/order-confirmation/<order_number>')
 def order_confirmation(order_number):
@@ -900,6 +1235,20 @@ def order_confirmation(order_number):
         ''', (order['id'],))
         
         items = cursor.fetchall()
+        
+        # Convert Decimal to float for template
+        if order.get('total_amount'):
+            order['total_amount'] = float(order['total_amount'])
+        if order.get('subtotal'):
+            order['subtotal'] = float(order['subtotal'])
+        if order.get('shipping_fee'):
+            order['shipping_fee'] = float(order['shipping_fee'])
+        
+        for item in items:
+            if item.get('unit_price'):
+                item['unit_price'] = float(item['unit_price'])
+            if item.get('subtotal'):
+                item['subtotal'] = float(item['subtotal'])
         
         cursor.close()
         conn.close()
@@ -1019,8 +1368,21 @@ def signup():
             )
             
             if not otp_code:
+                # Check if table exists
+                try:
+                    cursor_check = conn.cursor()
+                    cursor_check.execute("SHOW TABLES LIKE 'otp_verifications'")
+                    table_exists = cursor_check.fetchone()
+                    cursor_check.close()
+                    
+                    if not table_exists:
+                        conn.close()
+                        return jsonify({'success': False, 'message': 'OTP table does not exist. Please run the migration: python migrations/add_otp_verification.py'}), 500
+                except:
+                    pass
+                
                 conn.close()
-                return jsonify({'success': False, 'message': 'Failed to generate OTP'}), 500
+                return jsonify({'success': False, 'message': 'Failed to generate OTP. Please check database connection and ensure otp_verifications table exists. Check server logs for details.'}), 500
             
             success = OTPService.send_email_otp(email, otp_code, 'registration')
             
@@ -1035,7 +1397,7 @@ def signup():
                 }
                 return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
             else:
-                return jsonify({'success': False, 'message': 'Failed to send OTP'}), 500
+                return jsonify({'success': False, 'message': 'Failed to send OTP email. Please check email configuration (MAIL_USERNAME and MAIL_PASSWORD in .env file).'}), 500
                 
         except Exception as err:
             return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
@@ -1051,11 +1413,32 @@ def signup_rider():
         email = request.form.get('email')
         phone = request.form.get('phone')
         password = request.form.get('password')
-        vehicle_type = request.form.get('vehicle_type')
-        vehicle_plate = request.form.get('vehicle_plate')
-        license_number = request.form.get('license_number')
+        vehicle_types = request.form.getlist('vehicle_type')  # Get multiple vehicle types
+        region = request.form.get('region')
         service_area = request.form.get('service_area')
         tnc = request.form.get('tnc')
+        
+        # If service_area is empty but region is provided, use region as service_area
+        if not service_area or service_area.strip() == '':
+            if region and region.strip():
+                service_area = region
+                print(f"DEBUG: service_area was empty, using region: {service_area}")
+            else:
+                print(f"DEBUG: Both service_area and region are empty")
+        
+        # Collect vehicle plates for each vehicle type
+        vehicle_plates = []
+        for vtype in vehicle_types:
+            plate = request.form.get(f'vehicle_plate_{vtype}')
+            if plate:
+                vehicle_plates.append(f"{vtype}:{plate}")
+        
+        # Get single driver's license (not per vehicle)
+        license_number = request.form.get('license_number')
+        
+        # Join vehicle types and plates with delimiters for storage
+        vehicle_type = ','.join(vehicle_types) if vehicle_types else None
+        vehicle_plate = '|'.join(vehicle_plates) if vehicle_plates else None
 
         # Validate required fields
         required_fields = {
@@ -1069,15 +1452,28 @@ def signup_rider():
             'tnc': tnc
         }
 
-        # Only require plate and license if not bicycle
-        if vehicle_type != 'bicycle':
-            required_fields['vehicle_plate'] = vehicle_plate
-            required_fields['license_number'] = license_number
-
-        # Check required fields
-        missing_fields = [field for field, value in required_fields.items() if not value]
+        # Check required fields (handle empty strings as missing)
+        missing_fields = [field for field, value in required_fields.items() if not value or (isinstance(value, str) and value.strip() == '')]
         if missing_fields:
+            # Debug logging
+            print(f"DEBUG: Missing fields: {missing_fields}")
+            print(f"DEBUG: service_area value: {repr(service_area)}")
+            print(f"DEBUG: All form data: {dict(request.form)}")
+            print(f"DEBUG: Form keys: {list(request.form.keys())}")
             return jsonify({'success': False, 'message': f'Missing required fields: {", ".join(missing_fields)}'}), 400
+        
+        # Validate that each vehicle type has plate number
+        if not vehicle_plate:
+            return jsonify({'success': False, 'message': 'Please provide plate number for all selected vehicles'}), 400
+        
+        # Validate driver's license
+        if not license_number:
+            return jsonify({'success': False, 'message': 'Please provide your driver\'s license number'}), 400
+        
+        # Validate password strength
+        import re
+        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$', password):
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters and contain both letters and numbers'}), 400
 
         # Validate email format
         if '@' not in email or '.' not in email:
@@ -1124,8 +1520,21 @@ def signup_rider():
             )
             
             if not otp_code:
+                # Check if table exists
+                try:
+                    cursor_check = conn.cursor()
+                    cursor_check.execute("SHOW TABLES LIKE 'otp_verifications'")
+                    table_exists = cursor_check.fetchone()
+                    cursor_check.close()
+                    
+                    if not table_exists:
+                        conn.close()
+                        return jsonify({'success': False, 'message': 'OTP table does not exist. Please run the migration: python migrations/add_otp_verification.py'}), 500
+                except:
+                    pass
+                
                 conn.close()
-                return jsonify({'success': False, 'message': 'Failed to generate OTP'}), 500
+                return jsonify({'success': False, 'message': 'Failed to generate OTP. Please check database connection and ensure otp_verifications table exists. Check server logs for details.'}), 500
             
             success = OTPService.send_email_otp(email, otp_code, 'registration')
             
@@ -1140,7 +1549,7 @@ def signup_rider():
                 }
                 return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
             else:
-                return jsonify({'success': False, 'message': 'Failed to send OTP'}), 500
+                return jsonify({'success': False, 'message': 'Failed to send OTP email. Please check email configuration (MAIL_USERNAME and MAIL_PASSWORD in .env file).'}), 500
                 
         except Exception as err:
             return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
@@ -1169,6 +1578,11 @@ def signup_seller():
         # Validate phone number
         if not phone.replace('+', '').replace('-', '').replace(' ', '').isdigit():
             return jsonify({'success': False, 'message': 'Please enter a valid phone number'}), 400
+        
+        # Validate password strength
+        import re
+        if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$', password):
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters and contain both letters and numbers'}), 400
 
         conn = get_db()
         if not conn:
@@ -1176,12 +1590,37 @@ def signup_seller():
 
         try:
             cursor = conn.cursor(dictionary=True)
-
+            
+            # Check if user is already logged in
+            logged_in_user_id = session.get('user_id')
+            logged_in_email = session.get('email')
+            
             # Check if email already exists
-            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
-            if cursor.fetchone():
-                conn.close()
-                return jsonify({'success': False, 'message': 'Email already registered'}), 400
+            cursor.execute('SELECT id, email, role FROM users WHERE email = %s', (email,))
+            existing_user = cursor.fetchone()
+            
+            # If user is logged in and using their own email, allow it
+            if existing_user:
+                if logged_in_user_id and existing_user['id'] == logged_in_user_id and existing_user['email'] == logged_in_email:
+                    # User is logged in and using their own email - allow seller registration
+                    pass
+                elif existing_user['role'] == 'seller':
+                    # Email already has a seller account
+                    conn.close()
+                    return jsonify({'success': False, 'message': 'This email already has a seller account. Please log in instead.'}), 400
+                elif not logged_in_user_id:
+                    # Email exists but user is not logged in - don't allow
+                    conn.close()
+                    return jsonify({'success': False, 'message': 'Email already registered. Please log in first, then register as a seller.'}), 400
+
+            # Check if phone number already exists
+            cursor.execute('SELECT id FROM users WHERE phone = %s', (phone,))
+            existing_phone_user = cursor.fetchone()
+            if existing_phone_user:
+                # Allow if it's the same logged-in user
+                if not (logged_in_user_id and existing_phone_user['id'] == logged_in_user_id):
+                    conn.close()
+                    return jsonify({'success': False, 'message': 'This phone number is already registered. Please use a different number.'}), 400
 
             # Check if shop name exists
             cursor.execute('SELECT id FROM sellers WHERE store_name = %s', (shop_name,))
@@ -1190,12 +1629,20 @@ def signup_seller():
                 return jsonify({'success': False, 'message': 'Shop name already taken'}), 400
 
             # Store seller signup data in session for later use
+            is_existing = bool(logged_in_user_id and existing_user and existing_user['id'] == logged_in_user_id)
+            existing_id = logged_in_user_id if (logged_in_user_id and existing_user and existing_user['id'] == logged_in_user_id) else None
+            
             session['pending_seller_signup'] = {
                 'email': email,
                 'password': password,
                 'phone': phone,
-                'shop_name': shop_name
+                'shop_name': shop_name,
+                'is_existing_user': is_existing,
+                'existing_user_id': existing_id
             }
+            
+            print(f"[SELLER SIGNUP] Stored in session - Email: {email}, Shop: {shop_name}, Is Existing: {is_existing}, User ID: {existing_id}")
+            print(f"[SELLER SIGNUP] Session keys: {list(session.keys())}")
             
             # Send OTP
             ip_address = request.remote_addr
@@ -1208,8 +1655,21 @@ def signup_seller():
             )
             
             if not otp_code:
+                # Check if table exists
+                try:
+                    cursor_check = conn.cursor()
+                    cursor_check.execute("SHOW TABLES LIKE 'otp_verifications'")
+                    table_exists = cursor_check.fetchone()
+                    cursor_check.close()
+                    
+                    if not table_exists:
+                        conn.close()
+                        return jsonify({'success': False, 'message': 'OTP table does not exist. Please run the migration: python migrations/add_otp_verification.py'}), 500
+                except:
+                    pass
+                
                 conn.close()
-                return jsonify({'success': False, 'message': 'Failed to generate OTP'}), 500
+                return jsonify({'success': False, 'message': 'Failed to generate OTP. Please check database connection and ensure otp_verifications table exists. Check server logs for details.'}), 500
             
             success = OTPService.send_email_otp(email, otp_code, 'registration')
             
@@ -1222,14 +1682,20 @@ def signup_seller():
                     'verification_type': 'email',
                     'purpose': 'registration'
                 }
+                # Ensure session is saved
+                session.permanent = True
+                print(f"[SELLER SIGNUP] OTP sent successfully. Session saved. Redirecting to verify page.")
+                print(f"[SELLER SIGNUP] Pending seller signup still in session: {session.get('pending_seller_signup') is not None}")
                 return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
             else:
-                return jsonify({'success': False, 'message': 'Failed to send OTP'}), 500
+                return jsonify({'success': False, 'message': 'Failed to send OTP email. Please check email configuration (MAIL_USERNAME and MAIL_PASSWORD in .env file).'}), 500
                 
         except Exception as err:
             return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
 
-    return render_template('auth/signupSeller.html')
+    # Pre-fill email if user is logged in
+    user_email = session.get('email') if session.get('logged_in') else None
+    return render_template('auth/signupSeller.html', user_email=user_email)
 
 @app.route('/dashboard')
 def dashboard():
@@ -1338,6 +1804,59 @@ def admin_pending_products():
         
     except Exception as err:
         return jsonify({'error': str(err)}), 500
+
+@app.route('/admin/product-details/<int:product_id>', methods=['GET'])
+def admin_product_details(product_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get product details
+        cursor.execute('''
+            SELECT p.*, s.store_name, u.email as seller_email,
+                   c.name as category,
+                   COALESCE(SUM(pv.stock_quantity), 0) as stock
+            FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN product_variants pv ON p.id = pv.product_id
+            WHERE p.id = %s
+            GROUP BY p.id
+        ''', (product_id,))
+        product = cursor.fetchone()
+        
+        if not product:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Product not found'}), 404
+        
+        # Get product variants (sizes and colors) - show ALL variants including zero stock
+        cursor.execute('''
+            SELECT size, color, stock_quantity
+            FROM product_variants
+            WHERE product_id = %s
+            ORDER BY size, color
+        ''', (product_id,))
+        variants = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'product': product,
+            'variants': variants
+        }), 200
+        
+    except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
 
 @app.route('/admin/approve-product/<int:product_id>', methods=['POST'])
 def admin_approve_product(product_id):
@@ -1906,6 +2425,165 @@ def admin_reject_recovery(request_id):
             conn.rollback()
         return jsonify({'error': str(err)}), 500
 
+# Journal Management Routes
+@app.route('/admin/journal-entries', methods=['GET'])
+def admin_journal_entries():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT id, title, description, image_url, link_url, is_active, created_at, updated_at
+            FROM journal_entries
+            ORDER BY created_at DESC
+        ''')
+        entries = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'entries': entries}), 200
+    except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/journal-entry', methods=['POST'])
+def admin_create_journal_entry():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        image_url = request.form.get('image_url', '').strip()
+        link_url = request.form.get('link_url', '').strip()
+        
+        if not title:
+            return jsonify({'success': False, 'error': 'Title is required'}), 400
+        
+        cursor.execute('''
+            INSERT INTO journal_entries (title, description, image_url, link_url, created_by)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (title, description, image_url, link_url, user_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Journal entry created'}), 200
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/journal-entry/<int:entry_id>', methods=['GET'])
+def admin_get_journal_entry(entry_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT * FROM journal_entries WHERE id = %s', (entry_id,))
+        entry = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if entry:
+            return jsonify({'success': True, 'entry': entry}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Entry not found'}), 404
+    except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/journal-entry/<int:entry_id>', methods=['PUT'])
+def admin_update_journal_entry(entry_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        image_url = request.form.get('image_url', '').strip()
+        link_url = request.form.get('link_url', '').strip()
+        
+        if not title:
+            return jsonify({'success': False, 'error': 'Title is required'}), 400
+        
+        cursor.execute('''
+            UPDATE journal_entries 
+            SET title = %s, description = %s, image_url = %s, link_url = %s, updated_at = NOW()
+            WHERE id = %s
+        ''', (title, description, image_url, link_url, entry_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Journal entry updated'}), 200
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/journal-entry/<int:entry_id>', methods=['DELETE'])
+def admin_delete_journal_entry(entry_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM journal_entries WHERE id = %s', (entry_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Journal entry deleted'}), 200
+    except Exception as err:
+        if conn:
+            conn.rollback()
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/api/journal-entries', methods=['GET'])
+def api_journal_entries():
+    """Public API to get active journal entries for homepage"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT id, title, description, image_url, link_url, created_at
+            FROM journal_entries
+            WHERE is_active = TRUE
+            ORDER BY created_at DESC
+            LIMIT 6
+        ''')
+        entries = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'entries': entries}), 200
+    except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
+
 @app.route('/seller-dashboard')
 def seller_dashboard():
     if not session.get('logged_in') or session.get('role') != 'seller':
@@ -2017,6 +2695,10 @@ def seller_dashboard():
         max_value = max(weekly_sales.values()) if weekly_sales.values() else 0
         max_weekly_sales = max_value if max_value > 0 else 1
         
+        # Get all active categories for the dropdown
+        cursor.execute('SELECT id, name, slug FROM categories WHERE is_active = TRUE ORDER BY name')
+        categories = cursor.fetchall()
+        
         cursor.close()
         conn.close()
         
@@ -2026,6 +2708,7 @@ def seller_dashboard():
                              low_stock=low_stock,
                              recent_orders=recent_orders,
                              today_sales=today_sales,
+                             categories=categories,
                              pending_orders=pending_orders,
                              top_products=top_products,
                              weekly_sales=weekly_sales,
@@ -2095,6 +2778,11 @@ def rider_dashboard():
         ''', (rider['id'] if rider else None,))
         recent_deliveries = cursor.fetchall()
         
+        # Convert Decimal to float for template rendering
+        for delivery in recent_deliveries:
+            if delivery.get('total_amount'):
+                delivery['total_amount'] = float(delivery['total_amount'])
+        
         # Get active deliveries
         cursor.execute('''
             SELECT s.*, o.order_number, o.total_amount,
@@ -2109,6 +2797,15 @@ def rider_dashboard():
             ORDER BY s.created_at DESC
         ''', (rider['id'] if rider else None,))
         active_deliveries = cursor.fetchall()
+        
+        # Convert Decimal to float for template rendering
+        for delivery in active_deliveries:
+            if delivery.get('total_amount'):
+                delivery['total_amount'] = float(delivery['total_amount'])
+        
+        # Convert earnings_today to float
+        if today_stats.get('earnings_today'):
+            today_stats['earnings_today'] = float(today_stats['earnings_today'])
         
         cursor.close()
         conn.close()
@@ -2198,7 +2895,7 @@ def seller_add_product():
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         price = request.form.get('price', '0')
-        category_name = request.form.get('category', 'casual')
+        category_id = request.form.get('category_id', '').strip()
         brand = request.form.get('brand', '').strip()
         sku = request.form.get('sku', '').strip()
         
@@ -2212,8 +2909,17 @@ def seller_add_product():
             return jsonify({'error': 'Product name is required'}), 400
         if not price or float(price) <= 0:
             return jsonify({'error': 'Valid price is required'}), 400
-        if not category_name:
+        if not category_id:
             return jsonify({'error': 'Category is required'}), 400
+        
+        # Get category info to check if it's grooming
+        cursor.execute('SELECT id, slug, name FROM categories WHERE id = %s AND is_active = TRUE', (category_id,))
+        category = cursor.fetchone()
+        if not category:
+            return jsonify({'error': 'Invalid category selected'}), 400
+        
+        category_slug = category['slug']
+        category_name = category['name']
         
         # Get sizes and colors
         sizes = request.form.getlist('sizes')
@@ -2221,18 +2927,32 @@ def seller_add_product():
         
         # Add custom sizes if provided
         custom_sizes = request.form.get('custom-sizes', '').strip()
+        print(f"[DEBUG] Custom sizes received: '{custom_sizes}'")
         if custom_sizes:
             custom_size_list = [s.strip() for s in custom_sizes.split(',') if s.strip()]
             sizes.extend(custom_size_list)
+            print(f"[DEBUG] Custom sizes added: {custom_size_list}")
         
         # Add custom colors if provided
         custom_colors = request.form.get('custom-colors', '').strip()
+        print(f"[DEBUG] Custom colors received: '{custom_colors}'")
         if custom_colors:
             custom_color_list = [c.strip() for c in custom_colors.split(',') if c.strip()]
             colors.extend(custom_color_list)
+            print(f"[DEBUG] Custom colors added: {custom_color_list}")
+        
+        print(f"[DEBUG] Final sizes list: {sizes}")
+        print(f"[DEBUG] Final colors list: {colors}")
+        
+        # Debug: Print all form keys that start with 'stock_'
+        stock_keys = [key for key in request.form.keys() if key.startswith('stock_')]
+        print(f"[DEBUG] Stock form keys received: {stock_keys}")
         
         # Validate sizes and colors for non-grooming products
-        if category_name != 'grooming':
+        # Check if category slug contains 'grooming' or check category name
+        is_grooming = 'grooming' in category_slug.lower() or 'grooming' in category_name.lower()
+        
+        if not is_grooming:
             if not sizes:
                 return jsonify({'error': 'Please select at least one size'}), 400
             if not colors:
@@ -2240,22 +2960,10 @@ def seller_add_product():
         
         # Handle ingredients for grooming products
         ingredients = ''
-        if category_name == 'grooming':
+        if is_grooming:
             ingredients = request.form.get('ingredients', '').strip()
             if not ingredients:
                 return jsonify({'error': 'Ingredients are required for grooming products'}), 400
-        
-        # Get or create category
-        cursor.execute('SELECT id FROM categories WHERE slug = %s', (category_name,))
-        category = cursor.fetchone()
-        
-        if not category:
-            # Create category if it doesn't exist
-            cursor.execute('INSERT INTO categories (name, slug) VALUES (%s, %s)', 
-                         (category_name.replace('-', ' ').title(), category_name))
-            category_id = cursor.lastrowid
-        else:
-            category_id = category['id']
         
         # Handle multiple image uploads
         uploaded_images = []
@@ -2320,11 +3028,17 @@ def seller_add_product():
         
         # Add size and color variants with individual stock (skip for grooming)
         if category_name != 'grooming':
+            import re
             for size in sizes:
                 for color in colors:
-                    stock_key = f'stock_{size}_{color}'
+                    # Sanitize size and color to match frontend naming (replace non-alphanumeric with underscore)
+                    safe_size = re.sub(r'[^a-zA-Z0-9]', '_', size)
+                    safe_color = re.sub(r'[^a-zA-Z0-9]', '_', color)
+                    stock_key = f'stock_{safe_size}_{safe_color}'
                     variant_stock = int(request.form.get(stock_key, 0))
                     total_stock += variant_stock
+                    
+                    print(f"[DEBUG] Processing variant: size='{size}', color='{color}', stock_key='{stock_key}', stock={variant_stock}")
                     
                     # Insert product variant
                     cursor.execute('''
@@ -2727,7 +3441,7 @@ def seller_edit_product():
 
 @app.route('/get_buyer_name')
 def get_buyer_name():
-    """Get the logged-in buyer's first name"""
+    """Get the logged-in buyer's account details"""
     try:
         if not session.get('logged_in') or session.get('role') != 'buyer':
             return jsonify({'error': 'Not logged in'}), 401
@@ -2736,14 +3450,19 @@ def get_buyer_name():
         cursor = conn.cursor(dictionary=True)
         
         user_id = session.get('user_id')
-        cursor.execute('SELECT first_name FROM users WHERE id = %s', (user_id,))
+        cursor.execute('SELECT first_name, last_name, email, phone FROM users WHERE id = %s', (user_id,))
         user = cursor.fetchone()
         
         cursor.close()
         conn.close()
         
         if user:
-            return jsonify({'firstName': user['first_name']}), 200
+            return jsonify({
+                'firstName': user['first_name'],
+                'lastName': user.get('last_name', ''),
+                'email': user.get('email', ''),
+                'phone': user.get('phone', '')
+            }), 200
         else:
             return jsonify({'firstName': 'Guest'}), 200
     except Exception as e:
@@ -2751,12 +3470,17 @@ def get_buyer_name():
 
 @app.route('/api/products')
 def api_products():
-    """Get all active products for browsing"""
+    """Get all active products for browsing with optional search and category filter"""
     try:
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
         
-        # Fetch products with images
+        # Get query parameters
+        limit = request.args.get('limit', 50, type=int)
+        search = request.args.get('search', '').strip()
+        category_id = request.args.get('category_id', type=int)
+        
+        # Build query with filters
         query = """
             SELECT 
                 p.id,
@@ -2769,12 +3493,26 @@ def api_products():
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.is_active = 1 AND p.archive_status = 'active'
-            ORDER BY p.created_at DESC
-            LIMIT 50
+            WHERE p.is_active = 1
         """
         
-        cursor.execute(query)
+        params = []
+        
+        # Add search filter
+        if search:
+            query += " AND (p.name LIKE %s OR p.description LIKE %s)"
+            search_pattern = f"%{search}%"
+            params.extend([search_pattern, search_pattern])
+        
+        # Add category filter
+        if category_id:
+            query += " AND p.category_id = %s"
+            params.append(category_id)
+        
+        query += " ORDER BY p.created_at DESC LIMIT %s"
+        params.append(limit)
+        
+        cursor.execute(query, tuple(params))
         products = cursor.fetchall()
         
         # For each product, get available colors
@@ -2801,6 +3539,34 @@ def api_products():
             'error': str(e)
         }), 500
 
+@app.route('/api/categories')
+def api_categories():
+    """Get all active categories for filtering"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT id, name, slug
+            FROM categories
+            WHERE is_active = TRUE
+            ORDER BY name ASC
+        """)
+        categories = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'categories': categories
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/seller-products/<int:seller_id>')
 def api_seller_products(seller_id):
     conn = get_db()
@@ -2818,7 +3584,7 @@ def api_seller_products(seller_id):
             FROM products p
             LEFT JOIN product_images pi ON (p.id = pi.product_id AND pi.is_primary = 1)
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.seller_id = %s AND p.is_active = 1 AND p.archive_status = 'active'
+            WHERE p.seller_id = %s AND p.is_active = 1
             ORDER BY p.created_at DESC
             LIMIT 50
         ''', (seller_id,))
@@ -2851,16 +3617,62 @@ def api_user_orders():
         
         # Fetch user's orders
         cursor.execute('''
-            SELECT o.id, o.order_number, o.total_amount, o.status, o.created_at,
+            SELECT o.id, o.order_number, o.total_amount, o.order_status as status, o.created_at,
                    u.first_name, u.email
             FROM orders o
-            JOIN users u ON o.buyer_id = u.id
-            WHERE o.buyer_id = %s
+            JOIN users u ON o.user_id = u.id
+            WHERE o.user_id = %s
             ORDER BY o.created_at DESC
             LIMIT 50
         ''', (user_id,))
         
         orders = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'orders': orders
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/my-orders')
+def api_my_orders():
+    """Get orders for logged-in user (alias for /api/user-orders)"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        
+        # Fetch user's orders
+        cursor.execute('''
+            SELECT o.id, o.order_number, o.total_amount, o.order_status as status, o.created_at,
+                   u.first_name, u.email
+            FROM orders o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.user_id = %s
+            ORDER BY o.created_at DESC
+            LIMIT 50
+        ''', (user_id,))
+        
+        orders = cursor.fetchall()
+        
+        # Convert Decimal to float and ensure id is present
+        for order in orders:
+            if order.get('total_amount'):
+                order['total_amount'] = float(order['total_amount'])
+            # Ensure id is an integer
+            if 'id' in order and order['id']:
+                order['id'] = int(order['id'])
+        
         cursor.close()
         conn.close()
         
@@ -2931,6 +3743,522 @@ def cart():
         return redirect(url_for('login'))
     return render_template('pages/cart.html')
 
+@app.route('/account-details')
+def account_details():
+    """Account details page for buyers to view and edit their profile"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        flash('Access denied. Please log in first.', 'error')
+        return redirect(url_for('login'))
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        # Check if profile_image column exists, if not, select without it
+        cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
+        has_profile_image = cursor.fetchone()
+        
+        if has_profile_image:
+            cursor.execute('SELECT id, first_name, last_name, email, phone, profile_image FROM users WHERE id = %s', (user_id,))
+        else:
+            cursor.execute('SELECT id, first_name, last_name, email, phone FROM users WHERE id = %s', (user_id,))
+        
+        user = cursor.fetchone()
+        if user and not has_profile_image:
+            user['profile_image'] = None
+        
+        # Check if email_verified and phone_verified columns exist
+        cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
+        has_email_verified = cursor.fetchone()
+        cursor.execute('SHOW COLUMNS FROM users LIKE "phone_verified"')
+        has_phone_verified = cursor.fetchone()
+        
+        # Get verification status
+        email_verified = False
+        phone_verified = False
+        
+        if has_email_verified:
+            cursor.execute('SELECT email_verified FROM users WHERE id = %s', (user_id,))
+            result = cursor.fetchone()
+            email_verified = result.get('email_verified', False) if result else False
+        
+        if has_phone_verified:
+            cursor.execute('SELECT phone_verified FROM users WHERE id = %s', (user_id,))
+            result = cursor.fetchone()
+            phone_verified = result.get('phone_verified', False) if result else False
+        
+        # If columns don't exist, assume verified (for existing users)
+        if not has_email_verified:
+            email_verified = True
+        if not has_phone_verified:
+            phone_verified = True
+        
+        user['email_verified'] = email_verified
+        user['phone_verified'] = phone_verified
+        
+        cursor.close()
+        conn.close()
+        
+        if not user:
+            flash('User not found', 'error')
+            return redirect(url_for('buyer_dashboard'))
+        
+        return render_template('pages/accountDetails.html', user=user)
+    except Exception as e:
+        print(f"Error fetching account details: {str(e)}")
+        flash('Error loading account details', 'error')
+        return redirect(url_for('buyer_dashboard'))
+
+@app.route('/upload-profile-picture', methods=['POST'])
+def upload_profile_picture():
+    """Upload profile picture for buyer"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        if 'profile_image' not in request.files:
+            return jsonify({'success': False, 'message': 'No file provided'}), 400
+        
+        file = request.files['profile_image']
+        if not file or not file.filename:
+            return jsonify({'success': False, 'message': 'No file selected'}), 400
+        
+        # Validate file type
+        if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.avif', '.webp')):
+            return jsonify({'success': False, 'message': 'Only image files (JPG, PNG, AVIF, WebP) are allowed'}), 400
+        
+        import os
+        from werkzeug.utils import secure_filename
+        import time
+        
+        # Create uploads directory if it doesn't exist
+        upload_folder = os.path.join('static', 'images', 'profiles')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # Generate unique filename
+        filename = secure_filename(file.filename)
+        timestamp = int(time.time() * 1000)
+        user_id = session.get('user_id')
+        unique_filename = f"user_{user_id}_{timestamp}_{filename}"
+        filepath = os.path.join(upload_folder, unique_filename)
+        file.save(filepath)
+        
+        # Store relative URL
+        image_url = f"/static/images/profiles/{unique_filename}"
+        
+        # Update database
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Check if profile_image column exists, if not, add it
+        cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
+        has_column = cursor.fetchone()
+        if not has_column:
+            cursor.execute('ALTER TABLE users ADD COLUMN profile_image VARCHAR(500)')
+            conn.commit()
+        
+        # Update database with profile image path
+        cursor.execute('UPDATE users SET profile_image = %s WHERE id = %s', (image_url, user_id))
+        conn.commit()
+        
+        # Verify the update
+        cursor.execute('SELECT profile_image FROM users WHERE id = %s', (user_id,))
+        updated_user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if updated_user and updated_user[0] == image_url:
+            print(f"Profile picture saved to database for user {user_id}: {image_url}")
+            return jsonify({
+                'success': True,
+                'message': 'Profile picture saved successfully',
+                'image_url': image_url
+            })
+        else:
+            print(f"Warning: Profile picture may not have been saved correctly for user {user_id}")
+            return jsonify({
+                'success': True,
+                'message': 'Profile picture uploaded, but database update may have failed',
+                'image_url': image_url
+            })
+    except Exception as e:
+        print(f"Error uploading profile picture: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error uploading profile picture'}), 500
+
+@app.route('/send-email-change-otp', methods=['POST'])
+def send_email_change_otp():
+    """Send OTP for email change verification"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        new_email = data.get('new_email', '').strip()
+        
+        if not new_email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+        
+        # Check if email is already taken
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+        cursor.execute('SELECT id FROM users WHERE email = %s AND id != %s', (new_email, user_id))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Email is already taken'}), 400
+        
+        # Generate and send OTP
+        ip_address = request.remote_addr
+        otp_code, otp_id = OTPService.create_otp_record(
+            conn,
+            email=new_email,
+            otp_type='email',
+            purpose='email_change',
+            ip_address=ip_address
+        )
+        
+        cursor.close()
+        conn.close()
+        
+        if otp_code:
+            # Try to send email
+            email_sent = OTPService.send_email_otp(new_email, otp_code, 'email_change')
+            if email_sent:
+                print(f"✅ Email change OTP sent to {new_email}")
+            else:
+                print(f"⚠️ Email sending failed, but OTP is available in console")
+            
+            print(f"\n{'='*60}")
+            print(f"📧 EMAIL CHANGE OTP FOR {new_email}")
+            print(f"OTP CODE: {otp_code}")
+            print(f"{'='*60}\n")
+            
+            # Store in session for verification
+            session['email_change'] = {
+                'new_email': new_email,
+                'otp_id': otp_id,
+                'verified': False
+            }
+            
+            return jsonify({
+                'success': True,
+                'message': 'Verification code sent to your new email',
+                'otp_id': otp_id
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Failed to generate verification code'}), 500
+            
+    except Exception as e:
+        print(f"Error sending email change OTP: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error sending verification code'}), 500
+
+@app.route('/verify-email-change', methods=['POST'])
+def verify_email_change():
+    """Verify OTP for email change"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        otp_code = data.get('otp', '')
+        otp_id = data.get('otp_id')
+        
+        if not otp_code or 'email_change' not in session:
+            return jsonify({'success': False, 'message': 'Invalid request'}), 400
+        
+        email_change_data = session['email_change']
+        new_email = email_change_data.get('new_email')
+        
+        conn = get_db()
+        
+        # Verify OTP
+        is_valid, message = OTPService.verify_otp(conn, otp_code, email=new_email, purpose='email_change')
+        
+        if is_valid:
+            # Mark as verified in session
+            session['email_change']['verified'] = True
+            session.modified = True
+            
+            # Update email and email_verified in database
+            cursor = conn.cursor()
+            # Check if email_verified column exists, if not, add it
+            cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
+            has_column = cursor.fetchone()
+            if not has_column:
+                cursor.execute('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE')
+                conn.commit()
+            
+            # Update email and verification status
+            user_id = session.get('user_id')
+            cursor.execute('UPDATE users SET email = %s, email_verified = TRUE WHERE id = %s', (new_email, user_id))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            # Update session email
+            session['email'] = new_email
+            
+            return jsonify({
+                'success': True,
+                'message': 'Email verified and updated successfully'
+            })
+        else:
+            conn.close()
+            return jsonify({'success': False, 'message': message}), 400
+            
+    except Exception as e:
+        print(f"Error verifying email change: {str(e)}")
+        return jsonify({'success': False, 'message': 'Verification failed'}), 500
+
+@app.route('/update-account', methods=['POST'])
+def update_account():
+    """Update user account details"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        user_id = session.get('user_id')
+        
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        email = data.get('email', '').strip()
+        phone = data.get('phone', '').strip()
+        
+        if not first_name:
+            return jsonify({'success': False, 'message': 'First name is required'}), 400
+        
+        if not email:
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
+        
+        # Check if email was changed and verify it was verified
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT email FROM users WHERE id = %s', (user_id,))
+        current_user = cursor.fetchone()
+        current_email = current_user['email'] if current_user else None
+        
+        if email != current_email:
+            # Email was changed - check if it was verified
+            if 'email_change' not in session or not session['email_change'].get('verified'):
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'message': 'Please verify your new email address first'}), 400
+            
+            if session['email_change'].get('new_email') != email:
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'message': 'Email mismatch. Please verify the correct email'}), 400
+        
+        # Check if email is already taken by another user
+        cursor.execute('SELECT id FROM users WHERE email = %s AND id != %s', (email, user_id))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Email is already taken'}), 400
+        
+        # Check if email_verified and phone_verified columns exist
+        cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
+        has_email_verified = cursor.fetchone()
+        cursor.execute('SHOW COLUMNS FROM users LIKE "phone_verified"')
+        has_phone_verified = cursor.fetchone()
+        
+        # Get current values to check if they changed
+        cursor.execute('SELECT email, phone FROM users WHERE id = %s', (user_id,))
+        current_user = cursor.fetchone()
+        current_email = current_user['email'] if current_user else None
+        current_phone = current_user.get('phone') if current_user else None
+        
+        # Build update query
+        update_fields = ['email = %s', 'phone = %s']
+        update_values = [email, phone]
+        
+        # Reset verification status if email/phone changed
+        if has_email_verified and email != current_email:
+            update_fields.append('email_verified = FALSE')
+        if has_phone_verified and phone != current_phone:
+            update_fields.append('phone_verified = FALSE')
+        
+        # Update user details
+        update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
+        update_values.append(user_id)
+        cursor.execute(update_query, tuple(update_values))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Update session
+        session['email'] = email
+        if 'email_change' in session:
+            session.pop('email_change', None)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Account updated successfully'
+        })
+    except Exception as e:
+        print(f"Error updating account: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error updating account'}), 500
+
+@app.route('/verify-password', methods=['POST'])
+def verify_password():
+    """Verify user password for account changes"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        password = data.get('password', '').strip()
+        
+        if not password:
+            return jsonify({'success': False, 'message': 'Password is required'}), 400
+        
+        user_id = session.get('user_id')
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT password FROM users WHERE id = %s', (user_id,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        # Check password (plain text comparison since passwords are stored as plain text)
+        if user['password'] == password:
+            return jsonify({
+                'success': True,
+                'message': 'Password verified'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Incorrect password'}), 401
+            
+    except Exception as e:
+        print(f"Error verifying password: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error verifying password'}), 500
+
+@app.route('/send-phone-verification-otp', methods=['POST'])
+def send_phone_verification_otp():
+    """Send OTP for phone number verification"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        phone = data.get('phone', '').strip()
+        
+        if not phone:
+            return jsonify({'success': False, 'message': 'Phone number is required'}), 400
+        
+        # Generate and send OTP
+        conn = get_db()
+        ip_address = request.remote_addr
+        otp_code, otp_id = OTPService.create_otp_record(
+            conn,
+            phone=phone,
+            otp_type='sms',
+            purpose='phone_verification',
+            ip_address=ip_address
+        )
+        
+        if otp_code:
+            # Send SMS via email-to-SMS gateway (FREE)
+            sms_sent = OTPService.send_sms_otp(phone, otp_code, 'phone_verification')
+            
+            print(f"\n{'='*60}")
+            print(f"📱 PHONE VERIFICATION OTP FOR {phone}")
+            print(f"OTP CODE: {otp_code}")
+            print(f"{'='*60}\n")
+            
+            # Store in session for verification
+            session['phone_verification'] = {
+                'phone': phone,
+                'otp_id': otp_id,
+                'verified': False
+            }
+            
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Verification code sent to your phone number',
+                'otp_id': otp_id
+            })
+        else:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Failed to generate verification code'}), 500
+            
+    except Exception as e:
+        print(f"Error sending phone verification OTP: {str(e)}")
+        return jsonify({'success': False, 'message': 'Error sending verification code'}), 500
+
+@app.route('/verify-phone-otp', methods=['POST'])
+def verify_phone_otp():
+    """Verify OTP for phone number"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'message': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json()
+        otp_code = str(data.get('otp', '')).strip()  # Strip whitespace
+        phone = data.get('phone', '').strip()
+        
+        if not otp_code or len(otp_code) != 6:
+            return jsonify({'success': False, 'message': 'Invalid OTP code format'}), 400
+        
+        if not phone:
+            return jsonify({'success': False, 'message': 'Phone number is required'}), 400
+        
+        conn = get_db()
+        
+        print(f"🔍 Verifying phone OTP:")
+        print(f"   OTP Code: {otp_code}")
+        print(f"   Phone: {phone}")
+        print(f"   Purpose: phone_verification")
+        
+        # Verify OTP
+        is_valid, message = OTPService.verify_otp(conn, otp_code, phone=phone, purpose='phone_verification')
+        
+        if is_valid:
+            # Mark as verified in session
+            if 'phone_verification' in session:
+                session['phone_verification']['verified'] = True
+                session.modified = True
+            
+            # Update phone and phone_verified in database
+            cursor = conn.cursor()
+            # Check if phone_verified column exists, if not, add it
+            cursor.execute('SHOW COLUMNS FROM users LIKE "phone_verified"')
+            has_column = cursor.fetchone()
+            if not has_column:
+                cursor.execute('ALTER TABLE users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE')
+                conn.commit()
+            
+            # Update phone and verification status
+            user_id = session.get('user_id')
+            cursor.execute('UPDATE users SET phone = %s, phone_verified = TRUE WHERE id = %s', (phone, user_id))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Phone number verified and updated successfully'
+            })
+        else:
+            conn.close()
+            return jsonify({'success': False, 'message': message}), 400
+            
+    except Exception as e:
+        print(f"Error verifying phone OTP: {str(e)}")
+        return jsonify({'success': False, 'message': 'Verification failed'}), 500
+
 @app.route('/admin/recent-orders')
 def admin_recent_orders():
     if not session.get('logged_in') or session.get('role') != 'admin':
@@ -2942,9 +4270,9 @@ def admin_recent_orders():
         
         # Get recent orders (last 4)
         query = '''
-            SELECT o.id, o.order_number, o.total_amount, o.status, o.created_at, u.first_name, u.last_name
+            SELECT o.id, o.order_number, o.total_amount, o.order_status, o.created_at, u.first_name, u.last_name
             FROM orders o
-            JOIN users u ON o.buyer_id = u.id
+            JOIN users u ON o.user_id = u.id
             ORDER BY o.created_at DESC
             LIMIT 4
         '''
@@ -2959,7 +4287,7 @@ def admin_recent_orders():
                 'buyer_name': f"{order['first_name']} {order['last_name']}",
                 'created_at': order['created_at'],
                 'total_amount': order['total_amount'],
-                'status': order['status']
+                'status': order['order_status']
             })
         
         cursor.close()
@@ -2987,7 +4315,7 @@ def admin_best_product():
             LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
             LEFT JOIN sellers s ON p.seller_id = s.id
             LEFT JOIN order_items oi ON p.id = oi.product_id
-            WHERE p.is_active = 1 AND p.archive_status = 'active'
+            WHERE p.is_active = 1
             GROUP BY p.id, p.name, pi.image_url, s.store_name
             ORDER BY order_count DESC
             LIMIT 1
@@ -3034,9 +4362,11 @@ def seller_orders():
         
         seller_id = seller_result['id']
         
-        # Fetch orders for this seller
+        # Fetch orders for this seller, including shipment status
+        # Note: Orders can have products from multiple sellers, so we need to check order_items
+        # We'll use DISTINCT to avoid duplicates when an order has multiple items from this seller
         query = """
-            SELECT 
+            SELECT DISTINCT
                 o.id,
                 o.order_number,
                 o.user_id,
@@ -3044,26 +4374,66 @@ def seller_orders():
                 o.order_status,
                 o.created_at,
                 o.updated_at,
-                u.first_name as customer_name,
-                COUNT(oi.id) as item_count
+                CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+                (SELECT COUNT(*) FROM order_items oi2 
+                 WHERE oi2.order_id = o.id) as item_count,
+                IFNULL(s.status, 'pending') as shipment_status,
+                IFNULL(s.rider_id, 0) as rider_id,
+                IFNULL(s.seller_confirmed, FALSE) as seller_confirmed,
+                s.id as shipment_id
             FROM orders o
+            INNER JOIN order_items oi ON o.id = oi.order_id
+            INNER JOIN products p ON oi.product_id = p.id
             LEFT JOIN users u ON o.user_id = u.id
-            LEFT JOIN order_items oi ON o.id = oi.order_id
-            WHERE o.seller_id = %s
-            GROUP BY o.id
+            LEFT JOIN shipments s ON s.order_id = o.id
+            WHERE p.seller_id = %s
             ORDER BY o.created_at DESC
         """
         
         cursor.execute(query, (seller_id,))
         orders = cursor.fetchall()
         
+        print(f"[DEBUG] seller_orders: Found {len(orders)} orders for seller_id={seller_id}")
+        if len(orders) > 0:
+            print(f"[DEBUG] First order sample: {orders[0]}")
+        else:
+            # Debug: Check if there are any orders at all
+            cursor.execute('SELECT COUNT(*) as count FROM orders')
+            total_orders = cursor.fetchone()['count']
+            print(f"[DEBUG] Total orders in database: {total_orders}")
+            cursor.execute('SELECT COUNT(*) as count FROM orders WHERE seller_id = %s', (seller_id,))
+            orders_by_seller_id = cursor.fetchone()['count']
+            print(f"[DEBUG] Orders with seller_id={seller_id}: {orders_by_seller_id}")
+            cursor.execute('''
+                SELECT COUNT(DISTINCT o.id) as count 
+                FROM orders o
+                INNER JOIN order_items oi ON o.id = oi.order_id
+                INNER JOIN products p ON oi.product_id = p.id
+                WHERE p.seller_id = %s
+            ''', (seller_id,))
+            orders_by_product = cursor.fetchone()['count']
+            print(f"[DEBUG] Orders with products from seller_id={seller_id}: {orders_by_product}")
+        
+        # Convert datetime objects to strings and Decimal to float
+        for order in orders:
+            if order.get('created_at'):
+                order['created_at'] = order['created_at'].isoformat()
+            if order.get('updated_at'):
+                order['updated_at'] = order['updated_at'].isoformat() if order['updated_at'] else None
+            if order.get('total_amount'):
+                order['total_amount'] = float(order['total_amount'])
+            # Ensure all fields are present
+            if 'shipment_status' not in order:
+                order['shipment_status'] = 'pending'
+            if 'rider_id' not in order:
+                order['rider_id'] = 0
+            if 'seller_confirmed' not in order:
+                order['seller_confirmed'] = False
+            if 'shipment_id' not in order:
+                order['shipment_id'] = None
+        
         cursor.close()
         conn.close()
-        
-        # Convert datetime objects to strings
-        for order in orders:
-            if order['created_at']:
-                order['created_at'] = order['created_at'].isoformat()
         
         return jsonify({
             'success': True,
@@ -3091,7 +4461,7 @@ def update_order_status():
         if not order_id or not new_status:
             return jsonify({'success': False, 'error': 'Missing order_id or new_status'}), 400
         
-        valid_statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned']
+        valid_statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned', 'release_to_rider']
         if new_status not in valid_statuses:
             return jsonify({'success': False, 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}), 400
         
@@ -3132,6 +4502,15 @@ def update_order_status():
         """
         
         cursor.execute(update_query, (new_status, order_id))
+        
+        # If status is 'release_to_rider', update shipment status to 'picked_up'
+        if new_status == 'release_to_rider':
+            cursor.execute('''
+                UPDATE shipments 
+                SET status = 'picked_up', updated_at = NOW()
+                WHERE order_id = %s
+            ''', (order_id,))
+        
         conn.commit()
         
         print(f"[✅] Order {order_id} status updated to {new_status} by seller {seller_id}")
@@ -3145,6 +4524,77 @@ def update_order_status():
         }), 200
     except Exception as e:
         print(f"[ERROR] update_order_status: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/seller/approve-rider', methods=['POST'])
+def seller_approve_rider():
+    """Approve a rider who has accepted an order"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+        
+        user_id = session['user_id']
+        order_id = request.form.get('order_id')
+        
+        if not order_id:
+            return jsonify({'success': False, 'error': 'Missing order_id'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get the seller_id for this user
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+        
+        seller_id = seller_result['id']
+        
+        # Verify that this seller owns the products in this order
+        verify_query = """
+            SELECT o.id
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE o.id = %s AND p.seller_id = %s
+            LIMIT 1
+        """
+        
+        cursor.execute(verify_query, (order_id, seller_id))
+        order_check = cursor.fetchone()
+        
+        if not order_check:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found or you do not have permission'}), 403
+        
+        # Check if shipment exists and has a rider
+        cursor.execute('''
+            SELECT id, rider_id FROM shipments 
+            WHERE order_id = %s AND rider_id IS NOT NULL
+        ''', (order_id,))
+        shipment = cursor.fetchone()
+        
+        if not shipment:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'No rider found for this order'}), 400
+        
+        # Rider is approved - shipment status remains 'pending' until seller releases
+        # This allows seller to see the order is ready for release
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Rider approved. You can now release the order to rider.'
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] seller_approve_rider: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -3386,8 +4836,24 @@ def verify_otp():
         phone = data.get('phone')
         purpose = data.get('purpose', 'registration')
         
+        # Get email/phone from session if not provided in request
+        pending_verification = session.get('pending_otp_verification', {})
+        if not email and pending_verification.get('email'):
+            email = pending_verification.get('email')
+        if not phone and pending_verification.get('phone'):
+            phone = pending_verification.get('phone')
+        if not purpose or purpose == 'None':
+            purpose = pending_verification.get('purpose', 'registration')
+        
+        print(f"[VERIFY OTP] OTP Code: {otp_code}, Email: {email}, Phone: {phone}, Purpose: {purpose}")
+        print(f"[VERIFY OTP] Pending verification in session: {pending_verification}")
+        print(f"[VERIFY OTP] Pending seller signup in session: {session.get('pending_seller_signup')}")
+        
         if not otp_code or len(otp_code) != 6:
             return jsonify({'success': False, 'message': 'Invalid OTP code'}), 400
+        
+        if not email and not phone:
+            return jsonify({'success': False, 'message': 'Email or phone number is required'}), 400
         
         conn = get_db()
         if not conn:
@@ -3468,46 +4934,88 @@ def verify_otp():
             
             # Check for seller signup
             pending_seller_signup = session.get('pending_seller_signup')
+            print(f"[VERIFY OTP] Checking for seller signup: {pending_seller_signup is not None}")
+            
             if pending_seller_signup:
+                print(f"[VERIFY OTP] Seller signup data found: {pending_seller_signup}")
                 conn = get_db()
                 if conn:
                     try:
                         cursor = conn.cursor(dictionary=True)
                         
-                        # Create user account (use shop name as first/last name for sellers)
-                        name_parts = pending_seller_signup['shop_name'].split(' ', 1)
-                        first_name = name_parts[0] if len(name_parts) > 0 else pending_seller_signup['shop_name']
-                        last_name = name_parts[1] if len(name_parts) > 1 else 'Shop'
+                        # Check if this is an existing user registering as seller
+                        is_existing_user = pending_seller_signup.get('is_existing_user', False)
+                        existing_user_id = pending_seller_signup.get('existing_user_id')
                         
-                        cursor.execute('INSERT INTO users (first_name, last_name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
-                                     (first_name, last_name, pending_seller_signup['email'], pending_seller_signup['password'], 
-                                      pending_seller_signup['phone'], 'seller'))
-                        user_id = cursor.lastrowid
+                        print(f"[VERIFY OTP] Is existing user: {is_existing_user}, User ID: {existing_user_id}")
+                        
+                        if is_existing_user and existing_user_id:
+                            # Update existing user's role to seller
+                            cursor.execute('UPDATE users SET role = %s WHERE id = %s', ('seller', existing_user_id))
+                            user_id = existing_user_id
+                            print(f"[VERIFY OTP] Updated existing user {user_id} to seller role")
+                        else:
+                            # Create new user account (use shop name as first/last name for sellers)
+                            name_parts = pending_seller_signup['shop_name'].split(' ', 1)
+                            first_name = name_parts[0] if len(name_parts) > 0 else pending_seller_signup['shop_name']
+                            last_name = name_parts[1] if len(name_parts) > 1 else 'Shop'
+                            
+                            print(f"[VERIFY OTP] Creating new user: {first_name} {last_name}, Email: {pending_seller_signup['email']}")
+                            
+                            cursor.execute('INSERT INTO users (first_name, last_name, email, password, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
+                                         (first_name, last_name, pending_seller_signup['email'], pending_seller_signup['password'], 
+                                          pending_seller_signup['phone'], 'seller'))
+                            user_id = cursor.lastrowid
+                            print(f"[VERIFY OTP] Created new user with ID: {user_id}")
 
-                        # Create store slug from shop name
-                        store_slug = pending_seller_signup['shop_name'].lower().replace(' ', '-').replace("'", '')
+                        # Check if seller profile already exists
+                        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+                        existing_seller = cursor.fetchone()
+                        
+                        if not existing_seller:
+                            # Create store slug from shop name
+                            store_slug = pending_seller_signup['shop_name'].lower().replace(' ', '-').replace("'", '')
 
-                        # Create seller profile with pending status
-                        cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, status) VALUES (%s, %s, %s, %s)',
-                                     (user_id, pending_seller_signup['shop_name'], store_slug, 'pending'))
+                            # Create seller profile with pending status
+                            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, status) VALUES (%s, %s, %s, %s)',
+                                         (user_id, pending_seller_signup['shop_name'], store_slug, 'pending'))
+                            print(f"[VERIFY OTP] Created seller profile for user {user_id}")
 
                         conn.commit()
                         cursor.close()
                         conn.close()
                         session.pop('pending_seller_signup', None)
                         session['email_verified'] = True
-                        return jsonify({
-                            'success': True, 
-                            'message': 'Seller account created successfully! Please log in.',
-                            'redirect': url_for('login')
-                        })
+                        
+                        # Update session role if user was already logged in
+                        if is_existing_user:
+                            session['role'] = 'seller'
+                            session['logged_in'] = True
+                            session['user_id'] = existing_user_id
+                            print(f"[VERIFY OTP] Redirecting existing user to seller dashboard")
+                            return jsonify({
+                                'success': True, 
+                                'message': 'Seller account created successfully! Redirecting to seller dashboard...',
+                                'redirect': url_for('seller_dashboard')
+                            })
+                        else:
+                            print(f"[VERIFY OTP] Redirecting new user to login")
+                            return jsonify({
+                                'success': True, 
+                                'message': 'Seller account created successfully! Please log in.',
+                                'redirect': url_for('login')
+                            })
                     except Exception as e:
+                        import traceback
+                        print(f"[VERIFY OTP] Error creating seller account: {str(e)}")
+                        traceback.print_exc()
                         conn.close()
                         return jsonify({'success': False, 'message': f'Failed to complete seller registration: {str(e)}'}), 500
                 else:
                     return jsonify({'success': False, 'message': 'Database connection failed'}), 500
             
-            return jsonify({'success': False, 'message': 'No pending signup data found'}), 400
+            print(f"[VERIFY OTP] No pending seller signup found. Available session keys: {list(session.keys())}")
+            return jsonify({'success': False, 'message': 'No pending signup data found. Please try registering again.'}), 400
         elif purpose == 'login':
             redirect_url = url_for('buyer_dashboard')
         else:
@@ -3893,58 +5401,44 @@ def api_rider_available_orders():
         
         rider_service_area = rider['service_area']
         
-        # Regional mapping - maps major regions to cities/provinces with postal code ranges
-        region_mappings = {
-            'North Luzon': {
-                'cities': ['Baguio', 'Benguet', 'Laoag', 'Ilocos Norte', 'Ilocos Sur', 'Vigan', 'Tuguegarao', 'Cagayan', 'Santiago', 'Isabela', 'La Union', 'Pangasinan', 'CAR', 'Cordillera', 'Abra', 'Apayao', 'Ifugao', 'Kalinga', 'Mountain Province'],
-                'postal_prefixes': ['26', '29']  # 2600-2699, 2900-2999
-            },
-            'Central Luzon': {
-                'cities': ['Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 'Pasay', 'Parañaque', 'Las Piñas', 'Muntinlupa', 'Caloocan', 'Malabon', 'Navotas', 'Valenzuela', 'San Juan', 'Marikina', 'NCR', 'Metro Manila', 'Angeles', 'Pampanga', 'San Fernando', 'Olongapo', 'Zambales', 'Tarlac', 'Nueva Ecija', 'Cabanatuan', 'Bataan', 'Bulacan', 'Malolos', 'Balanga'],
-                'postal_prefixes': ['10', '11', '12', '13', '14', '15', '16', '20', '21', '22', '23']  # NCR & Central Luzon
-            },
-            'South Luzon': {
-                'cities': ['Calamba', 'Santa Cruz', 'Los Baños', 'San Pablo', 'Biñan', 'Cabuyao', 'Laguna', 'Batangas', 'Lipa', 'Tanauan', 'Lucena', 'Quezon', 'Antipolo', 'Rizal', 'Cavite', 'Bacoor', 'Imus', 'Dasmariñas', 'Tagaytay', 'Legazpi', 'Albay', 'Naga', 'Camarines Norte', 'Camarines Sur', 'Sorsogon', 'Bicol', 'Puerto Princesa', 'Palawan', 'Mindoro', 'Occidental Mindoro', 'Oriental Mindoro', 'Marinduque', 'Romblon', 'CALABARZON', 'MIMAROPA'],
-                'postal_prefixes': ['40', '41', '42', '43', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '55']
-            },
-            'Visayas': {
-                'cities': ['Cebu', 'Mandaue', 'Lapu-Lapu', 'Iloilo', 'Bacolod', 'Negros Occidental', 'Negros Oriental', 'Roxas', 'Capiz', 'Aklan', 'Kalibo', 'Tagbilaran', 'Bohol', 'Dumaguete', 'Tacloban', 'Ormoc', 'Leyte', 'Eastern Samar', 'Western Samar', 'Northern Samar', 'Samar', 'Calbayog', 'Antique', 'Guimaras', 'Biliran', 'Southern Leyte'],
-                'postal_prefixes': ['56', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69']
-            },
-            'Mindanao': {
-                'cities': ['Davao', 'Tagum', 'Panabo', 'Digos', 'Mati', 'Davao del Norte', 'Davao del Sur', 'Davao Oriental', 'Davao Occidental', 'Davao de Oro', 'Cagayan de Oro', 'CDO', 'Misamis Oriental', 'Misamis Occidental', 'Iligan', 'Lanao del Norte', 'Lanao del Sur', 'Valencia', 'Malaybalay', 'Bukidnon', 'Zamboanga', 'Zamboanga del Norte', 'Zamboanga del Sur', 'Zamboanga Sibugay', 'Pagadian', 'Dipolog', 'General Santos', 'Koronadal', 'Cotabato', 'North Cotabato', 'South Cotabato', 'Maguindanao', 'Sultan Kudarat', 'Kidapawan', 'Tacurong', 'Butuan', 'Agusan del Norte', 'Agusan del Sur', 'Surigao del Norte', 'Surigao del Sur', 'Dinagat Islands', 'Tandag', 'Marawi', 'Basilan', 'Sulu', 'Tawi-Tawi', 'BARMM', 'Camiguin'],
-                'postal_prefixes': ['70', '80', '81', '82', '83', '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '95', '96', '97', '98']
-            }
-        }
+        # Parse service area to extract provinces
+        # Format: "Region,Province1,Province2" or just "Region"
+        provinces = []
+        if rider_service_area:
+            # Split by comma and skip the first element (region name)
+            parts = [p.strip() for p in rider_service_area.split(',')]
+            if len(parts) > 1:
+                provinces = parts[1:]  # Skip region, get provinces
+            else:
+                # If no provinces specified, use the region name as province
+                provinces = [parts[0]]
         
-        # Get cities and postal prefixes covered by rider's region
-        region_data = region_mappings.get(rider_service_area, {'cities': [rider_service_area], 'postal_prefixes': []})
-        covered_cities = region_data['cities']
-        postal_prefixes = region_data['postal_prefixes']
+        print(f"[DEBUG] Rider service area: {rider_service_area}")
+        print(f"[DEBUG] Extracted provinces: {provinces}")
         
-        # Build LIKE conditions for cities, provinces, and postal codes
-        # Check against address table fields: city, province, postal_code, street_address
+        # Build matching conditions based on province and postal code
         conditions = []
         params = []
         
-        # Match by city or province
-        for city in covered_cities:
-            conditions.append('a.city LIKE %s')
-            params.append(f'%{city}%')
-            conditions.append('a.province LIKE %s')
-            params.append(f'%{city}%')
-        
-        # Match by postal code prefix
-        for prefix in postal_prefixes:
-            conditions.append('a.postal_code LIKE %s')
-            params.append(f'{prefix}%')
+        # Primary matching: Match by province directly from rider's service area
+        if provinces:
+            for province in provinces:
+                # Match province field exactly or with LIKE for partial matches
+                conditions.append('a.province LIKE %s')
+                params.append(f'%{province}%')
         
         like_conditions = ' OR '.join(conditions) if conditions else '1=0'
         
-        # Get orders in the rider's service area by joining with addresses table
+        print(f"[DEBUG] Query conditions: {like_conditions}")
+        print(f"[DEBUG] Query params: {params}")
+        
+        # Get orders in the rider's service area by matching province and postal code
         query = f'''
             SELECT o.id, o.order_number, o.user_id, o.total_amount, o.created_at,
                    CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', IFNULL(a.postal_code, '')) as delivery_address,
+                   a.province as delivery_province,
+                   a.postal_code as delivery_postal_code,
+                   a.city as delivery_city,
                    CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                    u.phone as customer_phone,
                    u.email,
@@ -3955,11 +5449,12 @@ def api_rider_available_orders():
             JOIN addresses a ON o.shipping_address_id = a.id
             LEFT JOIN shipments s ON s.order_id = o.id
             WHERE o.order_status = 'confirmed'
-            AND (s.rider_id IS NULL OR s.rider_id = 0)
+            AND (s.rider_id IS NULL OR s.rider_id = 0 OR (s.rider_id IS NOT NULL AND s.status = 'rider_accepted'))
             AND ({like_conditions})
             ORDER BY o.created_at DESC
         '''
         
+        print(f"[DEBUG] Executing query with {len(params)} parameters")
         cursor.execute(query, params)
         orders = cursor.fetchall()
         
@@ -4029,7 +5524,9 @@ def api_rider_active_deliveries():
             JOIN users u ON o.user_id = u.id
             JOIN addresses a ON o.shipping_address_id = a.id
             JOIN shipments s ON s.order_id = o.id
-            WHERE s.rider_id = %s AND s.status IN ('pending', 'picked_up', 'in_transit', 'out_for_delivery')
+            WHERE s.rider_id = %s 
+            AND (s.status IN ('pending', 'picked_up', 'in_transit', 'out_for_delivery') 
+                 OR (s.status = 'pending' AND s.seller_confirmed = FALSE))
             ORDER BY s.seller_confirmed ASC, o.created_at DESC
         ''', (rider_db_id,))
         deliveries = cursor.fetchall()
@@ -4040,6 +5537,13 @@ def api_rider_active_deliveries():
                 delivery['total_amount'] = float(delivery['total_amount'])
             if delivery.get('created_at'):
                 delivery['created_at'] = delivery['created_at'].isoformat() if hasattr(delivery['created_at'], 'isoformat') else str(delivery['created_at'])
+            # Ensure seller_confirmed is boolean
+            if delivery.get('seller_confirmed') is None:
+                delivery['seller_confirmed'] = False
+        
+        print(f"[DEBUG] Active deliveries for rider {rider_db_id}: {len(deliveries)} deliveries found")
+        for d in deliveries:
+            print(f"  - Order {d['order_number']}: status={d['shipment_status']}, seller_confirmed={d['seller_confirmed']}")
         
         cursor.close()
         conn.close()
@@ -4295,11 +5799,12 @@ def api_rider_accept_order_by_shipment():
         
         rider_db_id = rider_record['id']
         
-        # Update shipment with rider and set awaiting seller confirmation
+        # Update shipment with rider - status remains 'pending' until seller approves
+        # Set seller_confirmed = FALSE so seller knows to approve
         cursor.execute('''
             UPDATE shipments 
-            SET rider_id = %s, seller_confirmed = FALSE
-            WHERE id = %s AND rider_id IS NULL
+            SET rider_id = %s, status = 'pending', seller_confirmed = FALSE
+            WHERE id = %s AND (rider_id IS NULL OR rider_id = 0)
         ''', (rider_db_id, shipment_id))
         
         conn.commit()
@@ -4420,10 +5925,11 @@ def api_rider_update_delivery_status():
 def forgot_password():
     """Send OTP to email for password reset"""
     try:
-        email = request.form.get('email')
+        data = request.get_json()
+        email = data.get('email') if data else request.form.get('email')
         
         if not email:
-            return jsonify({'success': False, 'error': 'Email is required'}), 400
+            return jsonify({'success': False, 'message': 'Email is required'}), 400
         
         conn = get_db()
         if not conn:
@@ -4440,7 +5946,7 @@ def forgot_password():
                 # Return error for better UX - user needs to know email is not registered
                 return jsonify({
                     'success': False, 
-                    'error': 'No account found with this email address. Please check and try again.'
+                    'message': 'No account found with this email address. Please check and try again.'
                 })
             
             # Generate and send OTP
@@ -4448,7 +5954,6 @@ def forgot_password():
             otp_code, otp_id = OTPService.create_otp_record(
                 conn,
                 email=email,
-                user_id=user['id'],
                 otp_type='email',
                 purpose='password_reset',
                 ip_address=ip_address
@@ -4459,7 +5964,7 @@ def forgot_password():
                 cursor.close()
             if conn:
                 conn.close()
-            return jsonify({'success': False, 'error': 'Database error occurred'}), 500
+            return jsonify({'success': False, 'message': 'Database error occurred'}), 500
         
         print(f"\n{'='*60}")
         print(f"🔑 PASSWORD RESET OTP FOR {email}")
@@ -4492,21 +5997,22 @@ def forgot_password():
         else:
             return jsonify({
                 'success': False,
-                'error': 'Failed to generate verification code. Please try again.'
+                'message': 'Failed to generate verification code. Please try again.'
             }), 500
             
     except Exception as e:
         print(f"Forgot password error: {str(e)}")
-        return jsonify({'success': False, 'error': 'An error occurred'}), 500
+        return jsonify({'success': False, 'message': 'An error occurred'}), 500
 
 @app.route('/verify-reset-otp', methods=['POST'])
 def verify_reset_otp():
     """Verify OTP for password reset"""
     try:
-        otp_code = request.form.get('otp')
+        data = request.get_json()
+        otp_code = data.get('otp') if data else request.form.get('otp')
         
         if not otp_code or 'password_reset' not in session:
-            return jsonify({'success': False, 'error': 'Invalid request'}), 400
+            return jsonify({'success': False, 'message': 'Invalid request'}), 400
         
         reset_data = session['password_reset']
         email = reset_data.get('email')
@@ -4520,8 +6026,24 @@ def verify_reset_otp():
         
         if is_valid:
             # Mark as verified in session
-            session['password_reset']['verified'] = True
-            session.modified = True
+            if 'email_change' in session:
+                session['email_change']['verified'] = True
+                session.modified = True
+            
+            # Update email_verified in database
+            cursor = conn.cursor()
+            # Check if email_verified column exists, if not, add it
+            cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
+            has_column = cursor.fetchone()
+            if not has_column:
+                cursor.execute('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE')
+                conn.commit()
+            
+            # Update verification status
+            user_id = session.get('user_id')
+            cursor.execute('UPDATE users SET email_verified = TRUE WHERE id = %s', (user_id,))
+            conn.commit()
+            cursor.close()
             conn.close()
             
             return jsonify({
@@ -4530,44 +6052,46 @@ def verify_reset_otp():
             })
         else:
             conn.close()
-            return jsonify({'success': False, 'error': message}), 400
+            return jsonify({'success': False, 'message': message}), 400
             
     except Exception as e:
         print(f"OTP verification error: {str(e)}")
-        return jsonify({'success': False, 'error': 'Verification failed'}), 500
+        return jsonify({'success': False, 'message': 'Verification failed'}), 500
 
 @app.route('/reset-password', methods=['POST'])
 def reset_password():
     """Reset password after OTP verification"""
     try:
-        new_password = request.form.get('password')
+        data = request.get_json()
+        new_password = data.get('new_password') if data else request.form.get('password')
         
         if not new_password or 'password_reset' not in session:
-            return jsonify({'success': False, 'error': 'Invalid request'}), 400
+            return jsonify({'success': False, 'message': 'Invalid request'}), 400
         
         reset_data = session['password_reset']
         
         if not reset_data.get('verified'):
-            return jsonify({'success': False, 'error': 'Please verify OTP first'}), 400
+            return jsonify({'success': False, 'message': 'Please verify OTP first'}), 400
         
         # Validate password: minimum 6 characters with letters and numbers
         if len(new_password) < 6:
-            return jsonify({'success': False, 'error': 'Password must be at least 6 characters long'}), 400
+            return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'}), 400
         
         has_letter = any(c.isalpha() for c in new_password)
         has_number = any(c.isdigit() for c in new_password)
         
         if not (has_letter and has_number):
-            return jsonify({'success': False, 'error': 'Password must contain both letters and numbers'}), 400
+            return jsonify({'success': False, 'message': 'Password must contain both letters and numbers'}), 400
         
         email = reset_data.get('email')
         user_id = reset_data.get('user_id')
         
         conn = get_db()
         if not conn:
-            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+            return jsonify({'success': False, 'message': 'Database connection failed'}), 500
         
         cursor = conn.cursor()
+        # Store password as plain text
         cursor.execute('UPDATE users SET password = %s WHERE id = %s AND email = %s',
                       (new_password, user_id, email))
         conn.commit()
@@ -4584,7 +6108,7 @@ def reset_password():
         
     except Exception as e:
         print(f"Password reset error: {str(e)}")
-        return jsonify({'success': False, 'error': 'Password reset failed'}), 500
+        return jsonify({'success': False, 'message': 'Password reset failed'}), 500
 
 @app.route('/logout')
 def logout():

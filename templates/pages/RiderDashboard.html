@@ -134,7 +134,7 @@
               <div class="inner">
                 <div class="coverage-title">
                   <span class="icon">🗺️</span>
-                  Your Service Area: {{ rider.service_area if rider and rider.service_area else 'Sta Cruz, Laguna' }}
+                  Your Service Area: {% if rider and rider.service_area %}{{ rider.service_area.split(',')[0].strip() }}{% else %}South Luzon{% endif %}
                 </div>
                 <div class="coverage-details" id="coverage-description">
                   Loading coverage details...
@@ -145,10 +145,6 @@
                   <div id="serviceMap"></div>
                 </div>
 
-                <!-- Barangays List -->
-                <ul class="coverage-list" id="barangays-list">
-                  <li>Loading...</li>
-                </ul>
               </div>
             </div>
 
@@ -482,73 +478,50 @@
     </style>
 
     <script>
-      // Region coordinates mapping - supports various naming formats
+      // Region coordinates mapping - supports major Philippine regions
       const regionCoordinates = {
-        'sta cruz': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Sta Cruz, Laguna (CALABARZON)' },
-        'santa cruz': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Santa Cruz, Laguna (CALABARZON)' },
-        'sta cruz, laguna': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Sta Cruz, Laguna (CALABARZON)' },
-        'santa cruz, laguna': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Santa Cruz, Laguna (CALABARZON)' },
-        'calamba': { center: [14.2117, 121.1653], zoom: 13, radius: 6000, displayName: 'Calamba, Laguna (CALABARZON)' },
-        'los baños': { center: [14.1697, 121.2408], zoom: 13, radius: 5000, displayName: 'Los Baños, Laguna (CALABARZON)' },
-        'san pablo': { center: [14.0681, 121.3260], zoom: 13, radius: 7000, displayName: 'San Pablo, Laguna (CALABARZON)' },
-        'biñan': { center: [14.3364, 121.0823], zoom: 13, radius: 5000, displayName: 'Biñan, Laguna (CALABARZON)' },
-        'cabuyao': { center: [14.2780, 121.1230], zoom: 13, radius: 5000, displayName: 'Cabuyao, Laguna (CALABARZON)' },
+        'north luzon': { center: [16.4023, 120.5960], zoom: 7, radius: 150000, displayName: 'North Luzon' },
+        'central luzon': { center: [15.4828, 120.7129], zoom: 8, radius: 100000, displayName: 'Central Luzon' },
+        'south luzon': { center: [14.2691, 121.4147], zoom: 8, radius: 120000, displayName: 'South Luzon' },
+        'visayas': { center: [11.2447, 123.0167], zoom: 7, radius: 200000, displayName: 'Visayas' },
+        'mindanao': { center: [7.1907, 124.2250], zoom: 7, radius: 250000, displayName: 'Mindanao' },
+        // Legacy support for specific cities
+        'sta cruz': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Sta Cruz, Laguna' },
+        'santa cruz': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Santa Cruz, Laguna' },
+        'calamba': { center: [14.2117, 121.1653], zoom: 13, radius: 6000, displayName: 'Calamba, Laguna' },
+        'los baños': { center: [14.1697, 121.2408], zoom: 13, radius: 5000, displayName: 'Los Baños, Laguna' },
         'manila': { center: [14.5995, 120.9842], zoom: 12, radius: 8000, displayName: 'Manila (NCR)' },
-        'ncr': { center: [14.2691, 121.4147], zoom: 13, radius: 5000, displayName: 'Sta Cruz, Laguna (CALABARZON)' },
-        'quezon city': { center: [14.6760, 121.0437], zoom: 12, radius: 10000, displayName: 'Quezon City (NCR)' },
-        'makati': { center: [14.5547, 121.0244], zoom: 13, radius: 6000, displayName: 'Makati (NCR)' },
-        'calabarzon': { center: [14.2691, 121.4147], zoom: 11, radius: 15000, displayName: 'CALABARZON Region' }
-      };
-
-      // Warehouse locations for different regions - case insensitive keys
-      const warehouses = {
-        'sta cruz': [
-          { name: 'Varón Main Warehouse', coords: [14.2741, 121.4097], type: 'main' },
-          { name: 'Patimbao Distribution Hub', coords: [14.2850, 121.4200], type: 'distribution' },
-          { name: 'Poblacion Storage', coords: [14.2680, 121.4160], type: 'storage' }
-        ],
-        'santa cruz': [
-          { name: 'Varón Main Warehouse', coords: [14.2741, 121.4097], type: 'main' },
-          { name: 'Patimbao Distribution Hub', coords: [14.2850, 121.4200], type: 'distribution' }
-        ],
-        'ncr': [
-          { name: 'Varón Main Warehouse', coords: [14.2741, 121.4097], type: 'main' },
-          { name: 'Patimbao Distribution Hub', coords: [14.2850, 121.4200], type: 'distribution' },
-          { name: 'Poblacion Storage', coords: [14.2680, 121.4160], type: 'storage' }
-        ],
-        'calamba': [
-          { name: 'Calamba Central Warehouse', coords: [14.2150, 121.1700], type: 'main' },
-          { name: 'PEZA Distribution Center', coords: [14.2080, 121.1620], type: 'distribution' }
-        ],
-        'manila': [
-          { name: 'Manila Main Hub', coords: [14.6042, 120.9822], type: 'main' },
-          { name: 'Divisoria Storage', coords: [14.6008, 120.9756], type: 'storage' }
-        ]
+        'quezon city': { center: [14.6760, 121.0437], zoom: 12, radius: 10000, displayName: 'Quezon City (NCR)' }
       };
 
       // Initialize Interactive Map based on rider's region
       function initializeMap() {
         // Get rider's service area from template
-        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "Sta Cruz, Laguna" }}';
+        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "South Luzon" }}';
         console.log('Service Area from DB:', serviceAreaText);
         
-        // Normalize the service area text for matching
-        const normalizedArea = serviceAreaText.toLowerCase().trim();
+        // Parse service area: format is "Region" or "Region,Province1,Province2,..."
+        const serviceAreaParts = serviceAreaText.split(',').map(part => part.trim());
+        const mainRegion = serviceAreaParts[0]; // First part is the main region
+        const normalizedRegion = mainRegion.toLowerCase().trim();
+        
+        console.log('Parsed main region:', mainRegion);
+        console.log('All service area parts:', serviceAreaParts);
         
         // Find matching region coordinates (case-insensitive)
         let regionConfig = null;
         for (const [region, config] of Object.entries(regionCoordinates)) {
-          if (normalizedArea.includes(region.toLowerCase()) || region.toLowerCase().includes(normalizedArea)) {
+          if (normalizedRegion.includes(region.toLowerCase()) || region.toLowerCase().includes(normalizedRegion)) {
             regionConfig = config;
             console.log('Matched region:', region, config);
             break;
           }
         }
         
-        // Default to Sta Cruz if no match found
+        // Default to South Luzon if no match found
         if (!regionConfig) {
-          console.log('No match found, using default: Sta Cruz, Laguna');
-          regionConfig = regionCoordinates['sta cruz'];
+          console.log('No match found, using default: South Luzon');
+          regionConfig = regionCoordinates['south luzon'];
         }
         
         // Initialize the map with region-specific settings
@@ -568,106 +541,20 @@
           radius: regionConfig.radius
         }).addTo(map);
         
-        // Add warehouse markers based on region (case-insensitive matching)
-        const normalizedAreaKey = normalizedArea.replace(/,.*$/,'').trim(); // Remove everything after comma
-        let regionWarehouses = null;
-        
-        // Try to find matching warehouses
-        for (const [warehouseKey, warehouseList] of Object.entries(warehouses)) {
-          if (normalizedAreaKey.includes(warehouseKey.toLowerCase()) || warehouseKey.toLowerCase().includes(normalizedAreaKey)) {
-            regionWarehouses = warehouseList;
-            console.log('Matched warehouses for:', warehouseKey);
-            break;
-          }
-        }
-        
-        // Default to Sta Cruz warehouses if no match
-        if (!regionWarehouses) {
-          console.log('No warehouse match, using default Sta Cruz warehouses');
-          regionWarehouses = warehouses['sta cruz'];
-        }
-        
-        // Custom icons for different warehouse types
-        const mainWarehouseIcon = L.divIcon({
-          className: 'warehouse-marker',
-          html: '<div style="background:#ef4444;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:18px;">🏭</div>',
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        });
-        
-        const distributionIcon = L.divIcon({
-          className: 'warehouse-marker',
-          html: '<div style="background:#f59e0b;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);font-size:16px;">📦</div>',
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
-        });
-        
-        const storageIcon = L.divIcon({
-          className: 'warehouse-marker',
-          html: '<div style="background:#3b82f6;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);font-size:14px;">🏪</div>',
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
-        });
-        
-        // Add warehouse markers
-        regionWarehouses.forEach(warehouse => {
-          let icon = storageIcon;
-          let warehouseType = 'Storage Facility';
-          
-          if (warehouse.type === 'main') {
-            icon = mainWarehouseIcon;
-            warehouseType = 'Main Warehouse';
-          } else if (warehouse.type === 'distribution') {
-            icon = distributionIcon;
-            warehouseType = 'Distribution Hub';
-          }
-          
-          const marker = L.marker(warehouse.coords, { icon: icon }).addTo(map);
-          marker.bindPopup(`
-            <div style="font-family:Inter,sans-serif;">
-              <strong style="font-size:14px;">${warehouse.name}</strong><br>
-              <span style="color:#666;font-size:12px;">${warehouseType}</span><br>
-              <span style="color:#10b981;font-size:11px;">✓ Pickup Available</span>
-            </div>
-          `);
-        });
-        
-        // Add center marker for service area
+        // Add center marker for service area (region name only)
         const centerMarker = L.marker(regionConfig.center, {
           icon: L.divIcon({
             className: 'center-marker',
-            html: '<div style="background:#0a0a0a;color:white;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);">📍 ' + (regionConfig.displayName || serviceAreaText) + '</div>',
+            html: '<div style="background:#0a0a0a;color:white;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3);">📍 ' + regionConfig.displayName + '</div>',
             iconSize: [120, 32],
             iconAnchor: [60, 16]
           })
         }).addTo(map);
         
-        centerMarker.bindPopup(`<b>${regionConfig.displayName || serviceAreaText}</b><br>Your Service Area`);
+        centerMarker.bindPopup(`<b>${regionConfig.displayName}</b><br>Your Service Area`);
         
         // Add scale control
         L.control.scale().addTo(map);
-        
-        // Add legend for warehouse types
-        const legend = L.control({ position: 'bottomright' });
-        legend.onAdd = function(map) {
-          const div = L.DomUtil.create('div', 'legend');
-          div.innerHTML = `
-            <div style="background:white;padding:10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);font-family:Inter,sans-serif;">
-              <div style="font-weight:600;margin-bottom:6px;font-size:11px;color:#666;">PICKUP LOCATIONS</div>
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">
-                <span style="font-size:14px;">🏭</span> Main Warehouse
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;">
-                <span style="font-size:14px;">📦</span> Distribution Hub
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;font-size:11px;">
-                <span style="font-size:14px;">🏪</span> Storage Facility
-              </div>
-            </div>
-          `;
-          return div;
-        };
-        legend.addTo(map);
       }
       
       // Simple function to switch between sections
@@ -756,11 +643,12 @@
 
       // Load rider's active deliveries
       function loadMyActiveDeliveries() {
-        fetch('/api/rider/available-orders')
+        fetch('/api/rider/active-deliveries')
           .then(response => response.json())
           .then(data => {
             const tbody = document.querySelector('#active-deliveries-table tbody');
-            const activeOrders = data.orders ? data.orders.filter(order => order.shipment_status === 'picked_up') : [];
+            // Include all active deliveries: pending (waiting approval), picked_up, in_transit, out_for_delivery
+            const activeOrders = data.deliveries || [];
             
             // Update count badge
             document.getElementById('active-count').textContent = `${activeOrders.length} Active`;
@@ -769,7 +657,33 @@
               tbody.innerHTML = activeOrders.map(order => {
                 const earning = (parseFloat(order.total_amount) * 0.15).toFixed(2);
                 const statusClass = order.shipment_status.replace('_', '-');
-                const statusText = order.shipment_status.replace('_', ' ').toUpperCase();
+                
+                // Show status based on seller_confirmed
+                let statusText, statusColor;
+                if (!order.seller_confirmed && order.shipment_status === 'pending') {
+                  statusText = 'WAITING FOR APPROVAL';
+                  statusColor = '#f59e0b'; // Orange/amber
+                } else {
+                  statusText = order.shipment_status.replace('_', ' ').toUpperCase();
+                  statusColor = order.shipment_status === 'delivered' ? '#10b981' : 
+                               order.shipment_status === 'picked_up' ? '#3b82f6' :
+                               order.shipment_status === 'in_transit' ? '#8b5cf6' : '#6b7280';
+                }
+                
+                // Only show status update dropdown if seller has approved
+                const statusDropdown = order.seller_confirmed ? `
+                  <select onchange="updateDeliveryStatus(${order.shipment_id}, this.value)" 
+                          class="tag" 
+                          style="background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer">
+                    <option value="">Update Status...</option>
+                    <option value="in_transit">In Transit</option>
+                    <option value="out_for_delivery">Out for Delivery</option>
+                    <option value="delivered">Delivered ✓</option>
+                    <option value="failed">Failed</option>
+                  </select>
+                ` : `
+                  <span style="color:#f59e0b;font-size:12px;font-weight:500">⏳ Waiting for seller approval</span>
+                `;
                 
                 return `
                   <tr>
@@ -782,19 +696,13 @@
                     </td>
                     <td style="max-width:200px">${order.delivery_address}</td>
                     <td>
-                      <span class="status ${statusClass}">${statusText}</span>
+                      <span class="status ${statusClass}" style="background:${statusColor};color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">
+                        ${statusText}
+                      </span>
                     </td>
                     <td style="color:#10b981;font-weight:600">₱${earning}</td>
                     <td>
-                      <select onchange="updateDeliveryStatus(${order.shipment_id}, this.value)" 
-                              class="tag" 
-                              style="background:#fff;border:1px solid #ddd;padding:6px 10px;border-radius:6px;cursor:pointer">
-                        <option value="">Update Status...</option>
-                        <option value="in_transit">In Transit</option>
-                        <option value="out_for_delivery">Out for Delivery</option>
-                        <option value="delivered">Delivered ✓</option>
-                        <option value="failed">Failed</option>
-                      </select>
+                      ${statusDropdown}
                     </td>
                   </tr>
                 `;
@@ -990,63 +898,73 @@
           });
       }
 
-      // Region-specific coverage data
-      const regionCoverage = {
-        'Sta Cruz, Laguna': {
-          description: 'Covering: Sta Cruz proper, Patimbao, Santissima, Poblacion I-V, and surrounding barangays',
-          barangays: ['Sta Cruz Proper', 'Patimbao', 'Santissima', 'Poblacion I', 'Poblacion II', 'Poblacion III', 'Poblacion IV', 'Poblacion V']
-        },
-        'Santa Cruz, Laguna': {
-          description: 'Covering: Sta Cruz proper, Patimbao, Santissima, Poblacion I-V, and surrounding barangays',
-          barangays: ['Sta Cruz Proper', 'Patimbao', 'Santissima', 'Poblacion I', 'Poblacion II', 'Poblacion III']
-        },
-        'Calamba, Laguna': {
-          description: 'Covering: Calamba City proper, PEZA industrial area, and major residential barangays',
-          barangays: ['Barangay 1 (Poblacion)', 'Barangay 2', 'Barangay 3', 'Parian', 'Canlubang', 'Halang', 'Bucal', 'Milagros']
-        },
-        'Los Baños, Laguna': {
-          description: 'Covering: Los Baños proper, UPLB area, and commercial districts',
-          barangays: ['Poblacion', 'Anos', 'Batong Malake', 'Bay', 'Mayondon', 'Maahas', 'Malinta']
-        },
-        'Manila': {
-          description: 'Covering: Manila downtown, Ermita, Malate, and major commercial districts',
-          barangays: ['Ermita', 'Malate', 'Paco', 'San Miguel', 'Santa Ana', 'Sampaloc', 'Quiapo', 'Binondo']
-        },
-        'Quezon City': {
-          description: 'Covering: Quezon City central business districts and residential areas',
-          barangays: ['Araneta Center Area', 'Cubao', 'Diliman', 'Project 4-8', 'Commonwealth', 'Fairview', 'Novaliches']
-        }
+      // Region to provinces mapping
+      const regionProvinces = {
+        'North Luzon': [
+          'Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan', 
+          'Baguio City', 'Benguet', 'Abra', 'Kalinga', 'Apayao', 'Mountain Province',
+          'Cagayan', 'Isabela', 'Nueva Vizcaya', 'Quirino', 'Batanes'
+        ],
+        'Central Luzon': [
+          'Pampanga', 'Tarlac', 'Nueva Ecija', 'Zambales', 'Bataan', 
+          'Bulacan', 'Aurora', 'Angeles City', 'Olongapo City', 'San Fernando City'
+        ],
+        'South Luzon': [
+          'Laguna', 'Batangas', 'Cavite', 'Rizal', 'Quezon', 
+          'Antipolo City', 'Lucena City', 'Batangas City', 'Lipa City', 'Tagaytay City',
+          'Calamba City', 'Los Baños', 'Biñan City', 'Cabuyao', 'San Pablo City',
+          'Albay', 'Camarines Norte', 'Camarines Sur', 'Catanduanes', 'Masbate', 'Sorsogon',
+          'Marinduque', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan', 'Romblon',
+          'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 
+          'Marikina', 'Pasay', 'Parañaque', 'Las Piñas', 'Muntinlupa', 'Caloocan',
+          'Malabon', 'Navotas', 'Valenzuela', 'San Juan'
+        ],
+        'Visayas': [
+          'Cebu', 'Cebu City', 'Mandaue City', 'Lapu-Lapu City', 'Talisay City',
+          'Iloilo', 'Iloilo City', 'Bacolod City', 'Negros Occidental', 'Negros Oriental',
+          'Bohol', 'Tagbilaran City', 'Dumaguete City', 'Roxas City', 'Kalibo',
+          'Tacloban City', 'Ormoc City', 'Leyte', 'Samar', 'Eastern Samar', 'Northern Samar',
+          'Biliran', 'Southern Leyte'
+        ],
+        'Mindanao': [
+          'Davao City', 'Davao del Norte', 'Davao del Sur', 'Davao Oriental', 'Davao de Oro',
+          'Cagayan de Oro City', 'Misamis Oriental', 'Misamis Occidental', 'Iligan City',
+          'Zamboanga City', 'Zamboanga del Norte', 'Zamboanga del Sur', 'Zamboanga Sibugay',
+          'General Santos City', 'South Cotabato', 'North Cotabato', 'Sultan Kudarat',
+          'Butuan City', 'Agusan del Norte', 'Agusan del Sur', 'Surigao del Norte', 'Surigao del Sur',
+          'Cotabato City', 'Maguindanao', 'Lanao del Norte', 'Lanao del Sur', 'Marawi City',
+          'Bukidnon', 'Valencia City', 'Malaybalay City'
+        ]
       };
 
-      // Update coverage details based on rider's region
+      // Update coverage details based on rider's service area
       function updateCoverageDetails() {
-        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "Sta Cruz, Laguna" }}';
-        const normalizedArea = serviceAreaText.toLowerCase().trim();
+        const serviceAreaText = '{{ rider.service_area if rider and rider.service_area else "South Luzon" }}';
+        console.log('Updating coverage details for:', serviceAreaText);
         
-        // Find matching region coverage
-        let coverage = null;
-        for (const [region, data] of Object.entries(regionCoverage)) {
-          if (normalizedArea.includes(region.toLowerCase()) || region.toLowerCase().includes(normalizedArea)) {
-            coverage = data;
-            console.log('Matched coverage for:', region);
-            break;
-          }
-        }
+        // Parse service area: format is "Region" or "Region,Province1,Province2,..."
+        const serviceAreaParts = serviceAreaText.split(',').map(part => part.trim());
+        const mainRegion = serviceAreaParts[0];
         
-        // Default to Sta Cruz if no match
-        if (!coverage) {
-          console.log('No coverage match, using default');
-          coverage = regionCoverage['Sta Cruz, Laguna'];
+        // Build coverage description - always show all provinces for the region
+        let coverageText = 'Covering: ';
+        
+        // Get all provinces for the region
+        const allRegionProvinces = regionProvinces[mainRegion] || [];
+        
+        if (allRegionProvinces.length > 0) {
+          // Show all provinces in the region
+          coverageText += allRegionProvinces.join(', ');
+        } else {
+          // Fallback to just the region name if no provinces mapped
+          coverageText += mainRegion;
         }
         
         // Update description
-        document.getElementById('coverage-description').textContent = coverage.description;
-        
-        // Update barangays list
-        const barangaysList = document.getElementById('barangays-list');
-        barangaysList.innerHTML = coverage.barangays.map(barangay => 
-          `<li>${barangay}</li>`
-        ).join('');
+        const coverageDescription = document.getElementById('coverage-description');
+        if (coverageDescription) {
+          coverageDescription.textContent = coverageText;
+        }
       }
 
       // Upload profile image

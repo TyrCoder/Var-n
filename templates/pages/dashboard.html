@@ -82,6 +82,7 @@
           <a class="side-link" href="#" data-page="statistics">Statistics</a>
           <a class="side-link" href="#" data-page="riders">Riders</a>
           <a class="side-link" href="#" data-page="sellers">Sellers</a>
+          <a class="side-link" href="#" data-page="journal">Journal Management</a>
                     <a class="side-link" href="#" onclick="confirmLogout(event)">Logout</a>
         </div>
         <div class="side-group">
@@ -213,6 +214,16 @@
               <div id="pending-products-list">Loading pending products...</div>
             </div>
           </div>
+          <!-- Product Details Modal -->
+          <div id="product-details-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:24px;max-width:800px;width:90%;max-height:85vh;overflow-y:auto">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line)">
+                <h2 style="margin:0;font-size:20px;font-weight:700">📦 Product Details</h2>
+                <button onclick="closeProductDetailsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
+              </div>
+              <div id="product-details-body">Loading...</div>
+            </div>
+          </div>
         `,
         'product-edits': `
           <div class="card">
@@ -256,6 +267,48 @@
               <div id="pending-riders-list">Loading pending riders...</div>
             </div>
           </div>
+        `,
+        'journal': `
+          <div class="card">
+            <div class="inner">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <h2 style="margin: 0;">📝 Journal Management</h2>
+                <button onclick="openAddJournalModal()" class="tag" style="background:#0a0a0a;cursor:pointer;border:none;padding:10px 16px">+ Add Journal Entry</button>
+              </div>
+              <div id="journal-list">Loading journal entries...</div>
+            </div>
+          </div>
+          <!-- Add/Edit Journal Modal -->
+          <div id="journal-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:24px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line)">
+                <h2 style="margin:0;font-size:20px;font-weight:700" id="journal-modal-title">Add Journal Entry</h2>
+                <button onclick="closeJournalModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
+              </div>
+              <form id="journal-form" style="display:flex;flex-direction:column;gap:16px">
+                <div>
+                  <label style="display:block;margin-bottom:8px;font-weight:500">Title</label>
+                  <input type="text" id="journal-title" required style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px">
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:8px;font-weight:500">Description</label>
+                  <textarea id="journal-description" required rows="4" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;resize:vertical"></textarea>
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:8px;font-weight:500">Image URL</label>
+                  <input type="url" id="journal-image" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px" placeholder="https://example.com/image.jpg">
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:8px;font-weight:500">Link URL (optional)</label>
+                  <input type="url" id="journal-link" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px" placeholder="https://example.com/article">
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+                  <button type="button" onclick="closeJournalModal()" class="tag" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px">Cancel</button>
+                  <button type="submit" class="tag" style="background:#0a0a0a;cursor:pointer;border:none;padding:10px 16px;color:#fff">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
         `
       };
 
@@ -289,6 +342,8 @@
             loadPendingSellers();
           } else if (page === 'riders') {
             loadPendingRiders();
+          } else if (page === 'journal') {
+            loadJournalEntries();
           }
         } else {
           content.innerHTML = `
@@ -311,6 +366,7 @@
           'statistics': 'Statistics',
           'riders': 'Rider Verifications',
           'sellers': 'Seller Verifications',
+          'journal': 'Journal Management',
           'log': 'Activity Log'
         };
         document.querySelector('.page-title').textContent = pageNames[page] || 'Dashboard';
@@ -354,10 +410,7 @@
                     <td>${product.stock} pcs</td>
                     <td>${date}</td>
                     <td>
-                      <div style="display: flex; gap: 8px;">
-                        <button class="tag" onclick="approveProduct(${product.id})" style="background: #10b981; cursor: pointer; border: none;">Approve</button>
-                        <button class="tag" onclick="rejectProduct(${product.id})" style="background: #ef4444; cursor: pointer; border: none;">Reject</button>
-                      </div>
+                      <button class="tag" onclick="viewProductDetails(${product.id})" style="background: #3b82f6; cursor: pointer; border: none;">View Details</button>
                     </td>
                   </tr>
                 `;
@@ -1029,6 +1082,262 @@
       function proceedLogout() {
         window.location.href = '/logout';
       }
+
+      // Product Details Modal Functions
+      function viewProductDetails(productId) {
+        const modal = document.getElementById('product-details-modal');
+        const modalBody = document.getElementById('product-details-body');
+        
+        modal.style.display = 'flex';
+        modalBody.innerHTML = '<p style="text-align:center;padding:40px;">Loading product details...</p>';
+        
+        fetch(`/admin/product-details/${productId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.product) {
+              const p = data.product;
+              // Format category name
+              const categoryNames = {
+                'shirts': 'Shirts & T-Shirts',
+                'pants': 'Pants & Jeans',
+                'shorts': 'Shorts',
+                'jackets': 'Jackets & Coats',
+                'shoes': 'Shoes & Footwear',
+                'accessories': 'Accessories',
+                'underwear': 'Underwear & Socks',
+                'activewear': 'Activewear & Sports',
+                'formal': 'Formal Wear',
+                'casual': 'Casual Wear',
+                'grooming': 'Grooming Products'
+              };
+              const categoryDisplay = categoryNames[p.category] || p.category || 'N/A';
+              
+              let html = `
+                <div style="display:grid;gap:20px;">
+                  <!-- Product Images -->
+                  ${p.image_url ? `
+                    <div style="text-align:center;background:#f9fafb;padding:20px;border-radius:8px;">
+                      <img src="${p.image_url}" alt="${p.name}" style="max-width:100%;max-height:300px;object-fit:contain;border-radius:8px;">
+                    </div>
+                  ` : ''}
+                  
+                  <!-- Basic Info -->
+                  <div style="background:#f9fafb;padding:16px;border-radius:8px;">
+                    <h3 style="margin:0 0 12px;color:#0a0a0a;">📋 Basic Information</h3>
+                    <div style="display:grid;gap:8px;">
+                      <div><strong>Product Name:</strong> ${p.name}</div>
+                      <div><strong>Category:</strong> ${categoryDisplay}</div>
+                      <div><strong>Brand:</strong> ${p.brand || 'N/A'}</div>
+                      <div><strong>SKU:</strong> ${p.sku || 'N/A'}</div>
+                      <div><strong>Price:</strong> ₱${parseFloat(p.price).toFixed(2)}</div>
+                      <div><strong>Description:</strong><br>${p.description || 'No description'}</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seller Info -->
+                  <div style="background:#f0f9ff;padding:16px;border-radius:8px;">
+                    <h3 style="margin:0 0 12px;color:#0a0a0a;">🏪 Seller Information</h3>
+                    <div style="display:grid;gap:8px;">
+                      <div><strong>Store Name:</strong> ${p.store_name}</div>
+                      <div><strong>Seller Email:</strong> ${p.seller_email || 'N/A'}</div>
+                      <div><strong>Submitted:</strong> ${new Date(p.created_at).toLocaleString()}</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Stock Info -->
+                  ${data.variants && data.variants.length > 0 ? `
+                    <div style="background:#fef3c7;padding:16px;border-radius:8px;">
+                      <h3 style="margin:0 0 12px;color:#0a0a0a;">📦 Stock & Variants</h3>
+                      <div style="max-height:300px;overflow-y:auto;">
+                        <table style="width:100%;border-collapse:collapse;">
+                          <thead>
+                            <tr style="background:#fbbf24;color:#fff;position:sticky;top:0;">
+                              <th style="padding:8px;text-align:left;">Size</th>
+                              <th style="padding:8px;text-align:left;">Color</th>
+                              <th style="padding:8px;text-align:left;">Stock</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${data.variants.map(v => `
+                              <tr style="border-bottom:1px solid #fde68a;">
+                                <td style="padding:8px;font-weight:500;">${v.size || 'N/A'}</td>
+                                <td style="padding:8px;font-weight:500;">${v.color || 'N/A'}</td>
+                                <td style="padding:8px;">${v.stock_quantity || 0} pcs</td>
+                              </tr>
+                            `).join('')}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div style="margin-top:12px;padding-top:12px;border-top:2px solid #fbbf24;">
+                        <strong>Total Stock:</strong> ${data.variants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0)} pcs
+                      </div>
+                    </div>
+                  ` : `
+                    <div style="background:#fef3c7;padding:16px;border-radius:8px;">
+                      <h3 style="margin:0 0 12px;color:#0a0a0a;">📦 Stock Information</h3>
+                      <div><strong>Total Stock:</strong> ${p.stock || 0} pcs</div>
+                    </div>
+                  `}
+                  
+                  <!-- Action Buttons -->
+                  <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:16px;border-top:2px solid var(--line);">
+                    <button onclick="closeProductDetailsModal()" class="tag" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px;">Close</button>
+                    <button onclick="approveProductFromModal(${productId})" class="tag" style="background:#10b981;cursor:pointer;border:none;padding:10px 16px;color:#fff;">✓ Approve</button>
+                    <button onclick="rejectProductFromModal(${productId})" class="tag" style="background:#ef4444;cursor:pointer;border:none;padding:10px 16px;color:#fff;">✗ Reject</button>
+                  </div>
+                </div>
+              `;
+              modalBody.innerHTML = html;
+            } else {
+              modalBody.innerHTML = '<p style="color:#ef4444;text-align:center;padding:40px;">Error loading product details</p>';
+            }
+          })
+          .catch(error => {
+            modalBody.innerHTML = '<p style="color:#ef4444;text-align:center;padding:40px;">Error: ' + error.message + '</p>';
+          });
+      }
+      
+      function closeProductDetailsModal() {
+        document.getElementById('product-details-modal').style.display = 'none';
+      }
+      
+      function approveProductFromModal(productId) {
+        closeProductDetailsModal();
+        approveProduct(productId);
+      }
+      
+      function rejectProductFromModal(productId) {
+        closeProductDetailsModal();
+        rejectProduct(productId);
+      }
+
+      // Journal Management Functions
+      function loadJournalEntries() {
+        fetch('/admin/journal-entries')
+          .then(response => response.json())
+          .then(data => {
+            const container = document.getElementById('journal-list');
+            if (data.success && data.entries && data.entries.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Image</th>
+                      <th>Created</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.entries.forEach(entry => {
+                const date = new Date(entry.created_at).toLocaleDateString();
+                html += `
+                  <tr id="journal-row-${entry.id}">
+                    <td><strong>${entry.title}</strong></td>
+                    <td><img src="${entry.image_url || '/static/images/placeholder.svg'}" style="width:60px;height:60px;object-fit:cover;border-radius:6px" alt="${entry.title}"></td>
+                    <td style="color:var(--muted);font-size:13px">${date}</td>
+                    <td><span class="tag" style="background:${entry.is_active ? '#10b981' : '#ef4444'}">${entry.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                      <div style="display:flex;gap:8px">
+                        <button class="tag" onclick="editJournalEntry(${entry.id})" style="background:#3b82f6;cursor:pointer;border:none">Edit</button>
+                        <button class="tag" onclick="deleteJournalEntry(${entry.id})" style="background:#ef4444;cursor:pointer;border:none">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No journal entries yet. Click "Add Journal Entry" to create one.</p>';
+            }
+          })
+          .catch(error => {
+            document.getElementById('journal-list').innerHTML = '<p style="color:#ef4444">Error loading journal entries</p>';
+          });
+      }
+
+      function openAddJournalModal() {
+        document.getElementById('journal-modal-title').textContent = 'Add Journal Entry';
+        document.getElementById('journal-form').reset();
+        document.getElementById('journal-form').setAttribute('data-entry-id', '');
+        document.getElementById('journal-modal').style.display = 'flex';
+      }
+
+      function editJournalEntry(entryId) {
+        fetch(`/admin/journal-entry/${entryId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.entry) {
+              const entry = data.entry;
+              document.getElementById('journal-modal-title').textContent = 'Edit Journal Entry';
+              document.getElementById('journal-title').value = entry.title;
+              document.getElementById('journal-description').value = entry.description || '';
+              document.getElementById('journal-image').value = entry.image_url || '';
+              document.getElementById('journal-link').value = entry.link_url || '';
+              document.getElementById('journal-form').setAttribute('data-entry-id', entryId);
+              document.getElementById('journal-modal').style.display = 'flex';
+            }
+          })
+          .catch(error => alert('Error loading journal entry'));
+      }
+
+      function deleteJournalEntry(entryId) {
+        if (!confirm('Delete this journal entry? This cannot be undone.')) return;
+        
+        fetch(`/admin/journal-entry/${entryId}`, { method: 'DELETE' })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Journal entry deleted');
+              loadJournalEntries();
+            } else {
+              alert('Error: ' + data.error);
+            }
+          })
+          .catch(error => alert('Error deleting entry'));
+      }
+
+      function closeJournalModal() {
+        document.getElementById('journal-modal').style.display = 'none';
+        document.getElementById('journal-form').reset();
+      }
+
+      // Handle journal form submission
+      document.addEventListener('DOMContentLoaded', function() {
+        const journalForm = document.getElementById('journal-form');
+        if (journalForm) {
+          journalForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const entryId = this.getAttribute('data-entry-id');
+            const formData = new FormData();
+            formData.append('title', document.getElementById('journal-title').value);
+            formData.append('description', document.getElementById('journal-description').value);
+            formData.append('image_url', document.getElementById('journal-image').value);
+            formData.append('link_url', document.getElementById('journal-link').value);
+
+            const url = entryId ? `/admin/journal-entry/${entryId}` : '/admin/journal-entry';
+            const method = entryId ? 'PUT' : 'POST';
+
+            fetch(url, { method: method, body: formData })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success) {
+                  alert(entryId ? 'Journal entry updated' : 'Journal entry created');
+                  closeJournalModal();
+                  loadJournalEntries();
+                } else {
+                  alert('Error: ' + data.error);
+                }
+              })
+              .catch(error => alert('Error saving journal entry'));
+          });
+        }
+      });
     </script>
   </body>
 </html>

@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Account Details — Varón</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+      body {
+        background: #fafafa;
+        padding-top: 75px;
+      }
+
+      /* Top Bar */
+      .top-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 75px;
+        background: #ffffff;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 48px;
+        z-index: 999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        backdrop-filter: blur(10px);
+      }
+
+      .top-brand {
+        font-family: 'Playfair Display', serif;
+        font-size: 28px;
+        font-weight: 600;
+        color: #000000;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+        text-decoration: none;
+      }
+      .top-brand:hover {
+        opacity: 0.7;
+      }
+
+      /* User Dropdown */
+      .user-dropdown {
+        position: relative;
+      }
+      .user-button {
+        background: #fafafa;
+        border: 1px solid #e8e8e8;
+        color: #000000;
+        cursor: pointer;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 10px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      }
+      .user-button:hover {
+        background: #f5f5f5;
+        border-color: #d4d4d4;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+      }
+      .user-button-icon {
+        width: 34px;
+        height: 34px;
+        background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 13px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      }
+      .user-button-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        line-height: 1.2;
+      }
+      .user-button-arrow {
+        margin-left: 4px;
+        font-size: 10px;
+        color: #9ca3af;
+        transition: transform 0.2s ease;
+      }
+      .user-dropdown.show .user-button-arrow {
+        transform: rotate(180deg);
+      }
+      .dropdown-content {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        background: #fff;
+        min-width: 180px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        z-index: 1000;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        opacity: 0;
+        transform: translateY(-4px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        pointer-events: none;
+      }
+      .dropdown-content.show {
+        display: block;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: all;
+      }
+      .account-details-section {
+        padding: 16px 18px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .account-detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .account-detail-item:last-child {
+        margin-bottom: 0;
+      }
+      .account-detail-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-right: 12px;
+        flex-shrink: 0;
+      }
+      .account-detail-value {
+        font-size: 13px;
+        color: #0a0a0a;
+        font-weight: 400;
+        text-align: right;
+        word-break: break-word;
+      }
+      .dropdown-divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 0;
+      }
+      .dropdown-content a {
+        color: #0a0a0a;
+        padding: 14px 18px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s ease;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .dropdown-content a:hover {
+        background: #f9fafb;
+        padding-left: 22px;
+      }
+
+      /* Account Details Page */
+      .account-container {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        min-height: calc(100vh - 75px);
+        background: #fafafa;
+      }
+      .account-content {
+        width: 100%;
+        padding: 60px 48px;
+      }
+      .profile-section {
+        background: #fff;
+        padding: 60px 48px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+      .profile-picture-container {
+        position: relative;
+        flex-shrink: 0;
+      }
+      .profile-picture {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #e5e7eb;
+        background: #f3f4f6;
+      }
+      .profile-upload-overlay {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 48px;
+        height: 48px;
+        background: #0a0a0a;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 4px solid #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transition: all 0.2s ease;
+      }
+      .profile-upload-overlay:hover {
+        background: #2d2d2d;
+        transform: scale(1.05);
+      }
+      .profile-upload-overlay svg {
+        width: 20px;
+        height: 20px;
+        color: #fff;
+      }
+      .profile-info {
+        flex: 1;
+      }
+      .profile-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 36px;
+        font-weight: 600;
+        color: #0a0a0a;
+        margin: 0 0 8px;
+      }
+      .profile-email {
+        font-size: 16px;
+        color: #6b7280;
+        margin: 0;
+      }
+      .form-section {
+        background: #fff;
+        padding: 60px 48px;
+      }
+      .account-header {
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .account-header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 32px;
+        font-weight: 600;
+        color: #0a0a0a;
+        margin: 0 0 8px;
+      }
+      .account-header p {
+        color: #6b7280;
+        font-size: 14px;
+        margin: 0;
+      }
+      .form-group {
+        margin-bottom: 24px;
+      }
+      .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .form-input {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 15px;
+        font-family: 'Commissioner', sans-serif;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #0a0a0a;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+      }
+      .form-input:focus {
+        outline: none;
+        border-color: #0a0a0a;
+        box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.1);
+      }
+      .form-input:disabled {
+        background: #f9fafb;
+        color: #6b7280;
+        cursor: not-allowed;
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .input-with-button {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+      .input-with-button .form-input {
+        padding-right: 100px;
+      }
+      .input-button {
+        position: absolute;
+        right: 8px;
+        background: #0a0a0a;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: 'Commissioner', sans-serif;
+        white-space: nowrap;
+      }
+      .input-button:hover {
+        background: #2d2d2d;
+      }
+      .input-button:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+      .change-verification-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+      }
+      .change-verification-modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        max-width: 500px;
+        width: 90%;
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      }
+      .modal-step {
+        display: none;
+      }
+      .modal-step.active {
+        display: block;
+      }
+      .password-input-group {
+        margin-bottom: 24px;
+      }
+      .password-input-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .password-input-wrapper {
+        position: relative;
+      }
+      .password-input-wrapper input {
+        width: 100%;
+        padding: 12px 45px 12px 16px;
+        font-size: 15px;
+        font-family: 'Commissioner', sans-serif;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #0a0a0a;
+        box-sizing: border-box;
+      }
+      .password-toggle-btn {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        color: #6b7280;
+      }
+      .otp-inputs {
+        display: flex;
+        gap: 10px;
+        margin: 24px 0;
+        justify-content: center;
+      }
+      .otp-input {
+        width: 60px;
+        height: 60px;
+        text-align: center;
+        font-size: 28px;
+        font-weight: 600;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-family: 'Commissioner', sans-serif;
+      }
+      .otp-input:focus {
+        border-color: #0a0a0a;
+        outline: none;
+      }
+      .email-otp-input {
+        width: 60px;
+        height: 60px;
+        text-align: center;
+        font-size: 28px;
+        font-weight: 600;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-family: 'Commissioner', sans-serif;
+      }
+      .email-otp-input:focus {
+        border-color: #0a0a0a;
+        outline: none;
+      }
+      .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e7eb;
+      }
+      .btn-primary {
+        background: #0a0a0a;
+        color: #fff;
+        border: none;
+        padding: 14px 28px;
+        font-size: 15px;
+        font-weight: 500;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: 'Commissioner', sans-serif;
+      }
+      .btn-primary:hover {
+        background: #2d2d2d;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
+      .btn-secondary {
+        background: #fff;
+        color: #0a0a0a;
+        border: 1px solid #d1d5db;
+        padding: 14px 28px;
+        font-size: 15px;
+        font-weight: 500;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: 'Commissioner', sans-serif;
+        text-decoration: none;
+        display: inline-block;
+      }
+      .btn-secondary:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+      }
+      .alert {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+        font-size: 14px;
+        display: none;
+      }
+      .alert.success {
+        background: #d1e7dd;
+        color: #198754;
+        border: 1px solid #badbcc;
+      }
+      .alert.error {
+        background: #fde8e8;
+        color: #dc3545;
+        border: 1px solid #f5c2c7;
+      }
+      .alert.show {
+        display: block;
+      }
+      .change-verification-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+      }
+      .change-verification-modal-content {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        max-width: 500px;
+        width: 90%;
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      }
+      .modal-step {
+        display: none;
+      }
+      .modal-step.active {
+        display: block;
+      }
+      .password-input-group {
+        margin-bottom: 24px;
+      }
+      .password-input-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .password-input-wrapper {
+        position: relative;
+      }
+      .password-input-wrapper input {
+        width: 100%;
+        padding: 12px 45px 12px 16px;
+        font-size: 15px;
+        font-family: 'Commissioner', sans-serif;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #0a0a0a;
+        box-sizing: border-box;
+      }
+      .password-toggle-btn {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        color: #6b7280;
+      }
+      .phone-otp-inputs {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 24px 0;
+      }
+      .phone-otp-input {
+        width: 60px;
+        height: 60px;
+        text-align: center;
+        font-size: 28px;
+        font-weight: 600;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-family: 'Commissioner', sans-serif;
+      }
+      .phone-otp-input:focus {
+        border-color: #0a0a0a;
+        outline: none;
+      }
+      .modal-close-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #666;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+      }
+      .modal-close-btn:hover {
+        background: #f3f4f6;
+        color: #0a0a0a;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <a href="{{ url_for('buyer_dashboard') }}" class="top-brand">Varón</a>
+      <div class="user-dropdown">
+        <button class="user-button" onclick="toggleUserDropdown()">
+          <div class="user-button-icon">{{ user.first_name[0]|upper if user.first_name else 'U' }}</div>
+          <div class="user-button-text">
+            <span style="font-weight: 600;">{{ user.first_name or 'User' }}</span>
+          </div>
+          <span class="user-button-arrow">▼</span>
+        </button>
+        <div id="userDropdown" class="dropdown-content">
+          <a href="{{ url_for('account_details') }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Account Details
+          </a>
+          <a href="javascript:void(0)" onclick="confirmLogout()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Logout
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Details Content -->
+    <div class="account-container">
+      <div class="account-content">
+        <!-- Profile Picture Section -->
+        <div class="profile-section">
+          <div class="profile-picture-container">
+            <img id="profilePicture" class="profile-picture" src="{{ user.profile_image or '/static/images/default-avatar.png' }}" alt="Profile Picture" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22150%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22150%22 height=%22150%22 rx=%2275%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2260%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3E{{ (user.first_name or 'U')[0]|upper }}%3C/text%3E%3C/svg%3E'">
+            <label for="profileImageInput" class="profile-upload-overlay">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </label>
+            <input type="file" id="profileImageInput" accept="image/*" style="display: none;">
+          </div>
+          <div class="profile-info">
+            <h1 class="profile-name">{{ (user.first_name or '') + ' ' + (user.last_name or '') }}</h1>
+            <p class="profile-email">{{ user.email or '' }}</p>
+          </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="form-section">
+          <div class="account-header">
+            <h1>Account Information</h1>
+            <p>Update your account details</p>
+          </div>
+
+          <div id="alertMessage" class="alert"></div>
+
+          <form id="accountForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="firstName">First Name</label>
+                <input type="text" id="firstName" class="form-input" name="first_name" value="{{ user.first_name or '' }}" disabled>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="lastName">Last Name</label>
+                <input type="text" id="lastName" class="form-input" name="last_name" value="{{ user.last_name or '' }}" disabled>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="email">Email Address</label>
+              <div class="input-with-button">
+                <input type="email" id="email" class="form-input" name="email" value="{{ user.email or '' }}" required disabled>
+                <button type="button" id="verifyEmailButton" class="input-button" onclick="handleEmailButtonClick(event)">{{ 'Change' if user.email_verified else 'Verify' }}</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="phone">Phone Number</label>
+              <div class="input-with-button">
+                <input type="tel" id="phone" class="form-input" name="phone" value="{{ user.phone or '' }}" disabled>
+                <button type="button" id="verifyPhoneButton" class="input-button" onclick="handlePhoneButtonClick(event)">{{ 'Change' if user.phone_verified else 'Verify' }}</button>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary">Save Changes</button>
+              <a href="{{ url_for('buyer_dashboard') }}" class="btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Define showAlert function first (used everywhere)
+      function showAlert(message, type) {
+        const alertEl = document.getElementById('alertMessage');
+        if (alertEl) {
+          alertEl.className = `alert ${type} show`;
+          alertEl.textContent = message;
+          setTimeout(() => {
+            alertEl.classList.remove('show');
+          }, 5000);
+        } else {
+          console.error('Alert element not found');
+          alert(message); // Fallback to browser alert
+        }
+      }
+      window.showAlert = showAlert;
+
+      // Define global functions immediately so onclick handlers can access them
+      window.handleEmailButtonClick = function(e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        console.log('Email button clicked');
+        const emailButton = document.getElementById('verifyEmailButton');
+        if (!emailButton) {
+          console.error('Email button not found');
+          return;
+        }
+        
+        const buttonText = emailButton.textContent.trim();
+        const modal = document.getElementById('emailChangeModal');
+        if (!modal) {
+          console.error('Email change modal not found');
+          return;
+        }
+        
+        if (buttonText === 'Change') {
+          modal.style.display = 'flex';
+          if (window.resetEmailChangeModal) window.resetEmailChangeModal();
+        } else {
+          modal.style.display = 'flex';
+          if (window.resetEmailChangeModal) window.resetEmailChangeModal();
+          if (window.showEmailStep) window.showEmailStep(2);
+        }
+      };
+
+      window.handlePhoneButtonClick = function(e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        console.log('Phone button clicked');
+        const phoneButton = document.getElementById('verifyPhoneButton');
+        if (!phoneButton) {
+          console.error('Phone button not found');
+          return;
+        }
+        
+        const buttonText = phoneButton.textContent.trim();
+        const modal = document.getElementById('phoneChangeModal');
+        if (!modal) {
+          console.error('Phone change modal not found');
+          return;
+        }
+        
+        if (buttonText === 'Change') {
+          modal.style.display = 'flex';
+          if (window.resetPhoneChangeModal) window.resetPhoneChangeModal();
+        } else {
+          modal.style.display = 'flex';
+          if (window.resetPhoneChangeModal) window.resetPhoneChangeModal();
+          if (window.showPhoneStep) window.showPhoneStep(2);
+        }
+      };
+
+      // Wait for DOM to be ready
+      document.addEventListener('DOMContentLoaded', function() {
+        // User dropdown toggle
+        function toggleUserDropdown() {
+          const dropdown = document.getElementById('userDropdown');
+          if (!dropdown) return;
+          const container = dropdown.closest('.user-dropdown');
+          if (!container) return;
+          const isOpen = container.classList.contains('show');
+          
+          // Close all dropdowns
+          document.querySelectorAll('.user-dropdown').forEach(d => d.classList.remove('show'));
+          
+          if (!isOpen) {
+            container.classList.add('show');
+          }
+        }
+        window.toggleUserDropdown = toggleUserDropdown;
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.user-dropdown')) {
+            document.querySelectorAll('.user-dropdown').forEach(d => d.classList.remove('show'));
+          }
+        });
+
+        // Profile picture upload
+        let originalEmail = '{{ user.email }}';
+        let originalPhone = '{{ user.phone or '' }}';
+        let emailChanged = false;
+        let emailVerificationOtp = null;
+        let emailVerified = {{ 'true' if user.email_verified else 'false' }};
+        let phoneVerified = {{ 'true' if user.phone_verified else 'false' }};
+        let emailEditing = false;
+        let phoneEditing = false;
+
+        // Profile picture upload handler
+        const profileImageInput = document.getElementById('profileImageInput');
+        if (profileImageInput) {
+          profileImageInput.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          if (!file.type.startsWith('image/')) {
+            showAlert('Please select an image file', 'error');
+            return;
+          }
+
+          // Show loading state
+          const profilePicture = document.getElementById('profilePicture');
+          const originalSrc = profilePicture ? profilePicture.src : '';
+
+          const formData = new FormData();
+          formData.append('profile_image', file);
+
+          try {
+            const response = await fetch('/upload-profile-picture', {
+              method: 'POST',
+              body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+              if (profilePicture) {
+                profilePicture.src = data.image_url + '?t=' + Date.now();
+              }
+              showAlert('Profile picture saved successfully!', 'success');
+              console.log('Profile picture saved to database:', data.image_url);
+            } else {
+              showAlert(data.message || 'Error uploading profile picture', 'error');
+              console.error('Profile picture upload error:', data.message);
+            }
+          } catch (error) {
+            console.error('Profile picture upload network error:', error);
+            showAlert('Network error. Please try again.', 'error');
+          }
+        });
+      } else {
+        console.error('Profile image input not found');
+      }
+
+        // Email button handler (already defined globally above)
+        // Also attach event listener as backup
+        const emailButton = document.getElementById('verifyEmailButton');
+        if (emailButton) {
+          emailButton.addEventListener('click', window.handleEmailButtonClick);
+        }
+
+        function resetEmailChangeModal() {
+          // Clear timer
+          if (window.emailOtpTimerInterval) {
+            clearInterval(window.emailOtpTimerInterval);
+            window.emailOtpTimerInterval = null;
+          }
+          // Reset resend button
+          const resendBtn = document.getElementById('emailResendOtpBtn');
+          if (resendBtn) {
+            resendBtn.disabled = false;
+            resendBtn.style.cursor = 'pointer';
+            resendBtn.style.opacity = '1';
+            resendBtn.textContent = 'Resend';
+          }
+          
+          const step1 = document.getElementById('emailStep1');
+          const step2 = document.getElementById('emailStep2');
+          const step3 = document.getElementById('emailStep3');
+          if (step1) step1.classList.add('active');
+          if (step2) step2.classList.remove('active');
+          if (step3) step3.classList.remove('active');
+          const passwordInput = document.getElementById('emailPasswordConfirm');
+          if (passwordInput) passwordInput.value = '';
+          const emailInput = document.getElementById('newEmailInput');
+          if (emailInput) emailInput.value = '';
+          document.querySelectorAll('.email-otp-input').forEach(input => input.value = '');
+        }
+        window.resetEmailChangeModal = resetEmailChangeModal;
+
+        function showEmailStep(step) {
+          const step1 = document.getElementById('emailStep1');
+          const step2 = document.getElementById('emailStep2');
+          const step3 = document.getElementById('emailStep3');
+          if (step1) step1.classList.toggle('active', step === 1);
+          if (step2) step2.classList.toggle('active', step === 2);
+          if (step3) step3.classList.toggle('active', step === 3);
+        }
+        window.showEmailStep = showEmailStep;
+
+        function closeEmailChangeModal() {
+          const modal = document.getElementById('emailChangeModal');
+          if (modal) {
+            modal.style.display = 'none';
+            resetEmailChangeModal();
+          }
+        }
+        window.closeEmailChangeModal = closeEmailChangeModal;
+
+        // Email password confirmation
+        const emailPasswordConfirmBtn = document.getElementById('emailPasswordConfirmBtn');
+        if (emailPasswordConfirmBtn) {
+          emailPasswordConfirmBtn.addEventListener('click', async () => {
+            const password = document.getElementById('emailPasswordConfirm').value;
+            if (!password) {
+              showAlert('Please enter your password', 'error');
+              return;
+            }
+
+            const btn = document.getElementById('emailPasswordConfirmBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+              const response = await fetch('/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+              });
+
+              const data = await response.json();
+              if (data.success) {
+                showEmailStep(2);
+              } else {
+                showAlert(data.message || 'Incorrect password', 'error');
+              }
+            } catch (error) {
+              showAlert('Network error. Please try again.', 'error');
+            } finally {
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        }
+
+        // Email send OTP
+        const emailSendOtpBtn = document.getElementById('emailSendOtpBtn');
+        if (emailSendOtpBtn) {
+          emailSendOtpBtn.addEventListener('click', async () => {
+            const newEmail = document.getElementById('newEmailInput').value.trim();
+            if (!newEmail) {
+              showAlert('Please enter a new email address', 'error');
+              return;
+            }
+
+            const btn = document.getElementById('emailSendOtpBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+              const response = await fetch('/send-email-change-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_email: newEmail })
+              });
+
+              const data = await response.json();
+              if (data.success) {
+                emailVerificationOtp = data.otp_id;
+                emailChanged = true;
+                showEmailStep(3);
+                setupEmailOTPInputs();
+              } else {
+                showAlert(data.message || 'Error sending verification code', 'error');
+              }
+            } catch (error) {
+              showAlert('Network error. Please try again.', 'error');
+            } finally {
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        }
+
+        // Email OTP input setup
+        function setupEmailOTPInputs() {
+          const inputs = document.querySelectorAll('.email-otp-input');
+          inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+              if (e.target.value.length === 1 && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+              }
+            });
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                inputs[index - 1].focus();
+              }
+            });
+          });
+        }
+
+        // Phone OTP input setup
+        function setupPhoneOTPInputs() {
+          const inputs = document.querySelectorAll('.phone-otp-input');
+          inputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+              if (e.target.value.length === 1 && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+              }
+            });
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                inputs[index - 1].focus();
+              }
+            });
+          });
+        }
+
+        // Email verify OTP
+        const emailVerifyOtpBtn = document.getElementById('emailVerifyOtpBtn');
+        if (emailVerifyOtpBtn) {
+          emailVerifyOtpBtn.addEventListener('click', async () => {
+            const otpInputs = document.querySelectorAll('.email-otp-input');
+            // Get OTP and remove any whitespace, ensure it's exactly 6 digits
+            const otp = Array.from(otpInputs).map(input => input.value.trim()).join('').replace(/\s/g, '');
+
+            if (otp.length !== 6) {
+              showAlert('Please enter the complete 6-digit code', 'error');
+              return;
+            }
+
+            // Validate it's only digits
+            if (!/^\d{6}$/.test(otp)) {
+              showAlert('OTP code must contain only numbers', 'error');
+              return;
+            }
+
+            const newEmail = document.getElementById('newEmailInput').value.trim();
+            const btn = document.getElementById('emailVerifyOtpBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            console.log('Verifying email OTP:', { otp, newEmail, otp_id: emailVerificationOtp });
+
+            try {
+              const response = await fetch('/verify-email-change', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ otp: otp, otp_id: emailVerificationOtp })
+              });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showAlert('Email verified successfully!', 'success');
+            // Update email in main form
+            document.getElementById('email').value = newEmail;
+            originalEmail = newEmail;
+            emailVerified = true;
+            document.getElementById('verifyEmailButton').textContent = 'Change';
+            closeEmailChangeModal();
+            // Reload page to reflect changes
+            setTimeout(() => window.location.reload(), 1500);
+          } else {
+            showAlert(data.message || 'Invalid verification code', 'error');
+          }
+        } catch (error) {
+          showAlert('Network error. Please try again.', 'error');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+          }
+        });
+        }
+
+        // Email resend OTP
+        const emailResendOtpBtn = document.getElementById('emailResendOtpBtn');
+        if (emailResendOtpBtn) {
+          emailResendOtpBtn.addEventListener('click', async () => {
+            // Don't allow resend if button is disabled (timer running)
+            if (emailResendOtpBtn.disabled) {
+              return;
+            }
+            
+            const newEmail = document.getElementById('newEmailInput').value.trim();
+            if (!newEmail) {
+              showAlert('Please enter a valid email address', 'error');
+              return;
+            }
+
+            const btn = document.getElementById('emailResendOtpBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+              const response = await fetch('/send-email-change-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ new_email: newEmail })
+              });
+
+              const data = await response.json();
+              if (data.success) {
+                emailVerificationOtp = data.otp_id;
+                showAlert('New verification code sent!', 'success');
+                document.querySelectorAll('.email-otp-input').forEach(input => input.value = '');
+                document.querySelector('.email-otp-input').focus();
+                startEmailOtpTimer(); // Restart timer for new code
+              } else {
+                showAlert(data.message || 'Error resending code', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+              }
+            } catch (error) {
+              showAlert('Network error. Please try again.', 'error');
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        }
+        
+        // Also attach event listener as backup
+        const phoneButton = document.getElementById('verifyPhoneButton');
+        if (phoneButton) {
+          phoneButton.addEventListener('click', window.handlePhoneButtonClick);
+        }
+
+        function resetPhoneChangeModal() {
+          // Clear timer
+          if (window.phoneOtpTimerInterval) {
+            clearInterval(window.phoneOtpTimerInterval);
+            window.phoneOtpTimerInterval = null;
+          }
+          // Reset resend button
+          const resendBtn = document.getElementById('phoneResendOtpBtn');
+          if (resendBtn) {
+            resendBtn.disabled = false;
+            resendBtn.style.cursor = 'pointer';
+            resendBtn.style.opacity = '1';
+            resendBtn.textContent = 'Resend';
+          }
+          
+          const step1 = document.getElementById('phoneStep1');
+          const step2 = document.getElementById('phoneStep2');
+          const step3 = document.getElementById('phoneStep3');
+          if (step1) step1.classList.add('active');
+          if (step2) step2.classList.remove('active');
+          if (step3) step3.classList.remove('active');
+          const passwordInput = document.getElementById('phonePasswordConfirm');
+          if (passwordInput) passwordInput.value = '';
+          const phoneInput = document.getElementById('newPhoneInput');
+          if (phoneInput) {
+            phoneInput.value = '+63';
+          }
+          document.querySelectorAll('.phone-otp-input').forEach(input => input.value = '');
+        }
+        window.resetPhoneChangeModal = resetPhoneChangeModal;
+
+        function showPhoneStep(step) {
+          const step1 = document.getElementById('phoneStep1');
+          const step2 = document.getElementById('phoneStep2');
+          const step3 = document.getElementById('phoneStep3');
+          if (step1) step1.classList.toggle('active', step === 1);
+          if (step2) step2.classList.toggle('active', step === 2);
+          if (step3) step3.classList.toggle('active', step === 3);
+        }
+        window.showPhoneStep = showPhoneStep;
+
+        function closePhoneChangeModal() {
+          const modal = document.getElementById('phoneChangeModal');
+          if (modal) {
+            modal.style.display = 'none';
+            resetPhoneChangeModal();
+          }
+        }
+        window.closePhoneChangeModal = closePhoneChangeModal;
+
+        // Phone password confirmation
+        const phonePasswordConfirmBtn = document.getElementById('phonePasswordConfirmBtn');
+        if (phonePasswordConfirmBtn) {
+          phonePasswordConfirmBtn.addEventListener('click', async () => {
+            const password = document.getElementById('phonePasswordConfirm').value;
+            if (!password) {
+              showAlert('Please enter your password', 'error');
+              return;
+            }
+
+            const btn = document.getElementById('phonePasswordConfirmBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+              const response = await fetch('/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+              });
+
+              const data = await response.json();
+              if (data.success) {
+                showPhoneStep(2);
+              } else {
+                showAlert(data.message || 'Incorrect password', 'error');
+              }
+            } catch (error) {
+              showAlert('Network error. Please try again.', 'error');
+            } finally {
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        }
+
+        // Phone input +63 prefix handler
+        const newPhoneInput = document.getElementById('newPhoneInput');
+        if (newPhoneInput) {
+          // Ensure +63 prefix is always present
+          newPhoneInput.addEventListener('input', function(e) {
+            let value = e.target.value;
+            if (!value.startsWith('+63')) {
+              if (value.startsWith('63')) {
+                value = '+63' + value.substring(2);
+              } else if (value.startsWith('0')) {
+                value = '+63' + value.substring(1);
+              } else {
+                value = '+63' + value.replace(/^\+63/, '');
+              }
+              e.target.value = value;
+            }
+          });
+          
+          newPhoneInput.addEventListener('keydown', function(e) {
+            const cursorPos = e.target.selectionStart;
+            // Prevent deletion of +63 prefix
+            if (cursorPos <= 3 && (e.key === 'Backspace' || e.key === 'Delete')) {
+              e.preventDefault();
+            }
+          });
+          
+          newPhoneInput.addEventListener('focus', function(e) {
+            // Move cursor after +63 if user clicks at the beginning
+            if (e.target.selectionStart < 3) {
+              e.target.setSelectionRange(3, 3);
+            }
+          });
+        }
+
+        // Phone send OTP
+        const phoneSendOtpBtn = document.getElementById('phoneSendOtpBtn');
+        if (phoneSendOtpBtn) {
+          phoneSendOtpBtn.addEventListener('click', async () => {
+            let newPhone = document.getElementById('newPhoneInput').value.trim();
+            if (!newPhone || newPhone === '+63') {
+              showAlert('Please enter a new phone number', 'error');
+              return;
+            }
+            
+            // Ensure +63 prefix
+            if (!newPhone.startsWith('+63')) {
+              if (newPhone.startsWith('63')) {
+                newPhone = '+63' + newPhone.substring(2);
+              } else if (newPhone.startsWith('0')) {
+                newPhone = '+63' + newPhone.substring(1);
+              } else {
+                newPhone = '+63' + newPhone;
+              }
+              document.getElementById('newPhoneInput').value = newPhone;
+            }
+
+            const btn = document.getElementById('phoneSendOtpBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+              const response = await fetch('/send-phone-verification-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: newPhone })
+              });
+
+              const data = await response.json();
+              if (data.success) {
+                phoneVerificationOtp = data.otp_id;
+                showPhoneStep(3);
+                setupPhoneOTPInputs();
+                startPhoneOtpTimer();
+              } else {
+                showAlert(data.message || 'Error sending verification code', 'error');
+              }
+            } catch (error) {
+              showAlert('Network error. Please try again.', 'error');
+            } finally {
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        }
+
+        // Password visibility toggle
+        function togglePasswordVisibility(inputId, button) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+          input.type = 'text';
+          button.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>';
+        } else {
+          input.type = 'password';
+          button.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>';
+        }
+      }
+
+        // Phone verify OTP
+        const phoneVerifyOtpBtn = document.getElementById('phoneVerifyOtpBtn');
+        if (phoneVerifyOtpBtn) {
+          phoneVerifyOtpBtn.addEventListener('click', async () => {
+            const otpInputs = document.querySelectorAll('.phone-otp-input');
+            // Get OTP and remove any whitespace, ensure it's exactly 6 digits
+            const otp = Array.from(otpInputs).map(input => input.value.trim()).join('').replace(/\s/g, '');
+
+            if (otp.length !== 6) {
+              showAlert('Please enter the complete 6-digit code', 'error');
+              return;
+            }
+
+            // Validate it's only digits
+            if (!/^\d{6}$/.test(otp)) {
+              showAlert('OTP code must contain only numbers', 'error');
+              return;
+            }
+
+            const newPhone = document.getElementById('newPhoneInput').value.trim();
+            const btn = document.getElementById('phoneVerifyOtpBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            console.log('Verifying phone OTP:', { otp, newPhone });
+
+            try {
+              const response = await fetch('/verify-phone-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ otp: otp, phone: newPhone })
+              });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showAlert('Phone number verified successfully!', 'success');
+            // Update phone in main form
+            document.getElementById('phone').value = newPhone;
+            originalPhone = newPhone;
+            phoneVerified = true;
+            document.getElementById('verifyPhoneButton').textContent = 'Change';
+            closePhoneChangeModal();
+            // Reload page to reflect changes
+            setTimeout(() => window.location.reload(), 1500);
+          } else {
+            showAlert(data.message || 'Invalid verification code', 'error');
+          }
+        } catch (error) {
+          showAlert('Network error. Please try again.', 'error');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+          }
+        });
+        }
+
+        // Phone resend OTP
+        const phoneResendOtpBtn = document.getElementById('phoneResendOtpBtn');
+        if (phoneResendOtpBtn) {
+          phoneResendOtpBtn.addEventListener('click', async () => {
+            // Don't allow resend if button is disabled (timer running)
+            if (phoneResendOtpBtn.disabled) {
+              return;
+            }
+            
+            let newPhone = document.getElementById('newPhoneInput').value.trim();
+            if (!newPhone || newPhone === '+63') {
+              showAlert('Please enter a valid phone number', 'error');
+              return;
+            }
+            
+            // Ensure +63 prefix
+            if (!newPhone.startsWith('+63')) {
+              if (newPhone.startsWith('63')) {
+                newPhone = '+63' + newPhone.substring(2);
+              } else if (newPhone.startsWith('0')) {
+                newPhone = '+63' + newPhone.substring(1);
+              } else {
+                newPhone = '+63' + newPhone;
+              }
+              document.getElementById('newPhoneInput').value = newPhone;
+            }
+
+            const btn = document.getElementById('phoneResendOtpBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+              const response = await fetch('/send-phone-verification-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: newPhone })
+              });
+
+              const data = await response.json();
+              if (data.success) {
+                phoneVerificationOtp = data.otp_id;
+                showAlert('New verification code sent!', 'success');
+                document.querySelectorAll('.phone-otp-input').forEach(input => input.value = '');
+                document.querySelector('.phone-otp-input').focus();
+                startPhoneOtpTimer(); // Restart timer for new code
+              } else {
+                showAlert(data.message || 'Error resending code', 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+              }
+            } catch (error) {
+              showAlert('Network error. Please try again.', 'error');
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }
+          });
+        }
+
+        // Form submission
+        const accountForm = document.getElementById('accountForm');
+        if (accountForm) {
+          accountForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // If inputs are disabled, don't submit changes
+        const emailInput = document.getElementById('email');
+        const phoneInput = document.getElementById('phone');
+        
+        if (emailInput.disabled && phoneInput.disabled) {
+          showAlert('No changes to save', 'success');
+          return;
+        }
+        
+        const formData = {
+          first_name: document.getElementById('firstName').value.trim(),
+          last_name: document.getElementById('lastName').value.trim(),
+          email: emailInput.disabled ? originalEmail : emailInput.value.trim(),
+          phone: phoneInput.disabled ? originalPhone : phoneInput.value.trim()
+        };
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        try {
+          const response = await fetch('/update-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showAlert(data.message || 'Account updated successfully!', 'success');
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            showAlert(data.message || 'Error updating account', 'error');
+          }
+        } catch (error) {
+          showAlert('Network error. Please try again.', 'error');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }
+        });
+        }
+
+        // OTP Timer functions
+        window.emailOtpTimerInterval = null;
+        window.phoneOtpTimerInterval = null;
+
+        function startEmailOtpTimer() {
+          // Clear any existing timer
+          if (window.emailOtpTimerInterval) {
+            clearInterval(window.emailOtpTimerInterval);
+          }
+
+          const resendBtn = document.getElementById('emailResendOtpBtn');
+          if (!resendBtn) return;
+
+          let timeLeft = 600; // 10 minutes in seconds
+
+          const updateTimer = () => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            
+            if (timeLeft > 0) {
+              // Disable resend button and show timer
+              resendBtn.disabled = true;
+              resendBtn.style.cursor = 'not-allowed';
+              resendBtn.style.opacity = '0.6';
+              
+              if (timeLeft >= 600) {
+                // Show "10 Minutes" for the first minute
+                resendBtn.textContent = 'Resend (10 Minutes)';
+              } else {
+                // Show countdown after first minute
+                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                resendBtn.textContent = `Resend (${timeString})`;
+              }
+              timeLeft--;
+            } else {
+              // Enable resend button when timer expires
+              resendBtn.disabled = false;
+              resendBtn.style.cursor = 'pointer';
+              resendBtn.style.opacity = '1';
+              resendBtn.textContent = 'Resend';
+              clearInterval(window.emailOtpTimerInterval);
+              window.emailOtpTimerInterval = null;
+            }
+          };
+
+          updateTimer(); // Initial update
+          window.emailOtpTimerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function startPhoneOtpTimer() {
+          // Clear any existing timer
+          if (window.phoneOtpTimerInterval) {
+            clearInterval(window.phoneOtpTimerInterval);
+          }
+
+          const resendBtn = document.getElementById('phoneResendOtpBtn');
+          if (!resendBtn) return;
+
+          let timeLeft = 600; // 10 minutes in seconds
+
+          const updateTimer = () => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            
+            if (timeLeft > 0) {
+              // Disable resend button and show timer
+              resendBtn.disabled = true;
+              resendBtn.style.cursor = 'not-allowed';
+              resendBtn.style.opacity = '0.6';
+              
+              if (timeLeft >= 600) {
+                // Show "10 Minutes" for the first minute
+                resendBtn.textContent = 'Resend (10 Minutes)';
+              } else {
+                // Show countdown after first minute
+                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                resendBtn.textContent = `Resend (${timeString})`;
+              }
+              timeLeft--;
+            } else {
+              // Enable resend button when timer expires
+              resendBtn.disabled = false;
+              resendBtn.style.cursor = 'pointer';
+              resendBtn.style.opacity = '1';
+              resendBtn.textContent = 'Resend';
+              clearInterval(window.phoneOtpTimerInterval);
+              window.phoneOtpTimerInterval = null;
+            }
+          };
+
+          updateTimer(); // Initial update
+          window.phoneOtpTimerInterval = setInterval(updateTimer, 1000);
+        }
+
+        // Logout confirmation
+        function confirmLogout() {
+          if (confirm('Are you sure you want to logout?')) {
+            window.location.href = '/logout';
+          }
+        }
+        window.confirmLogout = confirmLogout;
+        window.togglePasswordVisibility = togglePasswordVisibility;
+      });
+    </script>
+
+    <!-- Email Change Modal -->
+    <div id="emailChangeModal" class="change-verification-modal">
+      <div class="change-verification-modal-content">
+        <button class="modal-close-btn" onclick="closeEmailChangeModal()">&times;</button>
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 10px; color: #0a0a0a;">Change Email Address</h2>
+        
+        <!-- Step 1: Password Confirmation -->
+        <div id="emailStep1" class="modal-step active">
+          <p style="color: #777; margin-bottom: 24px; font-size: 14px;">Please confirm your password to proceed</p>
+          <div class="password-input-group">
+            <label for="emailPasswordConfirm">Current Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="emailPasswordConfirm" placeholder="Enter your password" required>
+              <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('emailPasswordConfirm', this)">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+            <button type="button" onclick="closeEmailChangeModal()" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">Cancel</button>
+            <button type="button" id="emailPasswordConfirmBtn" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Continue</button>
+          </div>
+        </div>
+
+        <!-- Step 2: New Email Input -->
+        <div id="emailStep2" class="modal-step">
+          <p style="color: #777; margin-bottom: 24px; font-size: 14px;">Enter your new email address</p>
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label class="form-label" for="newEmailInput">New Email Address</label>
+            <input type="email" id="newEmailInput" class="form-input" placeholder="Enter new email" required>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+            <button type="button" onclick="closeEmailChangeModal()" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">Cancel</button>
+            <button type="button" id="emailSendOtpBtn" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Send Code</button>
+          </div>
+        </div>
+
+        <!-- Step 3: OTP Verification -->
+        <div id="emailStep3" class="modal-step">
+          <p style="color: #777; margin-bottom: 24px; font-size: 14px; text-align: center;">Enter the 6-digit code sent to your new email address</p>
+          <div class="otp-inputs">
+            <input type="text" class="email-otp-input" maxlength="1" required>
+            <input type="text" class="email-otp-input" maxlength="1" required>
+            <input type="text" class="email-otp-input" maxlength="1" required>
+            <input type="text" class="email-otp-input" maxlength="1" required>
+            <input type="text" class="email-otp-input" maxlength="1" required>
+            <input type="text" class="email-otp-input" maxlength="1" required>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: center; margin-top: 24px;">
+            <button type="button" id="emailVerifyOtpBtn" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Change</button>
+            <button type="button" id="emailResendOtpBtn" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">Resend</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phone Change Modal -->
+    <div id="phoneChangeModal" class="change-verification-modal">
+      <div class="change-verification-modal-content">
+        <button class="modal-close-btn" onclick="closePhoneChangeModal()">&times;</button>
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 10px; color: #0a0a0a;">Change Phone Number</h2>
+        
+        <!-- Step 1: Password Confirmation -->
+        <div id="phoneStep1" class="modal-step active">
+          <p style="color: #777; margin-bottom: 24px; font-size: 14px;">Please confirm your password to proceed</p>
+          <div class="password-input-group">
+            <label for="phonePasswordConfirm">Current Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="phonePasswordConfirm" placeholder="Enter your password" required>
+              <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('phonePasswordConfirm', this)">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+            <button type="button" onclick="closePhoneChangeModal()" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">Cancel</button>
+            <button type="button" id="phonePasswordConfirmBtn" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Continue</button>
+          </div>
+        </div>
+
+        <!-- Step 2: New Phone Input -->
+        <div id="phoneStep2" class="modal-step">
+          <p style="color: #777; margin-bottom: 24px; font-size: 14px;">Enter your new phone number</p>
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label class="form-label" for="newPhoneInput">New Phone Number</label>
+            <input type="tel" id="newPhoneInput" class="form-input" placeholder="Enter new phone number" value="+63" required>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+            <button type="button" onclick="closePhoneChangeModal()" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">Cancel</button>
+            <button type="button" id="phoneSendOtpBtn" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Send Code</button>
+          </div>
+        </div>
+
+        <!-- Step 3: OTP Verification -->
+        <div id="phoneStep3" class="modal-step">
+          <p style="color: #777; margin-bottom: 24px; font-size: 14px; text-align: center;">Enter the 6-digit code sent to your phone number</p>
+          <div class="otp-inputs">
+            <input type="text" class="phone-otp-input" maxlength="1" required>
+            <input type="text" class="phone-otp-input" maxlength="1" required>
+            <input type="text" class="phone-otp-input" maxlength="1" required>
+            <input type="text" class="phone-otp-input" maxlength="1" required>
+            <input type="text" class="phone-otp-input" maxlength="1" required>
+            <input type="text" class="phone-otp-input" maxlength="1" required>
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: center; margin-top: 24px;">
+            <button type="button" id="phoneVerifyOtpBtn" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">Change</button>
+            <button type="button" id="phoneResendOtpBtn" class="btn-secondary" style="padding: 12px 24px; font-size: 14px;">Resend</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

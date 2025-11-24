@@ -195,8 +195,6 @@
         <ul class="top-nav-links">
           <li><a href="javascript:void(0)" onclick="showSection('home')" class="active">Home</a></li>
           <li><a href="javascript:void(0)" onclick="showSection('browse')">Browse</a></li>
-          <li><a href="{{ url_for('login') }}">Track Order</a></li>
-          <li><a href="javascript:void(0)" onclick="showSection('journal')">Journal</a></li>
           <li><a href="javascript:void(0)" onclick="showSection('about')">About</a></li>
         </ul>
       </div>
@@ -205,14 +203,25 @@
       </div>
     </div>
 
+    <!-- Hero Section -->
     <section class="hero">
       <div class="hero-inner container">
         <div class="hero-copy">
           <h2>Refined Elegance for the Modern Gentleman</h2>
           <p class="muted">Where sophistication meets contemporary style. Each piece is meticulously crafted to elevate your presence.</p>
-          <p><a href="#productGrid" class="btn-cta">Discover Collection</a></p>
+          <p><a href="javascript:void(0)" onclick="showSection('browse')" class="btn-cta">Discover Collection</a></p>
         </div>
         <div class="hero-media" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- Journal Section on Homepage -->
+    <section id="journalSection" style="background:#fafafa;padding:60px 20px;min-height:calc(100vh - 75px)">
+      <div class="container" style="max-width:1200px;margin:0 auto">
+        <h2 style="margin:0 0 40px;text-align:center;font-size:32px;font-weight:600">Journal</h2>
+        <div id="journalGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;margin-bottom:40px">
+          <!-- Journal entries will be loaded here from database -->
+        </div>
       </div>
     </section>
 
@@ -237,34 +246,44 @@
     </div>
 
     <div id="browse" class="content-section" style="display:none">
-      <div class="container" style="margin-top:90px">
+      <div class="container" style="margin-top:90px;padding-bottom:60px">
         <h2 style="margin:24px 0">Browse Collection</h2>
-        <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
-          <!-- Products will be loaded here -->
+        
+        <!-- Search and Filter Bar -->
+        <div style="display:flex;gap:12px;margin-bottom:24px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:250px;position:relative">
+            <input type="text" id="browseSearch" placeholder="Search products..." style="width:100%;padding:12px 16px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none" onkeyup="handleBrowseSearch(event)">
+            <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#999;pointer-events:none">🔍</span>
+          </div>
+          <div style="min-width:200px">
+            <select id="browseCategoryFilter" style="width:100%;padding:12px 16px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none;background:#fff;cursor:pointer" onchange="handleBrowseFilter()">
+              <option value="">All Categories</option>
+              <!-- Categories will be loaded here -->
+            </select>
+          </div>
         </div>
-      </div>
-    </div>
-
-    <div id="journal" class="content-section" style="display:none">
-      <div class="container" style="margin-top:90px">
-        <h2 style="margin:24px 0">Journal</h2>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px">
-          <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-            <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
-            <div style="padding:20px">
-              <h3 style="margin:0 0 10px">Style Guide: Fall 2025</h3>
-              <p style="margin:0;color:#666;line-height:1.5">Explore our comprehensive guide to fall fashion trends and essential pieces for your wardrobe.</p>
-              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>
+        
+        <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
+          {% if products %}
+            {% for product in products %}
+              <a href="/product/{{ product.id }}" style="text-decoration:none;color:inherit">
+                <article class="product" data-category="men" data-genre="{{ product.category_slug or 'all' }}" data-product-id="{{ product.id }}" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:transform 0.2s,box-shadow 0.2s;cursor:pointer" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'">
+                  <div class="product-image" style="position:relative;width:100%;height:280px;background:#f5f5f5;overflow:hidden">
+                    <img src="{{ product.image_url or '/static/images/placeholder.svg' }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='/static/images/placeholder.svg'">
+                  </div>
+                  <div class="product-info" style="padding:16px">
+                    <h3 style="margin:0 0 6px;font-size:15px;font-weight:500;color:#0a0a0a;line-height:1.3">{{ product.name }}</h3>
+                    <div class="price" style="font-size:16px;font-weight:600;color:#0a0a0a">₱{{ "{:,.2f}".format(product.price) }}</div>
+                  </div>
+                </article>
+              </a>
+            {% endfor %}
+          {% else %}
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+              <h3 style="margin: 0 0 12px; color: #666;">No Products Available</h3>
+              <p style="margin: 0; color: #999;">Check back soon for new arrivals!</p>
             </div>
-          </article>
-          <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-            <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1610963876305-c8e7cb43a09b?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
-            <div style="padding:20px">
-              <h3 style="margin:0 0 10px">Sustainable Fashion</h3>
-              <p style="margin:0;color:#666;line-height:1.5">Learn about our commitment to sustainable practices and ethical fashion production.</p>
-              <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>
-            </div>
-          </article>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -280,60 +299,6 @@
       </div>
     </div>
 
-    <!-- Hero Section (Home Only) -->
-    <section id="home" class="content-section" style="display:block">
-      <div style="background:#0a0a0a;color:#fff;min-height:500px;display:flex;align-items:center;justify-content:center;padding:80px 20px;margin-top:70px">
-        <div style="max-width:700px;text-align:left">
-          <h1 style="font-family:'Playfair Display',serif;font-size:48px;font-weight:500;line-height:1.2;margin:0 0 20px;letter-spacing:-0.02em">Refined Elegance for the Modern Gentleman</h1>
-          <p style="font-size:16px;line-height:1.6;color:#d1d5db;margin:0 0 32px">Where sophistication meets contemporary style. Each piece is meticulously crafted to elevate your presence.</p>
-          <a href="javascript:void(0)" onclick="showSection('browse')" style="display:inline-block;background:#fff;color:#0a0a0a;padding:14px 32px;text-decoration:none;font-weight:500;font-size:14px;letter-spacing:0.5px;transition:all 0.3s ease;border-radius:2px" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">DISCOVER COLLECTION</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- Main Content -->
-    <main class="container" id="mainContent" style="display:none">
-      <section class="toolbar">
-        <div class="filters">
-          <button data-filter="men" class="active">Men</button>
-        </div>
-        <div class="genres">
-          <label>Genres:</label>
-          <button data-genre="all" class="genre active">All</button>
-          <button data-genre="shirts" class="genre">Shirts</button>
-          <button data-genre="pants" class="genre">Pants</button>
-          <button data-genre="shorts" class="genre">Shorts</button>
-          <button data-genre="jackets" class="genre">Jackets</button>
-          <button data-genre="shoes" class="genre">Shoes</button>
-          <button data-genre="accessories" class="genre">Accessories</button>
-          <button data-genre="formal" class="genre">Formal</button>
-          <button data-genre="casual" class="genre">Casual</button>
-        </div>
-      </section>
-
-      <section class="product-grid" id="productGrid">
-        {% if products %}
-          {% for product in products %}
-            <a href="/login" style="text-decoration:none;color:inherit">
-              <article class="product" data-category="men" data-genre="{{ product.category_slug or 'all' }}" data-product-id="{{ product.id }}" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:transform 0.2s,box-shadow 0.2s;cursor:pointer" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)'">
-                <div class="product-image" style="position:relative;width:100%;height:280px;background:#f5f5f5;overflow:hidden">
-                  <img src="{{ product.image_url or '/static/images/placeholder.svg' }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='/static/images/placeholder.svg'">
-                </div>
-                <div class="product-info" style="padding:16px">
-                  <h3 style="margin:0 0 6px;font-size:15px;font-weight:500;color:#0a0a0a;line-height:1.3">{{ product.name }}</h3>
-                  <div class="price" style="font-size:16px;font-weight:600;color:#0a0a0a">₱{{ "{:,.2f}".format(product.price) }}</div>
-                </div>
-              </article>
-            </a>
-          {% endfor %}
-        {% else %}
-          <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
-            <h3 style="margin: 0 0 12px; color: #666;">No Products Available</h3>
-            <p style="margin: 0; color: #999;">Check back soon for new arrivals!</p>
-          </div>
-        {% endif %}
-      </section>
-    </main>
 
     <footer class="site-footer">
       <div class="footer-grid">
@@ -383,7 +348,6 @@
       <nav class="sidebar-nav">
         <a href="{{ url_for('login') }}">Track Your Order</a>
         <a href="javascript:void(0)" onclick="showSection('browse')">Browse</a>
-        <a href="javascript:void(0)" onclick="showSection('journal')">Journal</a>
         <a href="javascript:void(0)" onclick="showSection('about')">About</a>
         <a href="{{ url_for('login') }}" class="account">Login</a>
         <a href="{{ url_for('login') }}" class="account">Cart <span id="cartCountSidebar">0</span></a>
@@ -432,7 +396,7 @@
           <button type="submit" class="btn-submit">Login to Your Account</button>
 
           <div class="form-footer">
-            <a href="#" class="forgot-link">Forgot your password?</a>
+            <a href="#" onclick="event.preventDefault(); openForgotPasswordModal(); return false;" class="forgot-link">Forgot your password?</a>
           </div>
         </form>
       </div>
@@ -511,14 +475,25 @@
           section.style.display = 'none';
         });
 
-        // Hide main content (products) by default
-        const mainContent = document.getElementById('mainContent');
-        if (mainContent) mainContent.style.display = 'none';
+        // Get hero and journal sections
+        const heroSection = document.querySelector('.hero');
+        const journalSection = document.getElementById('journalSection');
 
-        // Show selected section
-        const targetSection = document.getElementById(sectionName);
-        if (targetSection) {
-          targetSection.style.display = 'block';
+        // Show/hide hero and journal based on section
+        if (sectionName === 'home') {
+          // Show hero and journal on home
+          if (heroSection) heroSection.style.display = 'block';
+          if (journalSection) journalSection.style.display = 'block';
+        } else {
+          // Hide hero and journal on other sections
+          if (heroSection) heroSection.style.display = 'none';
+          if (journalSection) journalSection.style.display = 'none';
+          
+          // Show selected section
+          const targetSection = document.getElementById(sectionName);
+          if (targetSection) {
+            targetSection.style.display = 'block';
+          }
         }
 
         // Load data for specific sections
@@ -536,29 +511,169 @@
         }
       }
 
+      // Helper function to generate color swatch background (supports multi-color)
+      function getColorBackground(colorName) {
+        const colorHex = {
+          'Black': '#000000', 'White': '#FFFFFF', 'Gray': '#808080', 'Grey': '#808080',
+          'Navy': '#000080', 'Blue': '#0000FF', 'Red': '#FF0000', 'Pink': '#FFC0CB',
+          'Green': '#008000', 'Brown': '#8B4513', 'Beige': '#F5F5DC', 'Cream': '#FFFDD0',
+          'Khaki': '#C3B091', 'Burgundy': '#800020', 'Olive': '#808000', 'Orange': '#FF8C00',
+          'Charcoal': '#36454F', 'Yellow': '#FFD700', 'Purple': '#800080', 'Violet': '#8B00FF',
+          'Maroon': '#800000', 'Tan': '#D2B48C', 'Ivory': '#FFFFF0', 'Silver': '#C0C0C0',
+          'Gold': '#FFD700', 'Indigo': '#4B0082', 'Teal': '#008080', 'Cyan': '#00FFFF'
+        };
+        
+        // Check if color contains a slash (multi-color)
+        if (colorName.includes('/')) {
+          const colors = colorName.split('/').map(c => c.trim());
+          const gradientColors = colors.map(c => {
+            let hex = colorHex[c];
+            if (!hex) {
+              const colorLower = c.toLowerCase();
+              for (const [key, value] of Object.entries(colorHex)) {
+                if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
+                  hex = value;
+                  break;
+                }
+              }
+            }
+            if (!hex) hex = '#' + c.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0'), 0).substr(0, 6);
+            return hex;
+          });
+          
+          if (colors.length === 2) {
+            return `linear-gradient(135deg, ${gradientColors[0]} 50%, ${gradientColors[1]} 50%)`;
+          } else if (colors.length === 3) {
+            return `linear-gradient(135deg, ${gradientColors[0]} 33%, ${gradientColors[1]} 33%, ${gradientColors[1]} 66%, ${gradientColors[2]} 66%)`;
+          } else {
+            const percentPerColor = 100 / colors.length;
+            let gradient = 'linear-gradient(135deg';
+            gradientColors.forEach((hex, i) => {
+              gradient += `, ${hex} ${i * percentPerColor}%, ${hex} ${(i + 1) * percentPerColor}%`;
+            });
+            gradient += ')';
+            return gradient;
+          }
+        } else {
+          // Single color
+          let hex = colorHex[colorName];
+          if (!hex) {
+            const colorLower = colorName.toLowerCase();
+            for (const [key, value] of Object.entries(colorHex)) {
+              if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
+                hex = value;
+                break;
+              }
+            }
+          }
+          if (!hex) hex = '#' + colorName.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0'), 0).substr(0, 6);
+          return hex;
+        }
+      }
+
       // Function to load and display products in browse section
-      function loadBrowseProducts() {
-        fetch('/api/products')
+      // Load categories for filter dropdown
+      function loadCategories() {
+        fetch('/api/categories')
           .then(response => response.json())
           .then(data => {
-            if (data.success && data.products) {
-              const browseGrid = document.getElementById('browseGrid');
-              browseGrid.innerHTML = data.products.map(product => `
-                <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);cursor:pointer;transition:transform 0.2s" 
-                     onclick="window.location.href='/product/${product.id}'" 
-                     onmouseover="this.style.transform='translateY(-4px)'" 
-                     onmouseout="this.style.transform='translateY(0)'">
-                  <div style="height:200px;background:#f5f5f5;background-image:url('${product.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
-                  <div style="padding:16px">
-                    <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;line-height:1.3">${product.name}</h3>
-                    <p style="margin:0;color:#666;font-size:14px">₱${parseFloat(product.price).toFixed(2)}</p>
-                  </div>
-                </div>
-              `).join('');
+            if (data.success && data.categories) {
+              const categoryFilter = document.getElementById('browseCategoryFilter');
+              if (categoryFilter) {
+                // Clear existing options except "All Categories"
+                categoryFilter.innerHTML = '<option value="">All Categories</option>';
+                data.categories.forEach(category => {
+                  const option = document.createElement('option');
+                  option.value = category.id;
+                  option.textContent = category.name;
+                  categoryFilter.appendChild(option);
+                });
+              }
             }
           })
           .catch(error => {
-            console.error('Error fetching product details:', error);
+            console.error('Error fetching categories:', error);
+          });
+      }
+
+      // Handle search input
+      let searchTimeout;
+      function handleBrowseSearch(event) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          loadBrowseProducts();
+        }, 300); // Debounce search by 300ms
+      }
+
+      // Handle category filter change
+      function handleBrowseFilter() {
+        loadBrowseProducts();
+      }
+
+      function loadBrowseProducts() {
+        const searchInput = document.getElementById('browseSearch');
+        const categoryFilter = document.getElementById('browseCategoryFilter');
+        
+        const search = searchInput ? searchInput.value.trim() : '';
+        const categoryId = categoryFilter ? categoryFilter.value : '';
+        
+        // Build query string
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (categoryId) params.append('category_id', categoryId);
+        params.append('limit', '50');
+        
+        fetch(`/api/products?${params.toString()}`)
+          .then(response => response.json())
+          .then(data => {
+            const browseGrid = document.getElementById('browseGrid');
+            if (!browseGrid) return;
+            
+            if (data.success && data.products && data.products.length > 0) {
+              browseGrid.innerHTML = data.products.map(product => {
+                const colorSwatches = product.colors && product.colors.length > 0 
+                  ? `<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
+                      ${product.colors.slice(0, 5).map(color => `
+                        <div style="width:20px;height:20px;border-radius:50%;background:${getColorBackground(color)};border:1px solid #e0e0e0;" title="${color}"></div>
+                      `).join('')}
+                      ${product.colors.length > 5 ? `<span style="font-size:11px;color:#999;align-self:center;">+${product.colors.length - 5}</span>` : ''}
+                    </div>`
+                  : '';
+                
+                return `
+                  <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);cursor:pointer;transition:transform 0.2s" 
+                       onclick="window.location.href='/product/${product.id}'" 
+                       onmouseover="this.style.transform='translateY(-4px)'" 
+                       onmouseout="this.style.transform='translateY(0)'">
+                    <div style="height:200px;background:#f5f5f5;background-image:url('${product.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
+                    <div style="padding:16px">
+                      <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;line-height:1.3">${product.name}</h3>
+                      <p style="margin:0;color:#666;font-size:14px">₱${parseFloat(product.price).toFixed(2)}</p>
+                      ${colorSwatches}
+                    </div>
+                  </div>
+                `;
+              }).join('');
+            } else {
+              browseGrid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+                  <h3 style="margin: 0 0 12px; color: #666;">No Products Found</h3>
+                  <p style="margin: 0; color: #999;">Try adjusting your search or filter criteria.</p>
+                </div>
+              `;
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching products:', error);
+            const browseGrid = document.getElementById('browseGrid');
+            if (browseGrid) {
+              browseGrid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+                  <h3 style="margin: 0 0 12px; color: #ef4444;">Error Loading Products</h3>
+                  <p style="margin: 0; color: #999;">Please try again later.</p>
+                </div>
+              `;
+            }
           });
       }
 
@@ -582,8 +697,41 @@
         }
       };
 
+      // Load journal entries on page load
+      function loadJournalEntries() {
+        fetch('/api/journal-entries')
+          .then(response => response.json())
+          .then(data => {
+            const journalGrid = document.getElementById('journalGrid');
+            if (data.success && data.entries && data.entries.length > 0) {
+              journalGrid.innerHTML = data.entries.map(entry => `
+                <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);transition:transform 0.2s;cursor:pointer" 
+                         onmouseover="this.style.transform='translateY(-4px)'" 
+                         onmouseout="this.style.transform='translateY(0)'"
+                         ${entry.link_url ? `onclick="window.open('${entry.link_url}', '_blank')"` : ''}>
+                  <div style="height:200px;background:#f5f5f5;background-image:url('${entry.image_url || 'https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
+                  <div style="padding:20px">
+                    <h3 style="margin:0 0 10px;font-size:18px;font-weight:600">${entry.title}</h3>
+                    <p style="margin:0;color:#666;line-height:1.5;font-size:14px">${entry.description || ''}</p>
+                    ${entry.link_url ? '<a href="' + entry.link_url + '" target="_blank" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>' : ''}
+                  </div>
+                </article>
+              `).join('');
+            } else {
+              journalGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;padding:40px">No journal entries available yet.</p>';
+            }
+          })
+          .catch(error => {
+            console.error('Error loading journal entries:', error);
+            const journalGrid = document.getElementById('journalGrid');
+            journalGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;padding:40px">No journal entries available yet.</p>';
+          });
+      }
+
       // Add click event to products
       document.addEventListener('DOMContentLoaded', function() {
+        loadJournalEntries();
+        setupOTPInputs();
         // Handle product card clicks to show detail modal
         document.querySelectorAll('.product').forEach(product => {
           product.addEventListener('click', function(e) {
@@ -618,6 +766,318 @@
           });
         });
       });
+
+      // ========== FORGOT PASSWORD MODAL ==========
+      let currentForgotPasswordStep = 1;
+      let forgotPasswordEmail = '';
+
+      function openForgotPasswordModal() {
+        document.getElementById('forgotPasswordModal').style.display = 'flex';
+        resetForgotPasswordModal();
+        // Re-initialize OTP inputs when modal opens
+        setTimeout(() => {
+          setupOTPInputs();
+        }, 100);
+      }
+
+      function closeForgotPasswordModal() {
+        document.getElementById('forgotPasswordModal').style.display = 'none';
+        resetForgotPasswordModal();
+      }
+
+      function resetForgotPasswordModal() {
+        currentForgotPasswordStep = 1;
+        forgotPasswordEmail = '';
+        document.getElementById('fpStep1').style.display = 'block';
+        document.getElementById('fpStep2').style.display = 'none';
+        document.getElementById('fpStep3').style.display = 'none';
+        document.getElementById('fpEmail').value = '';
+        document.querySelectorAll('.fp-otp-input').forEach(input => input.value = '');
+        document.getElementById('fpNewPassword').value = '';
+        document.getElementById('fpConfirmPassword').value = '';
+        document.getElementById('fpErrorMessage').style.display = 'none';
+        document.getElementById('fpSuccessMessage').style.display = 'none';
+      }
+
+      function showForgotPasswordError(message) {
+        const errorEl = document.getElementById('fpErrorMessage');
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        document.getElementById('fpSuccessMessage').style.display = 'none';
+      }
+
+      function showForgotPasswordSuccess(message) {
+        const successEl = document.getElementById('fpSuccessMessage');
+        successEl.textContent = message;
+        successEl.style.display = 'block';
+        document.getElementById('fpErrorMessage').style.display = 'none';
+      }
+
+      async function requestPasswordReset(e) {
+        e.preventDefault();
+        const email = document.getElementById('fpEmail').value.trim();
+        
+        if (!email) {
+          showForgotPasswordError('Please enter your email address');
+          return;
+        }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending OTP...';
+
+        try {
+          const response = await fetch('/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            forgotPasswordEmail = email;
+            showForgotPasswordSuccess(data.message || 'OTP sent successfully');
+            setTimeout(() => {
+              document.getElementById('fpStep1').style.display = 'none';
+              document.getElementById('fpStep2').style.display = 'block';
+              currentForgotPasswordStep = 2;
+              document.getElementById('fpSuccessMessage').style.display = 'none';
+            }, 1500);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'An error occurred');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      async function verifyResetOTP(e) {
+        e.preventDefault();
+        const otpInputs = document.querySelectorAll('.fp-otp-input');
+        const otp = Array.from(otpInputs).map(input => input.value).join('');
+
+        if (otp.length !== 6) {
+          showForgotPasswordError('Please enter the complete 6-digit code');
+          return;
+        }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+
+        try {
+          const response = await fetch('/verify-reset-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotPasswordEmail, otp })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showForgotPasswordSuccess('OTP verified! Please set your new password.');
+            setTimeout(() => {
+              document.getElementById('fpStep2').style.display = 'none';
+              document.getElementById('fpStep3').style.display = 'block';
+              currentForgotPasswordStep = 3;
+              document.getElementById('fpSuccessMessage').style.display = 'none';
+            }, 1500);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'Invalid OTP');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      async function resetPassword(e) {
+        e.preventDefault();
+        const newPassword = document.getElementById('fpNewPassword').value;
+        const confirmPassword = document.getElementById('fpConfirmPassword').value;
+
+        if (!newPassword || !confirmPassword) {
+          showForgotPasswordError('Please fill in both password fields');
+          return;
+        }
+
+        if (newPassword !== confirmPassword) {
+          showForgotPasswordError('Passwords do not match');
+          return;
+        }
+
+        if (newPassword.length < 6) {
+          showForgotPasswordError('Password must be at least 6 characters');
+          return;
+        }
+
+        if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+          showForgotPasswordError('Password must contain both letters and numbers');
+          return;
+        }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Resetting...';
+
+        try {
+          const response = await fetch('/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_password: newPassword })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showForgotPasswordSuccess('Password reset successful! Redirecting to login...');
+            setTimeout(() => {
+              closeForgotPasswordModal();
+              window.location.reload();
+            }, 2000);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'Password reset failed');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      async function resendResetOTP() {
+        const btn = document.getElementById('fpResendBtn');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+          const response = await fetch('/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotPasswordEmail })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showForgotPasswordSuccess('New OTP sent to your email!');
+            setTimeout(() => {
+              document.getElementById('fpSuccessMessage').style.display = 'none';
+            }, 3000);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'Failed to resend OTP');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      // OTP input auto-advance
+      function setupOTPInputs() {
+        const inputs = document.querySelectorAll('.fp-otp-input');
+        inputs.forEach((input, index) => {
+          input.addEventListener('input', (e) => {
+            if (e.target.value.length === 1 && index < inputs.length - 1) {
+              inputs[index + 1].focus();
+            }
+          });
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+              inputs[index - 1].focus();
+            }
+          });
+        });
+      }
+    </script>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+      <div style="background: white; border-radius: 20px; padding: 40px; max-width: 500px; width: 90%; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <button onclick="closeForgotPasswordModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+        
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 10px; color: #0a0a0a;">Reset Password</h2>
+        <p style="color: #777; margin-bottom: 30px; font-size: 14px;">Follow the steps to reset your password</p>
+
+        <!-- Error/Success Messages -->
+        <div id="fpErrorMessage" style="display: none; background: #fde8e8; color: #dc3545; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+        <div id="fpSuccessMessage" style="display: none; background: #d1e7dd; color: #198754; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+
+        <!-- Step 1: Enter Email -->
+        <form id="fpStep1" onsubmit="requestPasswordReset(event)">
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #0a0a0a; font-size: 14px;">Email Address</label>
+            <input type="email" id="fpEmail" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: 'Commissioner', sans-serif;" placeholder="Enter your email">
+          </div>
+          <button type="submit" style="width: 100%; padding: 14px; background: #0a0a0a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; font-family: 'Commissioner', sans-serif;">Send Reset Code</button>
+        </form>
+
+        <!-- Step 2: Enter OTP -->
+        <form id="fpStep2" style="display: none;" onsubmit="verifyResetOTP(event)">
+          <p style="color: #666; margin-bottom: 20px; font-size: 14px;">Enter the 6-digit code sent to your email</p>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+          </div>
+          <button type="submit" style="width: 100%; padding: 14px; background: #0a0a0a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-bottom: 10px; font-family: 'Commissioner', sans-serif;">Verify Code</button>
+          <button type="button" id="fpResendBtn" onclick="resendResetOTP()" style="width: 100%; padding: 12px; background: transparent; color: #0a0a0a; border: 1px solid #0a0a0a; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: 'Commissioner', sans-serif;">Resend Code</button>
+        </form>
+
+        <!-- Step 3: New Password -->
+        <form id="fpStep3" style="display: none;" onsubmit="resetPassword(event)">
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #0a0a0a; font-size: 14px;">New Password</label>
+            <div style="position: relative;">
+              <input type="password" id="fpNewPassword" required style="width: 100%; padding: 12px; padding-right: 45px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: 'Commissioner', sans-serif;" placeholder="Enter new password">
+              <button type="button" onclick="togglePasswordVisibility('fpNewPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 5px;">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #0a0a0a; font-size: 14px;">Confirm Password</label>
+            <div style="position: relative;">
+              <input type="password" id="fpConfirmPassword" required style="width: 100%; padding: 12px; padding-right: 45px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: 'Commissioner', sans-serif;" placeholder="Confirm new password">
+              <button type="button" onclick="togglePasswordVisibility('fpConfirmPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 5px;">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+              </button>
+            </div>
+            <p style="font-size: 12px; color: #777; margin-top: 5px;">Must be at least 6 characters with letters and numbers</p>
+          </div>
+          <button type="submit" style="width: 100%; padding: 14px; background: #0a0a0a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; font-family: 'Commissioner', sans-serif;">Reset Password</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // Password visibility toggle for modal
+      function togglePasswordVisibility(inputId, button) {
+        const input = document.getElementById(inputId);
+        if (input.type === 'password') {
+          input.type = 'text';
+          button.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>';
+        } else {
+          input.type = 'password';
+          button.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>';
+        }
+      }
     </script>
   </body>
 </html>

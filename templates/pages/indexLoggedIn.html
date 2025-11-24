@@ -9,6 +9,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
+      /* Ensure body is flex container for footer positioning */
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
       /* Top Bar */
       .top-bar {
         position: fixed;
@@ -179,6 +186,40 @@
         transform: translateY(0);
         pointer-events: all;
       }
+      .account-details-section {
+        padding: 16px 18px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .account-detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+      .account-detail-item:last-child {
+        margin-bottom: 0;
+      }
+      .account-detail-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-right: 12px;
+        flex-shrink: 0;
+      }
+      .account-detail-value {
+        font-size: 13px;
+        color: #0a0a0a;
+        font-weight: 400;
+        text-align: right;
+        word-break: break-word;
+      }
+      .dropdown-divider {
+        height: 1px;
+        background: #e5e7eb;
+        margin: 0;
+      }
       .dropdown-content a {
         color: #0a0a0a;
         padding: 14px 18px;
@@ -249,6 +290,7 @@
         margin-top: 75px;
         min-height: calc(100vh - 75px);
         background: #fafafa;
+        flex: 1;
       }
 
       @media (max-width: 768px) {
@@ -291,8 +333,6 @@
           <li><a href="javascript:void(0)" onclick="showSection('home')" class="active">Home</a></li>
           <li><a href="javascript:void(0)" onclick="showSection('browse')">Browse</a></li>
           <li><a href="javascript:void(0)" onclick="showSection('myOrders')">My Orders</a></li>
-          <li><a href="javascript:void(0)" onclick="showSection('trackOrder')">Track Order</a></li>
-          <li><a href="javascript:void(0)" onclick="showSection('journal')">Journal</a></li>
           <li><a href="javascript:void(0)" onclick="showSection('about')">About</a></li>
         </ul>
       </div>
@@ -300,12 +340,18 @@
         <button class="user-button" onclick="toggleUserDropdown()">
           <div class="user-button-icon" id="buyerInitial">U</div>
           <div class="user-button-text">
-            <span class="user-button-label">Account</span>
             <span id="buyerFirstName" style="font-weight: 600;">User</span>
           </div>
           <span class="user-button-arrow">▼</span>
         </button>
         <div id="userDropdown" class="dropdown-content">
+          <a href="{{ url_for('account_details') }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Account Details
+          </a>
           <a href="javascript:void(0)" onclick="confirmLogout()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -329,6 +375,7 @@
     <!-- Main Content -->
     <div class="main-content">
       <!-- Hero Section (Home Only) -->
+      <!-- Hero Section -->
       <section id="heroSection" style="display:block">
         <div style="background:#0a0a0a;color:#fff;min-height:500px;display:flex;align-items:center;justify-content:center;padding:80px 20px">
           <div style="max-width:700px;text-align:left">
@@ -339,15 +386,12 @@
         </div>
       </section>
 
-      <!-- Featured Products Section (Home) -->
-      <section id="home" class="content-section" style="display:block">
-        <div class="container">
-          <h2 style="margin:40px 0 30px;text-align:center">Featured Collection</h2>
-          <div id="featuredGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;margin-bottom:40px">
-            <!-- Featured products will be loaded here from database -->
-          </div>
-          <div style="text-align:center">
-            <a href="javascript:void(0)" onclick="showSection('browse')" class="btn-cta">View All Products</a>
+      <!-- Journal Section on Homepage -->
+      <section id="journalSection" style="background:#fafafa;padding:60px 20px;min-height:calc(100vh - 75px)">
+        <div class="container" style="max-width:1200px;margin:0 auto">
+          <h2 style="margin:0 0 40px;text-align:center;font-size:32px;font-weight:600">Journal</h2>
+          <div id="journalGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;margin-bottom:40px">
+            <!-- Journal entries will be loaded here from database -->
           </div>
         </div>
       </section>
@@ -387,34 +431,25 @@
       </div>
 
       <div id="browse" class="content-section" style="display:none">
-        <div class="container">
+        <div class="container" style="padding-bottom:60px">
           <h2 style="margin:24px 0">Browse Collection</h2>
-          <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
-            <!-- Products will be loaded here -->
+          
+          <!-- Search and Filter Bar -->
+          <div style="display:flex;gap:12px;margin-bottom:24px;align-items:center;flex-wrap:wrap">
+            <div style="flex:1;min-width:250px;position:relative">
+              <input type="text" id="browseSearch" placeholder="Search products..." style="width:100%;padding:12px 16px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none" onkeyup="handleBrowseSearch(event)">
+              <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#999;pointer-events:none">🔍</span>
+            </div>
+            <div style="min-width:200px">
+              <select id="browseCategoryFilter" style="width:100%;padding:12px 16px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none;background:#fff;cursor:pointer" onchange="handleBrowseFilter()">
+                <option value="">All Categories</option>
+                <!-- Categories will be loaded here -->
+              </select>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div id="journal" class="content-section" style="display:none">
-        <div class="container">
-          <h2 style="margin:24px 0">Journal</h2>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px">
-            <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-              <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
-              <div style="padding:20px">
-                <h3 style="margin:0 0 10px">Style Guide: Fall 2025</h3>
-                <p style="margin:0;color:#666;line-height:1.5">Explore our comprehensive guide to fall fashion trends and essential pieces for your wardrobe.</p>
-                <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>
-              </div>
-            </article>
-            <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-              <div style="height:200px;background:#f5f5f5;background-image:url('https://images.unsplash.com/photo-1610963876305-c8e7cb43a09b?q=80&w=800&auto=format&fit=crop');background-size:cover"></div>
-              <div style="padding:20px">
-                <h3 style="margin:0 0 10px">Sustainable Fashion</h3>
-                <p style="margin:0;color:#666;line-height:1.5">Learn about our commitment to sustainable practices and ethical fashion production.</p>
-                <a href="#" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>
-              </div>
-            </article>
+          
+          <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;margin-bottom:40px">
+            <!-- Products will be loaded here -->
           </div>
         </div>
       </div>
@@ -430,6 +465,43 @@
         </div>
       </div>
     </div>
+
+    <footer class="site-footer">
+      <div class="footer-grid">
+        <div>
+          <h4>Varón</h4>
+          <p class="muted">Minimal, responsibly-made apparel. Clean silhouettes and timeless staples.</p>
+        </div>
+        <div>
+          <h5>Shop</h5>
+          <ul>
+            <li><a href="#">All Products</a></li>
+            <li><a href="#">New Arrivals</a></li>
+            <li><a href="#">Best Sellers</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Genres</h5>
+          <ul>
+            <li><a href="#">Tops</a></li>
+            <li><a href="#">Bottoms</a></li>
+            <li><a href="#">Outerwear</a></li>
+            <li><a href="#">Accessories</a></li>
+          </ul>
+        </div>
+        <div>
+          <h5>Partners</h5>
+          <ul>
+            <li><a href="{{ url_for('signup_seller') }}" id="footerSeller">Register as a seller</a></li>
+            <li><a href="{{ url_for('signup_rider') }}" id="footerRider">Register as a rider</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-brand">Varón — Minimal Apparel</div>
+        <small>© <span class="muted">2025</span></small>
+      </div>
+    </footer>
 
     <!-- Cart Modal -->
     <div id="cartModal" class="modal" aria-hidden="true">
@@ -530,22 +602,30 @@
           section.style.display = 'none';
         });
 
-        // Hide/show hero section based on which section is active
+        // Get hero and journal sections
         const heroSection = document.getElementById('heroSection');
-        if (sectionName === 'home') {
-          heroSection.style.display = 'block';
-        } else {
-          heroSection.style.display = 'none';
-        }
+        const journalSection = document.getElementById('journalSection');
 
-        // Show selected section
-        const targetSection = document.getElementById(sectionName);
-        if (targetSection) {
-          targetSection.style.display = 'block';
+        // Show/hide hero and journal based on section
+        if (sectionName === 'home') {
+          // Show hero and journal on home
+          if (heroSection) heroSection.style.display = 'block';
+          if (journalSection) journalSection.style.display = 'block';
+        } else {
+          // Hide hero and journal on other sections
+          if (heroSection) heroSection.style.display = 'none';
+          if (journalSection) journalSection.style.display = 'none';
+          
+          // Show selected section
+          const targetSection = document.getElementById(sectionName);
+          if (targetSection) {
+            targetSection.style.display = 'block';
+          }
         }
 
         // Load data for specific sections
         if (sectionName === 'browse') {
+          loadCategories();
           loadBrowseProducts();
         } else if (sectionName === 'myOrders') {
           loadMyOrders();
@@ -578,17 +658,21 @@
         }
       }
 
-      // Fetch the buyer's first name on page load
+      // Fetch the buyer's account details on page load
       window.addEventListener('DOMContentLoaded', (event) => {
         fetch('/get_buyer_name')
           .then(response => response.json())
           .then(data => {
-            const firstName = data.firstName;
+            const firstName = data.firstName || 'User';
+            const lastName = data.lastName || '';
+            const email = data.email || '-';
+            const phone = data.phone || '-';
+            
+            // Update button
             document.getElementById('buyerFirstName').textContent = firstName;
-            // Set the initial in the icon circle
             document.getElementById('buyerInitial').textContent = firstName.charAt(0).toUpperCase();
           })
-          .catch(error => console.error('Error fetching buyer name:', error));
+          .catch(error => console.error('Error fetching buyer details:', error));
 
         // Load cart count from database
         if (window.VaronCart) {
@@ -598,9 +682,40 @@
         // Show home section by default
         showSection('home');
 
-        // Load featured products on home
-        loadFeaturedProducts();
+        // Load journal entries on home
+        loadJournalEntries();
       });
+
+      // Load journal entries from API
+      function loadJournalEntries() {
+        fetch('/api/journal-entries')
+          .then(response => response.json())
+          .then(data => {
+            const journalGrid = document.getElementById('journalGrid');
+            if (data.success && data.entries && data.entries.length > 0) {
+              journalGrid.innerHTML = data.entries.map(entry => `
+                <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);transition:transform 0.2s;cursor:pointer" 
+                         onmouseover="this.style.transform='translateY(-4px)'" 
+                         onmouseout="this.style.transform='translateY(0)'"
+                         ${entry.link_url ? `onclick="window.open('${entry.link_url}', '_blank')"` : ''}>
+                  <div style="height:200px;background:#f5f5f5;background-image:url('${entry.image_url || 'https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
+                  <div style="padding:20px">
+                    <h3 style="margin:0 0 10px;font-size:18px;font-weight:600">${entry.title}</h3>
+                    <p style="margin:0;color:#666;line-height:1.5;font-size:14px">${entry.description || ''}</p>
+                    ${entry.link_url ? '<a href="' + entry.link_url + '" target="_blank" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>' : ''}
+                  </div>
+                </article>
+              `).join('');
+            } else {
+              journalGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;padding:40px">No journal entries available yet.</p>';
+            }
+          })
+          .catch(error => {
+            console.error('Error loading journal entries:', error);
+            const journalGrid = document.getElementById('journalGrid');
+            journalGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;padding:40px">No journal entries available yet.</p>';
+          });
+      }
 
       // Load featured products from API (for home section)
       function loadFeaturedProducts() {
@@ -640,18 +755,130 @@
           .catch(error => console.error('Error loading featured products:', error));
       }
 
+      // Helper function to generate color swatch background (supports multi-color)
+      function getColorBackground(colorName) {
+        const colorHex = {
+          'Black': '#000000', 'White': '#FFFFFF', 'Gray': '#808080', 'Grey': '#808080',
+          'Navy': '#000080', 'Blue': '#0000FF', 'Red': '#FF0000', 'Pink': '#FFC0CB',
+          'Green': '#008000', 'Brown': '#8B4513', 'Beige': '#F5F5DC', 'Cream': '#FFFDD0',
+          'Khaki': '#C3B091', 'Burgundy': '#800020', 'Olive': '#808000', 'Orange': '#FF8C00',
+          'Charcoal': '#36454F', 'Yellow': '#FFD700', 'Purple': '#800080', 'Violet': '#8B00FF',
+          'Maroon': '#800000', 'Tan': '#D2B48C', 'Ivory': '#FFFFF0', 'Silver': '#C0C0C0',
+          'Gold': '#FFD700', 'Indigo': '#4B0082', 'Teal': '#008080', 'Cyan': '#00FFFF'
+        };
+        
+        // Check if color contains a slash (multi-color)
+        if (colorName.includes('/')) {
+          const colors = colorName.split('/').map(c => c.trim());
+          const gradientColors = colors.map(c => {
+            let hex = colorHex[c];
+            if (!hex) {
+              const colorLower = c.toLowerCase();
+              for (const [key, value] of Object.entries(colorHex)) {
+                if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
+                  hex = value;
+                  break;
+                }
+              }
+            }
+            if (!hex) hex = '#' + c.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0'), 0).substr(0, 6);
+            return hex;
+          });
+          
+          if (colors.length === 2) {
+            return `linear-gradient(135deg, ${gradientColors[0]} 50%, ${gradientColors[1]} 50%)`;
+          } else if (colors.length === 3) {
+            return `linear-gradient(135deg, ${gradientColors[0]} 33%, ${gradientColors[1]} 33%, ${gradientColors[1]} 66%, ${gradientColors[2]} 66%)`;
+          } else {
+            const percentPerColor = 100 / colors.length;
+            let gradient = 'linear-gradient(135deg';
+            gradientColors.forEach((hex, i) => {
+              gradient += `, ${hex} ${i * percentPerColor}%, ${hex} ${(i + 1) * percentPerColor}%`;
+            });
+            gradient += ')';
+            return gradient;
+          }
+        } else {
+          // Single color
+          let hex = colorHex[colorName];
+          if (!hex) {
+            const colorLower = colorName.toLowerCase();
+            for (const [key, value] of Object.entries(colorHex)) {
+              if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
+                hex = value;
+                break;
+              }
+            }
+          }
+          if (!hex) hex = '#' + colorName.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0'), 0).substr(0, 6);
+          return hex;
+        }
+      }
+
       // Load browse products from API
-      function loadBrowseProducts() {
-        fetch('/api/products')
+      // Load categories for filter dropdown
+      function loadCategories() {
+        fetch('/api/categories')
           .then(response => response.json())
           .then(data => {
-            if (data.success && data.products) {
-              const browseGrid = document.getElementById('browseGrid');
+            if (data.success && data.categories) {
+              const categoryFilter = document.getElementById('browseCategoryFilter');
+              if (categoryFilter) {
+                // Clear existing options except "All Categories"
+                categoryFilter.innerHTML = '<option value="">All Categories</option>';
+                data.categories.forEach(category => {
+                  const option = document.createElement('option');
+                  option.value = category.id;
+                  option.textContent = category.name;
+                  categoryFilter.appendChild(option);
+                });
+              }
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching categories:', error);
+          });
+      }
+
+      // Handle search input
+      let searchTimeout;
+      function handleBrowseSearch(event) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          loadBrowseProducts();
+        }, 300); // Debounce search by 300ms
+      }
+
+      // Handle category filter change
+      function handleBrowseFilter() {
+        loadBrowseProducts();
+      }
+
+      function loadBrowseProducts() {
+        const searchInput = document.getElementById('browseSearch');
+        const categoryFilter = document.getElementById('browseCategoryFilter');
+        
+        const search = searchInput ? searchInput.value.trim() : '';
+        const categoryId = categoryFilter ? categoryFilter.value : '';
+        
+        // Build query string
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (categoryId) params.append('category_id', categoryId);
+        params.append('limit', '50');
+        
+        fetch(`/api/products?${params.toString()}`)
+          .then(response => response.json())
+          .then(data => {
+            const browseGrid = document.getElementById('browseGrid');
+            if (!browseGrid) return;
+            
+            if (data.success && data.products && data.products.length > 0) {
               browseGrid.innerHTML = data.products.map(product => {
                 const colorSwatches = product.colors && product.colors.length > 0 
                   ? `<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
                       ${product.colors.slice(0, 5).map(color => `
-                        <div style="width:20px;height:20px;border-radius:50%;background:${color};border:1px solid #e0e0e0;" title="${color}"></div>
+                        <div style="width:20px;height:20px;border-radius:50%;background:${getColorBackground(color)};border:1px solid #e0e0e0;" title="${color}"></div>
                       `).join('')}
                       ${product.colors.length > 5 ? `<span style="font-size:11px;color:#999;align-self:center;">+${product.colors.length - 5}</span>` : ''}
                     </div>`
@@ -671,12 +898,25 @@
                 `;
               }).join('');
             } else {
-              document.getElementById('browseGrid').innerHTML = '<p style="color:#999;text-align:center;grid-column:1/-1;padding:40px">No products available</p>';
+              browseGrid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+                  <h3 style="margin: 0 0 12px; color: #666;">No Products Found</h3>
+                  <p style="margin: 0; color: #999;">Try adjusting your search or filter criteria.</p>
+                </div>
+              `;
             }
           })
           .catch(error => {
             console.error('Error loading products:', error);
-            document.getElementById('browseGrid').innerHTML = '<p style="color:#ef4444;text-align:center;grid-column:1/-1;padding:40px">Error loading products</p>';
+            const browseGrid = document.getElementById('browseGrid');
+            if (browseGrid) {
+              browseGrid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
+                  <h3 style="margin: 0 0 12px; color: #ef4444;">Error Loading Products</h3>
+                  <p style="margin: 0; color: #999;">Please try again later.</p>
+                </div>
+              `;
+            }
           });
       }
 
@@ -747,7 +987,12 @@
           .then(data => {
             const ordersList = document.getElementById('myOrdersList');
             if (data.success && data.orders && data.orders.length > 0) {
-              ordersList.innerHTML = data.orders.map(order => `
+              ordersList.innerHTML = data.orders.map(order => {
+                const orderId = order.id || order.order_id;
+                if (!orderId) {
+                  console.error('Order ID missing!', order);
+                }
+                return `
                 <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
                     <div>
@@ -757,11 +1002,12 @@
                     <span style="background:#3b82f6;color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">${order.status}</span>
                   </div>
                   <div style="margin-bottom:16px">
-                    <p style="margin:0;font-weight:600">Total: ₱${parseFloat(order.total_amount).toFixed(2)}</p>
+                    <p style="margin:0;font-weight:600">Total: ₱${parseFloat(order.total_amount || 0).toFixed(2)}</p>
                   </div>
-                  <a href="/order/${order.id}" style="color:#3b82f6;text-decoration:none;font-weight:500">View Details →</a>
+                  <a href="/order/${orderId}" style="color:#3b82f6;text-decoration:none;font-weight:500">View Details →</a>
                 </div>
-              `).join('');
+              `;
+              }).join('');
             } else {
               ordersList.innerHTML = '<div style="text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Orders Yet</h3><p style="color:#999;margin:0">Your order history will appear here.</p></div>';
             }

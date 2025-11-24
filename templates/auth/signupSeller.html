@@ -263,25 +263,50 @@
 							<input id="shopName" name="shop_name" class="form-input" type="text" placeholder="My Shop" required />
 						</div>
 
-						<div class="form-group">
-							<label for="sellerEmail">Email address</label>
-							<input id="sellerEmail" name="email" class="form-input" type="email" placeholder="you@business.com" required />
-						</div>
+					<div class="form-group">
+						<label for="sellerEmail">Email address</label>
+						<input id="sellerEmail" name="email" class="form-input" type="email" placeholder="you@business.com" value="{{ user_email or '' }}" {% if user_email %}readonly style="background-color: #f3f4f6; cursor: not-allowed;"{% endif %} required />
+						{% if user_email %}
+						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">Using your logged-in email address</small>
+						{% endif %}
+					</div>
 
-						<div class="form-group">
-							<label for="sellerPhone">Contact number</label>
-							<input id="sellerPhone" name="phone" class="form-input" type="tel" placeholder="+63 9xx xxx xxxx" pattern="[0-9\+\-\s]{7,20}" required />
-						</div>
+					<div class="form-group">
+						<label for="sellerPhone">Contact number</label>
+						<input id="sellerPhone" name="phone" class="form-input" type="tel" value="+63 " placeholder="+63 9xx xxx xxxx" pattern="[0-9\+\-\s]{7,20}" required />
+					</div>
 
-						<div class="form-group">
-							<label for="sellerPassword">Create password</label>
-							<input id="sellerPassword" name="password" class="form-input" type="password" placeholder="Choose a secure password" minlength="8" required />
+					<div class="form-group">
+						<label for="sellerPassword">Create password</label>
+						<div style="position: relative;">
+							<input id="sellerPassword" name="password" class="form-input" type="password" placeholder="At least 6 characters with letters and numbers" minlength="6" required style="padding-right: 45px;" />
+							<button type="button" onclick="togglePasswordVisibility('sellerPassword', 'toggleSellerPassword')" id="toggleSellerPassword" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+								<svg id="toggleSellerPasswordIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7280;">
+									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+									<circle cx="12" cy="12" r="3"></circle>
+								</svg>
+							</button>
 						</div>
+						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">Must be at least 6 characters with both letters and numbers</small>
+					</div>
 
-						<div class="tnc-row">
-							<input id="sellerTnc" name="tnc" type="checkbox" required />
-							<label for="sellerTnc">I agree to the <a href="/terms" target="_blank">Terms &amp; Conditions</a></label>
+					<div class="form-group">
+						<label for="sellerConfirmPassword">Confirm password</label>
+						<div style="position: relative;">
+							<input id="sellerConfirmPassword" name="confirm_password" class="form-input" type="password" placeholder="Re-enter your password" minlength="6" required style="padding-right: 45px;" />
+							<button type="button" onclick="togglePasswordVisibility('sellerConfirmPassword', 'toggleSellerConfirmPassword')" id="toggleSellerConfirmPassword" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+								<svg id="toggleSellerConfirmPasswordIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7280;">
+									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+									<circle cx="12" cy="12" r="3"></circle>
+								</svg>
+							</button>
 						</div>
+					</div>
+
+					<div class="tnc-row">
+						<input id="sellerTnc" name="tnc" type="checkbox" required />
+						<label for="sellerTnc">I agree to the <a href="/terms" target="_blank">Terms &amp; Conditions</a></label>
+					</div>
 
 						<button type="submit" class="btn">Create seller account</button>
 
@@ -292,6 +317,43 @@
 		</div>
 
 		<script>
+			// Toggle password visibility
+			function togglePasswordVisibility(inputId, buttonId) {
+				const input = document.getElementById(inputId);
+				const icon = document.getElementById(buttonId + 'Icon');
+				if (input.type === 'password') {
+					input.type = 'text';
+					// Change to eye-off icon
+					icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+				} else {
+					input.type = 'password';
+					// Change back to eye icon
+					icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+				}
+			}
+
+			// Auto-format phone number with +63 prefix
+			const sellerPhoneInput = document.getElementById('sellerPhone');
+			sellerPhoneInput.addEventListener('input', function(e) {
+				let value = e.target.value;
+				// Always ensure +63 prefix
+				if (!value.startsWith('+63')) {
+					value = '+63 ' + value.replace(/^\+63\s*/, '');
+					e.target.value = value;
+				}
+				// Prevent deleting the +63 prefix
+				if (value.length < 4) {
+					e.target.value = '+63 ';
+				}
+			});
+			
+			sellerPhoneInput.addEventListener('keydown', function(e) {
+				// Prevent backspace from deleting the +63 prefix
+				if (e.key === 'Backspace' && e.target.selectionStart <= 4) {
+					e.preventDefault();
+				}
+			});
+
 			document.getElementById('sellerSignup').addEventListener('submit', function(e) {
 				e.preventDefault();
 				const form = e.target;
@@ -300,9 +362,26 @@
 				// Validate required fields
 				const email = formData.get('email');
 				const password = formData.get('password');
+				const confirmPassword = formData.get('confirm_password');
 				const phone = formData.get('phone');
 				const shopName = formData.get('shop_name');
 				const tnc = formData.get('tnc');
+				
+				// Check if passwords match
+				const errorDiv = document.getElementById('errorDisplay');
+				if (password !== confirmPassword) {
+					errorDiv.textContent = 'Passwords do not match';
+					errorDiv.style.display = 'block';
+					return;
+				}
+				
+				// Validate password strength (at least 6 characters with letters and numbers)
+				const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+				if (!passwordRegex.test(password)) {
+					errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
+					errorDiv.style.display = 'block';
+					return;
+				}
 
 				// Create error message div if it doesn't exist
 				let errorDiv = document.querySelector('.alert-error');
@@ -338,8 +417,7 @@
 
 				// Check Terms & Conditions
 				if (!tnc) {
-					errorDiv.textContent = 'Please agree to the Terms & Conditions to continue';
-					errorDiv.style.display = 'block';
+					alert('Please agree to the Terms & Conditions to continue');
 					return;
 				}
 
@@ -360,8 +438,13 @@
 						// Redirect to OTP verification page
 						window.location.href = data.redirect;
 					} else {
-						errorDiv.textContent = data.message;
-						errorDiv.style.display = 'block';
+						// Show popup for phone number already used
+						if (data.message.includes('phone number') || data.message.includes('Phone number')) {
+							alert(data.message);
+						} else {
+							errorDiv.textContent = data.message;
+							errorDiv.style.display = 'block';
+						}
 						submitBtn.disabled = false;
 						submitBtn.textContent = originalText;
 					}

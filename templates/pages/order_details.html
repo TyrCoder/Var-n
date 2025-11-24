@@ -191,9 +191,9 @@
       <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
       <h1 class="brand"><a href="/" style="color:#fff;text-decoration:none">Varón</a></h1>
       <nav class="top-nav" id="topNav">
-        <a href="{{ url_for('buyer_dashboard') }}">Home</a>
-        <a href="{{ url_for('buyer_dashboard') }}">Browse</a>
-        <a href="{{ url_for('buyer_dashboard') }}#myOrders">My Orders</a>
+        <a href="/indexLoggedIn.html#home">Home</a>
+        <a href="/indexLoggedIn.html#browse">Browse</a>
+        <a href="/indexLoggedIn.html#myOrders">My Orders</a>
         <div class="user-dropdown">
           <button class="user-button" onclick="toggleUserDropdown()">
             <span id="buyerFirstName">
@@ -212,7 +212,7 @@
     </header>
 
     <div class="order-details-container">
-      <a href="{{ url_for('buyer_dashboard') }}#myOrders" class="btn-back">← Back to Orders</a>
+      <a href="/indexLoggedIn.html#myOrders" class="btn-back">← Back to Orders</a>
       
       <!-- Order Header -->
       <div class="detail-card">
@@ -221,8 +221,10 @@
             <h1 style="margin:0 0 8px;font-size:28px">Order #{{ order.order_number }}</h1>
             <p style="margin:0;color:#666">Placed on {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
           </div>
-          <span class="status-badge" style="background:{{ status_colors[order.order_status]['bg'] }};color:{{ status_colors[order.order_status]['color'] }}">
-            {{ status_colors[order.order_status]['emoji'] }} {{ order.order_status.upper() }}
+          {% set status = order.order_status or 'pending' %}
+          {% set status_info = status_colors.get(status, status_colors.get('pending')) %}
+          <span class="status-badge" style="background:{{ status_info['bg'] }};color:{{ status_info['color'] }}">
+            {{ status_info['emoji'] }} {{ status.upper() }}
           </span>
         </div>
         
@@ -475,7 +477,7 @@
 
       <!-- Action Buttons -->
       <div class="detail-card" style="display:flex;gap:12px;justify-content:flex-end">
-        <a href="{{ url_for('buyer_dashboard') }}#myOrders" class="btn-back" style="margin:0">Back to Orders</a>
+        <a href="/indexLoggedIn.html#myOrders" class="btn-back" style="margin:0">Back to Orders</a>
         {% if order.order_status == 'pending' %}
         <button onclick="cancelOrder('{{ order.order_number }}')" style="padding:10px 20px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">
           Cancel Order

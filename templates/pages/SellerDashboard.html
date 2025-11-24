@@ -19,6 +19,7 @@
       .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
       .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea;cursor:pointer}
       .side-link.active,.side-link:hover{background:#141414;color:#fff}
+      .order-count-badge{background:#ef4444;color:#fff;border-radius:999px;padding:2px 6px;font-size:10px;font-weight:600;min-width:18px;text-align:center;margin-left:auto}
 
       .content{display:flex;flex-direction:column}
       .topbar{display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;position:sticky;top:0;z-index:5}
@@ -104,7 +105,10 @@
           <a class="side-link" href="#" data-page="products">Products</a>
           <a class="side-link" href="#" data-page="add-product" style="padding-left: 24px; font-size: 14px;">+ Add Product</a>
           <a class="side-link" href="#" data-page="archived-products">Archived Products</a>
-          <a class="side-link" href="#" data-page="orders">Orders</a>
+          <a class="side-link" href="#" data-page="orders" id="orders-link">
+            Orders
+            <span class="order-count-badge" id="order-count-badge" style="display:none;background:#ef4444;color:#fff;border-radius:999px;padding:2px 6px;font-size:10px;margin-left:auto;">0</span>
+          </a>
           <a class="side-link" href="#" data-page="inventory">Inventory</a>
           <a class="side-link" href="#" data-page="reviews">Customer Reviews</a>
           <a class="side-link" href="#" data-page="promotions">Promotions</a>
@@ -118,7 +122,6 @@
           <div class="side-title">Settings</div>
           <a class="side-link" href="#" data-page="store-settings">Store Settings</a>
           <a class="side-link" href="#" data-page="account">Account</a>
-          <a class="side-link" href="#" onclick="confirmLogout(event)">Logout</a>
         </div>
       </aside>
 
@@ -132,6 +135,7 @@
             <span class="tag status-badge {% if seller and seller.status == 'approved' %}status-active{% else %}status-pending{% endif %}">
               {{ seller.status.title() if seller else 'Pending' }}
             </span>
+            <a href="#" onclick="confirmLogout(event); return false;" style="margin-left: 10px; padding: 8px 16px; background: #ef4444; color: #fff; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500;">Logout</a>
           </div>
         </div>
 
@@ -318,19 +322,13 @@
                 
                 <div>
                   <label style="display: block; margin-bottom: 6px; font-weight: 500;">Category/Genre *</label>
-                  <select id="categorySelect" name="category" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" onchange="toggleSizeColorSections()">
+                  <select id="categorySelect" name="category_id" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" onchange="toggleSizeColorSections()">
                     <option value="">Select a category</option>
-                    <option value="shirts">Shirts & T-Shirts</option>
-                    <option value="pants">Pants & Jeans</option>
-                    <option value="shorts">Shorts</option>
-                    <option value="jackets">Jackets & Coats</option>
-                    <option value="shoes">Shoes & Footwear</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="underwear">Underwear & Socks</option>
-                    <option value="activewear">Activewear & Sports</option>
-                    <option value="formal">Formal Wear</option>
-                    <option value="casual">Casual Wear</option>
-                    <option value="grooming">Grooming Products</option>
+                    {% if categories %}
+                      {% for category in categories %}
+                        <option value="{{ category.id }}" data-slug="{{ category.slug }}">{{ category.name }}</option>
+                      {% endfor %}
+                    {% endif %}
                   </select>
                 </div>
                 
@@ -366,95 +364,140 @@
                 
                 <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="sizesSection">
                   <h3 style="margin: 0 0 12px; font-size: 16px;">Available Sizes *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all sizes available for this product</small>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select sizes or add custom sizes below</small>
+                  
+                  <!-- Clothing Sizes (default) -->
+                  <div id="clothingSizes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="XS" style="margin-right: 6px;">
+                      <input type="checkbox" name="sizes" value="XS" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>XS</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="S" style="margin-right: 6px;">
+                      <input type="checkbox" name="sizes" value="S" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>S</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="M" style="margin-right: 6px;">
+                      <input type="checkbox" name="sizes" value="M" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>M</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="L" style="margin-right: 6px;">
+                      <input type="checkbox" name="sizes" value="L" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>L</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="XL" style="margin-right: 6px;">
+                      <input type="checkbox" name="sizes" value="XL" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>XL</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="2XL" style="margin-right: 6px;">
+                      <input type="checkbox" name="sizes" value="2XL" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>2XL</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="3XL" style="margin-right: 6px;">
+                      <input type="checkbox" name="sizes" value="3XL" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>3XL</span>
                     </label>
                   </div>
+                  
+                  <!-- Shoe Sizes (hidden by default) -->
+                  <div id="shoeSizes" style="display: none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="6" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>6</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="7" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>7</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="8" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>8</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="9" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>9</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="10" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>10</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="11" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>11</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="12" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>12</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                      <input type="checkbox" name="sizes" value="13" style="margin-right: 6px;" onchange="updateStockInputs()">
+                      <span>13</span>
+                    </label>
+                  </div>
+                  
                   <div style="margin-top: 12px;">
                     <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s)</label>
                     <input type="text" id="custom-sizes" placeholder="e.g. 4XL, 5XL, 28W, 32W (comma-separated)" 
-                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;">
-                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom sizes separated by commas if not listed above</small>
+                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" 
+                      oninput="updateStockInputs()" 
+                      onchange="updateStockInputs()" 
+                      onblur="updateStockInputs()">
+                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">You can type here even without checking boxes above</small>
                   </div>
                 </div>
                 
                 <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="colorsSection">
                   <h3 style="margin: 0 0 12px; font-size: 16px;">Available Colors *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select all colors available for this product</small>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select colors or add custom colors below</small>
                   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Black" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Black" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Black</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="White" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="White" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>White</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Gray" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Gray" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Gray</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Navy" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Navy" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Navy</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Blue" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Blue" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Blue</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Red" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Red" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Red</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Green" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Green" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Green</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Brown" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Brown" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Brown</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Beige" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Beige" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Beige</span>
                     </label>
                     <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Khaki" style="margin-right: 6px;">
+                      <input type="checkbox" name="colors" value="Khaki" style="margin-right: 6px;" onchange="updateStockInputs()">
                       <span>Khaki</span>
                     </label>
                   </div>
                   <div style="margin-top: 12px;">
                     <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Color(s)</label>
                     <input type="text" id="custom-colors" placeholder="e.g. Burgundy, Olive, Charcoal (comma-separated)" 
-                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;">
-                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Enter custom colors separated by commas if not listed above</small>
+                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" 
+                      oninput="updateStockInputs()" 
+                      onchange="updateStockInputs()" 
+                      onblur="updateStockInputs()">
+                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">You can type here even without checking boxes above</small>
                   </div>
                 </div>
                 
@@ -532,7 +575,7 @@
               <h2 style="margin: 0 0 16px;">Order Management</h2>
               
               <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                <button class="action-btn" data-filter-btn="all" onclick="filterOrders('all')" style="background: #0a0a0a; color: #fff; padding: 8px 16px; font-size: 13px;">
+                <button class="action-btn" data-filter-btn="all" onclick="filterOrders('all')" style="background: #666; color: #fff; padding: 8px 16px; font-size: 13px;">
                   📋 All Orders
                 </button>
                 <button class="action-btn" data-filter-btn="pending" onclick="filterOrders('pending')" style="background: #ff9800; color: #fff; padding: 8px 16px; font-size: 13px;">
@@ -541,11 +584,8 @@
                 <button class="action-btn" data-filter-btn="confirmed" onclick="filterOrders('confirmed')" style="background: #2196f3; color: #fff; padding: 8px 16px; font-size: 13px;">
                   ✔️ Confirmed
                 </button>
-                <button class="action-btn" data-filter-btn="processing" onclick="filterOrders('processing')" style="background: #ff5722; color: #fff; padding: 8px 16px; font-size: 13px;">
-                  🔄 Processing
-                </button>
-                <button class="action-btn" data-filter-btn="shipped" onclick="filterOrders('shipped')" style="background: #4caf50; color: #fff; padding: 8px 16px; font-size: 13px;">
-                  📦 Shipped
+                <button class="action-btn" data-filter-btn="release_to_rider" onclick="filterOrders('release_to_rider')" style="background: #4caf50; color: #fff; padding: 8px 16px; font-size: 13px;">
+                  🚚 Release to Rider
                 </button>
               </div>
               
@@ -621,9 +661,27 @@
         const stockSection = document.getElementById('size-color-stocks');
         const ingredientsSection = document.getElementById('ingredientsSection');
         const ingredientsInput = document.getElementById('ingredients');
+        const clothingSizes = document.getElementById('clothingSizes');
+        const shoeSizes = document.getElementById('shoeSizes');
         
         if (categorySelect && sizesSection && colorsSection && stockSection) {
-          if (categorySelect.value === 'grooming') {
+          const categoryId = categorySelect.value;
+          const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+          const categorySlug = selectedOption ? selectedOption.getAttribute('data-slug') || '' : '';
+          
+          if (!categoryId) {
+            // No category selected, hide all sections
+            sizesSection.style.display = 'none';
+            colorsSection.style.display = 'none';
+            stockSection.style.display = 'none';
+            if (ingredientsSection) ingredientsSection.style.display = 'none';
+            return;
+          }
+          
+          // Check if it's a grooming category (check slug or name)
+          const isGrooming = categorySlug && (categorySlug.toLowerCase().includes('grooming') || selectedOption.textContent.toLowerCase().includes('grooming'));
+          
+          if (isGrooming) {
             // Hide sizes, colors, and stock sections for grooming products
             sizesSection.style.display = 'none';
             colorsSection.style.display = 'none';
@@ -638,19 +696,64 @@
             // Remove required attribute from checkboxes
             document.querySelectorAll('input[name="sizes"], input[name="colors"]').forEach(input => {
               input.removeAttribute('required');
+              input.checked = false; // Uncheck all
             });
-          } else {
-            // Show sections for other categories
+          } else if (categorySlug && (categorySlug.toLowerCase().includes('shoe') || categorySlug.toLowerCase().includes('footwear') || selectedOption.textContent.toLowerCase().includes('shoe'))) {
+            // Show sizes and colors sections for shoes
             sizesSection.style.display = 'block';
             colorsSection.style.display = 'block';
             stockSection.style.display = 'block';
+            
+            // Show shoe sizes, hide clothing sizes
+            if (clothingSizes) clothingSizes.style.display = 'none';
+            if (shoeSizes) shoeSizes.style.display = 'grid';
+            
+            // Uncheck clothing sizes
+            document.querySelectorAll('#clothingSizes input[name="sizes"]').forEach(input => {
+              input.checked = false;
+            });
+            
+            // Hide ingredients section
+            if (ingredientsSection) {
+              ingredientsSection.style.display = 'none';
+              if (ingredientsInput) ingredientsInput.required = false;
+            }
+            
+            // Update placeholder for custom sizes
+            const customSizesInput = document.getElementById('custom-sizes');
+            if (customSizesInput) {
+              customSizesInput.placeholder = 'e.g. 5.5, 6.5, 7.5, 14, 15 (comma-separated)';
+            }
+          } else {
+            // Show sections for other categories (clothing)
+            sizesSection.style.display = 'block';
+            colorsSection.style.display = 'block';
+            stockSection.style.display = 'block';
+            
+            // Show clothing sizes, hide shoe sizes
+            if (clothingSizes) clothingSizes.style.display = 'grid';
+            if (shoeSizes) shoeSizes.style.display = 'none';
+            
+            // Uncheck shoe sizes
+            document.querySelectorAll('#shoeSizes input[name="sizes"]').forEach(input => {
+              input.checked = false;
+            });
             
             // Hide ingredients section for non-grooming products
             if (ingredientsSection) {
               ingredientsSection.style.display = 'none';
               if (ingredientsInput) ingredientsInput.required = false;
             }
+            
+            // Reset placeholder for custom sizes
+            const customSizesInput = document.getElementById('custom-sizes');
+            if (customSizesInput) {
+              customSizesInput.placeholder = 'e.g. 4XL, 5XL, 28W, 32W (comma-separated)';
+            }
           }
+          
+          // Update stock inputs whenever category changes
+          updateStockInputs();
         }
       }
 
@@ -663,9 +766,11 @@
         
         if (customSizes && customSizesHidden) {
           customSizesHidden.value = customSizes.value;
+          console.log('Custom sizes copied:', customSizes.value);
         }
         if (customColors && customColorsHidden) {
           customColorsHidden.value = customColors.value;
+          console.log('Custom colors copied:', customColors.value);
         }
         
         return true;
@@ -678,27 +783,99 @@
         const nameInput = form.elements['name'];
         const priceInput = form.elements['price'];
         
-        // Validate required fields
-        if (!form.checkValidity()) {
-          alert('Please fill in all required fields');
+        // Basic validation for name and price
+        if (!nameInput.value.trim()) {
+          alert('⚠️ Please enter a product name');
           return;
+        }
+        
+        if (!priceInput.value || parseFloat(priceInput.value) <= 0) {
+          alert('⚠️ Please enter a valid price');
+          return;
+        }
+        
+        if (!categorySelect.value) {
+          alert('⚠️ Please select a category');
+          return;
+        }
+        
+        // Check if category requires sizes and colors (not grooming)
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const categorySlug = selectedOption ? selectedOption.getAttribute('data-slug') || '' : '';
+        const isGrooming = categorySlug && (categorySlug.toLowerCase().includes('grooming') || selectedOption.textContent.toLowerCase().includes('grooming'));
+        
+        if (!isGrooming) {
+          const selectedSizes = document.querySelectorAll('input[name="sizes"]:checked');
+          const customSizesInput = document.getElementById('custom-sizes');
+          const customSizes = customSizesInput ? customSizesInput.value.trim() : '';
+          const selectedColors = document.querySelectorAll('input[name="colors"]:checked');
+          const customColorsInput = document.getElementById('custom-colors');
+          const customColors = customColorsInput ? customColorsInput.value.trim() : '';
+          
+          // Check if at least one size is provided (either checkbox or custom)
+          const hasSizes = selectedSizes.length > 0 || customSizes.length > 0;
+          if (!hasSizes) {
+            alert('⚠️ Please select at least one size or add custom sizes');
+            return;
+          }
+          
+          // Check if at least one color is provided (either checkbox or custom)
+          const hasColors = selectedColors.length > 0 || customColors.length > 0;
+          if (!hasColors) {
+            alert('⚠️ Please select at least one color or add custom colors');
+            return;
+          }
+          
+          // Make sure stock inputs are updated before proceeding
+          updateStockInputs();
         }
         
         const productName = nameInput.value.trim();
         const productPrice = parseFloat(priceInput.value);
         const category = categorySelect.options[categorySelect.selectedIndex].text;
         
-        const confirmMsg = `Are you sure you want to add this product?\n\nProduct Name: ${productName}\nCategory: ${category}\nPrice: ₱${productPrice.toFixed(2)}\n\nThis product will be submitted for admin approval.`;
+        // Get size and color info for confirmation
+        const customSizesInput = document.getElementById('custom-sizes');
+        const customColorsInput = document.getElementById('custom-colors');
+        const selectedSizes = document.querySelectorAll('input[name="sizes"]:checked');
+        const selectedColors = document.querySelectorAll('input[name="colors"]:checked');
+        
+        let sizeInfo = '';
+        if (selectedSizes.length > 0) {
+          sizeInfo = Array.from(selectedSizes).map(s => s.value).join(', ');
+        }
+        if (customSizesInput && customSizesInput.value.trim()) {
+          sizeInfo += (sizeInfo ? ', ' : '') + customSizesInput.value.trim();
+        }
+        
+        let colorInfo = '';
+        if (selectedColors.length > 0) {
+          colorInfo = Array.from(selectedColors).map(c => c.value).join(', ');
+        }
+        if (customColorsInput && customColorsInput.value.trim()) {
+          colorInfo += (colorInfo ? ', ' : '') + customColorsInput.value.trim();
+        }
+        
+        // Check if grooming for confirmation message
+        const confirmSelectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const confirmCategorySlug = confirmSelectedOption ? confirmSelectedOption.getAttribute('data-slug') || '' : '';
+        const confirmIsGrooming = confirmCategorySlug && (confirmCategorySlug.toLowerCase().includes('grooming') || confirmSelectedOption.textContent.toLowerCase().includes('grooming'));
+        
+        const confirmMsg = `Are you sure you want to add this product?\n\nProduct Name: ${productName}\nCategory: ${category}\nPrice: ₱${productPrice.toFixed(2)}${!confirmIsGrooming ? '\nSizes: ' + sizeInfo + '\nColors: ' + colorInfo : ''}\n\nThis product will be submitted for admin approval.`;
         
         if (confirm(confirmMsg)) {
-          submitProductViaAJAX();
+          // Update stock inputs one final time before submission
+          updateStockInputs();
+          // Small delay to ensure inputs are ready
+          setTimeout(() => {
+            submitProductViaAJAX();
+          }, 200);
         }
       }
       
       // Function to submit product via AJAX
       function submitProductViaAJAX() {
         const form = document.getElementById('addProductForm');
-        const formData = new FormData(form);
         
         // Validate form before submitting
         if (!form.checkValidity()) {
@@ -706,8 +883,20 @@
           return;
         }
         
-        // Copy custom sizes and colors to hidden inputs first
+        // Copy custom sizes and colors to hidden inputs BEFORE creating FormData
         submitCustomValues();
+        
+        // Now create FormData after custom values are copied
+        const formData = new FormData(form);
+        
+        // Debug: Log all form data being sent
+        console.log('=== Form Data Being Sent ===');
+        for (let [key, value] of formData.entries()) {
+          if (key.startsWith('stock_') || key.includes('size') || key.includes('color')) {
+            console.log(`${key}: ${value}`);
+          }
+        }
+        console.log('===========================');
         
         // Show loading state
         const submitBtn = document.querySelector('button[onclick="confirmAddProduct()"]');
@@ -763,13 +952,24 @@
       
       // Function to update stock inputs based on selected sizes and colors
       function updateStockInputs() {
-        const sizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value);
-        const colors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
+        console.log('Updating stock inputs...');
+        
+        const sizes = [];
+        const colors = [];
+        
+        // Get checked sizes
+        const checkedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value);
+        sizes.push(...checkedSizes);
+        
+        // Get checked colors
+        const checkedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
+        colors.push(...checkedColors);
         
         // Add custom sizes if provided
         const customSizesInput = document.getElementById('custom-sizes');
         if (customSizesInput && customSizesInput.value.trim()) {
           const customSizes = customSizesInput.value.split(',').map(s => s.trim()).filter(s => s);
+          console.log('Custom sizes found:', customSizes);
           sizes.push(...customSizes);
         }
         
@@ -777,17 +977,34 @@
         const customColorsInput = document.getElementById('custom-colors');
         if (customColorsInput && customColorsInput.value.trim()) {
           const customColors = customColorsInput.value.split(',').map(c => c.trim()).filter(c => c);
+          console.log('Custom colors found:', customColors);
           colors.push(...customColors);
         }
         
+        console.log('Total sizes:', sizes);
+        console.log('Total colors:', colors);
+        
         const stockInputsDiv = document.getElementById('stock-inputs');
         
-        if (!stockInputsDiv) return;
-        
-        if (sizes.length === 0 || colors.length === 0) {
-          stockInputsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">Select sizes and colors above to set stock quantities</p>';
+        if (!stockInputsDiv) {
+          console.log('Stock inputs div not found');
           return;
         }
+        
+        if (sizes.length === 0 || colors.length === 0) {
+          stockInputsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">💡 Select sizes and colors above (or add custom ones) to see the stock table</p>';
+          return;
+        }
+        
+        // Save existing stock values before regenerating
+        const existingValues = {};
+        const existingInputs = stockInputsDiv.querySelectorAll('input[type="number"]');
+        existingInputs.forEach(input => {
+          if (input.value && input.value !== '0') {
+            existingValues[input.name] = input.value;
+          }
+        });
+        console.log('Preserved stock values:', existingValues);
         
         let html = '<div style="max-height: 300px; overflow-y: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse;">';
@@ -796,11 +1013,16 @@
         
         sizes.forEach(size => {
           colors.forEach(color => {
+            // Create a safe name for the input by replacing special characters
+            const safeName = `stock_${size.replace(/[^a-zA-Z0-9]/g, '_')}_${color.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            // Use preserved value if it exists, otherwise default to 0
+            const stockValue = existingValues[safeName] || '0';
+            console.log(`Creating stock input: size="${size}", color="${color}", name="${safeName}", value="${stockValue}"`);
             html += `<tr>
-              <td style="padding: 8px; border: 1px solid var(--line);">${size}</td>
-              <td style="padding: 8px; border: 1px solid var(--line);">${color}</td>
+              <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${size}</td>
+              <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${color}</td>
               <td style="padding: 8px; border: 1px solid var(--line);">
-                <input type="number" name="stock_${size}_${color}" min="0" value="0" required 
+                <input type="number" name="${safeName}" min="0" value="${stockValue}" required 
                   style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
               </td>
             </tr>`;
@@ -809,6 +1031,7 @@
         
         html += '</tbody></table></div>';
         stockInputsDiv.innerHTML = html;
+        console.log('Stock table generated with', sizes.length * colors.length, 'combinations');
       }
 
       function loadPage(page) {
@@ -889,23 +1112,30 @@
 
       function filterOrders(status) {
         console.log('📋 Filtering orders by status:', status);
+        console.log('📋 All orders available:', allOrders.length);
         currentOrderFilter = status;
         
         // Update active button
         const buttons = document.querySelectorAll('[data-filter-btn]');
         buttons.forEach(btn => btn.classList.remove('active'));
-        document.querySelector(`[data-filter-btn="${status}"]`)?.classList.add('active');
+        const activeBtn = document.querySelector(`[data-filter-btn="${status}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
         
         // Filter and display orders
         let filteredOrders = allOrders;
-        if (status !== 'all') {
-          filteredOrders = allOrders.filter(order => order.order_status === status);
+        if (status && status !== 'all') {
+          filteredOrders = allOrders.filter(order => {
+            const matches = order.order_status === status;
+            console.log(`Order ${order.id}: status=${order.order_status}, filter=${status}, matches=${matches}`);
+            return matches;
+          });
         }
         
+        console.log('📋 Filtered orders count:', filteredOrders.length);
         displayOrders(filteredOrders);
       }
 
-      function loadOrders(initialFilter = 'all') {
+      function loadOrders(initialFilter = 'confirmed') {
         console.log('📤 Fetching orders from /seller/orders');
         
         fetch('/seller/orders')
@@ -915,27 +1145,80 @@
             return response.json();
           })
           .then(data => {
-            console.log('✅ Orders loaded:', data);
+            console.log('✅ Orders response:', data);
+            console.log('✅ Orders array:', data.orders);
+            console.log('✅ Orders count:', data.orders ? data.orders.length : 0);
             
-            if (data.orders && Array.isArray(data.orders)) {
+            if (data.success && data.orders && Array.isArray(data.orders)) {
               allOrders = data.orders;
-              filterOrders(initialFilter);
+              console.log('✅ All orders stored:', allOrders.length);
+              updateOrderCount(allOrders.length);
+              
+              // Show all orders first, then filter
+              if (initialFilter && initialFilter !== 'all') {
+                filterOrders(initialFilter);
+              } else {
+                displayOrders(allOrders);
+              }
             } else {
-              console.warn('❌ No orders in response');
-              document.getElementById('orders-list').innerHTML = '<p style="color:#999;">No orders yet</p>';
+              console.warn('❌ No orders in response or invalid format:', data);
+              allOrders = [];
+              updateOrderCount(0);
+              const ordersList = document.getElementById('orders-list');
+              if (ordersList) {
+                ordersList.innerHTML = '<p style="color:#999;padding:40px;text-align:center;">No orders yet</p>';
+              }
             }
           })
           .catch(error => {
             console.error('❌ Error loading orders:', error);
-            document.getElementById('orders-list').innerHTML = `<p style="color:#d32f2f;">Error loading orders: ${error.message}</p>`;
+            updateOrderCount(0);
+            const ordersList = document.getElementById('orders-list');
+            if (ordersList) {
+              ordersList.innerHTML = `<p style="color:#d32f2f;padding:40px;text-align:center;">Error loading orders: ${error.message}</p>`;
+            }
+          });
+      }
+
+      function updateOrderCount(count) {
+        const badge = document.getElementById('order-count-badge');
+        if (badge) {
+          if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline-block';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      }
+
+      function fetchOrderCount() {
+        fetch('/seller/orders')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.orders && Array.isArray(data.orders)) {
+              updateOrderCount(data.orders.length);
+            } else {
+              updateOrderCount(0);
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching order count:', error);
           });
       }
 
       function displayOrders(orders) {
         const container = document.getElementById('orders-list');
         
+        if (!container) {
+          console.error('❌ orders-list container not found');
+          return;
+        }
+        
+        console.log('📊 Displaying orders:', orders ? orders.length : 0, orders);
+        
         if (!orders || orders.length === 0) {
-          container.innerHTML = '<p style="color:#999;">No orders found</p>';
+          container.innerHTML = '<p style="color:#999;padding:40px;text-align:center;">No orders found</p>';
           return;
         }
         
@@ -998,7 +1281,11 @@
               <td style="padding:10px; font-size:12px; color:#666;">${orderDate}</td>
               <td style="padding:10px; text-align:center;">
                 <button class="action-btn" onclick="viewOrderDetails(${order.id})" style="font-size:12px; padding:4px 8px; margin-right:4px;">View</button>
-                ${order.order_status !== 'delivered' && order.order_status !== 'cancelled' ? `<button class="action-btn" onclick="openStatusModal(${order.id}, '${order.order_status}')" style="font-size:12px; padding:4px 8px;">Update</button>` : ''}
+                ${order.order_status !== 'delivered' && order.order_status !== 'cancelled' ? 
+                  (order.shipment_status === 'pending' && order.rider_id && !order.seller_confirmed ? 
+                    `<button class="action-btn" onclick="approveRider(${order.id}, ${order.shipment_id || 'null'})" style="font-size:12px; padding:4px 8px; background:#10b981; color:#fff;">Approve Rider</button>` :
+                    `<button class="action-btn" onclick="openStatusModal(${order.id}, '${order.order_status}')" style="font-size:12px; padding:4px 8px;">Update</button>`
+                  ) : ''}
               </td>
             </tr>
           `;
@@ -1036,8 +1323,12 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
       function openStatusModal(orderId, currentStatus) {
         console.log('🔄 Opening status modal for order:', orderId);
         
-        const statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
-        let statusOptions = statuses.map(s => `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s.replace(/_/g, ' ').toUpperCase()}</option>`).join('');
+        // Only show 'confirmed' and 'release_to_rider' options
+        const statuses = ['confirmed', 'release_to_rider'];
+        let statusOptions = statuses.map(s => {
+          const displayName = s === 'release_to_rider' ? 'Release to Rider' : s.replace(/_/g, ' ').toUpperCase();
+          return `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${displayName}</option>`;
+        }).join('');
         
         const modal = document.createElement('div');
         modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;';
@@ -1082,8 +1373,9 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
               alert('✅ Order status updated successfully!');
               // Remove modal
               document.querySelectorAll('[style*="position:fixed"]').forEach(el => el.remove());
-              // Reload orders
+              // Reload orders and update count
               loadOrders(currentOrderFilter);
+              fetchOrderCount();
             } else {
               alert('❌ Failed to update order status: ' + (data.message || 'Unknown error'));
             }
@@ -1092,6 +1384,37 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
             console.error('❌ Error updating order status:', error);
             alert('Error updating order status: ' + error.message);
           });
+      }
+
+      function approveRider(orderId, shipmentId) {
+        console.log('✅ Approving rider for order:', orderId, 'shipment:', shipmentId);
+        
+        if (!confirm('Approve this rider to pick up the order?')) return;
+        
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        if (shipmentId) {
+          formData.append('shipment_id', shipmentId);
+        }
+        
+        fetch('/seller/approve-rider', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Rider approved! You can now release the order to rider.');
+            loadOrders(currentOrderFilter);
+            fetchOrderCount();
+          } else {
+            alert('❌ Failed to approve rider: ' + (data.error || data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error approving rider:', error);
+          alert('Error approving rider: ' + error.message);
+        });
       }
       // ============ END ORDER MANAGEMENT ============
 
@@ -1550,6 +1873,13 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
       function proceedLogout() {
         window.location.href = '/logout';
       }
+
+      // Fetch order count on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        fetchOrderCount();
+        // Refresh order count every 30 seconds
+        setInterval(fetchOrderCount, 30000);
+      });
     </script>
   </body>
 </html>

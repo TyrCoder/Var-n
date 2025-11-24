@@ -439,7 +439,7 @@ h1, h2, h3, h4, h5, h6, .brand {
               <button type="submit" class="btn-submit">Login to Your Account</button>
 
               <div class="form-footer">
-                <a href="#" class="forgot-link">Forgot your password?</a>
+                <a href="#" onclick="event.preventDefault(); openForgotPasswordModal(); return false;" class="forgot-link">Forgot your password?</a>
               </div>
             </form>
 
@@ -652,6 +652,307 @@ h1, h2, h3, h4, h5, h6, .brand {
           button.innerHTML = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>';
         }
       }
+
+      // ========== FORGOT PASSWORD MODAL ==========
+      let currentForgotPasswordStep = 1;
+      let forgotPasswordEmail = '';
+
+      function openForgotPasswordModal() {
+        document.getElementById('forgotPasswordModal').style.display = 'flex';
+        resetForgotPasswordModal();
+        // Re-initialize OTP inputs when modal opens
+        setTimeout(() => {
+          setupOTPInputs();
+        }, 100);
+      }
+
+      function closeForgotPasswordModal() {
+        document.getElementById('forgotPasswordModal').style.display = 'none';
+        resetForgotPasswordModal();
+      }
+
+      function resetForgotPasswordModal() {
+        currentForgotPasswordStep = 1;
+        forgotPasswordEmail = '';
+        document.getElementById('fpStep1').style.display = 'block';
+        document.getElementById('fpStep2').style.display = 'none';
+        document.getElementById('fpStep3').style.display = 'none';
+        document.getElementById('fpEmail').value = '';
+        document.querySelectorAll('.fp-otp-input').forEach(input => input.value = '');
+        document.getElementById('fpNewPassword').value = '';
+        document.getElementById('fpConfirmPassword').value = '';
+        document.getElementById('fpErrorMessage').style.display = 'none';
+        document.getElementById('fpSuccessMessage').style.display = 'none';
+      }
+
+      function showForgotPasswordError(message) {
+        const errorEl = document.getElementById('fpErrorMessage');
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        document.getElementById('fpSuccessMessage').style.display = 'none';
+      }
+
+      function showForgotPasswordSuccess(message) {
+        const successEl = document.getElementById('fpSuccessMessage');
+        successEl.textContent = message;
+        successEl.style.display = 'block';
+        document.getElementById('fpErrorMessage').style.display = 'none';
+      }
+
+      async function requestPasswordReset(e) {
+        e.preventDefault();
+        const email = document.getElementById('fpEmail').value.trim();
+        
+        if (!email) {
+          showForgotPasswordError('Please enter your email address');
+          return;
+        }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending OTP...';
+
+        try {
+          const response = await fetch('/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            forgotPasswordEmail = email;
+            showForgotPasswordSuccess(data.message || 'OTP sent successfully');
+            setTimeout(() => {
+              document.getElementById('fpStep1').style.display = 'none';
+              document.getElementById('fpStep2').style.display = 'block';
+              currentForgotPasswordStep = 2;
+              document.getElementById('fpSuccessMessage').style.display = 'none';
+            }, 1500);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'An error occurred');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      async function verifyResetOTP(e) {
+        e.preventDefault();
+        const otpInputs = document.querySelectorAll('.fp-otp-input');
+        const otp = Array.from(otpInputs).map(input => input.value).join('');
+
+        if (otp.length !== 6) {
+          showForgotPasswordError('Please enter the complete 6-digit code');
+          return;
+        }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+
+        try {
+          const response = await fetch('/verify-reset-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotPasswordEmail, otp })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showForgotPasswordSuccess('OTP verified! Please set your new password.');
+            setTimeout(() => {
+              document.getElementById('fpStep2').style.display = 'none';
+              document.getElementById('fpStep3').style.display = 'block';
+              currentForgotPasswordStep = 3;
+              document.getElementById('fpSuccessMessage').style.display = 'none';
+            }, 1500);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'Invalid OTP');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      async function resetPassword(e) {
+        e.preventDefault();
+        const newPassword = document.getElementById('fpNewPassword').value;
+        const confirmPassword = document.getElementById('fpConfirmPassword').value;
+
+        if (!newPassword || !confirmPassword) {
+          showForgotPasswordError('Please fill in both password fields');
+          return;
+        }
+
+        if (newPassword !== confirmPassword) {
+          showForgotPasswordError('Passwords do not match');
+          return;
+        }
+
+        if (newPassword.length < 6) {
+          showForgotPasswordError('Password must be at least 6 characters');
+          return;
+        }
+
+        if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+          showForgotPasswordError('Password must contain both letters and numbers');
+          return;
+        }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Resetting...';
+
+        try {
+          const response = await fetch('/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_password: newPassword })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showForgotPasswordSuccess('Password reset successful! Redirecting to login...');
+            setTimeout(() => {
+              closeForgotPasswordModal();
+              window.location.reload();
+            }, 2000);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'Password reset failed');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      async function resendResetOTP() {
+        const btn = document.getElementById('fpResendBtn');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+          const response = await fetch('/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotPasswordEmail })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            showForgotPasswordSuccess('New OTP sent to your email!');
+            setTimeout(() => {
+              document.getElementById('fpSuccessMessage').style.display = 'none';
+            }, 3000);
+          } else {
+            showForgotPasswordError(data.message || data.error || 'Failed to resend OTP');
+          }
+        } catch (error) {
+          showForgotPasswordError('Network error. Please try again.');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
+      }
+
+      // OTP input auto-advance
+      function setupOTPInputs() {
+        const inputs = document.querySelectorAll('.fp-otp-input');
+        inputs.forEach((input, index) => {
+          input.addEventListener('input', (e) => {
+            if (e.target.value.length === 1 && index < inputs.length - 1) {
+              inputs[index + 1].focus();
+            }
+          });
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+              inputs[index - 1].focus();
+            }
+          });
+        });
+      }
+
+      // Initialize OTP inputs when page loads
+      document.addEventListener('DOMContentLoaded', setupOTPInputs);
     </script>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+      <div style="background: white; border-radius: 20px; padding: 40px; max-width: 500px; width: 90%; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <button onclick="closeForgotPasswordModal()" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+        
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 10px; color: #0a0a0a;">Reset Password</h2>
+        <p style="color: #777; margin-bottom: 30px; font-size: 14px;">Follow the steps to reset your password</p>
+
+        <!-- Error/Success Messages -->
+        <div id="fpErrorMessage" style="display: none; background: #fde8e8; color: #dc3545; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+        <div id="fpSuccessMessage" style="display: none; background: #d1e7dd; color: #198754; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;"></div>
+
+        <!-- Step 1: Enter Email -->
+        <form id="fpStep1" onsubmit="requestPasswordReset(event)">
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #0a0a0a; font-size: 14px;">Email Address</label>
+            <input type="email" id="fpEmail" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: 'Commissioner', sans-serif;" placeholder="Enter your email">
+          </div>
+          <button type="submit" style="width: 100%; padding: 14px; background: #0a0a0a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; font-family: 'Commissioner', sans-serif;">Send Reset Code</button>
+        </form>
+
+        <!-- Step 2: Enter OTP -->
+        <form id="fpStep2" style="display: none;" onsubmit="verifyResetOTP(event)">
+          <p style="color: #666; margin-bottom: 20px; font-size: 14px;">Enter the 6-digit code sent to your email</p>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+            <input type="text" class="fp-otp-input" maxlength="1" required style="width: 50px; height: 50px; text-align: center; font-size: 24px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Commissioner', sans-serif;">
+          </div>
+          <button type="submit" style="width: 100%; padding: 14px; background: #0a0a0a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; margin-bottom: 10px; font-family: 'Commissioner', sans-serif;">Verify Code</button>
+          <button type="button" id="fpResendBtn" onclick="resendResetOTP()" style="width: 100%; padding: 12px; background: transparent; color: #0a0a0a; border: 1px solid #0a0a0a; border-radius: 8px; font-size: 14px; cursor: pointer; font-family: 'Commissioner', sans-serif;">Resend Code</button>
+        </form>
+
+        <!-- Step 3: New Password -->
+        <form id="fpStep3" style="display: none;" onsubmit="resetPassword(event)">
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #0a0a0a; font-size: 14px;">New Password</label>
+            <div style="position: relative;">
+              <input type="password" id="fpNewPassword" required style="width: 100%; padding: 12px; padding-right: 45px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: 'Commissioner', sans-serif;" placeholder="Enter new password">
+              <button type="button" onclick="togglePassword('fpNewPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 5px;">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #0a0a0a; font-size: 14px;">Confirm Password</label>
+            <div style="position: relative;">
+              <input type="password" id="fpConfirmPassword" required style="width: 100%; padding: 12px; padding-right: 45px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-family: 'Commissioner', sans-serif;" placeholder="Confirm new password">
+              <button type="button" onclick="togglePassword('fpConfirmPassword', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 5px;">
+                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+              </button>
+            </div>
+            <p style="font-size: 12px; color: #777; margin-top: 5px;">Must be at least 6 characters with letters and numbers</p>
+          </div>
+          <button type="submit" style="width: 100%; padding: 14px; background: #0a0a0a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; font-family: 'Commissioner', sans-serif;">Reset Password</button>
+        </form>
+      </div>
+    </div>
   </body>
   </html>

@@ -324,212 +324,73 @@
 							<input id="riderEmail" name="email" class="form-input" type="email" placeholder="you@example.com" required />
 						</div>
 
-						<div class="form-group">
-							<label for="riderPhone">Contact number</label>
-							<input id="riderPhone" name="phone" class="form-input" type="tel" placeholder="+63 9xx xxx xxxx" pattern="[0-9\+\-\s]{7,20}" required />
-						</div>
-
-						<div class="form-group">
-							<label>Vehicle Type</label>
-							<div class="vehicle-options" style="grid-template-columns:repeat(2,1fr)">
-								<div class="vehicle-option">
-									<input type="radio" id="motorcycle" name="vehicle_type" value="motorcycle" required>
-									<label for="motorcycle">
-										<span class="vehicle-icon">🏍️</span>
-										<span>Motorcycle</span>
-									</label>
-								</div>
-								<div class="vehicle-option">
-									<input type="radio" id="bicycle" name="vehicle_type" value="bicycle">
-									<label for="bicycle">
-										<span class="vehicle-icon">🚲</span>
-										<span>Bicycle</span>
-									</label>
-								</div>
-								<div class="vehicle-option">
-									<input type="radio" id="truck" name="vehicle_type" value="truck">
-									<label for="truck">
-										<span class="vehicle-icon">🚛</span>
-										<span>Truck</span>
-									</label>
-								</div>
-								<div class="vehicle-option">
-									<input type="radio" id="van" name="vehicle_type" value="van">
-									<label for="van">
-										<span class="vehicle-icon">🚐</span>
-										<span>Van</span>
-									</label>
-								</div>
-							</div>
-						</div>
-
-						<div class="form-group">
-							<label for="vehiclePlate">Vehicle Plate Number</label>
-							<input id="vehiclePlate" name="vehicle_plate" class="form-input" type="text" placeholder="Enter plate number" required />
-						</div>
-
-						<div class="form-group">
-							<label for="licenseNumber">Driver's License Number</label>
-							<input id="licenseNumber" name="license_number" class="form-input" type="text" placeholder="Enter license number" required />
-						</div>
+					<div class="form-group">
+						<label for="riderPhone">Contact number</label>
+						<input id="riderPhone" name="phone" class="form-input" type="tel" value="+63 " placeholder="+63 9xx xxx xxxx" pattern="[0-9\+\-\s]{7,20}" required />
+					</div>
 
 					<div class="form-group">
-						<label for="riderArea">Service Area</label>
-						<select id="riderArea" name="service_area" class="form-select" required>
-							<option value="">Select your service area</option>
-							
-							<optgroup label="NCR - National Capital Region">
-								<option value="Manila">Manila</option>
-								<option value="Quezon City">Quezon City</option>
-								<option value="Makati">Makati</option>
-								<option value="Pasig">Pasig</option>
-								<option value="Taguig">Taguig</option>
-								<option value="Mandaluyong">Mandaluyong</option>
-								<option value="Marikina">Marikina</option>
-								<option value="Pasay">Pasay</option>
-								<option value="Parañaque">Parañaque</option>
-								<option value="Las Piñas">Las Piñas</option>
-								<option value="Muntinlupa">Muntinlupa</option>
-								<option value="Caloocan">Caloocan</option>
-								<option value="Malabon">Malabon</option>
-								<option value="Navotas">Navotas</option>
-								<option value="Valenzuela">Valenzuela</option>
-								<option value="San Juan">San Juan</option>
-							</optgroup>
-							
-							<optgroup label="Region I - Ilocos Region">
-								<option value="Laoag, Ilocos Norte">Laoag, Ilocos Norte</option>
-								<option value="Vigan, Ilocos Sur">Vigan, Ilocos Sur</option>
-								<option value="San Fernando, La Union">San Fernando, La Union</option>
-								<option value="Dagupan, Pangasinan">Dagupan, Pangasinan</option>
-								<option value="Urdaneta, Pangasinan">Urdaneta, Pangasinan</option>
-							</optgroup>
-							
-							<optgroup label="Region II - Cagayan Valley">
-								<option value="Tuguegarao, Cagayan">Tuguegarao, Cagayan</option>
-								<option value="Ilagan, Isabela">Ilagan, Isabela</option>
-								<option value="Santiago, Isabela">Santiago, Isabela</option>
-								<option value="Cauayan, Isabela">Cauayan, Isabela</option>
-							</optgroup>
-							
-							<optgroup label="Region III - Central Luzon">
-								<option value="San Fernando, Pampanga">San Fernando, Pampanga</option>
-								<option value="Angeles, Pampanga">Angeles, Pampanga</option>
-								<option value="Mabalacat, Pampanga">Mabalacat, Pampanga</option>
-								<option value="Olongapo, Zambales">Olongapo, Zambales</option>
-								<option value="Tarlac City, Tarlac">Tarlac City, Tarlac</option>
-								<option value="Cabanatuan, Nueva Ecija">Cabanatuan, Nueva Ecija</option>
-								<option value="San Jose, Nueva Ecija">San Jose, Nueva Ecija</option>
-								<option value="Balanga, Bataan">Balanga, Bataan</option>
-							</optgroup>
-							
-							<optgroup label="Region IV-A - CALABARZON">
-								<option value="Calamba, Laguna">Calamba, Laguna</option>
-								<option value="Santa Cruz, Laguna">Santa Cruz, Laguna</option>
-								<option value="Sta Cruz, Laguna">Sta Cruz, Laguna</option>
-								<option value="San Pablo, Laguna">San Pablo, Laguna</option>
-								<option value="Biñan, Laguna">Biñan, Laguna</option>
-								<option value="Los Baños, Laguna">Los Baños, Laguna</option>
-								<option value="Cabuyao, Laguna">Cabuyao, Laguna</option>
-								<option value="Batangas City, Batangas">Batangas City, Batangas</option>
-								<option value="Lipa, Batangas">Lipa, Batangas</option>
-								<option value="Tanauan, Batangas">Tanauan, Batangas</option>
-								<option value="Lucena, Quezon">Lucena, Quezon</option>
-								<option value="Antipolo, Rizal">Antipolo, Rizal</option>
-								<option value="Cainta, Rizal">Cainta, Rizal</option>
-								<option value="Tagaytay, Cavite">Tagaytay, Cavite</option>
-								<option value="Bacoor, Cavite">Bacoor, Cavite</option>
-								<option value="Imus, Cavite">Imus, Cavite</option>
-								<option value="Dasmariñas, Cavite">Dasmariñas, Cavite</option>
-							</optgroup>
-							
-							<optgroup label="Region IV-B - MIMAROPA">
-								<option value="Calapan, Oriental Mindoro">Calapan, Oriental Mindoro</option>
-								<option value="Puerto Princesa, Palawan">Puerto Princesa, Palawan</option>
-								<option value="Boac, Marinduque">Boac, Marinduque</option>
-							</optgroup>
-							
-							<optgroup label="Region V - Bicol Region">
-								<option value="Legazpi, Albay">Legazpi, Albay</option>
-								<option value="Naga, Camarines Sur">Naga, Camarines Sur</option>
-								<option value="Iriga, Camarines Sur">Iriga, Camarines Sur</option>
-								<option value="Sorsogon City, Sorsogon">Sorsogon City, Sorsogon</option>
-							</optgroup>
-							
-							<optgroup label="Region VI - Western Visayas">
-								<option value="Iloilo City, Iloilo">Iloilo City, Iloilo</option>
-								<option value="Bacolod, Negros Occidental">Bacolod, Negros Occidental</option>
-								<option value="Roxas, Capiz">Roxas, Capiz</option>
-								<option value="Kalibo, Aklan">Kalibo, Aklan</option>
-							</optgroup>
-							
-							<optgroup label="Region VII - Central Visayas">
-								<option value="Cebu City, Cebu">Cebu City, Cebu</option>
-								<option value="Mandaue, Cebu">Mandaue, Cebu</option>
-								<option value="Lapu-Lapu, Cebu">Lapu-Lapu, Cebu</option>
-								<option value="Tagbilaran, Bohol">Tagbilaran, Bohol</option>
-								<option value="Dumaguete, Negros Oriental">Dumaguete, Negros Oriental</option>
-							</optgroup>
-							
-							<optgroup label="Region VIII - Eastern Visayas">
-								<option value="Tacloban, Leyte">Tacloban, Leyte</option>
-								<option value="Ormoc, Leyte">Ormoc, Leyte</option>
-								<option value="Calbayog, Samar">Calbayog, Samar</option>
-							</optgroup>
-							
-							<optgroup label="Region IX - Zamboanga Peninsula">
-								<option value="Zamboanga City, Zamboanga del Sur">Zamboanga City, Zamboanga del Sur</option>
-								<option value="Pagadian, Zamboanga del Sur">Pagadian, Zamboanga del Sur</option>
-								<option value="Dipolog, Zamboanga del Norte">Dipolog, Zamboanga del Norte</option>
-							</optgroup>
-							
-							<optgroup label="Region X - Northern Mindanao">
-								<option value="Cagayan de Oro, Misamis Oriental">Cagayan de Oro, Misamis Oriental</option>
-								<option value="Iligan, Lanao del Norte">Iligan, Lanao del Norte</option>
-								<option value="Valencia, Bukidnon">Valencia, Bukidnon</option>
-								<option value="Malaybalay, Bukidnon">Malaybalay, Bukidnon</option>
-							</optgroup>
-							
-							<optgroup label="Region XI - Davao Region">
-								<option value="Davao City, Davao del Sur">Davao City, Davao del Sur</option>
-								<option value="Tagum, Davao del Norte">Tagum, Davao del Norte</option>
-								<option value="Panabo, Davao del Norte">Panabo, Davao del Norte</option>
-								<option value="Digos, Davao del Sur">Digos, Davao del Sur</option>
-								<option value="Mati, Davao Oriental">Mati, Davao Oriental</option>
-							</optgroup>
-							
-							<optgroup label="Region XII - SOCCSKSARGEN">
-								<option value="General Santos, South Cotabato">General Santos, South Cotabato</option>
-								<option value="Koronadal, South Cotabato">Koronadal, South Cotabato</option>
-								<option value="Tacurong, Sultan Kudarat">Tacurong, Sultan Kudarat</option>
-								<option value="Kidapawan, Cotabato">Kidapawan, Cotabato</option>
-							</optgroup>
-							
-							<optgroup label="Region XIII - Caraga">
-								<option value="Butuan, Agusan del Norte">Butuan, Agusan del Norte</option>
-								<option value="Surigao City, Surigao del Norte">Surigao City, Surigao del Norte</option>
-								<option value="Tandag, Surigao del Sur">Tandag, Surigao del Sur</option>
-								<option value="Bayugan, Agusan del Sur">Bayugan, Agusan del Sur</option>
-							</optgroup>
-							
-							<optgroup label="CAR - Cordillera Administrative Region">
-								<option value="Baguio, Benguet">Baguio, Benguet</option>
-								<option value="Tabuk, Kalinga">Tabuk, Kalinga</option>
-								<option value="La Trinidad, Benguet">La Trinidad, Benguet</option>
-							</optgroup>
-							
-							<optgroup label="BARMM - Bangsamoro">
-								<option value="Cotabato City, Maguindanao">Cotabato City, Maguindanao</option>
-								<option value="Marawi, Lanao del Sur">Marawi, Lanao del Sur</option>
-							</optgroup>
-						</select>
-					</div>						<div class="form-group">
-							<label for="riderPassword">Create password</label>
-							<input id="riderPassword" name="password" class="form-input" type="password" placeholder="Choose a secure password" minlength="8" required />
+						<label>Vehicle Type(s) <small style="color:#666;font-weight:normal;">(Select all that apply)</small></label>
+						<div class="vehicle-options" style="grid-template-columns:repeat(3,1fr)">
+							<div class="vehicle-option">
+								<input type="checkbox" id="motorcycle" name="vehicle_type" value="motorcycle" onchange="updateVehicleDetails()">
+								<label for="motorcycle">
+									<span class="vehicle-icon">🏍️</span>
+									<span>Motorcycle</span>
+								</label>
+							</div>
+							<div class="vehicle-option">
+								<input type="checkbox" id="truck" name="vehicle_type" value="truck" onchange="updateVehicleDetails()">
+								<label for="truck">
+									<span class="vehicle-icon">🚛</span>
+									<span>Truck</span>
+								</label>
+							</div>
+							<div class="vehicle-option">
+								<input type="checkbox" id="van" name="vehicle_type" value="van" onchange="updateVehicleDetails()">
+								<label for="van">
+									<span class="vehicle-icon">🚐</span>
+									<span>Van</span>
+								</label>
+							</div>
 						</div>
+					</div>
 
-						<div class="tnc-row">
-							<input id="riderTnc" name="tnc" type="checkbox" required />
+				<div class="form-group">
+					<!-- Vehicle details (plate numbers and driver's license) will be dynamically added here when a vehicle type is selected -->
+					<div id="vehicleDetailsContainer" style="display: none; margin-bottom: 20px;">
+					</div>
+					
+					<label for="riderRegion">Select Your Service Area</label>
+					<select id="riderRegion" name="region" class="form-select" required onchange="toggleRegionProvinces(this.value)">
+						<option value="">Select a region</option>
+						<option value="North Luzon">North Luzon</option>
+						<option value="Central Luzon">Central Luzon</option>
+						<option value="South Luzon">South Luzon</option>
+						<option value="Visayas">Visayas</option>
+						<option value="Mindanao">Mindanao</option>
+					</select>
+					
+					<!-- Provinces Container -->
+					<div id="provincesContainer" style="display:none;margin-top:20px">
+						<!-- Provinces will be dynamically shown here -->
+					</div>
+					
+					<!-- Hidden input to store selected service areas -->
+					<input type="hidden" id="serviceAreaInput" name="service_area" required>
+				</div>						<div class="form-group">
+						<label for="riderPassword">Create password</label>
+						<input id="riderPassword" name="password" class="form-input" type="password" placeholder="At least 6 characters with letters and numbers" minlength="6" required />
+						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">Must be at least 6 characters with both letters and numbers</small>
+					</div>
+
+					<div class="form-group">
+						<label for="riderConfirmPassword">Confirm password</label>
+						<input id="riderConfirmPassword" name="confirm_password" class="form-input" type="password" placeholder="Re-enter your password" minlength="6" required />
+					</div>
+
+					<div class="tnc-row">
+						<input id="riderTnc" name="tnc" type="checkbox" required />
 							<label for="riderTnc">I agree to the <a href="/terms" target="_blank">Terms &amp; Conditions</a> and confirm I have a valid driver's license</label>
 						</div>
 
@@ -542,45 +403,6 @@
 		</div>
 
 		<script>
-			// Toggle vehicle plate field based on vehicle type
-			document.querySelectorAll('input[name="vehicle_type"]').forEach(radio => {
-				radio.addEventListener('change', function() {
-					const plateField = document.getElementById('vehiclePlate');
-					const licenseField = document.getElementById('licenseNumber');
-					const vehicleType = this.value;
-					
-					if (vehicleType === 'bicycle') {
-						// Bicycles don't require plate or license
-						plateField.required = false;
-						plateField.disabled = true;
-						plateField.placeholder = 'Not required for bicycle';
-						licenseField.required = false;
-						licenseField.disabled = true;
-						licenseField.placeholder = 'Not required for bicycle';
-					} else {
-						plateField.required = true;
-						plateField.disabled = false;
-						licenseField.required = true;
-						licenseField.disabled = false;
-
-						// Set appropriate placeholders based on vehicle type
-						switch (vehicleType) {
-							case 'truck':
-								plateField.placeholder = 'Enter truck plate number';
-								licenseField.placeholder = 'Enter professional driver\'s license';
-								break;
-							case 'van':
-								plateField.placeholder = 'Enter van plate number';
-								licenseField.placeholder = 'Enter professional driver\'s license';
-								break;
-							case 'motorcycle':
-							default:
-								plateField.placeholder = 'Enter plate number';
-								licenseField.placeholder = 'Enter license number';
-						}
-					}
-				});
-			});
 
 			// Form validation helper functions
 			function validateEmail(email) {
@@ -605,89 +427,208 @@
 			// Form validation
 			document.getElementById('riderSignup').addEventListener('submit', function(e) {
 				e.preventDefault();
+				e.stopPropagation();
 				const form = e.target;
-				const formData = new FormData(form);
+				
+				// Ensure service area is updated BEFORE creating FormData
+				updateServiceArea();
+				
+				// Small delay to ensure DOM is updated
+				setTimeout(function() {
+					const formData = new FormData(form);
 
-				// Validate required fields
-				const firstName = formData.get('first_name');
-				const lastName = formData.get('last_name');
-				const email = formData.get('email');
-				const phone = formData.get('phone');
-				const password = formData.get('password');
-				const vehicleType = formData.get('vehicle_type');
-				const serviceArea = formData.get('service_area');
-				const tnc = formData.get('tnc');
+					// Validate required fields
+					const firstName = formData.get('first_name');
+					const lastName = formData.get('last_name');
+					const email = formData.get('email');
+					const phone = formData.get('phone');
+					const password = formData.get('password');
+					const confirmPassword = formData.get('confirm_password');
+					const vehicleType = formData.get('vehicle_type');
+					const serviceAreaValue = formData.get('service_area');
+					const tnc = formData.get('tnc');
 
-				// Create error message div if it doesn't exist
-				let errorDiv = document.getElementById('errorDisplay');
-				errorDiv.style.display = 'none';
+			// Create error message div if it doesn't exist
+			let errorDiv = document.getElementById('errorDisplay');
+			errorDiv.style.display = 'none';
+			
+			// Check if passwords match
+			if (password !== confirmPassword) {
+				errorDiv.textContent = 'Passwords do not match';
+				errorDiv.style.display = 'block';
+				return;
+			}
+			
+			// Validate password strength (at least 6 characters with letters and numbers)
+			const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
+			if (!passwordRegex.test(password)) {
+				errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
+				errorDiv.style.display = 'block';
+				return;
+			}
+			
+			// Check if at least one vehicle type is selected
+			const vehicleTypes = formData.getAll('vehicle_type');
+			if (vehicleTypes.length === 0) {
+				errorDiv.textContent = 'Please select at least one vehicle type';
+				errorDiv.style.display = 'block';
+				return;
+			}
 
-				// Validate all required fields
-				if (!firstName || !lastName || !email || !phone || !password || !vehicleType || !serviceArea) {
-					errorDiv.textContent = 'All fields are required';
-					errorDiv.style.display = 'block';
-					return;
-				}
-
-				// Validate email format
-				if (!email.includes('@') || !email.includes('.')) {
-					errorDiv.textContent = 'Please enter a valid email address';
-					errorDiv.style.display = 'block';
-					return;
-				}
-
-				// Validate phone number
-				const cleanPhone = phone.replace(/[\+\-\s]/g, '');
-				if (!cleanPhone.match(/^\d+$/)) {
-					errorDiv.textContent = 'Please enter a valid phone number';
-					errorDiv.style.display = 'block';
-					return;
-				}
-
-				// Check vehicle type selection
-				if (!vehicleType) {
-					errorDiv.textContent = 'Please select a vehicle type';
-					errorDiv.style.display = 'block';
-					return;
-				}
-
-				// Check Terms & Conditions
-				if (!tnc) {
-					errorDiv.textContent = 'Please agree to the Terms & Conditions to continue';
-					errorDiv.style.display = 'block';
-					return;
-				}
-
-				// Disable submit button
-				const submitBtn = form.querySelector('button[type="submit"]');
-				const originalText = submitBtn.textContent;
-				submitBtn.disabled = true;
-				submitBtn.textContent = 'Sending OTP...';
-
-				// Submit the form via AJAX
-				fetch('/signup/rider', {
-					method: 'POST',
-					body: formData
-				})
-				.then(response => response.json())
-				.then(data => {
-					if (data.success) {
-						// Redirect to OTP verification page
-						window.location.href = data.redirect;
-					} else {
-						errorDiv.textContent = data.message;
+					// Validate service area - MUST be first check
+					const selectedRegion1 = formData.get('region');
+					const provinceCheckboxes1 = document.querySelectorAll('input[name="province"]:checked');
+					const selectedProvinces1 = Array.from(provinceCheckboxes1).map(cb => cb.value);
+					
+					console.log('=== Service Area Validation ===');
+					console.log('Region:', selectedRegion1);
+					console.log('Provinces from DOM:', selectedProvinces1);
+					
+					if (!selectedRegion1 || selectedRegion1.trim() === '') {
+						errorDiv.textContent = 'Please select a region';
 						errorDiv.style.display = 'block';
+						return;
+					}
+					
+					// Build service area from region (required) and provinces (optional)
+					const serviceAreas1 = [selectedRegion1];
+					if (selectedProvinces1.length > 0) {
+						serviceAreas1.push(...selectedProvinces1);
+					}
+					const serviceAreaFinal = serviceAreas1.join(',');
+					
+					// Set the service area input value immediately
+					const serviceAreaInput1 = document.getElementById('serviceAreaInput');
+					serviceAreaInput1.value = serviceAreaFinal;
+					
+					// Update FormData with service area
+					formData.set('service_area', serviceAreaFinal);
+					
+					console.log('Service Area set to:', serviceAreaFinal);
+
+					// Validate all required fields
+					if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
+						errorDiv.textContent = 'All fields are required';
+						errorDiv.style.display = 'block';
+						return;
+					}
+
+					// Validate email format
+					if (!email.includes('@') || !email.includes('.')) {
+						errorDiv.textContent = 'Please enter a valid email address';
+						errorDiv.style.display = 'block';
+						return;
+					}
+
+					// Validate phone number
+					const cleanPhone = phone.replace(/[\+\-\s]/g, '');
+					if (!cleanPhone.match(/^\d+$/)) {
+						errorDiv.textContent = 'Please enter a valid phone number';
+						errorDiv.style.display = 'block';
+						return;
+					}
+
+					// Vehicle type validation already done above
+
+					// Check Terms & Conditions
+					if (!tnc) {
+						errorDiv.textContent = 'Please agree to the Terms & Conditions to continue';
+						errorDiv.style.display = 'block';
+						return;
+					}
+
+					// Final update of service area - ensure it's set to region at minimum
+					const selectedRegion2 = formData.get('region');
+					const provinceCheckboxes2 = document.querySelectorAll('input[name="province"]:checked');
+					const selectedProvinces2 = Array.from(provinceCheckboxes2).map(cb => cb.value);
+					
+					console.log('=== Final Validation ===');
+					console.log('Region:', selectedRegion2);
+					console.log('Provinces (from DOM):', selectedProvinces2);
+					
+					// Build service area from region (required) and provinces (optional)
+					let finalServiceArea = '';
+					if (selectedRegion2) {
+						const serviceAreas2 = [selectedRegion2];
+						if (selectedProvinces2.length > 0) {
+							serviceAreas2.push(...selectedProvinces2);
+						}
+						finalServiceArea = serviceAreas2.join(',');
+					}
+					
+					// Validate that we have a region
+					if (!selectedRegion2 || selectedRegion2.trim() === '') {
+						errorDiv.textContent = 'Please select a region';
+						errorDiv.style.display = 'block';
+						return;
+					}
+					
+					// Ensure service area is set (at minimum to region)
+					if (!finalServiceArea || finalServiceArea.trim() === '') {
+						finalServiceArea = selectedRegion2;
+					}
+					
+					// Set the hidden input value
+					const serviceAreaInput2 = document.getElementById('serviceAreaInput');
+					serviceAreaInput2.value = finalServiceArea;
+					
+					// CRITICAL: Explicitly set service_area in FormData before sending
+					formData.set('service_area', finalServiceArea);
+					
+					// Verify it's set
+					const verifyServiceArea = formData.get('service_area');
+					console.log('Service Area in FormData after set:', verifyServiceArea);
+					console.log('All FormData entries:', Array.from(formData.entries()));
+					if (!verifyServiceArea || verifyServiceArea.trim() === '') {
+						errorDiv.textContent = 'Service area validation failed. Please try again.';
+						errorDiv.style.display = 'block';
+						return;
+					}
+					
+					// Debug: Log to console
+					console.log('=== Form Submission Debug ===');
+					console.log('Selected Region:', selectedRegion2);
+					console.log('Selected Provinces:', selectedProvinces2);
+					console.log('Service Area Input Value:', serviceAreaInput2.value);
+					console.log('Final Service Area:', finalServiceArea);
+					console.log('FormData service_area:', formData.get('service_area'));
+					console.log('All FormData entries:', Array.from(formData.entries()));
+
+					// Disable submit button
+					const submitBtn = form.querySelector('button[type="submit"]');
+					const originalText = submitBtn.textContent;
+					submitBtn.disabled = true;
+					submitBtn.textContent = 'Sending OTP...';
+
+					// Submit the form via AJAX
+					fetch('/signup/rider', {
+						method: 'POST',
+						body: formData
+					})
+					.then(response => {
+						console.log('Response status:', response.status);
+						return response.json();
+					})
+					.then(data => {
+						console.log('Response data:', data);
+						if (data.success) {
+							// Redirect to OTP verification page
+							window.location.href = data.redirect;
+						} else {
+							errorDiv.textContent = data.message || 'An error occurred';
+							errorDiv.style.display = 'block';
+							submitBtn.disabled = false;
+							submitBtn.textContent = originalText;
+						}
+					})
+					.catch(error => {
+						errorDiv.textContent = 'An error occurred. Please try again later.';
+						errorDiv.style.display = 'block';
+						console.error('Error:', error);
 						submitBtn.disabled = false;
 						submitBtn.textContent = originalText;
-					}
-				})
-				.catch(error => {
-					errorDiv.textContent = 'An error occurred. Please try again later.';
-					errorDiv.style.display = 'block';
-					console.error('Error:', error);
-					submitBtn.disabled = false;
-					submitBtn.textContent = originalText;
-				});
+					});
+				}, 100); // Small delay to ensure DOM updates
 			});
 
 			// Live validation feedback
@@ -704,23 +645,222 @@
 				e.target.style.borderColor = e.target.value && !isValid ? 'var(--error)' : '';
 			});
 
-			// Format phone number as user types
+			// Auto-format phone number with +63 prefix
 			phoneInput.addEventListener('input', function(e) {
-				let value = e.target.value.replace(/\D/g, '');
-				if (value.length > 0 && !value.startsWith('63')) {
-					value = '63' + value;
+				let value = e.target.value;
+				// Always ensure +63 prefix
+				if (!value.startsWith('+63')) {
+					value = '+63 ' + value.replace(/^\+63\s*/, '');
+					e.target.value = value;
 				}
-				if (value.length > 2) {
-					value = '+' + value.slice(0, 2) + ' ' + value.slice(2);
+				// Prevent deleting the +63 prefix
+				if (value.length < 4) {
+					e.target.value = '+63 ';
 				}
-				if (value.length > 7) {
-					value = value.slice(0, 7) + ' ' + value.slice(7);
-				}
-				if (value.length > 11) {
-					value = value.slice(0, 11) + ' ' + value.slice(11);
-				}
-				e.target.value = value;
 			});
+			
+			phoneInput.addEventListener('keydown', function(e) {
+				// Prevent backspace from deleting the +63 prefix
+				if (e.key === 'Backspace' && e.target.selectionStart <= 4) {
+					e.preventDefault();
+				}
+			});
+			
+			// Dynamic vehicle details based on selection
+			function updateVehicleDetails() {
+				console.log('updateVehicleDetails called');
+				const vehicleCheckboxes = document.querySelectorAll('input[name="vehicle_type"]:checked');
+				const container = document.getElementById('vehicleDetailsContainer');
+				
+				if (!container) {
+					console.error('vehicleDetailsContainer not found!');
+					return;
+				}
+				
+				const selectedVehicles = Array.from(vehicleCheckboxes).map(cb => {
+					const labelElement = cb.closest('.vehicle-option').querySelector('label');
+					const labelText = labelElement ? labelElement.querySelector('span:last-child').textContent : cb.value;
+					return {
+						value: cb.value,
+						label: labelText
+					};
+				});
+				
+				console.log('Selected vehicles:', selectedVehicles);
+				
+				// Clear existing fields
+				container.innerHTML = '';
+				
+				// If no vehicles selected, hide the container
+				if (selectedVehicles.length === 0) {
+					container.style.display = 'none';
+					return;
+				}
+				
+				// Show the container
+				container.style.display = 'block';
+				
+				// Add driver's license field FIRST (at the top)
+				const licenseSection = document.createElement('div');
+				licenseSection.className = 'form-group';
+				licenseSection.style.marginBottom = '20px';
+				licenseSection.innerHTML = `
+					<label for="licenseNumber">Driver's License Number</label>
+					<input id="licenseNumber" name="license_number" class="form-input" type="text" placeholder="Enter your driver's license number" required />
+				`;
+				container.appendChild(licenseSection);
+				
+				// Create fields for each selected vehicle (plate numbers)
+				selectedVehicles.forEach((vehicle, index) => {
+					const vehicleSection = document.createElement('div');
+					vehicleSection.className = 'form-group';
+					vehicleSection.style.marginBottom = '20px';
+					
+					vehicleSection.innerHTML = `
+						<label for="vehiclePlate_${vehicle.value}">${vehicle.label} Plate Number</label>
+						<input id="vehiclePlate_${vehicle.value}" name="vehicle_plate_${vehicle.value}" class="form-input" type="text" placeholder="Enter ${vehicle.label.toLowerCase()} plate number" required />
+					`;
+					
+					container.appendChild(vehicleSection);
+				});
+				
+				console.log('Vehicle details updated:', selectedVehicles.length, 'vehicles selected');
+				console.log('Container innerHTML length:', container.innerHTML.length);
+			}
+			
+			// Make updateVehicleDetails globally accessible
+			window.updateVehicleDetails = updateVehicleDetails;
+			
+			// Set up event listeners when DOM is ready
+			function initializeVehicleListeners() {
+				const checkboxes = document.querySelectorAll('input[name="vehicle_type"]');
+				console.log('Initializing listeners for', checkboxes.length, 'vehicle checkboxes');
+				
+				checkboxes.forEach(checkbox => {
+					// Add event listener (inline handler already exists in HTML)
+					checkbox.addEventListener('change', function() {
+						console.log('Vehicle type changed:', this.value, this.checked);
+						updateVehicleDetails();
+					});
+				});
+				
+				// Initial call to check if any vehicles are pre-selected
+				updateVehicleDetails();
+			}
+			
+			// Initialize when DOM is ready
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', initializeVehicleListeners);
+			} else {
+				// DOM already loaded, initialize immediately
+				initializeVehicleListeners();
+			}
+
+			// Region and Province Data
+			const regionProvinces = {
+				'North Luzon': [
+					'Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan', 
+					'Baguio City', 'Benguet', 'Abra', 'Kalinga', 'Apayao', 'Mountain Province',
+					'Cagayan', 'Isabela', 'Nueva Vizcaya', 'Quirino', 'Batanes'
+				],
+				'Central Luzon': [
+					'Pampanga', 'Tarlac', 'Nueva Ecija', 'Zambales', 'Bataan', 
+					'Bulacan', 'Aurora', 'Angeles City', 'Olongapo City', 'San Fernando City'
+				],
+				'South Luzon': [
+					'Laguna', 'Batangas', 'Cavite', 'Rizal', 'Quezon', 
+					'Antipolo City', 'Lucena City', 'Batangas City', 'Lipa City', 'Tagaytay City',
+					'Calamba City', 'Los Baños', 'Biñan City', 'Cabuyao', 'San Pablo City',
+					'Albay', 'Camarines Norte', 'Camarines Sur', 'Catanduanes', 'Masbate', 'Sorsogon',
+					'Marinduque', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan', 'Romblon',
+					'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 
+					'Marikina', 'Pasay', 'Parañaque', 'Las Piñas', 'Muntinlupa', 'Caloocan',
+					'Malabon', 'Navotas', 'Valenzuela', 'San Juan'
+				],
+				'Visayas': [
+					'Cebu', 'Cebu City', 'Mandaue City', 'Lapu-Lapu City', 'Talisay City',
+					'Iloilo', 'Iloilo City', 'Bacolod City', 'Negros Occidental', 'Negros Oriental',
+					'Bohol', 'Tagbilaran City', 'Dumaguete City', 'Roxas City', 'Kalibo',
+					'Tacloban City', 'Ormoc City', 'Leyte', 'Samar', 'Eastern Samar', 'Northern Samar',
+					'Biliran', 'Southern Leyte'
+				],
+				'Mindanao': [
+					'Davao City', 'Davao del Norte', 'Davao del Sur', 'Davao Oriental', 'Davao de Oro',
+					'Cagayan de Oro City', 'Misamis Oriental', 'Misamis Occidental', 'Iligan City',
+					'Zamboanga City', 'Zamboanga del Norte', 'Zamboanga del Sur', 'Zamboanga Sibugay',
+					'General Santos City', 'South Cotabato', 'North Cotabato', 'Sultan Kudarat',
+					'Butuan City', 'Agusan del Norte', 'Agusan del Sur', 'Surigao del Norte', 'Surigao del Sur',
+					'Cotabato City', 'Maguindanao', 'Lanao del Norte', 'Lanao del Sur', 'Marawi City',
+					'Bukidnon', 'Valencia City', 'Malaybalay City'
+				]
+			};
+
+			// Make functions globally accessible for inline handlers
+			window.toggleRegionProvinces = function(region) {
+				const container = document.getElementById('provincesContainer');
+				const provinces = regionProvinces[region] || [];
+				
+				// Clear existing provinces
+				container.innerHTML = '';
+				
+				if (region && provinces.length > 0) {
+					// Show provinces for this region
+					container.innerHTML = `
+						<div style="margin-bottom:12px">
+							<label style="font-size:14px;font-weight:600;color:var(--accent)">Select Provinces/Cities in ${region} (Optional)</label>
+							<small style="display:block;color:#666;font-size:12px;margin-top:4px">Optionally select specific provinces/cities, or leave blank to serve the entire region</small>
+						</div>
+						<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:300px;overflow-y:auto;padding:8px;background:#f9fafb;border-radius:8px;border:1px solid var(--line)">
+							${provinces.map(province => `
+								<label style="display:flex;align-items:center;gap:8px;padding:8px;cursor:pointer;font-size:14px;border-radius:6px;transition:background 0.2s" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+									<input type="checkbox" name="province" value="${province}" data-region="${region}" onchange="updateServiceArea()" style="width:18px;height:18px;cursor:pointer">
+									<span>${province}</span>
+								</label>
+							`).join('')}
+						</div>
+					`;
+					container.style.display = 'block';
+				} else {
+					container.style.display = 'none';
+				}
+				
+				updateServiceArea();
+			}
+
+			// Update hidden service area input with selected regions and provinces
+			window.updateServiceArea = function() {
+				const regionSelect = document.getElementById('riderRegion');
+				const selectedRegion = regionSelect ? regionSelect.value : '';
+				const selectedProvinces = Array.from(document.querySelectorAll('input[name="province"]:checked')).map(cb => cb.value);
+				
+				const serviceAreaInput = document.getElementById('serviceAreaInput');
+				
+				// Combine region and provinces - region is required, provinces are optional
+				const serviceAreas = [];
+				if (selectedRegion) {
+					serviceAreas.push(selectedRegion);
+					if (selectedProvinces.length > 0) {
+						serviceAreas.push(...selectedProvinces);
+					}
+					serviceAreaInput.value = serviceAreas.join(',');
+				} else {
+					// No region selected
+					serviceAreaInput.value = '';
+				}
+				
+				// Debug logging
+				console.log('updateServiceArea called:');
+				console.log('  Region:', selectedRegion);
+				console.log('  Provinces:', selectedProvinces);
+				console.log('  Final value:', serviceAreaInput.value);
+				
+				// Update validation - only require region
+				if (selectedRegion) {
+					serviceAreaInput.setCustomValidity('');
+				} else {
+					serviceAreaInput.setCustomValidity('Please select a region');
+				}
+			}
 
 			// Clear error display when user starts typing in any field
 			document.querySelectorAll('.form-input, .form-select').forEach(input => {
@@ -763,3 +903,4 @@
 		</script>
 	</body>
 </html>
+

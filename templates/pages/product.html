@@ -866,6 +866,9 @@
       let selectedColor = {% if not colors %}'Standard'{% else %}null{% endif %};
       let selectedSize = {% if not sizes %}'One Size'{% else %}null{% endif %};
       
+      // Stock map from backend
+      const stockMap = {{ stock_map|tojson|safe }};
+      
       // Auto-select for grooming products that only have sizes
       if (isGroomingProduct && !{{ colors|length }} && {{ sizes|length }}) {
         selectedColor = 'Standard';
@@ -885,30 +888,81 @@
         'Lavender': '#E6E6FA', 'Mint': '#98FF98', 'Sky Blue': '#87CEEB', 'Dark Blue': '#00008B'
       };
 
-      // Apply color swatches with better fallback
+      // Apply color swatches with better fallback and multi-color support
       document.querySelectorAll('.color-swatch').forEach(swatch => {
         const color = swatch.getAttribute('data-color');
-        let hex = colorHex[color];
         
-        // If no exact match, try to find a partial match
-        if (!hex) {
-          const colorLower = color.toLowerCase();
-          for (const [key, value] of Object.entries(colorHex)) {
-            if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
-              hex = value;
-              break;
+        // Check if color contains a slash (multi-color)
+        if (color.includes('/')) {
+          const colors = color.split('/').map(c => c.trim());
+          
+          // Create gradient for multi-color swatch
+          const gradientColors = colors.map(c => {
+            let hex = colorHex[c];
+            
+            // Try partial match
+            if (!hex) {
+              const colorLower = c.toLowerCase();
+              for (const [key, value] of Object.entries(colorHex)) {
+                if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
+                  hex = value;
+                  break;
+                }
+              }
+            }
+            
+            // Fallback - generate color from name
+            if (!hex) {
+              hex = '#' + c.split('').reduce((acc, char) => {
+                return ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0');
+              }, 0).substr(0, 6);
+            }
+            
+            return hex;
+          });
+          
+          // Apply gradient
+          if (colors.length === 2) {
+            swatch.style.background = `linear-gradient(135deg, ${gradientColors[0]} 50%, ${gradientColors[1]} 50%)`;
+          } else if (colors.length === 3) {
+            swatch.style.background = `linear-gradient(135deg, ${gradientColors[0]} 33%, ${gradientColors[1]} 33%, ${gradientColors[1]} 66%, ${gradientColors[2]} 66%)`;
+          } else {
+            // More than 3 colors - create equal segments
+            const segments = colors.length;
+            const percentPerColor = 100 / segments;
+            let gradient = 'linear-gradient(135deg';
+            gradientColors.forEach((hex, i) => {
+              const start = i * percentPerColor;
+              const end = (i + 1) * percentPerColor;
+              gradient += `, ${hex} ${start}%, ${hex} ${end}%`;
+            });
+            gradient += ')';
+            swatch.style.background = gradient;
+          }
+        } else {
+          // Single color
+          let hex = colorHex[color];
+          
+          // If no exact match, try to find a partial match
+          if (!hex) {
+            const colorLower = color.toLowerCase();
+            for (const [key, value] of Object.entries(colorHex)) {
+              if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
+                hex = value;
+                break;
+              }
             }
           }
+          
+          // Final fallback - generate a color from the name
+          if (!hex) {
+            hex = '#' + color.split('').reduce((acc, char) => {
+              return ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0');
+            }, 0).substr(0, 6);
+          }
+          
+          swatch.style.backgroundColor = hex;
         }
-        
-        // Final fallback - generate a color from the name
-        if (!hex) {
-          hex = '#' + color.split('').reduce((acc, char) => {
-            return ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0');
-          }, 0).substr(0, 6);
-        }
-        
-        swatch.style.backgroundColor = hex;
         
         // Add border for light colors
         if (color.toLowerCase().includes('white') || color.toLowerCase().includes('ivory') || 
@@ -957,6 +1011,7 @@
         document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
         event.target.classList.add('selected');
         
+        updateStockDisplay();
         checkSelection();
       }
 
@@ -967,7 +1022,46 @@
         document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
         event.target.classList.add('selected');
         
+        updateStockDisplay();
         checkSelection();
+      }
+      
+      function updateStockDisplay() {
+        const stockStatus = document.querySelector('.stock-status');
+        if (!stockStatus) return;
+        
+        // If both size and color are selected, show specific stock
+        if (selectedSize && selectedColor) {
+          const key = `${selectedSize}_${selectedColor}`;
+          const stock = stockMap[key] || 0;
+          
+          if (stock > 0) {
+            stockStatus.innerHTML = `
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              In stock (${stock} available)
+            `;
+            stockStatus.style.color = '#10b981';
+          } else {
+            stockStatus.innerHTML = `
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+              </svg>
+              Out of stock
+            `;
+            stockStatus.style.color = '#ef4444';
+          }
+        } else {
+          // Default message
+          stockStatus.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            In stock
+          `;
+          stockStatus.style.color = '#10b981';
+        }
       }
 
       function checkSelection() {
