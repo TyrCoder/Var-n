@@ -319,7 +319,7 @@
                         <tr>
                           <td>{{ order.order_number }}</td>
                           <td>{{ order.first_name }} {{ order.last_name }}</td>
-                          <td>{{ order.products[:30] }}...</td>
+                          <td>{% if order.products %}{{ order.products[:30] }}...{% else %}-{% endif %}</td>
                           <td>₱{{ "{:,.2f}".format(order.total_amount) }}</td>
                           <td><span class="status-badge status-{{ 'active' if order.order_status == 'delivered' else 'pending' }}">{{ order.order_status.title() }}</span></td>
                         </tr>
@@ -396,11 +396,7 @@
                   <label style="display: block; margin-bottom: 6px; font-weight: 500;">Category/Genre *</label>
                   <select id="categorySelect" name="category_id" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" onchange="toggleSizeColorSections()">
                     <option value="">Select a category</option>
-                    {% if categories %}
-                      {% for category in categories %}
-                        <option value="{{ category.id }}" data-slug="{{ category.slug }}">{{ category.name }}</option>
-                      {% endfor %}
-                    {% endif %}
+                    <!-- Categories will be loaded by JavaScript -->
                   </select>
                 </div>
                 
@@ -1416,6 +1412,9 @@
             } else if (page === 'orders') {
               loadOrders('all');
             } else if (page === 'add-product') {
+              // Load categories for dropdown
+              loadCategories();
+              
               // Attach event listeners for size/color checkboxes
               const sizeColorInputs = document.querySelectorAll('input[name="sizes"], input[name="colors"]');
               sizeColorInputs.forEach(checkbox => {
@@ -1579,7 +1578,7 @@
             'confirmed': '#2196f3',
             'processing': '#ff5722',
             'shipped': '#4caf50',
-            'released_to_rider': '#8bc34a',
+            'released_to_rider': '#4caf50',
             'delivered': '#9c27b0',
             'cancelled': '#f44336',
             'returned': '#795548'
@@ -1622,12 +1621,9 @@
                   ${order.order_status === 'pending' ? 
                     `<button class="action-btn" onclick="confirmOrder(${order.id})" style="font-size:12px; padding:4px 8px; background:#2196f3; color:#fff;">✓ Confirm</button>` :
                   order.order_status === 'confirmed' ? 
-                    `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button class="action-btn" onclick="releaseToRider(${order.id})" style="font-size:12px; padding:4px 8px; background:#4caf50; color:#fff;">🚚 Release to Rider</button>
-                    </div>` :
-                  order.order_status === 'processing' || order.order_status === 'shipped' ? 
-                    `${order.order_status !== 'shipped' ? `<button class="action-btn" onclick="markShipped(${order.id})" style="font-size:12px; padding:4px 8px; background:#8b5cf6; color:#fff;">📦 Shipped</button>` : ''}
-                    ${order.order_status !== 'delivered' ? `<button class="action-btn" onclick="releaseToRiderDelivered(${order.id})" style="font-size:12px; padding:4px 8px; background:#10b981; color:#fff;">🚚 Release to Rider</button>` : '<span style="background:#10b981;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">✓ Delivered</span>'}` :
+                    `<button class="action-btn" onclick="releaseToRider(${order.id})" style="font-size:12px; padding:4px 8px; background:#4caf50; color:#fff;">🚚 Release to Rider</button>` :
+                  order.order_status === 'released_to_rider' ? 
+                    `<span style="background:#4caf50;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">🚚 Released to Rider</span>` :
                   order.order_status !== 'delivered' && order.order_status !== 'cancelled' ? 
                     `<button class="action-btn" onclick="openStatusModal(${order.id}, '${order.order_status}')" style="font-size:12px; padding:4px 8px;">Update</button>` : ''}
                 </div>
@@ -1673,9 +1669,8 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
       // Define valid status transitions (forward-only, no backwards allowed)
       const orderStatusFlow = {
         'pending': ['confirmed'],
-        'confirmed': ['processing'],
-        'processing': ['shipped'],
-        'shipped': ['delivered'],
+        'confirmed': ['released_to_rider'],
+        'released_to_rider': ['delivered'],
         'delivered': [], // Final state
         'cancelled': [], // Final state
         'returned': []   // Final state
@@ -1949,8 +1944,9 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         
         const formData = new FormData();
         formData.append('order_id', orderId);
+        formData.append('new_status', 'released_to_rider');
         
-        fetch('/seller/release-to-rider', {
+        fetch('/seller/update-order-status', {
           method: 'POST',
           body: formData
         })
@@ -2182,45 +2178,228 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
           return;
         }
         
-        let html = `
-          <table style="width:100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background:#f5f5f5; border-bottom: 2px solid #ddd;">
-                <th style="padding:12px; text-align:left; font-weight:600;">Product</th>
-                <th style="padding:12px; text-align:left; font-weight:600;">SKU</th>
-                <th style="padding:12px; text-align:center; font-weight:600;">Size</th>
-                <th style="padding:12px; text-align:center; font-weight:600;">Color</th>
-                <th style="padding:12px; text-align:right; font-weight:600;">Stock</th>
-                <th style="padding:12px; text-align:right; font-weight:600;">Reserved</th>
-                <th style="padding:12px; text-align:right; font-weight:600;">Available</th>
-                <th style="padding:12px; text-align:center; font-weight:600;">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-        
+        // Group by product for better display
+        const grouped = {};
         inventory.forEach(item => {
-          const statusClass = item.available_quantity <= item.low_stock_threshold ? 'status-inactive' : 'status-active';
-          const statusText = item.available_quantity <= item.low_stock_threshold ? 'Low Stock' : 'In Stock';
+          const key = item.product_id;
+          if (!grouped[key]) {
+            grouped[key] = {
+              product_name: item.product_name,
+              sku: item.sku,
+              price: item.price,
+              image_url: item.image_url,
+              variants: []
+            };
+          }
+          grouped[key].variants.push(item);
+        });
+        
+        let html = '';
+        
+        Object.entries(grouped).forEach(([productId, product]) => {
+          const hasVariants = product.variants.some(v => v.size || v.color);
+          const imageHtml = product.image_url ? `<img src="${product.image_url}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #e0e0e0;">` : `<div style="width: 120px; height: 120px; background: #f0f0f0; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; color: #999;">No Image</div>`;
           
           html += `
-            <tr style="border-bottom: 1px solid #eee;">
-              <td style="padding:12px;">${item.product_name}</td>
-              <td style="padding:12px;">${item.sku || 'N/A'}</td>
-              <td style="padding:12px; text-align:center;">${item.size || '-'}</td>
-              <td style="padding:12px; text-align:center;">${item.color || '-'}</td>
-              <td style="padding:12px; text-align:right; font-weight:500;">${item.stock_quantity}</td>
-              <td style="padding:12px; text-align:right; font-weight:500;">${item.reserved_quantity}</td>
-              <td style="padding:12px; text-align:right; font-weight:600;">${item.available_quantity}</td>
-              <td style="padding:12px; text-align:center;">
-                <span class="status-badge ${statusClass}">${statusText}</span>
-              </td>
-            </tr>
+            <div style="margin-bottom: 24px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+              <div style="display: flex; gap: 20px; padding: 20px; border-bottom: 1px solid #e0e0e0;">
+                <div>${imageHtml}</div>
+                <div style="flex: 1;">
+                  <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.product_name}</h3>
+                  <p style="margin: 4px 0; font-size: 13px; color: #666;">SKU: ${product.sku || 'N/A'}</p>
+                  <p style="margin: 4px 0; font-size: 14px; font-weight: 600; color: #0a0a0a;">₱${parseFloat(product.price || 0).toFixed(2)}</p>
+                  <p style="margin: 8px 0 0; font-size: 12px; color: #999;">Total Variants: ${product.variants.length}</p>
+                </div>
+              </div>
+              
+              ${hasVariants ? `
+                <div style="padding: 20px;">
+                  <h4 style="margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #0a0a0a;">Stock Management by Size & Color</h4>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
+                    ${product.variants.map(variant => `
+                      <div style="background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
+                        <div style="margin-bottom: 12px;">
+                          <p style="margin: 0 0 4px; font-size: 12px; color: #666; font-weight: 600;">📏 Size: <strong>${variant.size || 'One Size'}</strong></p>
+                          <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">🎨 Color: <strong>${variant.color || 'N/A'}</strong></p>
+                        </div>
+                        
+                        <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                            <div>
+                              <p style="margin: 0; color: #0c4a6e; font-weight: 600;">Stock</p>
+                              <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #0c4a6e;">${variant.stock_quantity}</p>
+                            </div>
+                            <div>
+                              <p style="margin: 0; color: #0c4a6e; font-weight: 600;">Available</p>
+                              <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #0c4a6e;">${variant.available_quantity}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <button class="restock-btn" data-product-id="${variant.product_id}" data-variant-id="${variant.variant_id_full}" data-product-name="${variant.product_name}" data-size="${variant.size || 'One Size'}" data-color="${variant.color || 'N/A'}" data-stock="${variant.stock_quantity}" style="width: 100%; padding: 8px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">Restock</button>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : `
+                <div style="padding: 20px;">
+                  <div style="background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                      <div>
+                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Current Stock</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].stock_quantity}</p>
+                      </div>
+                      <div>
+                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Reserved</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].reserved_quantity}</p>
+                      </div>
+                      <div>
+                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Available</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].available_quantity}</p>
+                      </div>
+                      <div>
+                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Alert Level</p>
+                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].low_stock_threshold}</p>
+                      </div>
+                    </div>
+                    <button class="restock-btn" data-product-id="${product.variants[0].product_id}" data-variant-id="" data-product-name="${product.product_name}" data-size="One Size" data-color="N/A" data-stock="${product.variants[0].stock_quantity}" style="width: 100%; padding: 12px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Restock</button>
+                  </div>
+                </div>
+              `}
+            </div>
           `;
         });
         
-        html += `</tbody></table>`;
         document.getElementById('inventory-list').innerHTML = html;
+        
+        // Attach click handlers to restock buttons
+        console.log('Attaching event listeners to .restock-btn elements');
+        setTimeout(() => {
+          const buttons = document.querySelectorAll('.restock-btn');
+          console.log(`Found ${buttons.length} restock buttons`);
+          buttons.forEach((btn, index) => {
+            console.log(`Attaching listener to button ${index}:`, btn.dataset);
+            btn.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              const productId = this.dataset.productId;
+              const variantId = this.dataset.variantId;
+              const productName = this.dataset.productName;
+              const size = this.dataset.size;
+              const color = this.dataset.color;
+              const stock = this.dataset.stock;
+              
+              console.log('✓ Restock button clicked:', { productId, variantId, productName, size, color, stock });
+              openVariantRestockModal(productId, variantId, productName, size, color, stock);
+            });
+          });
+        }, 100);
+      }
+
+      function openVariantRestockModal(productId, variantId, productName, size, color, currentStock) {
+        console.log('🔧 openVariantRestockModal called with:', { productId, variantId, productName, size, color, currentStock });
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        
+        modal.innerHTML = `
+          <div style="background:#fff; padding:32px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); max-width:500px; width:90%;">
+            <button onclick="this.closest('[style*=fixed]').remove()" style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:#999;">×</button>
+            
+            <h2 style="margin:0 0 24px; font-size:22px; font-weight:600; color:#0a0a0a;">📦 Restock: ${size} - ${color}</h2>
+            
+            <!-- Product Details -->
+            <div style="background:#f9fafb; padding:16px; border-radius:8px; margin-bottom:20px; border-left:4px solid #0a0a0a;">
+              <p style="margin:0 0 8px; font-size:12px; color:#6b7280; font-weight:600; text-transform:uppercase;">Product</p>
+              <p style="margin:4px 0; font-size:14px; font-weight:600; color:#0a0a0a;">${productName}</p>
+            </div>
+            
+            <!-- Current Stock -->
+            <div style="background:#f0f9ff; padding:16px; border-radius:8px; margin-bottom:20px; border-left:4px solid #3b82f6;">
+              <p style="margin:0 0 8px; font-size:12px; color:#0c4a6e; font-weight:600;">Current Stock: <strong>${currentStock} pcs</strong></p>
+            </div>
+            
+            <!-- Quantity Input -->
+            <div style="margin-bottom:20px;">
+              <label style="display:block; margin-bottom:8px; font-weight:600; font-size:14px; color:#0a0a0a;">Add Quantity (pcs)</label>
+              <input type="number" id="restock-quantity" min="1" value="10" style="width:100%; padding:12px; border:2px solid #e5e7eb; border-radius:8px; font-size:14px; box-sizing:border-box;">
+            </div>
+            
+            <!-- Action Buttons -->
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+              <button onclick="this.closest('[style*=fixed]').remove()" style="padding:12px 24px; border:1px solid #e5e7eb; background:#f6f6f6; color:#0a0a0a; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
+              <button id="restock-submit-btn" style="padding:12px 24px; border:none; background:#0a0a0a; color:#fff; border-radius:8px; cursor:pointer; font-weight:600;">✓ Restock</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+        console.log('✓ Modal appended to body');
+        
+        // Attach submit handler to button with stored data
+        document.getElementById('restock-submit-btn').addEventListener('click', function() {
+          submitVariantRestock(productId, variantId);
+        });
+        
+        document.getElementById('restock-quantity').focus();
+      }
+
+      function submitVariantRestock(productId, variantId) {
+        console.log('Submitting restock:', { productId, variantId });
+        
+        const quantity = parseInt(document.getElementById('restock-quantity').value);
+        
+        if (!quantity || quantity <= 0) {
+          alert('Please enter a valid quantity');
+          return;
+        }
+        
+        if (!productId) {
+          alert('Error: Product ID missing');
+          return;
+        }
+        
+        const submitBtn = document.getElementById('restock-submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Processing...';
+        
+        const formData = new FormData();
+        formData.append('product_id', productId);
+        if (variantId) {
+          formData.append('variant_id', variantId);
+        }
+        formData.append('quantity', quantity);
+        
+        console.log('FormData entries:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`  ${key}: ${value}`);
+        }
+        
+        fetch('/seller/restock', {
+          method: 'POST',
+          body: formData
+        })
+          .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+              alert(`✅ Restocked!\nAdded: ${quantity} pcs\nNew Stock: ${data.new_stock} pcs`);
+              document.querySelectorAll('[style*="position:fixed"]').forEach(el => el.remove());
+              loadInventory();
+            } else {
+              alert('❌ Failed: ' + (data.error || 'Unknown error'));
+              submitBtn.disabled = false;
+              submitBtn.textContent = '✓ Restock';
+            }
+          })
+          .catch(error => {
+            console.error('Fetch error:', error);
+            alert('Error: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✓ Restock';
+          });
       }
       
       // ============ REVIEWS MANAGEMENT ============
@@ -2347,15 +2526,19 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         promotions.forEach(promo => {
           const isActive = new Date(promo.start_date) <= new Date() && new Date() <= new Date(promo.end_date);
           const discountText = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
+          const isApproved = promo.is_approved;
+          const statusColor = isApproved ? (isActive ? '#10b981' : '#fbbf24') : '#9ca3af';
+          const statusText = isApproved ? (isActive ? 'Active' : 'Scheduled') : 'Pending Approval';
           
           html += `
-            <div style="background: #f9f9f9; border-left: 4px solid ${isActive ? '#10b981' : '#fbbf24'}; border-radius: 8px; padding: 16px;">
+            <div style="background: #f9f9f9; border-left: 4px solid ${statusColor}; border-radius: 8px; padding: 16px;">
               <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                 <div>
                   <strong style="font-size: 14px;">${promo.product_name}</strong>
                   <p style="margin: 4px 0 0; color: #666; font-size: 13px;">Discount: ${discountText}</p>
+                  ${!isApproved ? '<p style="margin: 4px 0 0; color: #f59e0b; font-size: 12px; font-weight: 500;">⏳ Waiting for admin approval...</p>' : ''}
                 </div>
-                <span class="status-badge ${isActive ? 'status-active' : 'status-pending'}">${isActive ? 'Active' : 'Scheduled'}</span>
+                <span class="status-badge ${isApproved ? (isActive ? 'status-active' : 'status-pending') : 'status-pending'}">${statusText}</span>
               </div>
               <p style="margin: 0 0 12px; font-size: 13px; color: #666;">${promo.description || 'No description'}</p>
               <div style="display: flex; gap: 16px; font-size: 12px; color: #999;">
@@ -2363,7 +2546,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
                 <span>End: ${new Date(promo.end_date).toLocaleDateString()}</span>
               </div>
               <div style="display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-                <button class="action-btn" onclick="editPromotion(${promo.id})" style="flex: 1; background: #2196f3; color: #fff; padding: 8px 12px; font-size: 13px;">✎ Edit</button>
+                ${!isApproved ? `<button class="action-btn" disabled style="flex: 1; background: #ccc; color: #999; padding: 8px 12px; font-size: 13px; cursor: not-allowed;">✎ Edit (pending approval)</button>` : `<button class="action-btn" onclick="editPromotion(${promo.id})" style="flex: 1; background: #2196f3; color: #fff; padding: 8px 12px; font-size: 13px;">✎ Edit</button>`}
                 <button class="action-btn" onclick="deletePromotion(${promo.id})" style="flex: 1; background: #ef4444; color: #fff; padding: 8px 12px; font-size: 13px;">🗑 Delete</button>
               </div>
             </div>
@@ -2423,17 +2606,47 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
               .then(response => response.json())
               .then(data => {
                 if (data.success) {
-                  alert('Promotion created successfully');
+                  // Show success alert
+                  const productSelect = document.getElementById('promo-product');
+                  const discountType = document.getElementById('promo-discount-type').value;
+                  const discountValue = document.getElementById('promo-discount-value').value;
+                  const selectedProduct = productSelect.options[productSelect.selectedIndex].text;
+                  
+                  const discountDisplay = discountType === 'percentage' ? `${discountValue}%` : `₱${discountValue}`;
+                  
+                  alert(`✅ Promotion Submitted for Admin Approval!\n\nProduct: ${selectedProduct}\nDiscount: ${discountDisplay}\n\nStatus: Pending Review\n\nYou will receive an email once the admin approves or rejects your promotion.`);
                   closePromotionModal();
                   loadPromotions();
                 } else {
-                  alert('Error: ' + (data.error || 'Unknown error'));
+                  alert('❌ Error: ' + (data.error || 'Unknown error'));
                 }
               })
-              .catch(error => alert('Error creating promotion: ' + error.message));
+              .catch(error => alert('❌ Error creating promotion: ' + error.message));
           });
         }
       });
+      
+      // Load categories for add-product form
+      function loadCategories() {
+        const categorySelect = document.getElementById('categorySelect');
+        if (!categorySelect) return;
+        
+        fetch('/api/categories')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.categories) {
+              categorySelect.innerHTML = '<option value="">Select a category</option>';
+              data.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                option.dataset.slug = category.slug;
+                categorySelect.appendChild(option);
+              });
+            }
+          })
+          .catch(error => console.error('Error loading categories:', error));
+      }
       
       function loadSalesAnalytics() {
         fetch('/seller/sales-analytics')
@@ -2555,8 +2768,12 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
 
       function loadAccountSettings() {
         fetch('/seller/account-settings')
-          .then(response => response.json())
+          .then(response => {
+            console.log('Account settings response status:', response.status);
+            return response.json();
+          })
           .then(data => {
+            console.log('Account settings data:', data);
             if (data.success) {
               const account = data.account;
               document.getElementById('account-username').textContent = account.username || 'User';
@@ -2568,9 +2785,15 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
               document.getElementById('current-password').value = '';
               document.getElementById('new-password').value = '';
               document.getElementById('confirm-password').value = '';
+            } else {
+              console.error('Account settings error:', data.error);
+              document.getElementById('account-username').textContent = 'Error: ' + (data.error || 'Unknown error');
             }
           })
-          .catch(error => console.error('Error loading account settings:', error));
+          .catch(error => {
+            console.error('Error loading account settings:', error);
+            document.getElementById('account-username').textContent = 'Error loading settings';
+          });
       }
 
       function deletePromotion(promoId) {
@@ -2707,51 +2930,6 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
       function escapeHtml(text) {
         const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
         return text.replace(/[&<>"']/g, m => map[m]);
-      }
-
-      function loadInventory() {
-        fetch('/seller/products')
-          .then(response => response.json())
-          .then(data => {
-            if (data.products && data.products.length > 0) {
-              let html = `
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Current Stock</th>
-                      <th>Low Stock Alert</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-              `;
-              
-              data.products.forEach(product => {
-                const isLow = product.stock <= product.threshold;
-                html += `
-                  <tr>
-                    <td>${product.name}</td>
-                    <td>${product.stock} pcs</td>
-                    <td>${product.threshold} pcs</td>
-                    <td><span class="status-badge ${isLow ? 'status-pending' : 'status-active'}">${isLow ? 'Low Stock' : 'In Stock'}</span></td>
-                    <td>
-                      <button class="action-btn" onclick="updateStock(${product.id}, ${product.stock})" style="padding: 6px 12px; font-size: 12px;">Restock</button>
-                    </td>
-                  </tr>
-                `;
-              });
-              
-              html += '</tbody></table>';
-              document.getElementById('inventory-list').innerHTML = html;
-            } else {
-              document.getElementById('inventory-list').innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No products in inventory</p>';
-            }
-          })
-          .catch(error => {
-            document.getElementById('inventory-list').innerHTML = '<p style="color:#ef4444;">Error loading inventory</p>';
-          });
       }
 
       // Global variable to store original product data for comparison

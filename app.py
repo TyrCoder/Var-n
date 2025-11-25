@@ -359,21 +359,6 @@ def init_db():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
         # Coupons/Discounts
-        cursor.execute('''CREATE TABLE IF NOT EXISTS coupons (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            code VARCHAR(50) UNIQUE NOT NULL,
-            description TEXT,
-            discount_type ENUM('percentage', 'fixed') NOT NULL,
-            discount_value DECIMAL(10,2) NOT NULL,
-            min_purchase DECIMAL(10,2) DEFAULT 0.00,
-            max_discount DECIMAL(10,2),
-            usage_limit INT,
-            used_count INT DEFAULT 0,
-            start_date DATETIME NOT NULL,
-            end_date DATETIME NOT NULL,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
         # OTP Verifications table
         cursor.execute('''CREATE TABLE IF NOT EXISTS otp_verifications (
@@ -435,7 +420,6 @@ def init_db():
             title VARCHAR(200) NOT NULL,
             description TEXT,
             image_url VARCHAR(500),
-            link_url VARCHAR(500),
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -443,6 +427,31 @@ def init_db():
             FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
             INDEX idx_active (is_active),
             INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        
+        # Promotions table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS promotions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            code VARCHAR(50) NOT NULL UNIQUE,
+            product_id INT,
+            discount_type ENUM('percentage', 'fixed') NOT NULL DEFAULT 'percentage',
+            discount_value DECIMAL(10, 2) NOT NULL,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            description TEXT,
+            is_active BOOLEAN DEFAULT TRUE,
+            is_approved BOOLEAN DEFAULT FALSE,
+            min_purchase DECIMAL(10, 2) DEFAULT 0,
+            usage_limit INT DEFAULT 999999,
+            usage_count INT DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
+            INDEX idx_code (code),
+            INDEX idx_active (is_active),
+            INDEX idx_approved (is_approved),
+            INDEX idx_dates (start_date, end_date),
+            INDEX idx_product (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
         # Admin settings table
@@ -458,6 +467,45 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        
+        # Migration: Rename coupons table to promotions if it exists
+        try:
+            cursor.execute("SHOW TABLES LIKE 'coupons'")
+            if cursor.fetchone():
+                try:
+                    cursor.execute('ALTER TABLE coupons RENAME TO promotions')
+                    print("[DB MIGRATION] Successfully renamed coupons table to promotions")
+                except Exception as e:
+                    if 'already exists' in str(e) or 'Duplicate' in str(e):
+                        print("[DB MIGRATION] promotions table already exists, dropping old coupons table")
+                        try:
+                            cursor.execute('DROP TABLE IF EXISTS coupons')
+                            print("[DB MIGRATION] Dropped old coupons table")
+                        except Exception as drop_err:
+                            print(f"[DB MIGRATION] Could not drop coupons table: {drop_err}")
+                    else:
+                        print(f"[DB MIGRATION] Table rename failed: {e}")
+        except Exception as e:
+            print(f"[DB MIGRATION] Error during rename: {e}")
+        
+        # Migration: Add is_approved column to promotions table if it doesn't exist
+        try:
+            cursor.execute("SHOW COLUMNS FROM promotions LIKE 'is_approved'")
+            if not cursor.fetchone():
+                cursor.execute('ALTER TABLE promotions ADD COLUMN is_approved BOOLEAN DEFAULT FALSE AFTER is_active')
+                print("[DB MIGRATION] Added is_approved column to promotions table")
+        except Exception as e:
+            if 'Duplicate' not in str(e) and 'already exists' not in str(e):
+                print(f"[DB MIGRATION] Could not add is_approved column: {e}")
+        
+        # Migration: Add index on is_approved if it doesn't exist
+        try:
+            cursor.execute("SHOW INDEX FROM promotions WHERE Key_name = 'idx_approved'")
+            if not cursor.fetchone():
+                cursor.execute('CREATE INDEX idx_approved ON promotions(is_approved)')
+                print("[DB MIGRATION] Added idx_approved index to promotions table")
+        except Exception as e:
+            print(f"[DB MIGRATION] Index creation failed: {e}")
         
         conn.commit()
         print("[DB] All tables created successfully!")
@@ -535,7 +583,6 @@ def admin_create_tables():
             title VARCHAR(200) NOT NULL,
             description TEXT,
             image_url VARCHAR(500),
-            link_url VARCHAR(500),
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -545,6 +592,16 @@ def admin_create_tables():
             INDEX idx_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         messages.append("Journal entries table created/verified")
+        
+        # Migration: Remove link_url column if it exists
+        try:
+            cursor.execute("SHOW COLUMNS FROM journal_entries LIKE 'link_url'")
+            if cursor.fetchone():
+                cursor.execute('ALTER TABLE journal_entries DROP COLUMN link_url')
+                messages.append("Removed legacy link_url column from journal_entries")
+        except Exception as e:
+            if 'Unknown column' not in str(e):
+                messages.append(f"link_url column check: {str(e)}")
         
         conn.commit()
         cursor.close()
@@ -1114,7 +1171,8 @@ def place_order():
         if save_address:
             # Check if user wants this as default address
             cursor.execute('SELECT COUNT(*) as count FROM addresses WHERE user_id = %s AND is_default = TRUE', (user_id,))
-            has_default = cursor.fetchone()['count'] > 0
+            result = cursor.fetchone()
+            has_default = result['count'] > 0 if result else False
             is_default = not has_default  # Set as default if no default exists
             
             if is_default:
@@ -1925,23 +1983,28 @@ def dashboard():
         
         # Get pending products count
         cursor.execute('SELECT COUNT(*) as count FROM products WHERE is_active = 0')
-        pending_products = cursor.fetchone()['count']
+        result = cursor.fetchone()
+        pending_products = result['count'] if result else 0
         
         # Get pending sellers count
         cursor.execute("SELECT COUNT(*) as count FROM sellers WHERE status = 'pending'")
-        pending_sellers = cursor.fetchone()['count']
+        result = cursor.fetchone()
+        pending_sellers = result['count'] if result else 0
         
         # Get pending riders count
         cursor.execute("SELECT COUNT(*) as count FROM riders WHERE status = 'pending'")
-        pending_riders = cursor.fetchone()['count']
+        result = cursor.fetchone()
+        pending_riders = result['count'] if result else 0
         
         # Get total orders
         cursor.execute('SELECT COUNT(*) as count FROM orders')
-        total_orders = cursor.fetchone()['count']
+        result = cursor.fetchone()
+        total_orders = result['count'] if result else 0
         
         # Get total users
         cursor.execute('SELECT COUNT(*) as count FROM users')
-        total_users = cursor.fetchone()['count']
+        result = cursor.fetchone()
+        total_users = result['count'] if result else 0
         
         # Get weekly revenue (last 7 days)
         cursor.execute('''
@@ -2417,7 +2480,8 @@ def admin_approve_edit(edit_id):
             WHERE product_id = %s AND status = 'pending'
         ''', (product_id,))
         
-        pending_count = cursor.fetchone()['count']
+        result = cursor.fetchone()
+        pending_count = result['count'] if result else 0
         
         # If no more pending edits, update product edit_status
         if pending_count == 0:
@@ -2475,7 +2539,8 @@ def admin_reject_edit(edit_id):
             WHERE product_id = %s AND status = 'pending'
         ''', (product_id,))
         
-        pending_count = cursor.fetchone()['count']
+        result = cursor.fetchone()
+        pending_count = result['count'] if result else 0
         
         # If no more pending edits, update product edit_status
         if pending_count == 0:
@@ -2676,16 +2741,38 @@ def admin_create_journal_entry():
         user_id = session.get('user_id')
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
-        image_url = request.form.get('image_url', '').strip()
-        link_url = request.form.get('link_url', '').strip()
+        is_active = request.form.get('is_active', '1') == '1'
+        image_url = ''
         
         if not title:
             return jsonify({'success': False, 'error': 'Title is required'}), 400
         
+        # Handle image file upload
+        if 'image' in request.files:
+            image_file = request.files['image']
+            if image_file and image_file.filename:
+                try:
+                    # Create upload folder
+                    upload_folder = os.path.join('static', 'images', 'journal')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    # Generate unique filename
+                    timestamp = int(time.time())
+                    unique_filename = f"journal_{user_id}_{timestamp}_{os.urandom(4).hex()}.png"
+                    filepath = os.path.join(upload_folder, unique_filename)
+                    
+                    # Save image
+                    image_file.save(filepath)
+                    image_url = f"/static/images/journal/{unique_filename}"
+                    print(f"[JOURNAL] Image uploaded: {image_url}")
+                except Exception as img_err:
+                    print(f"[JOURNAL] Error uploading image: {img_err}")
+                    return jsonify({'success': False, 'error': f'Error uploading image: {img_err}'}), 500
+        
         cursor.execute('''
-            INSERT INTO journal_entries (title, description, image_url, link_url, created_by)
+            INSERT INTO journal_entries (title, description, image_url, is_active, created_by)
             VALUES (%s, %s, %s, %s, %s)
-        ''', (title, description, image_url, link_url, user_id))
+        ''', (title, description, image_url, is_active, user_id))
         
         conn.commit()
         cursor.close()
@@ -2730,19 +2817,46 @@ def admin_update_journal_entry(entry_id):
     
     try:
         cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
-        image_url = request.form.get('image_url', '').strip()
-        link_url = request.form.get('link_url', '').strip()
+        is_active = request.form.get('is_active', '1') == '1'
         
         if not title:
             return jsonify({'success': False, 'error': 'Title is required'}), 400
         
+        # Get current entry to preserve existing image if new one not provided
+        cursor.execute('SELECT image_url FROM journal_entries WHERE id = %s', (entry_id,))
+        current_entry = cursor.fetchone()
+        image_url = current_entry['image_url'] if current_entry else ''
+        
+        # Handle image file upload
+        if 'image' in request.files:
+            image_file = request.files['image']
+            if image_file and image_file.filename:
+                try:
+                    # Create upload folder
+                    upload_folder = os.path.join('static', 'images', 'journal')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    # Generate unique filename
+                    timestamp = int(time.time())
+                    unique_filename = f"journal_{user_id}_{timestamp}_{os.urandom(4).hex()}.png"
+                    filepath = os.path.join(upload_folder, unique_filename)
+                    
+                    # Save image
+                    image_file.save(filepath)
+                    image_url = f"/static/images/journal/{unique_filename}"
+                    print(f"[JOURNAL] Image updated: {image_url}")
+                except Exception as img_err:
+                    print(f"[JOURNAL] Error uploading image: {img_err}")
+                    return jsonify({'success': False, 'error': f'Error uploading image: {img_err}'}), 500
+        
         cursor.execute('''
             UPDATE journal_entries 
-            SET title = %s, description = %s, image_url = %s, link_url = %s, updated_at = NOW()
+            SET title = %s, description = %s, image_url = %s, is_active = %s, updated_at = NOW()
             WHERE id = %s
-        ''', (title, description, image_url, link_url, entry_id))
+        ''', (title, description, image_url, is_active, entry_id))
         
         conn.commit()
         cursor.close()
@@ -2784,7 +2898,7 @@ def api_journal_entries():
     try:
         cursor = conn.cursor(dictionary=True)
         cursor.execute('''
-            SELECT id, title, description, image_url, link_url, created_at
+            SELECT id, title, description, image_url, created_at
             FROM journal_entries
             WHERE is_active = TRUE
             ORDER BY created_at DESC
@@ -2900,15 +3014,18 @@ def admin_statistics():
         
         # Total orders
         cursor.execute('SELECT COUNT(*) as total FROM orders')
-        total_orders = cursor.fetchone()['total']
+        result = cursor.fetchone()
+        total_orders = result['total'] if result else 0
         
         # Active users
         cursor.execute('SELECT COUNT(*) as total FROM users WHERE role = "buyer"')
-        active_users = cursor.fetchone()['total']
+        result = cursor.fetchone()
+        active_users = result['total'] if result else 0
         
         # Active products
         cursor.execute('SELECT COUNT(*) as total FROM products WHERE is_active = 1')
-        active_products = cursor.fetchone()['total']
+        result = cursor.fetchone()
+        active_products = result['total'] if result else 0
         
         cursor.close()
         conn.close()
@@ -2963,9 +3080,10 @@ def admin_active_riders():
     try:
         cursor = conn.cursor(dictionary=True)
         cursor.execute('''
-            SELECT r.id, r.first_name, r.last_name, r.email, r.phone, r.vehicle_type,
-                   r.license_number, r.service_area, r.created_at
+            SELECT r.id, u.first_name, u.last_name, u.email, u.phone, r.vehicle_type,
+                   r.license_number, r.service_area, r.status, r.is_available, r.rating, r.created_at
             FROM riders r
+            JOIN users u ON r.user_id = u.id
             ORDER BY r.created_at DESC
             LIMIT 100
         ''')
@@ -2974,6 +3092,7 @@ def admin_active_riders():
         conn.close()
         return jsonify({'riders': riders or []}), 200
     except Exception as err:
+        print(f"[ERROR] admin_active_riders: {str(err)}")
         return jsonify({'error': str(err)}), 500
 
 @app.route('/admin/customer-growth-by-region', methods=['GET'])
@@ -3108,20 +3227,26 @@ def admin_settings():
 
 @app.route('/seller-dashboard')
 def seller_dashboard():
+    print("[DEBUG] seller_dashboard: Starting...")
     if not session.get('logged_in') or session.get('role') != 'seller':
+        print("[DEBUG] seller_dashboard: Access denied - not logged in as seller")
         flash('Access denied. Please log in as a seller.', 'error')
         return redirect(url_for('login'))
     
     conn = get_db()
     if not conn:
+        print("[DEBUG] seller_dashboard: Database connection failed")
         flash('Database error', 'error')
         return redirect(url_for('login'))
     
+    cursor = None
     try:
         cursor = conn.cursor(dictionary=True)
         user_id = session.get('user_id')
+        print(f"[DEBUG] seller_dashboard: user_id={user_id}")
         
         # Get seller info
+        print("[DEBUG] seller_dashboard: Fetching seller info...")
         cursor.execute('''
             SELECT s.*, u.first_name, u.last_name, u.email 
             FROM sellers s 
@@ -3129,16 +3254,27 @@ def seller_dashboard():
             WHERE s.user_id = %s
         ''', (user_id,))
         seller = cursor.fetchone()
+        print(f"[DEBUG] seller_dashboard: seller={seller}")
         
         if not seller:
-            flash('Seller profile not found', 'error')
+            print("[DEBUG] seller_dashboard: Seller profile not found")
+            cursor.close()
+            conn.close()
+            flash('Seller profile not found. Please complete your seller registration.', 'error')
             return redirect(url_for('login'))
         
+        seller_id = seller['id']
+        print(f"[DEBUG] seller_dashboard: seller_id={seller_id}")
+        
         # Get product count
-        cursor.execute('SELECT COUNT(*) as count FROM products WHERE seller_id = %s', (seller['id'],))
-        product_count = cursor.fetchone()['count']
+        print("[DEBUG] seller_dashboard: Fetching product count...")
+        cursor.execute('SELECT COUNT(*) as count FROM products WHERE seller_id = %s', (seller_id,))
+        result = cursor.fetchone()
+        product_count = result['count'] if result else 0
+        print(f"[DEBUG] seller_dashboard: product_count={product_count}")
         
         # Get low stock products
+        print("[DEBUG] seller_dashboard: Fetching low stock products...")
         cursor.execute('''
             SELECT p.name, p.id, i.stock_quantity, i.low_stock_threshold
             FROM products p
@@ -3146,10 +3282,12 @@ def seller_dashboard():
             WHERE p.seller_id = %s AND i.stock_quantity <= i.low_stock_threshold
             ORDER BY i.stock_quantity ASC
             LIMIT 5
-        ''', (seller['id'],))
+        ''', (seller_id,))
         low_stock = cursor.fetchall()
+        print(f"[DEBUG] seller_dashboard: low_stock count={len(low_stock) if low_stock else 0}")
         
         # Get recent orders
+        print("[DEBUG] seller_dashboard: Fetching recent orders...")
         cursor.execute('''
             SELECT o.order_number, o.total_amount, o.order_status, o.created_at,
                    u.first_name, u.last_name,
@@ -3160,37 +3298,47 @@ def seller_dashboard():
             WHERE o.seller_id = %s
             ORDER BY o.created_at DESC
             LIMIT 5
-        ''', (seller['id'],))
+        ''', (seller_id,))
         recent_orders = cursor.fetchall()
+        print(f"[DEBUG] seller_dashboard: recent_orders count={len(recent_orders) if recent_orders else 0}")
         
         # Get today's sales
+        print("[DEBUG] seller_dashboard: Fetching today's sales...")
         cursor.execute('''
             SELECT COALESCE(SUM(total_amount), 0) as today_sales
             FROM orders
             WHERE seller_id = %s AND DATE(created_at) = CURDATE()
             AND order_status != 'cancelled'
-        ''', (seller['id'],))
-        today_sales = cursor.fetchone()['today_sales']
+        ''', (seller_id,))
+        result = cursor.fetchone()
+        today_sales = result['today_sales'] if result else 0
+        print(f"[DEBUG] seller_dashboard: today_sales={today_sales}")
         
         # Get pending orders count
+        print("[DEBUG] seller_dashboard: Fetching pending orders count...")
         cursor.execute('''
             SELECT COUNT(*) as pending_count
             FROM orders
             WHERE seller_id = %s AND order_status = 'pending'
-        ''', (seller['id'],))
-        pending_orders = cursor.fetchone()['pending_count']
+        ''', (seller_id,))
+        result = cursor.fetchone()
+        pending_orders = result['pending_count'] if result else 0
+        print(f"[DEBUG] seller_dashboard: pending_orders={pending_orders}")
         
         # Get top performing products
+        print("[DEBUG] seller_dashboard: Fetching top products...")
         cursor.execute('''
             SELECT p.id, p.name, p.sales_count
             FROM products p
             WHERE p.seller_id = %s AND p.is_active = 1
             ORDER BY p.sales_count DESC
             LIMIT 3
-        ''', (seller['id'],))
+        ''', (seller_id,))
         top_products = cursor.fetchall()
+        print(f"[DEBUG] seller_dashboard: top_products count={len(top_products) if top_products else 0}")
         
         # Get weekly sales (last 7 days)
+        print("[DEBUG] seller_dashboard: Fetching weekly sales...")
         cursor.execute('''
             SELECT 
                 DAYNAME(created_at) as day_name,
@@ -3202,8 +3350,9 @@ def seller_dashboard():
             AND order_status != 'cancelled'
             GROUP BY DATE(created_at), DAYNAME(created_at), DAYOFWEEK(created_at)
             ORDER BY DATE(created_at)
-        ''', (seller['id'],))
+        ''', (seller_id,))
         weekly_sales_raw = cursor.fetchall()
+        print(f"[DEBUG] seller_dashboard: weekly_sales_raw count={len(weekly_sales_raw) if weekly_sales_raw else 0}")
         
         # Create a dictionary for all days of the week with default 0
         days_order = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -3211,19 +3360,26 @@ def seller_dashboard():
         
         # Fill in actual sales data
         for row in weekly_sales_raw:
-            weekly_sales[row['day_name']] = float(row['daily_sales'])
+            if row and row.get('day_name'):
+                weekly_sales[row['day_name']] = float(row['daily_sales']) if row['daily_sales'] else 0
+        
+        print(f"[DEBUG] seller_dashboard: weekly_sales={weekly_sales}")
         
         # Get max sales for percentage calculation (ensure it's never 0 to prevent division by zero)
         max_value = max(weekly_sales.values()) if weekly_sales.values() else 0
         max_weekly_sales = max_value if max_value > 0 else 1
+        print(f"[DEBUG] seller_dashboard: max_weekly_sales={max_weekly_sales}")
         
         # Get all active categories for the dropdown
+        print("[DEBUG] seller_dashboard: Fetching categories...")
         cursor.execute('SELECT id, name, slug FROM categories WHERE is_active = TRUE ORDER BY name')
         categories = cursor.fetchall()
+        print(f"[DEBUG] seller_dashboard: categories count={len(categories) if categories else 0}")
         
         cursor.close()
         conn.close()
         
+        print("[DEBUG] seller_dashboard: Rendering template...")
         return render_template('pages/SellerDashboard.html',
                              seller=seller,
                              product_count=product_count,
@@ -3237,6 +3393,19 @@ def seller_dashboard():
                              max_weekly_sales=max_weekly_sales)
         
     except Exception as err:
+        print(f"[ERROR] seller_dashboard: {str(err)}")
+        print(f"[ERROR] seller_dashboard: Exception type: {type(err)}")
+        import traceback
+        traceback.print_exc()
+        try:
+            if cursor:
+                cursor.close()
+        except:
+            pass
+        try:
+            conn.close()
+        except:
+            pass
         flash(f'Error loading dashboard: {str(err)}', 'error')
         return redirect(url_for('login'))
 
@@ -3422,7 +3591,7 @@ def seller_inventory():
         if not seller:
             return jsonify({'success': False, 'error': 'Seller not found'}), 404
         
-        # Get inventory for all seller's products
+        # Get inventory for all seller's products with images and variants
         cursor.execute('''
             SELECT 
                 i.id,
@@ -3434,11 +3603,20 @@ def seller_inventory():
                 i.low_stock_threshold,
                 p.name as product_name,
                 p.sku,
+                p.price,
+                pv.id as variant_id_full,
                 pv.size,
-                pv.color
+                pv.color,
+                pi.image_url
             FROM inventory i
             JOIN products p ON i.product_id = p.id
             LEFT JOIN product_variants pv ON i.variant_id = pv.id
+            LEFT JOIN (
+                SELECT product_id, image_url FROM product_images 
+                WHERE is_primary = TRUE OR (is_primary IS NULL)
+                GROUP BY product_id
+                LIMIT 1
+            ) pi ON p.id = pi.product_id
             WHERE p.seller_id = %s
             ORDER BY p.name, pv.size, pv.color
         ''', (seller['id'],))
@@ -3536,6 +3714,107 @@ def reject_review(review_id):
     except Exception as err:
         return jsonify({'success': False, 'error': str(err)}), 500
 
+@app.route('/seller/restock', methods=['POST'])
+def seller_restock():
+    """Update inventory for a product or variant"""
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    try:
+        product_id = request.form.get('product_id')
+        variant_id = request.form.get('variant_id')
+        quantity = int(request.form.get('quantity', 0))
+        
+        if quantity <= 0:
+            return jsonify({'success': False, 'error': 'Quantity must be greater than 0'}), 400
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Verify seller owns this product
+        cursor.execute('''
+            SELECT id FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            WHERE p.id = %s AND s.user_id = %s
+        ''', (product_id, session.get('user_id')))
+        
+        product = cursor.fetchone()
+        if not product:
+            return jsonify({'success': False, 'error': 'Product not found'}), 404
+        
+        # Get or create inventory record
+        cursor.execute('''
+            SELECT id, stock_quantity FROM inventory
+            WHERE product_id = %s AND (variant_id = %s OR (variant_id IS NULL AND %s IS NULL))
+        ''', (product_id, variant_id, variant_id))
+        
+        inventory = cursor.fetchone()
+        
+        if inventory:
+            # Update existing inventory
+            new_stock = inventory['stock_quantity'] + quantity
+            cursor.execute('''
+                UPDATE inventory 
+                SET stock_quantity = stock_quantity + %s,
+                    available_quantity = available_quantity + %s,
+                    last_restocked_at = NOW()
+                WHERE id = %s
+            ''', (quantity, quantity, inventory['id']))
+        else:
+            # Create new inventory record
+            cursor.execute('''
+                INSERT INTO inventory (product_id, variant_id, stock_quantity, available_quantity, low_stock_threshold, last_restocked_at)
+                VALUES (%s, %s, %s, %s, 10, NOW())
+            ''', (product_id, variant_id, quantity, quantity))
+            new_stock = quantity
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': f'Restocked with {quantity} units', 'new_stock': new_stock}), 200
+    except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/seller/variant/<int:variant_id>', methods=['GET'])
+def get_variant_details(variant_id):
+    """Get variant details including size and color"""
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get variant details with product and inventory info
+        cursor.execute('''
+            SELECT 
+                pv.id,
+                pv.size,
+                pv.color,
+                p.name as product_name,
+                i.stock_quantity,
+                i.reserved_quantity,
+                i.available_quantity,
+                i.low_stock_threshold
+            FROM product_variants pv
+            JOIN products p ON pv.product_id = p.id
+            JOIN sellers s ON p.seller_id = s.id
+            LEFT JOIN inventory i ON pv.id = i.variant_id
+            WHERE pv.id = %s AND s.user_id = %s
+        ''', (variant_id, session.get('user_id')))
+        
+        variant = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not variant:
+            return jsonify({'success': False, 'error': 'Variant not found'}), 404
+        
+        return jsonify({'success': True, 'variant': variant}), 200
+    except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
+
 # ============ PROMOTIONS MANAGEMENT ============
 @app.route('/seller/promotions', methods=['GET'])
 def seller_promotions():
@@ -3564,12 +3843,14 @@ def seller_promotions():
                 c.start_date,
                 c.end_date,
                 c.description,
+                c.is_approved,
+                c.is_active,
                 p.name as product_name,
                 p.price
-            FROM coupons c
+            FROM promotions c
             JOIN products p ON c.product_id = p.id
-            WHERE p.seller_id = %s AND c.is_active = TRUE
-            ORDER BY c.start_date DESC
+            WHERE p.seller_id = %s
+            ORDER BY c.created_at DESC
         ''', (seller['id'],))
         
         promotions = cursor.fetchall()
@@ -3580,9 +3861,51 @@ def seller_promotions():
     except Exception as err:
         return jsonify({'success': False, 'error': str(err)}), 500
 
+# ============ EMAIL HELPER FUNCTION ============
+def send_email(to_email, subject, html_body):
+    """Send email notification (using simple SMTP or print for development)"""
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        # For development, just log the email
+        # In production, configure SMTP settings from environment
+        smtp_server = os.getenv('SMTP_SERVER', 'localhost')
+        smtp_port = int(os.getenv('SMTP_PORT', '587'))
+        sender_email = os.getenv('SENDER_EMAIL', 'noreply@varon.com')
+        sender_password = os.getenv('SENDER_PASSWORD', '')
+        
+        # If no real SMTP configured, just log it
+        if not sender_email or sender_email == 'noreply@varon.com':
+            print(f"[📧 EMAIL LOG] To: {to_email}")
+            print(f"[📧 EMAIL LOG] Subject: {subject}")
+            print(f"[📧 EMAIL LOG] Body: {html_body[:200]}...")
+            return True
+        
+        # Send real email
+        message = MIMEMultipart('alternative')
+        message['Subject'] = subject
+        message['From'] = sender_email
+        message['To'] = to_email
+        
+        part = MIMEText(html_body, 'html')
+        message.attach(part)
+        
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            if sender_password:
+                server.starttls()
+                server.login(sender_email, sender_password)
+            server.sendmail(sender_email, to_email, message.as_string())
+        
+        return True
+    except Exception as e:
+        print(f"[⚠️] Email send error: {e}")
+        return False
+
 @app.route('/seller/promotion/create', methods=['POST'])
 def create_promotion():
-    """Create a new promotion"""
+    """Create a new promotion and notify interested buyers"""
     if not session.get('logged_in') or session.get('role') != 'seller':
         return jsonify({'success': False, 'error': 'Access denied'}), 403
     
@@ -3590,12 +3913,33 @@ def create_promotion():
         user_id = session.get('user_id')
         product_id = request.form.get('product_id')
         discount_type = request.form.get('discount_type')
-        discount_value = float(request.form.get('discount_value'))
+        discount_value = request.form.get('discount_value')
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
         description = request.form.get('description', '')
         
+        # Debug logging
+        print(f"[PROMO CREATE] Received data:")
+        print(f"  product_id: {product_id}")
+        print(f"  discount_type: {discount_type}")
+        print(f"  discount_value: {discount_value}")
+        print(f"  start_date: {start_date}")
+        print(f"  end_date: {end_date}")
+        print(f"  description: {description}")
+        
+        # Validate required fields
+        if not product_id or not discount_type or not discount_value or not start_date or not end_date:
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        
+        try:
+            discount_value = float(discount_value)
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Invalid discount value'}), 400
+        
         conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+            
         cursor = conn.cursor(dictionary=True)
         
         # Get seller ID and verify ownership
@@ -3604,34 +3948,121 @@ def create_promotion():
         if not seller:
             return jsonify({'success': False, 'error': 'Seller not found'}), 404
         
-        # Verify seller owns this product
-        cursor.execute('SELECT id FROM products WHERE id = %s AND seller_id = %s', (product_id, seller['id']))
-        if not cursor.fetchone():
-            return jsonify({'success': False, 'error': 'Product not found'}), 404
+        # Verify seller owns this product and get product details
+        cursor.execute('SELECT id, name, price, brand FROM products WHERE id = %s AND seller_id = %s', (product_id, seller['id']))
+        product = cursor.fetchone()
+        if not product:
+            return jsonify({'success': False, 'error': 'Product not found or not owned by seller'}), 404
         
-        # Insert promotion (as a coupon)
+        # Calculate discounted price
+        discounted_price = product['price']
+        discount_display = f"{discount_value}%"
+        if discount_type == 'percentage':
+            discounted_price = float(product['price']) * (1 - discount_value / 100)
+        else:
+            discounted_price = float(product['price']) - discount_value
+            discount_display = f"₱{discount_value}"
+        
+        # Convert datetime-local format (2025-11-25T14:30) to separate date/time
+        # Extract just the date part if it contains time
+        if 'T' in start_date:
+            start_date = start_date.split('T')[0]
+        if 'T' in end_date:
+            end_date = end_date.split('T')[0]
+        
+        # Generate auto promotion code: BRAND_PRODUCTID_TIMESTAMP
+        brand = (product['brand'] or 'BRAND').upper().replace(' ', '')
+        promo_code = f"{brand}_{product_id}_{int(time.time())}"
+        print(f"[PROMO CREATE] Inserting promotion with code: {promo_code}")
+        
         cursor.execute('''
-            INSERT INTO coupons (
-                code, discount_type, discount_value, 
-                start_date, end_date, description, is_active, created_at,
-                product_id, min_purchase, usage_limit
-            ) VALUES (%s, %s, %s, %s, %s, %s, TRUE, NOW(), %s, 0, 999999)
+            INSERT INTO promotions (
+                code, product_id, discount_type, discount_value, 
+                start_date, end_date, description, is_active, is_approved, created_at,
+                min_purchase, usage_limit
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, FALSE, NOW(), 0, 999999)
         ''', (
-            f"PROMO_{int(time.time())}",
+            promo_code,
+            product_id,
             discount_type,
             discount_value,
             start_date,
             end_date,
-            description,
-            product_id
+            description
         ))
         
         conn.commit()
+        promotion_id = cursor.lastrowid
+        print(f"[PROMO CREATE] Promotion created with ID: {promotion_id}")
+        
+        # Get buyers who have purchased this product (for email notification)
+        cursor.execute('''
+            SELECT DISTINCT u.email, u.first_name
+            FROM users u
+            JOIN order_items oi ON u.id = oi.user_id
+            WHERE oi.product_id = %s AND u.email IS NOT NULL
+            LIMIT 100
+        ''', (product_id,))
+        
+        buyers = cursor.fetchall()
+        emails_sent = 0
+        
+        print(f"[PROMO CREATE] Found {len(buyers)} buyers to notify")
+        
+        # Send email notifications to buyers
+        if buyers:
+            for buyer in buyers:
+                try:
+                    email_subject = f"🎉 Special Discount on {product['name']}!"
+                    email_body = f"""
+                    <html>
+                        <body style="font-family: Arial, sans-serif; color: #333;">
+                            <h2 style="color: #10b981;">🎉 Great News, {buyer['first_name']}!</h2>
+                            <p>We have a special promotion on a product you've purchased before:</p>
+                            
+                            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; margin: 20px 0;">
+                                <h3 style="margin: 0; color: #0a0a0a;">{product['name']}</h3>
+                                <p style="margin: 8px 0;">
+                                    <strong>Original Price:</strong> <span style="text-decoration: line-through;">₱{float(product['price']):.2f}</span>
+                                </p>
+                                <p style="margin: 8px 0; font-size: 18px;">
+                                    <strong style="color: #10b981;">Discount Price: ₱{discounted_price:.2f}</strong>
+                                </p>
+                                <p style="margin: 8px 0; color: #f59e0b;">
+                                    <strong>Save: {discount_display}</strong>
+                                </p>
+                                {f'<p style="color: #666; font-size: 14px;">{description}</p>' if description else ''}
+                            </div>
+                            
+                            <p>This promotion is valid from {start_date} to {end_date}.</p>
+                            <p style="margin-top: 20px; color: #666; font-size: 12px;">Use promo code: <strong>{promo_code}</strong></p>
+                        </body>
+                    </html>
+                    """
+                    
+                    if send_email(buyer['email'], email_subject, email_body):
+                        emails_sent += 1
+                except Exception as email_err:
+                    print(f"[PROMO CREATE] Error sending email to {buyer['email']}: {email_err}")
+        
         cursor.close()
         conn.close()
         
-        return jsonify({'success': True, 'message': 'Promotion created'}), 200
+        print(f"[PROMO CREATE] Success! Emails sent: {emails_sent}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Promotion submitted for admin approval',
+            'promotion_id': promotion_id,
+            'code': promo_code,
+            'emails_sent': emails_sent,
+            'status': 'pending_approval'
+        }), 201
+        
     except Exception as err:
+        print(f"[PROMO CREATE] Error: {str(err)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(err)}), 500
 
 @app.route('/seller/promotion/<int:promo_id>/delete', methods=['POST'])
@@ -3644,13 +4075,279 @@ def delete_promotion(promo_id):
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
         
-        cursor.execute('UPDATE coupons SET is_active = FALSE WHERE id = %s', (promo_id,))
+        cursor.execute('UPDATE promotions SET is_active = FALSE WHERE id = %s', (promo_id,))
         conn.commit()
         cursor.close()
         conn.close()
         
         return jsonify({'success': True, 'message': 'Promotion deleted'}), 200
     except Exception as err:
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/pending-promotions', methods=['GET'])
+def admin_pending_promotions():
+    """Get all pending promotions waiting for admin approval"""
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get pending promotions with product and brand details
+        cursor.execute('''
+            SELECT 
+                p.id,
+                p.code,
+                p.product_id,
+                p.discount_type,
+                p.discount_value,
+                p.start_date,
+                p.end_date,
+                p.description,
+                p.created_at,
+                pr.name as product_name,
+                pr.price as product_price,
+                pr.brand,
+                s.store_name,
+                u.first_name,
+                u.last_name
+            FROM promotions p
+            JOIN products pr ON p.product_id = pr.id
+            JOIN sellers s ON pr.seller_id = s.id
+            JOIN users u ON s.user_id = u.id
+            WHERE p.is_approved = FALSE
+            ORDER BY p.created_at ASC
+        ''')
+        
+        promotions = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'promotions': promotions,
+            'count': len(promotions)
+        }), 200
+        
+    except Exception as err:
+        print(f"[ERROR] admin_pending_promotions: {str(err)}")
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/promotion/<int:promo_id>/approve', methods=['POST'])
+def admin_approve_promotion(promo_id):
+    """Admin approves a promotion"""
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get complete promotion details with dates
+        cursor.execute('''
+            SELECT p.id, p.code, p.product_id, p.discount_type, p.discount_value,
+                   p.start_date, p.end_date, p.description,
+                   pr.name as product_name, pr.price, s.user_id, s.store_name
+            FROM promotions p
+            JOIN products pr ON p.product_id = pr.id
+            JOIN sellers s ON pr.seller_id = s.id
+            WHERE p.id = %s
+        ''', (promo_id,))
+        
+        promo = cursor.fetchone()
+        if not promo:
+            return jsonify({'success': False, 'error': 'Promotion not found'}), 404
+        
+        # Get seller email and details
+        cursor.execute('SELECT email, first_name, last_name FROM users WHERE id = %s', (promo['user_id'],))
+        seller = cursor.fetchone()
+        
+        # Update promotion to approved
+        cursor.execute('''
+            UPDATE promotions SET is_approved = TRUE, updated_at = NOW()
+            WHERE id = %s
+        ''', (promo_id,))
+        
+        conn.commit()
+        
+        # Get buyers who viewed or have interest in this product (from cart or reviews)
+        cursor.execute('''
+            SELECT DISTINCT u.id, u.email, u.first_name
+            FROM users u
+            LEFT JOIN cart c ON u.id = c.user_id AND c.product_id = %s
+            LEFT JOIN reviews r ON u.id = r.user_id AND r.product_id = %s
+            WHERE u.role = 'buyer' AND (c.id IS NOT NULL OR r.id IS NOT NULL)
+            LIMIT 100
+        ''', (promo['product_id'], promo['product_id']))
+        
+        interested_buyers = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        # Format dates for display
+        start_date = promo['start_date'].strftime('%B %d, %Y') if promo['start_date'] else 'TBD'
+        end_date = promo['end_date'].strftime('%B %d, %Y') if promo['end_date'] else 'TBD'
+        
+        # Calculate discount display
+        if promo['discount_type'] == 'percentage':
+            discount_text = f"{promo['discount_value']}% OFF"
+            discount_color = "#10b981"
+        else:
+            discount_text = f"₱{promo['discount_value']:.2f} OFF"
+            discount_color = "#8b5cf6"
+        
+        # Send approval email to seller
+        if seller and seller.get('email'):
+            try:
+                email_subject = f"🎉 Your Promotion Has Been Approved! - {promo['product_name']}"
+                email_body = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; color: #333;">
+                        <h2 style="color: #10b981;">✓ Promotion Approved!</h2>
+                        <p>Hi {seller.get('first_name', 'Seller')},</p>
+                        <p>Your promotion for <strong>{promo['product_name']}</strong> has been approved by our admin team and is now <strong>ACTIVE</strong>!</p>
+                        
+                        <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                            <p><strong>📦 Product:</strong> {promo['product_name']}</p>
+                            <p><strong>💰 Discount:</strong> <span style="color: {discount_color}; font-weight: bold; font-size: 16px;">{discount_text}</span></p>
+                            <p><strong>🎟️ Promo Code:</strong> <span style="background: #e0e7ff; padding: 4px 8px; font-family: monospace; font-weight: bold;">{promo['code']}</span></p>
+                            <p><strong>📅 Valid From:</strong> {start_date}</p>
+                            <p><strong>📅 Valid Until:</strong> {end_date}</p>
+                        </div>
+                        
+                        <p>Your promotion is now <strong>live and visible to customers</strong> on the product page. Buyers can use the promo code to get the discount at checkout.</p>
+                        <p style="color: #666; font-size: 14px; margin-top: 20px;">Store: {promo['store_name']}</p>
+                        <p>Thank you for using Varón!</p>
+                    </body>
+                </html>
+                """
+                send_email(seller['email'], email_subject, email_body)
+                print(f"[PROMO APPROVE] Seller approval email sent to {seller['email']}")
+            except Exception as email_err:
+                print(f"[PROMO APPROVE] Error sending seller email: {email_err}")
+        
+        # Send discount notification emails to interested buyers
+        if interested_buyers:
+            for buyer in interested_buyers:
+                if buyer.get('email'):
+                    try:
+                        email_subject = f"🤑 Special Discount on {promo['product_name']}!"
+                        email_body = f"""
+                        <html>
+                            <body style="font-family: Arial, sans-serif; color: #333;">
+                                <h2 style="color: #8b5cf6;">Great News! There's a New Discount!</h2>
+                                <p>Hi {buyer.get('first_name', 'Valued Customer')},</p>
+                                <p>A product you've shown interest in has a <strong>special promotion</strong> now available!</p>
+                                
+                                <div style="background: #faf5ff; border-left: 4px solid #8b5cf6; padding: 16px; margin: 20px 0; border-radius: 4px;">
+                                    <p style="margin: 0; font-size: 18px; font-weight: bold; color: #333;"><strong>📦 {promo['product_name']}</strong></p>
+                                    <p style="margin: 8px 0; font-size: 14px; color: #666;">Original Price: <strong>₱{promo['price']:.2f}</strong></p>
+                                    <p style="margin: 8px 0; font-size: 20px; color: {discount_color}; font-weight: bold;">Get <strong>{discount_text}</strong>!</p>
+                                    <p style="margin: 12px 0; background: #fff; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-weight: bold; display: inline-block;">Use Code: <span style="color: #8b5cf6;">{promo['code']}</span></p>
+                                </div>
+                                
+                                <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+                                    <p style="margin: 0;"><strong>⏰ Limited Time Offer!</strong></p>
+                                    <p style="margin: 4px 0; font-size: 14px;">Valid: <strong>{start_date} to {end_date}</strong></p>
+                                </div>
+                                
+                                <p><strong>How to use:</strong></p>
+                                <ol>
+                                    <li>Go to the product page</li>
+                                    <li>Add the item to your cart</li>
+                                    <li>Enter the code at checkout: <span style="background: #e0e7ff; padding: 2px 6px; font-family: monospace; font-weight: bold;">{promo['code']}</span></li>
+                                    <li>Enjoy your discount! 🎉</li>
+                                </ol>
+                                
+                                <p style="color: #666; font-size: 12px; margin-top: 20px;">Happy shopping!</p>
+                            </body>
+                        </html>
+                        """
+                        send_email(buyer['email'], email_subject, email_body)
+                        print(f"[PROMO APPROVE] Buyer notification sent to {buyer['email']}")
+                    except Exception as email_err:
+                        print(f"[PROMO APPROVE] Error sending buyer email: {email_err}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Promotion approved successfully! Emails sent to seller and {len(interested_buyers)} interested buyers.'
+        }), 200
+        
+    except Exception as err:
+        print(f"[ERROR] admin_approve_promotion: {str(err)}")
+        return jsonify({'success': False, 'error': str(err)}), 500
+
+@app.route('/admin/promotion/<int:promo_id>/reject', methods=['POST'])
+def admin_reject_promotion(promo_id):
+    """Admin rejects a promotion"""
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+    
+    try:
+        data = request.get_json() or {}
+        reason = data.get('reason', 'No reason provided')
+        
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get promotion and seller email
+        cursor.execute('''
+            SELECT p.id, p.code, pr.name as product_name, s.user_id
+            FROM promotions p
+            JOIN products pr ON p.product_id = pr.id
+            JOIN sellers s ON pr.seller_id = s.id
+            WHERE p.id = %s
+        ''', (promo_id,))
+        
+        promo = cursor.fetchone()
+        if not promo:
+            return jsonify({'success': False, 'error': 'Promotion not found'}), 404
+        
+        # Get seller email
+        cursor.execute('SELECT email, first_name FROM users WHERE id = %s', (promo['user_id'],))
+        seller = cursor.fetchone()
+        
+        # Delete the promotion
+        cursor.execute('DELETE FROM promotions WHERE id = %s', (promo_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Send rejection email to seller
+        if seller and seller.get('email'):
+            try:
+                email_subject = f"Promotion Rejected: {promo['product_name']}"
+                email_body = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; color: #333;">
+                        <h2 style="color: #ef4444;">Promotion Rejected</h2>
+                        <p>Hi {seller.get('first_name', 'Seller')},</p>
+                        <p>Your promotion has been rejected.</p>
+                        
+                        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 20px 0;">
+                            <p><strong>Product:</strong> {promo['product_name']}</p>
+                            <p><strong>Reason:</strong> {reason}</p>
+                        </div>
+                        
+                        <p>Please review the reason and feel free to submit another promotion if needed.</p>
+                        <p>Thank you!</p>
+                    </body>
+                </html>
+                """
+                send_email(seller['email'], email_subject, email_body)
+                print(f"[PROMO REJECT] Rejection email sent to {seller['email']}")
+            except Exception as email_err:
+                print(f"[PROMO REJECT] Error sending email: {email_err}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Promotion rejected successfully'
+        }), 200
+        
+    except Exception as err:
+        print(f"[ERROR] admin_reject_promotion: {str(err)}")
         return jsonify({'success': False, 'error': str(err)}), 500
 
 @app.route('/seller/sales-analytics', methods=['GET'])
@@ -3867,25 +4564,39 @@ def seller_brand_settings():
 @app.route('/seller/account-settings', methods=['GET', 'POST'])
 def seller_account_settings():
     """Get or update seller account settings"""
+    print(f"[DEBUG] seller_account_settings called - Role: {session.get('role')}, Logged in: {session.get('logged_in')}")
+    
     if not session.get('logged_in') or session.get('role') != 'seller':
+        print(f"[DEBUG] Access denied - Role: {session.get('role')}, Logged in: {session.get('logged_in')}")
         return jsonify({'success': False, 'error': 'Access denied'}), 403
     
     try:
         user_id = session.get('user_id')
+        print(f"[DEBUG] User ID: {user_id}")
+        
         conn = get_db()
+        if not conn:
+            print("[DEBUG] Database connection failed")
+            return jsonify({'success': False, 'error': 'Database connection error'}), 500
+            
         cursor = conn.cursor(dictionary=True)
         
-        # Get user and seller info
-        cursor.execute('''
-            SELECT u.id, u.username, u.email, u.password,
-                   s.id as seller_id, s.full_name, s.phone_number
-            FROM users u
-            LEFT JOIN sellers s ON u.id = s.user_id
-            WHERE u.id = %s
-        ''', (user_id,))
+        # Get user info
+        query = '''
+            SELECT id, first_name, last_name, email, password, phone
+            FROM users
+            WHERE id = %s
+        '''
+        print(f"[DEBUG] Executing query: {query}")
+        cursor.execute(query, (user_id,))
         
         user = cursor.fetchone()
+        print(f"[DEBUG] User fetched: {user is not None}, User data: {user}")
+        
         if not user:
+            cursor.close()
+            conn.close()
+            print("[DEBUG] User not found in database")
             return jsonify({'success': False, 'error': 'User not found'}), 404
         
         if request.method == 'GET':
@@ -3893,15 +4604,18 @@ def seller_account_settings():
             cursor.close()
             conn.close()
             
-            return jsonify({
+            full_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+            response_data = {
                 'success': True,
                 'account': {
-                    'username': user['username'],
-                    'email': user['email'],
-                    'full_name': user.get('full_name') or '',
-                    'phone_number': user.get('phone_number') or ''
+                    'username': f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+                    'email': user.get('email', ''),
+                    'full_name': full_name,
+                    'phone_number': user.get('phone', '') or ''
                 }
-            }), 200
+            }
+            print(f"[DEBUG] Returning account settings: {response_data}")
+            return jsonify(response_data), 200
         
         else:  # POST - Update account settings
             from werkzeug.security import check_password_hash, generate_password_hash
@@ -3911,20 +4625,35 @@ def seller_account_settings():
             current_password = request.form.get('current_password', '').strip()
             new_password = request.form.get('new_password', '').strip()
             
+            print(f"[DEBUG] Updating - full_name: {full_name}, phone: {phone_number}, pwd_change: {bool(new_password)}")
+            
+            # Split full name into first and last
+            name_parts = full_name.split(' ', 1)
+            first_name = name_parts[0] if len(name_parts) > 0 else ''
+            last_name = name_parts[1] if len(name_parts) > 1 else ''
+            
             # Update user profile
             cursor.execute('''
-                UPDATE sellers
-                SET full_name = %s, phone_number = %s
-                WHERE user_id = %s
-            ''', (full_name, phone_number, user_id))
+                UPDATE users
+                SET first_name = %s, last_name = %s, phone = %s
+                WHERE id = %s
+            ''', (first_name, last_name, phone_number, user_id))
             
             # If password change requested, verify current password
             if new_password:
                 if not current_password:
+                    conn.rollback()
+                    cursor.close()
+                    conn.close()
+                    print("[DEBUG] Password change requested but no current password provided")
                     return jsonify({'success': False, 'error': 'Current password required to change password'}), 400
                 
                 # Verify current password
                 if not check_password_hash(user['password'], current_password):
+                    conn.rollback()
+                    cursor.close()
+                    conn.close()
+                    print("[DEBUG] Current password incorrect")
                     return jsonify({'success': False, 'error': 'Current password is incorrect'}), 401
                 
                 # Hash and update new password
@@ -3934,14 +4663,19 @@ def seller_account_settings():
                     SET password = %s
                     WHERE id = %s
                 ''', (hashed_password, user_id))
+                print("[DEBUG] Password updated")
             
             conn.commit()
             cursor.close()
             conn.close()
             
+            print("[DEBUG] Account settings saved successfully")
             return jsonify({'success': True, 'message': 'Account settings updated'}), 200
     
     except Exception as err:
+        print(f"[ERROR] seller_account_settings: {str(err)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(err)}), 500
 
 @app.route('/seller/add-product', methods=['POST'])
@@ -4578,11 +5312,49 @@ def api_user_profile_navbar():
         print(f"Error fetching navbar profile: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/admin/check-db-schema', methods=['GET'])
+def check_db_schema():
+    """Check if coupons table has product_id column"""
+    try:
+        conn = get_db()
+        if not conn:
+            return jsonify({'success': False, 'error': 'DB connection failed'}), 500
+        
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SHOW COLUMNS FROM coupons LIKE 'product_id'")
+        result = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if result:
+            return jsonify({
+                'success': True,
+                'message': 'product_id column exists',
+                'column_info': result
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'product_id column NOT found - migration still needed'
+            }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/products')
 def api_products():
     """Get all active products for browsing with optional search and category filter"""
     try:
         conn = get_db()
+        if not conn:
+            return jsonify({
+                'success': False,
+                'error': 'Database connection failed'
+            }), 500
+        
         cursor = conn.cursor(dictionary=True)
         
         # Get query parameters
@@ -4625,8 +5397,17 @@ def api_products():
         cursor.execute(query, tuple(params))
         products = cursor.fetchall()
         
-        # For each product, get available colors
+        # Convert products to proper types for JSON serialization
+        products_list = []
         for product in products:
+            # Ensure all numeric fields are float/int
+            product['price'] = float(product['price']) if product['price'] else 0
+            product['id'] = int(product['id'])
+            product['category_id'] = int(product['category_id']) if product['category_id'] else None
+            products_list.append(product)
+        
+        # For each product, get available colors and active promotions
+        for product in products_list:
             cursor.execute("""
                 SELECT DISTINCT color 
                 FROM product_variants 
@@ -4635,15 +5416,71 @@ def api_products():
             """, (product['id'],))
             colors = cursor.fetchall()
             product['colors'] = [c['color'] for c in colors] if colors else []
+            
+            # Get active promotion for this product (must be approved)
+            promotion = None
+            try:
+                cursor.execute("""
+                    SELECT 
+                        id,
+                        discount_type,
+                        discount_value,
+                        start_date,
+                        end_date,
+                        description,
+                        code
+                    FROM promotions
+                    WHERE product_id = %s 
+                    AND is_active = TRUE
+                    AND is_approved = TRUE
+                    AND start_date <= NOW()
+                    AND end_date >= NOW()
+                    LIMIT 1
+                """, (product['id'],))
+                promotion = cursor.fetchone()
+            except Exception as promo_err:
+                # If there's any error, just skip promotions
+                print(f"[WARNING] Could not fetch promotions: {promo_err}")
+                promotion = None
+            
+            if promotion:
+                # Convert discount_value to float for JSON serialization
+                discount_val = float(promotion['discount_value']) if promotion['discount_value'] else 0
+                
+                product['promotion'] = {
+                    'id': promotion['id'],
+                    'discount_type': promotion['discount_type'],
+                    'discount_value': discount_val,
+                    'code': promotion['code'],
+                    'description': promotion['description']
+                }
+                
+                # Calculate discounted price
+                if promotion['discount_type'] == 'percentage':
+                    product['original_price'] = float(product['price'])
+                    product['discounted_price'] = float(product['price']) * (1 - discount_val / 100)
+                    product['discount_display'] = f"{int(discount_val)}% OFF"
+                else:
+                    product['original_price'] = float(product['price'])
+                    product['discounted_price'] = float(product['price']) - discount_val
+                    product['discount_display'] = f"₱{int(discount_val)} OFF"
+                
+                product['price_to_display'] = product['discounted_price']
+            else:
+                product['promotion'] = None
+                product['price_to_display'] = float(product['price'])
         
         cursor.close()
         conn.close()
         
         return jsonify({
             'success': True,
-            'products': products
+            'products': products_list
         }), 200
     except Exception as e:
+        print(f"[ERROR] /api/products: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -5644,10 +6481,12 @@ def seller_orders():
         else:
             # Debug: Check if there are any orders at all
             cursor.execute('SELECT COUNT(*) as count FROM orders')
-            total_orders = cursor.fetchone()['count']
+            result = cursor.fetchone()
+            total_orders = result['count'] if result else 0
             print(f"[DEBUG] Total orders in database: {total_orders}")
             cursor.execute('SELECT COUNT(*) as count FROM orders WHERE seller_id = %s', (seller_id,))
-            orders_by_seller_id = cursor.fetchone()['count']
+            result = cursor.fetchone()
+            orders_by_seller_id = result['count'] if result else 0
             print(f"[DEBUG] Orders with seller_id={seller_id}: {orders_by_seller_id}")
             cursor.execute('''
                 SELECT COUNT(DISTINCT o.id) as count 
@@ -5656,7 +6495,8 @@ def seller_orders():
                 INNER JOIN products p ON oi.product_id = p.id
                 WHERE p.seller_id = %s
             ''', (seller_id,))
-            orders_by_product = cursor.fetchone()['count']
+            result = cursor.fetchone()
+            orders_by_product = result['count'] if result else 0
             print(f"[DEBUG] Orders with products from seller_id={seller_id}: {orders_by_product}")
         
         # Convert datetime objects to strings and Decimal to float
@@ -5696,9 +6536,9 @@ def update_order_status():
     """Update the status of an order (for seller fulfillment)
     
     FORWARD-ONLY STATE MACHINE:
-    pending → confirmed → processing → shipped → delivered (FINAL)
-                                                ↘ cancelled (FINAL)
-                                                ↘ returned (FINAL)
+    pending → confirmed → released_to_rider → delivered (FINAL)
+                                             ↘ cancelled (FINAL)
+                                             ↘ returned (FINAL)
     """
     try:
         if 'user_id' not in session:
@@ -5713,7 +6553,7 @@ def update_order_status():
             return jsonify({'success': False, 'error': 'Missing order_id or new_status'}), 400
         
         # Define valid statuses
-        valid_statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'returned']
+        valid_statuses = ['pending', 'confirmed', 'released_to_rider', 'delivered', 'cancelled', 'returned']
         if new_status not in valid_statuses:
             return jsonify({'success': False, 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}), 400
         
@@ -5754,9 +6594,8 @@ def update_order_status():
         # Define valid transitions (no backwards allowed)
         valid_transitions = {
             'pending': ['confirmed'],
-            'confirmed': ['processing'],
-            'processing': ['shipped'],
-            'shipped': ['delivered'],
+            'confirmed': ['released_to_rider'],
+            'released_to_rider': ['delivered'],
             'delivered': [],  # Final state - no transitions
             'cancelled': [],  # Final state - no transitions
             'returned': []    # Final state - no transitions
@@ -5793,7 +6632,98 @@ def update_order_status():
         cursor.execute(update_query, (new_status, order_id))
         
         # Special handling for specific status transitions
-        if new_status == 'shipped':
+        if new_status == 'confirmed':
+            # When confirming an order: create/update shipment with seller_confirmed = TRUE
+            cursor.execute('''
+                SELECT o.shipping_address_id
+                FROM orders o
+                WHERE o.id = %s
+            ''', (order_id,))
+            order_info = cursor.fetchone()
+            
+            if order_info:
+                # Find or create shipment
+                cursor.execute('SELECT id FROM shipments WHERE order_id = %s', (order_id,))
+                shipment = cursor.fetchone()
+                
+                if not shipment:
+                    # Create new shipment
+                    tracking_number = f"SHIP{order_id}{int(time.time())}"
+                    cursor.execute('''
+                        INSERT INTO shipments (order_id, tracking_number, status, seller_confirmed, seller_confirmed_at, created_at)
+                        VALUES (%s, %s, 'pending', TRUE, NOW(), NOW())
+                    ''', (order_id, tracking_number))
+                    conn.commit()
+                else:
+                    # Update existing shipment to mark seller as confirmed
+                    cursor.execute('''
+                        UPDATE shipments
+                        SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
+                        WHERE id = %s
+                    ''', (shipment['id'],))
+                    conn.commit()
+        
+        elif new_status == 'released_to_rider':
+            # When releasing to rider: create/update shipment and assign rider
+            # First, get the order details and shipping address
+            cursor.execute('''
+                SELECT o.shipping_address_id
+                FROM orders o
+                WHERE o.id = %s
+            ''', (order_id,))
+            order_info = cursor.fetchone()
+            
+            if order_info:
+                # Get the shipping address
+                cursor.execute('SELECT province, city, postal_code FROM addresses WHERE id = %s', (order_info['shipping_address_id'],))
+                address = cursor.fetchone()
+                
+                # Find or create shipment
+                cursor.execute('SELECT id, rider_id FROM shipments WHERE order_id = %s', (order_id,))
+                shipment = cursor.fetchone()
+                
+                if shipment:
+                    shipment_id = shipment['id']
+                    existing_rider_id = shipment['rider_id']
+                else:
+                    # Create new shipment
+                    tracking_number = f"SHIP{order_id}{int(time.time())}"
+                    cursor.execute('''
+                        INSERT INTO shipments (order_id, tracking_number, status, seller_confirmed, seller_confirmed_at, created_at)
+                        VALUES (%s, %s, 'picked_up', TRUE, NOW(), NOW())
+                    ''', (order_id, tracking_number))
+                    conn.commit()
+                    shipment_id = cursor.lastrowid
+                    existing_rider_id = None
+                
+                # If no rider assigned yet, find an available one
+                if not existing_rider_id and address:
+                    cursor.execute('''
+                        SELECT id FROM riders 
+                        WHERE (service_area LIKE %s OR service_area LIKE %s OR service_area LIKE %s)
+                        AND status = 'active'
+                        AND is_available = TRUE
+                        LIMIT 1
+                    ''', (f'%{address["province"]}%', f'%{address["city"]}%', f'%{address["postal_code"]}%'))
+                    
+                    rider = cursor.fetchone()
+                    if rider:
+                        # Assign the rider and set status to picked_up
+                        cursor.execute('''
+                            UPDATE shipments 
+                            SET rider_id = %s, seller_confirmed = TRUE, seller_confirmed_at = NOW(), status = 'picked_up'
+                            WHERE id = %s
+                        ''', (rider['id'], shipment_id))
+                        print(f"[✅] Shipment {shipment_id} assigned to rider {rider['id']} with status picked_up")
+                else:
+                    # Already has a rider or can't find one, update shipment status to picked_up
+                    cursor.execute('''
+                        UPDATE shipments 
+                        SET seller_confirmed = TRUE, seller_confirmed_at = NOW(), status = 'picked_up'
+                        WHERE id = %s
+                    ''', (shipment_id,))
+        
+        elif new_status == 'shipped':
             # When marking as shipped, update shipment status
             cursor.execute('''
                 UPDATE shipments 
@@ -6885,71 +7815,52 @@ def api_rider_active_deliveries():
                    u.first_name, u.last_name, u.email, u.phone as customer_phone,
                    CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                    s.id as shipment_id, s.status as shipment_status,
-                   s.seller_confirmed, s.seller_confirmed_at,
+                   s.seller_confirmed, s.seller_confirmed_at, s.rider_id,
                    a.province, a.city, a.postal_code
             FROM orders o
             JOIN users u ON o.user_id = u.id
             JOIN addresses a ON o.shipping_address_id = a.id
             JOIN shipments s ON s.order_id = o.id
-            WHERE (s.rider_id = %s OR s.seller_confirmed = TRUE)
-            AND (s.status IN ('pending', 'picked_up', 'in_transit', 'out_for_delivery') 
-                 OR (s.status = 'pending' AND s.seller_confirmed = TRUE))
-            ORDER BY s.seller_confirmed DESC, o.created_at DESC
+            WHERE s.status IN ('pending', 'picked_up', 'in_transit', 'out_for_delivery')
+            AND (s.rider_id = %s OR s.rider_id IS NULL)
+            ORDER BY s.rider_id DESC, s.seller_confirmed DESC, o.created_at DESC
         ''', (rider_db_id,))
+        # Get all unfiltered deliveries first
         all_deliveries = cursor.fetchall()
         
-        # Filter deliveries by rider's service area and optional filters
-        # Define region-to-cities mapping for better matching
-        region_city_mapping = {
-            'north luzon': ['baguio', 'la union', 'benguet', 'ifugao', 'mountain province', 'nueva vizcaya', 'nueva ecija', 'tarlac', 'pangasinan', 'quirino', 'aurora'],
-            'south luzon': ['cavite', 'laguna', 'quezon', 'batangas', 'marinduque', 'oriental mindoro', 'occidental mindoro', 'romblon', 'tayabas'],
-            'metro manila': ['ncr', 'manila', 'makati', 'quezon city', 'pasig', 'taguig', 'mandaluyong', 'san juan', 'marikina', 'parañaque', 'muntinlupa', 'las piñas', 'bacoor', 'caloocan', 'malabon', 'navotas', 'valenzuela'],
-            'visayas': ['cebu', 'bohol', 'negros', 'antique', 'capiz', 'iloilo', 'guimaras', 'siquijor'],
-            'mindanao': ['davao', 'cagayan de oro', 'zamboanga', 'butuan', 'general santos', 'koronadal', 'iligan', 'marawi', 'cotabato', 'surigao'],
-            'bicol': ['albay', 'camarines norte', 'camarines sur', 'catanduanes', 'masbate', 'sorsogon'],
-            'calabarzon': ['cavite', 'laguna', 'batangas', 'rizal', 'quezon'],
-            'mimaropa': ['marinduque', 'mindoro', 'palawan', 'romblon'],
-            'calamansi': ['camarines norte', 'camarines sur', 'albay'],
-        }
+        print(f"[DEBUG] Query returned {len(all_deliveries)} deliveries for rider {rider_db_id}")
+        for d in all_deliveries:
+            print(f"  - Order {d['order_number']}: {d.get('city')}, {d.get('province')} | rider_id={d.get('rider_id')} | status={d.get('shipment_status')}")
         
+        # Simple filtering: get all deliveries assigned to this rider, plus any with no rider assigned
         deliveries = []
         for delivery in all_deliveries:
-            order_province = delivery.get('province', '').strip().lower()
-            order_city = delivery.get('city', '').strip().lower()
-            order_postal = delivery.get('postal_code', '').strip() or ''
-            
-            # Check if order is in rider's service area
-            in_service_area = False
-            for area in service_areas:
-                area_lower = area.lower()
+            # Include if assigned to this rider OR if unassigned
+            if delivery.get('rider_id') == rider_db_id or delivery.get('rider_id') is None:
+                deliveries.append(delivery)
+        
+        print(f"[DEBUG] After rider filtering: {len(deliveries)} deliveries")
+        
+        # Apply optional user filters if provided
+        if filter_province or filter_city or filter_postal:
+            filtered_by_user = []
+            for delivery in deliveries:
+                order_province = delivery.get('province', '').strip().lower()
+                order_city = delivery.get('city', '').strip().lower()
+                order_postal = delivery.get('postal_code', '').strip() or ''
                 
-                # Direct matches
-                if (area_lower == order_province or 
-                    area_lower == order_city or
-                    area_lower in order_city or
-                    order_city in area_lower):
-                    in_service_area = True
-                    break
+                # Check each filter
+                if filter_province and filter_province.lower() != order_province:
+                    continue
+                if filter_city and filter_city.lower() != order_city:
+                    continue
+                if filter_postal and filter_postal not in order_postal:
+                    continue
                 
-                # Regional mapping checks
-                if area_lower in region_city_mapping:
-                    cities_in_region = region_city_mapping[area_lower]
-                    if order_city in cities_in_region or order_province in cities_in_region:
-                        in_service_area = True
-                        break
+                filtered_by_user.append(delivery)
             
-            if not in_service_area:
-                continue
-            
-            # Apply optional filters
-            if filter_province and filter_province.lower() != order_province:
-                continue
-            if filter_city and filter_city.lower() != order_city:
-                continue
-            if filter_postal and filter_postal not in order_postal:
-                continue
-            
-            deliveries.append(delivery)
+            deliveries = filtered_by_user
+            print(f"[DEBUG] After user filters: {len(deliveries)} deliveries")
         
         # Convert Decimal to float and format dates for JSON serialization
         for delivery in deliveries:
@@ -6961,9 +7872,9 @@ def api_rider_active_deliveries():
             if delivery.get('seller_confirmed') is None:
                 delivery['seller_confirmed'] = False
         
-        print(f"[DEBUG] Active deliveries for rider {rider_db_id} (Service Area: {service_area}): {len(deliveries)} deliveries found (filtered from {len(all_deliveries)})")
+        print(f"[DEBUG] Final active deliveries for rider {rider_db_id}: {len(deliveries)} deliveries")
         for d in deliveries:
-            print(f"  - Order {d['order_number']}: {d['city']}, {d['province']} {d['postal_code']} | status={d['shipment_status']}, seller_confirmed={d['seller_confirmed']}")
+            print(f"  - Order {d['order_number']}: {d['city']}, {d['province']} | status={d['shipment_status']}, rider_id={d.get('rider_id')}")
         
         cursor.close()
         conn.close()
@@ -6979,7 +7890,7 @@ def api_rider_active_deliveries():
 
 @app.route('/api/rider/delivery-history', methods=['GET'])
 def api_rider_delivery_history():
-    """Get delivery history for the logged-in rider"""
+    """Get delivery history grouped by date for the logged-in rider"""
     if not session.get('logged_in') or session.get('role') != 'rider':
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
@@ -7001,24 +7912,28 @@ def api_rider_delivery_history():
         
         rider_db_id = rider_record['id']
         
+        # Group deliveries by date and calculate daily metrics
         cursor.execute('''
-            SELECT o.id, o.order_number, o.user_id, o.total_amount, o.order_status, o.created_at,
-                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', IFNULL(a.postal_code, '')) as delivery_address,
-                   u.first_name, u.last_name
-            FROM orders o
-            JOIN users u ON o.user_id = u.id
-            JOIN addresses a ON o.shipping_address_id = a.id
-            JOIN shipments s ON s.order_id = o.id
+            SELECT DATE(s.delivered_at) as delivery_date,
+                   COUNT(DISTINCT s.id) as order_count,
+                   COALESCE(SUM(o.total_amount * 0.15), 0) as daily_earnings,
+                   COALESCE(AVG(s.rider_rating), 5.0) as avg_rating
+            FROM shipments s
+            JOIN orders o ON s.order_id = o.id
             WHERE s.rider_id = %s AND s.status = 'delivered'
-            ORDER BY o.created_at DESC
-            LIMIT 50
-        ''', (rider_id,))
+            GROUP BY DATE(s.delivered_at)
+            ORDER BY delivery_date DESC
+            LIMIT 30
+        ''', (rider_db_id,))
+        
         history = cursor.fetchall()
         
         # Convert Decimal to float for JSON serialization
         for item in history:
-            if item.get('total_amount'):
-                item['total_amount'] = float(item['total_amount'])
+            if item.get('daily_earnings'):
+                item['daily_earnings'] = float(item['daily_earnings'])
+            if item.get('avg_rating'):
+                item['avg_rating'] = float(item['avg_rating'])
         
         cursor.close()
         conn.close()
@@ -8060,6 +8975,13 @@ def seller_confirm_order():
         
         if shipment:
             shipment_id = shipment['id']
+            # Update existing shipment to mark seller as confirmed
+            cursor.execute('''
+                UPDATE shipments
+                SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
+                WHERE id = %s
+            ''', (shipment_id,))
+            conn.commit()
         else:
             tracking_number = f"SHIP{order_id}{int(time.time())}"
             cursor.execute('''
@@ -8436,4 +9358,4 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)

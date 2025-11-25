@@ -12,7 +12,7 @@
       a{text-decoration:none;color:inherit}
       /* Layout */
       .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-      .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px}
+      .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:100vh}
       .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px}
       .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
       .side-group{margin-top:8px}
@@ -74,6 +74,7 @@
           <div class="side-title">Menu</div>
           <a class="side-link active" href="#" data-page="overview">Overview</a>
           <a class="side-link" href="#" data-page="pending-products">Pending Products <span class="tag" style="background:#ef4444;margin-left:auto;font-size:10px;padding:2px 6px;">{{ pending_products if pending_products else 0 }}</span></a>
+          <a class="side-link" href="#" data-page="pending-promotions" style="background:#1a1a1a;border-left:3px solid #8b5cf6;padding-left:7px">Pending Promotions <span class="tag" style="background:#8b5cf6;margin-left:auto;font-size:10px;padding:2px 6px;" id="pending-promotions-count">0</span></a>
           <a class="side-link" href="#" data-page="product-edits">Product Edits <span class="tag" style="background:#f59e0b;margin-left:auto;font-size:10px;padding:2px 6px;" id="edits-count">0</span></a>
           <a class="side-link" href="#" data-page="recovery-requests">Recovery Requests <span class="tag" style="background:#10b981;margin-left:auto;font-size:10px;padding:2px 6px;" id="recovery-count">0</span></a>
           <a class="side-link" href="#" data-page="product">All Products</a>
@@ -123,7 +124,7 @@
                 <div class="chart">
                   <div class="bars">
                     {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
-                    <div class="bar" style="height:{{ ((weekly_revenue[day] / max_weekly_revenue) * 100)|int if weekly_revenue[day] > 0 else 5 }}%"></div>
+                    <div class="bar" data-height="{{ ((weekly_revenue[day] / max_weekly_revenue) * 100)|int if weekly_revenue[day] > 0 else 5 }}"></div>
                     {% endfor %}
                   </div>
                   <div class="legend"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
@@ -211,6 +212,25 @@
                 <button onclick="closeProductDetailsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
               </div>
               <div id="product-details-body">Loading...</div>
+            </div>
+          </div>
+        `,
+        'pending-promotions': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">🎉 Pending Promotions</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">Review and approve promotions submitted by sellers</p>
+              <div id="pending-promotions-list">Loading pending promotions...</div>
+            </div>
+          </div>
+          <!-- Promotion Details Modal -->
+          <div id="promotion-details-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+            <div style="background:#fff;border-radius:12px;padding:24px;max-width:800px;width:90%;max-height:85vh;overflow-y:auto">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line)">
+                <h2 style="margin:0;font-size:20px;font-weight:700">🎉 Promotion Details</h2>
+                <button onclick="closePromotionDetailsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
+              </div>
+              <div id="promotion-details-body">Loading...</div>
             </div>
           </div>
         `,
@@ -344,12 +364,28 @@
                   <textarea id="journal-description" required rows="4" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;resize:vertical"></textarea>
                 </div>
                 <div>
-                  <label style="display:block;margin-bottom:8px;font-weight:500">Image URL</label>
-                  <input type="url" id="journal-image" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px" placeholder="https://example.com/image.jpg">
+                  <label style="display:block;margin-bottom:8px;font-weight:500">Journal Image</label>
+                  <div style="border:2px dashed var(--line);border-radius:6px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;" 
+                       onmouseover="this.style.borderColor='#8b5cf6';this.style.background='#faf5ff';"
+                       onmouseout="this.style.borderColor='var(--line)';this.style.background='transparent';"
+                       onclick="document.getElementById('journal-image-input').click()">
+                    <input type="file" id="journal-image-input" accept="image/*" style="display:none;" onchange="previewJournalImage(event)">
+                    <div id="journal-image-preview" style="display:none;">
+                      <img id="journal-preview-img" src="" alt="Preview" style="max-width:100%;max-height:200px;border-radius:6px;">
+                      <button type="button" onclick="removeJournalImage()" style="margin-top:10px;background:#ef4444;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">Remove Image</button>
+                    </div>
+                    <div id="journal-image-placeholder">
+                      <div style="font-size:32px;margin-bottom:8px;">🖼️</div>
+                      <p style="margin:0 0 4px;font-weight:500;color:#333;">Click to upload image</p>
+                      <p style="margin:0;font-size:12px;color:var(--muted);">or drag and drop (PNG, JPG, GIF)</p>
+                    </div>
+                  </div>
                 </div>
                 <div>
-                  <label style="display:block;margin-bottom:8px;font-weight:500">Link URL (optional)</label>
-                  <input type="url" id="journal-link" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px" placeholder="https://example.com/article">
+                  <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer">
+                    <input type="checkbox" id="journal-is-active" checked style="width:18px;height:18px;cursor:pointer">
+                    <span>Active (visible on homepage)</span>
+                  </label>
                 </div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
                   <button type="button" onclick="closeJournalModal()" class="tag" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px">Cancel</button>
@@ -515,6 +551,8 @@
           // Load dynamic data for specific pages
           if (page === 'pending-products') {
             loadPendingProducts();
+          } else if (page === 'pending-promotions') {
+            loadPendingPromotions();
           } else if (page === 'product-edits') {
             loadProductEdits();
           } else if (page === 'recovery-requests') {
@@ -553,6 +591,7 @@
         const pageNames = {
           'overview': 'Dashboard',
           'pending-products': 'Pending Products',
+          'pending-promotions': 'Pending Promotions',
           'product': 'All Products',
           'customer': 'Customers',
           'transactions': 'Transactions',
@@ -673,6 +712,248 @@
         })
         .catch(error => {
           alert('Error rejecting product');
+        });
+      }
+
+      function loadPendingPromotions() {
+        console.log('Loading pending promotions...');
+        fetch('/admin/pending-promotions')
+          .then(response => {
+            console.log('Promotions response:', response);
+            return response.json();
+          })
+          .then(data => {
+            console.log('Promotions data:', data);
+            if (data.promotions && data.promotions.length > 0) {
+              let html = `
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Product</th>
+                      <th>Seller</th>
+                      <th>Discount</th>
+                      <th>Dates</th>
+                      <th>Submitted</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+              `;
+              
+              data.promotions.forEach(promo => {
+                const date = new Date(promo.created_at).toLocaleDateString();
+                const startDate = new Date(promo.start_date).toLocaleDateString();
+                const endDate = new Date(promo.end_date).toLocaleDateString();
+                const discountLabel = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
+                
+                html += `
+                  <tr id="promotion-${promo.id}">
+                    <td><strong>${promo.code}</strong></td>
+                    <td>
+                      <strong>${promo.product_name}</strong><br>
+                      <small style="color: var(--muted)">₱${parseFloat(promo.product_price).toFixed(2)}</small>
+                    </td>
+                    <td>${promo.store_name}</td>
+                    <td>${discountLabel}</td>
+                    <td>
+                      <small>${startDate} to ${endDate}</small>
+                    </td>
+                    <td>${date}</td>
+                    <td>
+                      <div style="display: flex; gap: 8px;">
+                        <button class="tag" onclick="viewPromotionDetails(${promo.id})" style="background: #3b82f6; cursor: pointer; border: none;">Details</button>
+                        <button class="tag" onclick="approvePromotion(${promo.id})" style="background: #10b981; cursor: pointer; border: none;">Approve</button>
+                        <button class="tag" onclick="rejectPromotion(${promo.id})" style="background: #ef4444; cursor: pointer; border: none;">Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              });
+              
+              html += '</tbody></table>';
+              document.getElementById('pending-promotions-list').innerHTML = html;
+              
+              // Update badge count
+              const badge = document.querySelector('[data-page="pending-promotions"] .tag');
+              if (badge) {
+                badge.textContent = data.promotions.length;
+              }
+            } else {
+              document.getElementById('pending-promotions-list').innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending promotions to review</p>';
+              const badge = document.querySelector('[data-page="pending-promotions"] .tag');
+              if (badge) {
+                badge.textContent = '0';
+              }
+            }
+          })
+          .catch(error => {
+            document.getElementById('pending-promotions-list').innerHTML = '<p style="color:#ef4444;">Error loading pending promotions</p>';
+            console.error('Error:', error);
+          });
+      }
+
+      function viewPromotionDetails(promotionId) {
+        const modal = document.getElementById('promotion-details-modal');
+        const modalBody = document.getElementById('promotion-details-body');
+        
+        modal.style.display = 'flex';
+        modalBody.innerHTML = '<p style="text-align:center;padding:40px;">Loading promotion details...</p>';
+        
+        // Get the promotion data from the table row
+        fetch('/admin/pending-promotions')
+          .then(response => response.json())
+          .then(data => {
+            const promo = data.promotions.find(p => p.id === promotionId);
+            if (promo) {
+              const startDate = new Date(promo.start_date).toLocaleDateString();
+              const endDate = new Date(promo.end_date).toLocaleDateString();
+              const discountLabel = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
+              
+              let html = `
+                <div style="display: grid; gap: 16px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Promotion Code</label>
+                      <div style="font-size: 18px; font-weight: 700;">${promo.code}</div>
+                    </div>
+                    <div>
+                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Discount</label>
+                      <div style="font-size: 18px; font-weight: 700; color: #10b981;">${discountLabel}</div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Product</label>
+                    <div>${promo.product_name} (₱${parseFloat(promo.product_price).toFixed(2)})</div>
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Brand</label>
+                    <div>${promo.brand || 'N/A'}</div>
+                  </div>
+                  
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Description</label>
+                    <div>${promo.description || 'No description provided'}</div>
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Start Date</label>
+                      <div>${startDate}</div>
+                    </div>
+                    <div>
+                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">End Date</label>
+                      <div>${endDate}</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Min. Purchase</label>
+                      <div>₱${parseFloat(promo.min_purchase || 0).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Usage Limit</label>
+                      <div>${promo.usage_limit || 'Unlimited'}</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);">
+                    <button onclick="approvePromotion(${promo.id})" class="tag" style="background: #10b981; color: white; cursor: pointer; border: none; padding: 10px 16px; flex: 1;">✓ Approve</button>
+                    <button onclick="rejectPromotion(${promo.id})" class="tag" style="background: #ef4444; color: white; cursor: pointer; border: none; padding: 10px 16px; flex: 1;">✕ Reject</button>
+                  </div>
+                </div>
+              `;
+              modalBody.innerHTML = html;
+            }
+          })
+          .catch(error => {
+            modalBody.innerHTML = '<p style="color:#ef4444;">Error loading promotion details</p>';
+          });
+      }
+
+      function closePromotionDetailsModal() {
+        document.getElementById('promotion-details-modal').style.display = 'none';
+      }
+
+      function approvePromotion(promotionId) {
+        if (!confirm('Approve this promotion? An email will be sent to the seller.')) return;
+        
+        fetch(`/admin/promotion/${promotionId}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Promotion approved successfully! Email sent to seller.');
+            closePromotionDetailsModal();
+            document.getElementById(`promotion-${promotionId}`)?.remove();
+            
+            // Update counter
+            const badge = document.querySelector('[data-page="pending-promotions"] .tag');
+            if (badge) {
+              const count = parseInt(badge.textContent) - 1;
+              badge.textContent = count > 0 ? count : '0';
+            }
+            
+            // If no more promotions, reload the list
+            const listContainer = document.getElementById('pending-promotions-list');
+            if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
+              loadPendingPromotions();
+            }
+          } else {
+            alert('Error approving promotion: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          alert('Error approving promotion: ' + error.message);
+          console.error('Error:', error);
+        });
+      }
+
+      function rejectPromotion(promotionId) {
+        const reason = prompt('Enter rejection reason (will be sent to the seller):');
+        if (reason === null) return; // User cancelled
+        
+        fetch(`/admin/promotion/${promotionId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ reason: reason || 'No reason provided' })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Promotion rejected! Email sent to seller with rejection reason.');
+            closePromotionDetailsModal();
+            document.getElementById(`promotion-${promotionId}`)?.remove();
+            
+            // Update counter
+            const badge = document.querySelector('[data-page="pending-promotions"] .tag');
+            if (badge) {
+              const count = parseInt(badge.textContent) - 1;
+              badge.textContent = count > 0 ? count : '0';
+            }
+            
+            // If no more promotions, reload the list
+            const listContainer = document.getElementById('pending-promotions-list');
+            if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
+              loadPendingPromotions();
+            }
+          } else {
+            alert('Error rejecting promotion: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          alert('Error rejecting promotion: ' + error.message);
+          console.error('Error:', error);
         });
       }
 
@@ -1193,6 +1474,17 @@
         })
         .catch(error => console.error('Error loading recovery count:', error));
 
+      // Load pending promotions count on page load
+      fetch('/admin/pending-promotions')
+        .then(response => response.json())
+        .then(data => {
+          const promotionsCount = document.getElementById('pending-promotions-count');
+          if (promotionsCount && data.promotions) {
+            promotionsCount.textContent = data.promotions.length;
+          }
+        })
+        .catch(error => console.error('Error loading promotions count:', error));
+
       // Add click handlers for sidebar navigation
       document.querySelectorAll('.side-link').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -1264,6 +1556,10 @@
       window.addEventListener('DOMContentLoaded', () => {
         loadRecentOrders();
         loadBestProduct();
+        // Apply bar chart heights from data attributes
+        document.querySelectorAll('.bar[data-height]').forEach(bar => {
+          bar.style.height = bar.getAttribute('data-height') + '%';
+        });
       });
       function confirmLogout(event) {
         event.preventDefault();
@@ -1794,7 +2090,36 @@
         // Load overview customer growth data
         loadOverviewCustomerGrowth();
         
-        const journalForm = document.getElementById('journal-form');
+        // Image preview functions for journal
+      function previewJournalImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            document.getElementById('journal-image-placeholder').style.display = 'none';
+            document.getElementById('journal-image-preview').style.display = 'block';
+            document.getElementById('journal-preview-img').src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+
+      function removeJournalImage() {
+        document.getElementById('journal-image-input').value = '';
+        document.getElementById('journal-image-preview').style.display = 'none';
+        document.getElementById('journal-image-placeholder').style.display = 'block';
+      }
+
+      function closeJournalModal() {
+        document.getElementById('journal-modal').style.display = 'none';
+        document.getElementById('journal-form').reset();
+        document.getElementById('journal-image-input').value = '';
+        document.getElementById('journal-image-preview').style.display = 'none';
+        document.getElementById('journal-image-placeholder').style.display = 'block';
+        document.getElementById('journal-form').setAttribute('data-entry-id', '');
+      }
+
+      const journalForm = document.getElementById('journal-form');
         if (journalForm) {
           journalForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1802,8 +2127,13 @@
             const formData = new FormData();
             formData.append('title', document.getElementById('journal-title').value);
             formData.append('description', document.getElementById('journal-description').value);
-            formData.append('image_url', document.getElementById('journal-image').value);
-            formData.append('link_url', document.getElementById('journal-link').value);
+            formData.append('is_active', document.getElementById('journal-is-active').checked ? '1' : '0');
+            
+            // Get the file from input if it exists
+            const imageInput = document.getElementById('journal-image-input');
+            if (imageInput && imageInput.files && imageInput.files[0]) {
+              formData.append('image', imageInput.files[0]);
+            }
 
             const url = entryId ? `/admin/journal-entry/${entryId}` : '/admin/journal-entry';
             const method = entryId ? 'PUT' : 'POST';
