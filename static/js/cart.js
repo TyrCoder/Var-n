@@ -25,14 +25,20 @@ const VaronCart = {
   // Add item to cart
   async add(productId, quantity = 1, variantId = null, color = null, size = null) {
     try {
-      console.log('Adding to cart:', { productId, quantity, variantId, color, size });
+      // Ensure productId is an integer
+      const productIdInt = parseInt(productId, 10);
+      const quantityInt = parseInt(quantity, 10);
+      const variantIdInt = variantId ? parseInt(variantId, 10) : null;
+      
+      console.log('Adding to cart:', { productIdInt, quantityInt, variantIdInt, color, size });
+      
       const response = await fetch('/api/cart/add', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          product_id: productId,
-          quantity: quantity,
-          variant_id: variantId
+          product_id: productIdInt,
+          quantity: quantityInt,
+          variant_id: variantIdInt
         })
       });
       
@@ -41,7 +47,7 @@ const VaronCart = {
       
       if (data.success) {
         await this.updateBadge();
-        this.showMessage(`✓ Added ${quantity} item(s) to cart`, 'success');
+        this.showMessage(`✓ Added ${quantityInt} item(s) to cart`, 'success');
         return true;
       } else {
         console.error('Failed to add to cart:', data.error);

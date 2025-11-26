@@ -219,81 +219,58 @@
 
           <!-- Deliveries Section -->
           <div id="deliveries-section" style="display: none;">
-            <!-- Available Orders Tab -->
-            <div class="card" style="margin-bottom:14px">
-              <div class="inner">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                  <div class="metric">Available Orders in Your Area</div>
-                  <button onclick="loadAvailableOrders()" class="tag" style="background:#0a0a0a;color:#fff;border:none;cursor:pointer">🔄 Refresh</button>
-                </div>
-                <div style="overflow:auto">
-                  <table id="available-orders-table">
-                    <thead>
-                      <tr>
-                        <th>Order ID</th>
-                        <th>Customer</th>
-                        <th>Delivery Address</th>
-                        <th>Amount</th>
-                        <th>Earning</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td colspan="6" style="text-align:center;color:#999">Loading available orders...</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <!-- My Active Deliveries Tab -->
+            <!-- Unified Orders & Deliveries Tab -->
             <div class="card">
               <div class="inner">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                  <div class="metric">My Active Deliveries</div>
-                  <div class="tag" style="background:#10b981;color:#fff" id="active-count">0 Active</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+                  <div>
+                    <div class="metric">Deliveries & Orders</div>
+                    <div style="font-size:13px;color:#666;margin-top:2px">All available and active deliveries in your area</div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button onclick="loadOrdersAndDeliveries()" class="tag" style="background:#0a0a0a;color:#fff;border:none;cursor:pointer;padding:8px 14px">🔄 Refresh</button>
+                    <div class="tag" style="background:#10b981;color:#fff" id="order-count">0 Orders</div>
+                  </div>
                 </div>
 
-                <!-- Region/Area Filter Controls -->
+                <!-- Filter Controls -->
                 <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;padding:12px;background:#f8fafc;border-radius:8px">
                   <div style="flex:1;min-width:150px">
                     <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600">Filter by Province</label>
-                    <input type="text" id="filterProvince" placeholder="Enter province" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadMyActiveDeliveries()">
+                    <input type="text" id="filterProvince" placeholder="Enter province" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadOrdersAndDeliveries()">
                   </div>
                   <div style="flex:1;min-width:150px">
                     <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600">Filter by City</label>
-                    <input type="text" id="filterCity" placeholder="Enter city" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadMyActiveDeliveries()">
+                    <input type="text" id="filterCity" placeholder="Enter city" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadOrdersAndDeliveries()">
                   </div>
                   <div style="flex:1;min-width:150px">
                     <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;font-weight:600">Filter by Postal Code</label>
-                    <input type="text" id="filterPostalCode" placeholder="Enter postal code" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadMyActiveDeliveries()">
+                    <input type="text" id="filterPostalCode" placeholder="Enter postal code" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px" onchange="loadOrdersAndDeliveries()">
                   </div>
                   <div style="display:flex;align-items:flex-end;gap:6px">
                     <button onclick="clearFilters()" style="padding:8px 14px;background:#efefef;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;transition:all 0.2s" onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background='#efefef'">Clear Filters</button>
                   </div>
                 </div>
 
-                <div style="font-size:12px;color:#666;margin-bottom:10px">
+                <div style="font-size:12px;color:#666;margin-bottom:12px">
                   📍 Your Service Area: <strong id="riderServiceArea">Loading...</strong>
                 </div>
 
-                <div style="overflow:auto">
-                  <table id="active-deliveries-table">
+                <div id="orders-deliveries-container" style="overflow:auto">
+                  <table id="orders-deliveries-table" style="width:100%;border-collapse:collapse;background:#fff">
                     <thead>
-                      <tr>
-                        <th>Order ID</th>
-                        <th>Customer</th>
-                        <th>Delivery Address</th>
-                        <th>Status</th>
-                        <th>Earning</th>
-                        <th>Action</th>
+                      <tr style="background:#f8fafc;border-bottom:2px solid #e5e7eb">
+                        <th style="padding:12px 14px;text-align:left;font-size:12px;font-weight:700;color:#374151;letter-spacing:0.5px;min-width:100px">Order ID</th>
+                        <th style="padding:12px 14px;text-align:left;font-size:12px;font-weight:700;color:#374151;letter-spacing:0.5px;min-width:200px">Customer & Location</th>
+                        <th style="padding:12px 14px;text-align:left;font-size:12px;font-weight:700;color:#374151;letter-spacing:0.5px;min-width:120px">Amount</th>
+                        <th style="padding:12px 14px;text-align:left;font-size:12px;font-weight:700;color:#374151;letter-spacing:0.5px;min-width:100px">Your Earning</th>
+                        <th style="padding:12px 14px;text-align:left;font-size:12px;font-weight:700;color:#374151;letter-spacing:0.5px;min-width:120px">Status</th>
+                        <th style="padding:12px 14px;text-align:center;font-size:12px;font-weight:700;color:#374151;letter-spacing:0.5px;min-width:110px">Action</th>
                       </tr>
                     </thead>
-                    <tbody id="active-deliveries-tbody" style="color:#0a0a0a">
+                    <tbody id="orders-deliveries-tbody" style="color:#0a0a0a">
                       <tr>
-                        <td colspan="6" style="text-align:center;color:#999">Loading your deliveries...</td>
+                        <td colspan="6" style="text-align:center;color:#999;padding:40px">Loading your orders and deliveries...</td>
                       </tr>
                     </tbody>
                   </table>
@@ -308,22 +285,22 @@
               <div class="inner">
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <div class="metric">Delivery History</div>
-                  <div class="tag" style="background:#efefef;color:#0a0a0a">Last 30 Days</div>
+                  <div class="tag" style="background:#efefef;color:#0a0a0a">All Delivered Orders</div>
                 </div>
                 <div style="overflow:auto">
                   <table id="history-table">
                     <thead>
                       <tr>
-                        <th>Date</th>
-                        <th>Orders</th>
+                        <th>Order #</th>
+                        <th>Customer</th>
                         <th>Earnings</th>
-                        <th>Rating</th>
-                        <th style="text-align:center">Actions</th>
+                        <th>Status</th>
+                        <th style="text-align:center">Details</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td colspan="4" style="text-align:center;color:#999">Loading...</td>
+                        <td colspan="5" style="text-align:center;color:#999">Loading...</td>
                       </tr>
                     </tbody>
                   </table>
@@ -432,8 +409,13 @@
           <div id="profile-section" style="display: none;">
             <div class="card">
               <div class="inner">
-                <div class="metric">Profile Information</div>
-                <div style="margin-top:20px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                  <div class="metric">Profile Settings</div>
+                  <button id="editProfileBtn" onclick="toggleEditMode()" class="tag" style="background:#0a0a0a;color:#fff;border:none;cursor:pointer;padding:8px 16px">✎ Edit Profile</button>
+                </div>
+
+                <!-- View Mode -->
+                <div id="profileViewMode">
                   <div style="display:flex;gap:20px;margin-bottom:20px">
                     <div style="position:relative;width:100px;height:100px">
                       <img id="profileImage" 
@@ -453,7 +435,7 @@
                              onchange="uploadProfileImage(this)">
                     </div>
                     <div>
-                      <div style="font-size:20px;font-weight:bold">{{ rider_name }}</div>
+                      <div style="font-size:20px;font-weight:bold" id="viewRiderName">{{ rider_name }}</div>
                       <div style="color:var(--muted)">{{ rider.service_area if rider and rider.service_area else 'Sta Cruz, Laguna' }} Rider</div>
                       <div style="margin-top:10px">
                         <span class="tag" style="background:#efefef;color:#0a0a0a">Motorcycle</span>
@@ -462,37 +444,116 @@
                     </div>
                   </div>
                   <div style="display:grid;gap:10px">
-                    <div style="display:flex;justify-content:space-between">
-                      <div>Vehicle Type(s)</div>
-                      <div>
-                        {% if rider and rider.vehicle_type %}
-                          {% set vehicles = rider.vehicle_type.split(',') %}
-                          {% for vehicle in vehicles %}
-                            <span class="tag" style="background:#efefef;color:#0a0a0a;margin-right:6px">{{ vehicle.strip()|title }}</span>
-                          {% endfor %}
-                        {% else %}
-                          <span>Not specified</span>
-                        {% endif %}
-                      </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">First Name</div>
+                      <div id="viewFirstName">{{ user.first_name if user and user.first_name else 'N/A' }}</div>
                     </div>
-                    <div style="display:flex;justify-content:space-between">
-                      <div>License Number</div>
-                      <div>{{ rider.license_number if rider and rider.license_number else 'Not provided' }}</div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">Last Name</div>
+                      <div id="viewLastName">{{ user.last_name if user and user.last_name else 'N/A' }}</div>
                     </div>
-                    <div style="display:flex;justify-content:space-between">
-                      <div>Contact Number</div>
-                      <div>{{ user.phone if user and user.phone else 'Not provided' }}</div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">Email</div>
+                      <div id="viewEmail">{{ user.email if user and user.email else 'N/A' }}</div>
                     </div>
-                    <div style="display:flex;justify-content:space-between">
-                      <div>Email</div>
-                      <div>{{ user.email if user and user.email else 'N/A' }}</div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">Phone Number</div>
+                      <div id="viewPhone">{{ user.phone if user and user.phone else 'Not provided' }}</div>
                     </div>
-                    <div style="display:flex;justify-content:space-between">
-                      <div>Total Deliveries</div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">Vehicle Type</div>
+                      <div id="viewVehicle">{{ rider.vehicle_type if rider and rider.vehicle_type else 'Not specified' }}</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">License Number</div>
+                      <div id="viewLicense">{{ rider.license_number if rider and rider.license_number else 'Not provided' }}</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">Service Area</div>
+                      <div id="viewServiceArea">{{ rider.service_area if rider and rider.service_area else 'Not assigned' }}</div>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;padding:10px;background:#f9fafb;border-radius:6px">
+                      <div style="font-weight:500">Total Deliveries</div>
                       <div>{{ total_deliveries }}</div>
                     </div>
                   </div>
                 </div>
+
+                <!-- Edit Mode -->
+                <div id="profileEditMode" style="display:none">
+                  <form id="editProfileForm" style="display:grid;gap:14px">
+                    <div>
+                      <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">First Name</label>
+                      <input type="text" id="editFirstName" placeholder="First Name" 
+                             value="{{ user.first_name if user and user.first_name else '' }}"
+                             style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">Last Name</label>
+                      <input type="text" id="editLastName" placeholder="Last Name" 
+                             value="{{ user.last_name if user and user.last_name else '' }}"
+                             style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">Email Address</label>
+                      <input type="email" id="editEmail" placeholder="Email" 
+                             value="{{ user.email if user and user.email else '' }}"
+                             style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">Phone Number</label>
+                      <input type="tel" id="editPhone" placeholder="Phone Number" 
+                             value="{{ user.phone if user and user.phone else '' }}"
+                             style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">Vehicle Type</label>
+                      <select id="editVehicle" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+                        <option value="">Select Vehicle Type</option>
+                        <option value="motorcycle">Motorcycle</option>
+                        <option value="bicycle">Bicycle</option>
+                        <option value="tricycle">Tricycle</option>
+                        <option value="van">Van</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">License Number</label>
+                      <input type="text" id="editLicense" placeholder="License Number" 
+                             value="{{ rider.license_number if rider and rider.license_number else '' }}"
+                             style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px">
+                    </div>
+
+                    <div style="display:flex;gap:10px;margin-top:20px">
+                      <button type="button" onclick="saveProfileChanges()" 
+                              style="flex:1;padding:12px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.2s"
+                              onmouseover="this.style.background='#059669'"
+                              onmouseout="this.style.background='#10b981'">
+                        ✓ Save Changes
+                      </button>
+                      <button type="button" onclick="toggleEditMode()" 
+                              style="flex:1;padding:12px;background:#ef4444;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.2s"
+                              onmouseover="this.style.background='#dc2626'"
+                              onmouseout="this.style.background='#ef4444'">
+                        ✕ Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <!-- Change Password Section -->
+            <div class="card" style="margin-top:14px">
+              <div class="inner">
+                <div style="margin-bottom:20px">
+                  <div class="metric">Security Settings</div>
+                </div>
+                <button onclick="openChangePasswordModal()" 
+                        style="width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.2s"
+                        onmouseover="this.style.background='#2563eb'"
+                        onmouseout="this.style.background='#3b82f6'">
+                  🔒 Change Password
+                </button>
               </div>
             </div>
           </div>
@@ -508,6 +569,45 @@
       /* Show overview section by default */
       #overview-section {
         display: block;
+      }
+      
+      /* Active Deliveries Table Styling */
+      #active-deliveries-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+      }
+      
+      #active-deliveries-table thead tr {
+        background: #f8fafc;
+        border-bottom: 2px solid #e5e7eb;
+      }
+      
+      #active-deliveries-table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.2s ease;
+      }
+      
+      #active-deliveries-table tbody tr:hover {
+        background-color: #f9fafb;
+      }
+      
+      #active-deliveries-table td,
+      #active-deliveries-table th {
+        padding: 12px 14px;
+        text-align: left;
+      }
+      
+      #active-deliveries-table th {
+        font-size: 12px;
+        font-weight: 700;
+        color: #374151;
+        letter-spacing: 0.5px;
+      }
+      
+      #active-deliveries-table tbody td {
+        color: #0a0a0a;
+        font-size: 13px;
       }
     </style>
 
@@ -617,187 +717,10 @@
           activeLink.classList.add('active');
         }
 
-        // Load deliveries when switching to deliveries section
+        // Load merged orders/deliveries when switching to deliveries section
         if (sectionId === 'deliveries') {
-          loadAvailableOrders();
-          loadMyActiveDeliveries();
+          loadOrdersAndDeliveries();
         }
-      }
-
-      // Load available orders for delivery
-      function loadAvailableOrders() {
-        fetch('/api/rider/available-orders')
-          .then(response => response.json())
-          .then(data => {
-            const tbody = document.querySelector('#available-orders-table tbody');
-            
-            console.log('[DEBUG] Available Orders Response:', data);
-            
-            if (data.success && data.orders && data.orders.length > 0) {
-              const availableOrders = data.orders.filter(order => 
-                order.shipment_status === 'pending' && !order.assigned_rider_id
-              );
-              
-              if (availableOrders.length > 0) {
-                tbody.innerHTML = availableOrders.map(order => {
-                  const earning = (parseFloat(order.total_amount) * 0.15).toFixed(2);
-                  const orderDate = new Date(order.created_at).toLocaleString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  });
-                  const location = `${order.delivery_city}, ${order.delivery_province} ${order.delivery_postal_code}`.trim();
-                  return `
-                    <tr>
-                      <td>
-                        <div style="font-weight:600">#${order.order_number}</div>
-                        <div style="font-size:11px;color:#999">${orderDate}</div>
-                      </td>
-                      <td>
-                        <div>${order.customer_name}</div>
-                        <div style="font-size:11px;color:#999">${order.customer_phone || 'N/A'}</div>
-                      </td>
-                      <td style="max-width:200px">
-                        <div>${order.delivery_address}</div>
-                        <div style="font-size:11px;color:#10b981;margin-top:2px">📍 ${location}</div>
-                      </td>
-                      <td style="font-weight:600">₱${parseFloat(order.total_amount).toFixed(2)}</td>
-                      <td style="color:#10b981;font-weight:600">₱${earning}</td>
-                      <td>
-                        <button onclick="acceptOrder(${order.shipment_id})" 
-                                class="tag" 
-                                style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:8px 16px">
-                          Accept
-                        </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('');
-              } else {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">All available orders in your area are already accepted</td></tr>';
-              }
-            } else {
-              const message = data.service_area ? 
-                'No available orders in your area. New orders will appear here.' :
-                'No service area assigned. Please contact support.';
-              tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">${message}</td></tr>`;
-              console.log('[DEBUG] Data:', data);
-            }
-          })
-          .catch(error => {
-            console.error('Error loading available orders:', error);
-            document.querySelector('#available-orders-table tbody').innerHTML = 
-              '<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:40px">Error loading orders</td></tr>';
-          });
-      }
-
-      // Load rider's active deliveries with regional filtering
-      function loadMyActiveDeliveries() {
-        // Get filter values from inputs
-        const filterProvince = document.getElementById('filterProvince')?.value.trim() || '';
-        const filterCity = document.getElementById('filterCity')?.value.trim() || '';
-        const filterPostalCode = document.getElementById('filterPostalCode')?.value.trim() || '';
-        
-        // Build query parameters
-        let url = '/api/rider/active-deliveries';
-        const params = new URLSearchParams();
-        if (filterProvince) params.append('province', filterProvince);
-        if (filterCity) params.append('city', filterCity);
-        if (filterPostalCode) params.append('postal_code', filterPostalCode);
-        if (params.toString()) url += '?' + params.toString();
-        
-        fetch(url)
-          .then(response => response.json())
-          .then(data => {
-            const tbody = document.querySelector('#active-deliveries-table tbody');
-            // Include all active deliveries: pending (waiting approval), picked_up, in_transit, out_for_delivery
-            const activeOrders = data.deliveries || [];
-            
-            // Display rider's service area
-            if (data.service_area) {
-              document.getElementById('riderServiceArea').textContent = data.service_area || 'Not assigned';
-            }
-            
-            // Update count badge with filter info
-            let countText = `${activeOrders.length} Active`;
-            if (filterProvince || filterCity || filterPostalCode) {
-              const filters = [];
-              if (filterProvince) filters.push(filterProvince);
-              if (filterCity) filters.push(filterCity);
-              if (filterPostalCode) filters.push(filterPostalCode);
-              countText = `${activeOrders.length} Found (${filters.join(', ')})`;
-            }
-            document.getElementById('active-count').textContent = countText;
-            
-            if (activeOrders.length > 0) {
-              tbody.innerHTML = activeOrders.map(order => {
-                const earning = (parseFloat(order.total_amount) * 0.15).toFixed(2);
-                const statusClass = order.shipment_status.replace('_', '-');
-                
-                // Show status based on seller_confirmed
-                let statusText, statusColor;
-                if (!order.seller_confirmed && order.shipment_status === 'pending') {
-                  statusText = 'WAITING FOR APPROVAL';
-                  statusColor = '#f59e0b'; // Orange/amber
-                } else {
-                  statusText = order.shipment_status.replace('_', ' ').toUpperCase();
-                  statusColor = order.shipment_status === 'delivered' ? '#10b981' : 
-                               order.shipment_status === 'picked_up' ? '#3b82f6' :
-                               order.shipment_status === 'in_transit' ? '#8b5cf6' : '#6b7280';
-                }
-                
-                // Display order location
-                const orderLocation = `${order.city}, ${order.province} ${order.postal_code}`.trim();
-                
-                // Only show status update buttons if seller has approved
-                const statusButtons = order.seller_confirmed ? `
-                  <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    ${order.shipment_status !== 'in_transit' ? `<button onclick="updateDeliveryStatus(${order.shipment_id}, 'in_transit')" class="tag" style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">In Transit</button>` : ''}
-                    ${order.shipment_status !== 'out_for_delivery' && order.shipment_status !== 'delivered' ? `<button onclick="updateDeliveryStatus(${order.shipment_id}, 'out_for_delivery')" class="tag" style="background:#8b5cf6;color:#fff;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#7c3aed'" onmouseout="this.style.background='#8b5cf6'">Out for Delivery</button>` : ''}
-                    ${order.shipment_status !== 'delivered' ? `<button onclick="updateDeliveryStatus(${order.shipment_id}, 'delivered')" class="tag" style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">✓ Delivered</button>` : '<span style="background:#10b981;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600">✓ Delivered</span>'}
-                  </div>
-                ` : `
-                  <span style="color:#f59e0b;font-size:12px;font-weight:500">⏳ Waiting for seller approval</span>
-                `;
-                
-                return `
-                  <tr style="color:#0a0a0a">
-                    <td style="color:#0a0a0a">
-                      <div style="font-weight:600;color:#0a0a0a">#${order.order_number}</div>
-                    </td>
-                    <td style="color:#0a0a0a">
-                      <div style="color:#0a0a0a">${order.customer_name}</div>
-                      <div style="font-size:11px;color:#999">${order.customer_phone || 'N/A'}</div>
-                    </td>
-                    <td style="max-width:200px;color:#0a0a0a">
-                      <div>${order.delivery_address}</div>
-                      <div style="font-size:11px;color:#10b981;margin-top:2px">📍 ${orderLocation}</div>
-                    </td>
-                    <td style="color:#0a0a0a">
-                      <span class="status ${statusClass}" style="background:${statusColor};color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">
-                        ${statusText}
-                      </span>
-                    </td>
-                    <td style="color:#10b981;font-weight:600">₱${earning}</td>
-                    <td style="color:#0a0a0a">
-                      ${statusButtons}
-                    </td>
-                  </tr>
-                `;
-              }).join('');
-            } else {
-              const filterText = (filterProvince || filterCity || filterPostalCode) ? 
-                'No deliveries found in this area. Try adjusting your filters.' : 
-                'No active deliveries. New orders will appear here.';
-              tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">${filterText}</td></tr>`;
-            }
-          })
-          .catch(error => {
-            console.error('Error loading active deliveries:', error);
-            document.querySelector('#active-deliveries-table tbody').innerHTML = 
-              '<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:40px">Error loading deliveries</td></tr>';
-          });
       }
 
       // Clear all filters
@@ -805,7 +728,250 @@
         document.getElementById('filterProvince').value = '';
         document.getElementById('filterCity').value = '';
         document.getElementById('filterPostalCode').value = '';
-        loadMyActiveDeliveries();
+        loadOrdersAndDeliveries();
+      }
+
+      // Load available orders for delivery
+      // Load merged available orders and active deliveries
+      function loadOrdersAndDeliveries() {
+        // Get filter values
+        const filterProvince = document.getElementById('filterProvince')?.value.trim() || '';
+        const filterCity = document.getElementById('filterCity')?.value.trim() || '';
+        const filterPostalCode = document.getElementById('filterPostalCode')?.value.trim() || '';
+        
+        // Load both available orders and active deliveries
+        Promise.all([
+          fetch('/api/rider/available-orders').then(r => r.json()),
+          fetch('/api/rider/active-deliveries' + (filterProvince || filterCity || filterPostalCode ? 
+            '?' + new URLSearchParams({province: filterProvince, city: filterCity, postal_code: filterPostalCode}).toString() : '')).then(r => r.json())
+        ])
+        .then(([availableData, activeData]) => {
+          const tbody = document.querySelector('#orders-deliveries-tbody');
+          const allOrders = [];
+          
+          // Add available orders (not yet accepted) - includes waiting_for_pickup orders
+          if (availableData.success && availableData.orders && availableData.orders.length > 0) {
+            const availableOrders = availableData.orders.filter(order => 
+              order.order_status === 'waiting_for_pickup' && !order.assigned_rider_id
+            );
+            availableOrders.forEach(order => {
+              allOrders.push({...order, type: 'available'});
+            });
+          }
+          
+          // Add active deliveries
+          if (activeData.deliveries && activeData.deliveries.length > 0) {
+            activeData.deliveries.forEach(order => {
+              allOrders.push({...order, type: 'active'});
+            });
+          }
+          
+          // Update service area
+          if (activeData.service_area) {
+            document.getElementById('riderServiceArea').textContent = activeData.service_area || 'Not assigned';
+          }
+          
+          // Update count
+          document.getElementById('order-count').textContent = `${allOrders.length} Orders`;
+          
+          if (allOrders.length > 0) {
+            tbody.innerHTML = allOrders.map(order => {
+              const earning = (parseFloat(order.total_amount) * 0.15).toFixed(2);
+              const orderLocation = `${order.delivery_city || order.city}, ${order.delivery_province || order.province}`;
+              
+              // Determine status and styling
+              let statusText, statusColor, statusBg;
+              
+              if (order.type === 'available') {
+                statusText = 'Available';
+                statusColor = '#059669';
+                statusBg = '#ecfdf5';
+              } else {
+                // Active delivery statuses
+                if (!order.seller_confirmed && order.shipment_status === 'pending') {
+                  statusText = 'Waiting Approval';
+                  statusColor = '#f59e0b';
+                  statusBg = '#fffbeb';
+                } else if (order.shipment_status === 'delivered') {
+                  statusText = 'Delivered';
+                  statusColor = '#10b981';
+                  statusBg = '#ecfdf5';
+                } else if (order.shipment_status === 'picked_up') {
+                  statusText = 'Picked Up';
+                  statusColor = '#3b82f6';
+                  statusBg = '#eff6ff';
+                } else if (order.shipment_status === 'in_transit') {
+                  statusText = 'In Transit';
+                  statusColor = '#8b5cf6';
+                  statusBg = '#faf5ff';
+                } else if (order.shipment_status === 'out_for_delivery') {
+                  statusText = 'Out for Delivery';
+                  statusColor = '#ec4899';
+                  statusBg = '#fce7f3';
+                } else {
+                  statusText = order.shipment_status.replace('_', ' ');
+                  statusColor = '#6b7280';
+                  statusBg = '#f3f4f6';
+                }
+              }
+              
+              // Determine action button
+              let actionButton = '';
+              
+              if (order.type === 'available') {
+                actionButton = `
+                  <button onclick="acceptOrder(${order.shipment_id})" 
+                          style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
+                          onmouseover="this.style.background='#059669'"
+                          onmouseout="this.style.background='#10b981'">
+                    Accept Order
+                  </button>
+                `;
+              } else {
+                // Active delivery actions
+                if (!order.seller_confirmed) {
+                  actionButton = `
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                      <span style="font-size:12px;color:#f59e0b;font-weight:600">⏳ Waiting...</span>
+                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')" 
+                              style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#2563eb'"
+                              onmouseout="this.style.background='#3b82f6'">
+                        📊 Details
+                      </button>
+                    </div>
+                  `;
+                } else if (order.shipment_status === 'pending' || order.shipment_status === 'assigned_to_rider') {
+                  actionButton = `
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                      <button onclick="acceptOrder(${order.shipment_id})" 
+                              style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#059669'"
+                              onmouseout="this.style.background='#10b981'">
+                        Accept
+                      </button>
+                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')" 
+                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#4b5563'"
+                              onmouseout="this.style.background='#6b7280'">
+                        📊 Details
+                      </button>
+                    </div>
+                  `;
+                } else if (order.shipment_status === 'picked_up') {
+                  actionButton = `
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'in_transit')" 
+                              style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#2563eb'"
+                              onmouseout="this.style.background='#3b82f6'">
+                        Transit
+                      </button>
+                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')" 
+                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#4b5563'"
+                              onmouseout="this.style.background='#6b7280'">
+                        📊 Details
+                      </button>
+                    </div>
+                  `;
+                } else if (order.shipment_status === 'in_transit') {
+                  actionButton = `
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'out_for_delivery')" 
+                              style="background:#8b5cf6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#7c3aed'"
+                              onmouseout="this.style.background='#8b5cf6'">
+                        Out for Delivery
+                      </button>
+                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')" 
+                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#4b5563'"
+                              onmouseout="this.style.background='#6b7280'">
+                        📊 Details
+                      </button>
+                    </div>
+                  `;
+                } else if (order.shipment_status === 'out_for_delivery') {
+                  actionButton = `
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'delivered')" 
+                              style="background:#059669;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#047857'"
+                              onmouseout="this.style.background='#059669'">
+                        Complete
+                      </button>
+                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')" 
+                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#4b5563'"
+                              onmouseout="this.style.background='#6b7280'">
+                        📊 Details
+                      </button>
+                    </div>
+                  `;
+                } else if (order.shipment_status === 'delivered') {
+                  actionButton = `
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                      <span style="background:#10b981;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600">✓ Done</span>
+                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')" 
+                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                              onmouseover="this.style.background='#4b5563'"
+                              onmouseout="this.style.background='#6b7280'">
+                        📊 Details
+                      </button>
+                    </div>
+                  `;
+                }
+              }
+              
+              return `
+                <tr style="border-bottom:1px solid #e5e7eb;transition:background 0.2s">
+                  <td style="padding:12px 14px;font-weight:700;color:#0a0a0a;white-space:nowrap">
+                    #${order.order_number}
+                  </td>
+                  <td style="padding:12px 14px">
+                    <div style="font-weight:600;color:#0a0a0a;margin-bottom:3px">${order.customer_name}</div>
+                    <div style="font-size:12px;color:#666;margin-bottom:4px">${order.delivery_address}</div>
+                    <div style="font-size:11px;color:#10b981;font-weight:500">📍 ${orderLocation}</div>
+                  </td>
+                  <td style="padding:12px 14px;font-weight:600;color:#0a0a0a">
+                    ₱${parseFloat(order.total_amount).toFixed(2)}
+                  </td>
+                  <td style="padding:12px 14px;text-align:right;font-weight:700;color:#10b981;font-size:13px">
+                    ₱${earning}
+                  </td>
+                  <td style="padding:12px 14px">
+                    <span style="background:${statusBg};color:${statusColor};padding:6px 10px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap;display:inline-block">
+                      ${statusText}
+                    </span>
+                  </td>
+                  <td style="padding:12px 14px;text-align:center">
+                    ${actionButton}
+                  </td>
+                </tr>
+              `;
+            }).join('');
+          } else {
+            const filterText = (filterProvince || filterCity || filterPostalCode) ? 
+              'No orders found in this area. Try adjusting your filters.' : 
+              'No available or active orders right now. Check back soon!';
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#999;padding:40px">${filterText}</td></tr>`;
+          }
+        })
+        .catch(error => {
+          console.error('Error loading orders and deliveries:', error);
+          document.querySelector('#orders-deliveries-tbody').innerHTML = 
+            '<tr><td colspan="6" style="text-align:center;color:#dc2626;padding:40px">Error loading orders</td></tr>';
+        });
+      }
+
+      // Wrapper functions to load merged table
+      function loadAvailableOrders() {
+        loadOrdersAndDeliveries();
+      }
+
+      function loadMyActiveDeliveries() {
+        loadOrdersAndDeliveries();
       }
 
       // Accept an order
@@ -862,8 +1028,12 @@
             alert('Status updated successfully!');
             if (newStatus === 'delivered') {
               alert('🎉 Delivery completed! Your earnings have been updated.');
+              // Refresh both active deliveries and history when marked as delivered
+              loadMyActiveDeliveries();
+              loadDeliveryHistory();
+            } else {
+              loadMyActiveDeliveries();
             }
-            loadMyActiveDeliveries();
           } else {
             alert('Failed to update status: ' + (data.error || 'Unknown error'));
             event.target.value = '';
@@ -876,6 +1046,95 @@
         });
       }
 
+      // View shipment details with complete status information
+      function viewShipmentDetails(shipmentId, orderNumber) {
+        // Find the order in the loaded data
+        fetch('/api/rider/shipment-details/' + shipmentId)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.shipment) {
+              const s = data.shipment;
+              
+              // Status mapping with descriptions
+              const statusDescriptions = {
+                'pending': { text: 'Pending', emoji: '⏳', color: '#f59e0b', description: 'Seller has not confirmed yet' },
+                'assigned_to_rider': { text: 'Assigned', emoji: '📍', color: '#3b82f6', description: 'Assigned to you, waiting for acceptance' },
+                'picked_up': { text: 'Picked Up', emoji: '📦', color: '#3b82f6', description: 'You have picked up the order' },
+                'in_transit': { text: 'In Transit', emoji: '🚗', color: '#8b5cf6', description: 'On the way to delivery location' },
+                'out_for_delivery': { text: 'Out for Delivery', emoji: '🚪', color: '#ec4899', description: 'At delivery location, finalizing' },
+                'delivered': { text: 'Delivered', emoji: '✅', color: '#10b981', description: 'Successfully delivered' },
+                'failed': { text: 'Failed', emoji: '❌', color: '#ef4444', description: 'Delivery could not be completed' }
+              };
+              
+              const currentStatus = statusDescriptions[s.status] || {
+                text: s.status.replace('_', ' ').toUpperCase(),
+                emoji: '📋',
+                color: '#6b7280',
+                description: 'Current status'
+              };
+              
+              // Build delivery timeline
+              let timeline = '';
+              const statuses = ['pending', 'assigned_to_rider', 'picked_up', 'in_transit', 'out_for_delivery', 'delivered'];
+              const currentIndex = statuses.indexOf(s.status);
+              
+              statuses.forEach((status, index) => {
+                const statusInfo = statusDescriptions[status];
+                const isCompleted = index <= currentIndex;
+                const isCurrent = index === currentIndex;
+                const bgColor = isCompleted ? statusInfo.color : '#e5e7eb';
+                const textColor = isCompleted ? '#fff' : '#6b7280';
+                
+                timeline += `
+                  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                    <div style="width:8px;height:8px;border-radius:999px;background:${bgColor};flex-shrink:0;border:2px solid ${isCurrent ? statusInfo.color : 'transparent'}"></div>
+                    <div>
+                      <div style="font-weight:600;color:${isCurrent ? statusInfo.color : '#0a0a0a'};font-size:13px">${statusInfo.emoji} ${statusInfo.text}</div>
+                      <div style="font-size:12px;color:#666;margin-top:2px">${statusInfo.description}</div>
+                    </div>
+                  </div>
+                `;
+              });
+              
+              const details = `
+📦 SHIPMENT STATUS DETAILS
+═══════════════════════════════════
+
+Order #: ${orderNumber}
+Shipment ID: ${shipmentId}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Customer: ${s.customer_name || 'N/A'}
+Delivery Address: ${s.delivery_address || 'N/A'}
+📍 Location: ${s.delivery_city}, ${s.delivery_province}
+
+Amount: ₱${parseFloat(s.total_amount || 0).toFixed(2)}
+Your Earning (15%): ₱${(parseFloat(s.total_amount || 0) * 0.15).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current Status: ${currentStatus.emoji} ${currentStatus.text}
+
+Delivery Timeline:
+${timeline}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${s.created_at ? `Created: ${new Date(s.created_at).toLocaleString()}` : ''}
+${s.updated_at ? `Last Updated: ${new Date(s.updated_at).toLocaleString()}` : ''}
+              `;
+              
+              alert(details);
+            } else {
+              alert('Unable to load shipment details. Please try again.');
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching shipment details:', error);
+            alert('Error loading shipment details. Please try again.');
+          });
+      }
+
       // Load delivery history from database
       function loadDeliveryHistory() {
         fetch('/api/rider/delivery-history')
@@ -883,35 +1142,60 @@
           .then(data => {
             const tbody = document.querySelector('#history-table tbody');
             if (data.success && data.history && data.history.length > 0) {
-              tbody.innerHTML = data.history.map((day, index) => {
-                const date = new Date(day.delivery_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                const rating = day.avg_rating ? parseFloat(day.avg_rating).toFixed(1) : '5.0';
+              tbody.innerHTML = data.history.map((delivery) => {
+                const deliveredDate = delivery.delivered_at ? new Date(delivery.delivered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const earning = (parseFloat(delivery.total_amount) * 0.15).toFixed(2);
+                const location = `${delivery.city}, ${delivery.province}`.trim();
+                
                 return `
-                  <tr>
-                    <td>${date}</td>
-                    <td>${day.order_count} deliveries</td>
-                    <td>₱${parseFloat(day.daily_earnings).toFixed(2)}</td>
-                    <td>${rating} ⭐</td>
-                    <td style="text-align:center">
-                      <div style="display:flex;gap:6px;justify-content:center">
-                        <button onclick="viewHistoryDetails(${index}, '${date}', ${day.order_count}, ${day.daily_earnings})" class="tag" style="background:#0a0a0a;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#2d2d2d'" onmouseout="this.style.background='#0a0a0a'">View</button>
-                        <button onclick="updateHistoryRecord(${index}, '${date}')" class="tag" style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">Update</button>
+                  <tr style="border-left:4px solid #10b981;background:#f0fdf4">
+                    <td>
+                      <div style="font-weight:600;color:#0a0a0a">#${delivery.order_number}</div>
+                      <div style="font-size:11px;color:#999">${deliveredDate}</div>
+                    </td>
+                    <td>
+                      <div style="color:#0a0a0a;font-weight:500">${delivery.customer_name || 'N/A'}</div>
+                      <div style="font-size:11px;color:#999">${delivery.customer_phone || 'N/A'}</div>
+                    </td>
+                    <td style="color:#10b981;font-weight:600;font-size:14px">₱${earning}</td>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:6px">
+                        <span style="background:#dcfce7;color:#15803d;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600">✓ Delivered</span>
                       </div>
+                      <div style="font-size:10px;color:#666;margin-top:4px">📍 ${location}</div>
+                    </td>
+                    <td style="text-align:center">
+                      <button onclick="viewDeliveredOrderDetails(${delivery.id}, '${delivery.order_number}', '${delivery.customer_name}', ${delivery.total_amount}, '${deliveredDate}')" class="tag" style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;transition:all 0.2s" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">View</button>
                     </td>
                   </tr>
                 `;
               }).join('');
             } else {
-              tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999">No delivery history found</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px">No delivery history found</td></tr>';
             }
           })
           .catch(error => {
             console.error('Error loading delivery history:', error);
-            document.querySelector('#history-table tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444">Error loading history</td></tr>';
+            document.querySelector('#history-table tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px">Error loading history</td></tr>';
           });
       }
 
-      // View history details
+      // View delivered order details
+      function viewDeliveredOrderDetails(orderId, orderNumber, customerName, totalAmount, deliveredDate) {
+        const earning = (parseFloat(totalAmount) * 0.15).toFixed(2);
+        const details = `
+📦 ORDER #${orderNumber}
+━━━━━━━━━━━━━━━━━━━━━━━━
+Customer: ${customerName}
+Total Amount: ₱${parseFloat(totalAmount).toFixed(2)}
+Your Earnings (15%): ₱${earning}
+Delivered On: ${deliveredDate}
+Status: ✓ Delivered
+        `;
+        alert(details);
+      }
+
+      // View history details (legacy)
       function viewHistoryDetails(index, date, orderCount, earnings) {
         const details = `
 Delivery Date: ${date}
@@ -1078,6 +1362,169 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
         }
       }
 
+      // Toggle between view and edit mode
+      function toggleEditMode() {
+        const viewMode = document.getElementById('profileViewMode');
+        const editMode = document.getElementById('profileEditMode');
+        const editBtn = document.getElementById('editProfileBtn');
+        
+        if (editMode.style.display === 'none') {
+          // Switch to edit mode
+          viewMode.style.display = 'none';
+          editMode.style.display = 'block';
+          editBtn.textContent = '✕ Cancel';
+          editBtn.style.background = '#ef4444';
+        } else {
+          // Switch back to view mode
+          viewMode.style.display = 'block';
+          editMode.style.display = 'none';
+          editBtn.textContent = '✎ Edit Profile';
+          editBtn.style.background = '#0a0a0a';
+        }
+      }
+
+      // Save profile changes
+      function saveProfileChanges() {
+        const firstName = document.getElementById('editFirstName').value.trim();
+        const lastName = document.getElementById('editLastName').value.trim();
+        const email = document.getElementById('editEmail').value.trim();
+        const phone = document.getElementById('editPhone').value.trim();
+        const vehicleType = document.getElementById('editVehicle').value;
+        const licenseNumber = document.getElementById('editLicense').value.trim();
+
+        // Validation
+        if (!firstName || !lastName) {
+          alert('Please enter both first and last name');
+          return;
+        }
+
+        if (!email) {
+          alert('Please enter email address');
+          return;
+        }
+
+        if (!phone) {
+          alert('Please enter phone number');
+          return;
+        }
+
+        // Show loading
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '⏳ Saving...';
+        button.disabled = true;
+
+        // Send update request
+        fetch('/api/rider/update-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            phone: phone,
+            vehicle_type: vehicleType,
+            license_number: licenseNumber
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          button.textContent = originalText;
+          button.disabled = false;
+
+          if (data.success) {
+            // Update view mode with new values
+            document.getElementById('viewFirstName').textContent = firstName;
+            document.getElementById('viewLastName').textContent = lastName;
+            document.getElementById('viewEmail').textContent = email;
+            document.getElementById('viewPhone').textContent = phone;
+            document.getElementById('viewVehicle').textContent = vehicleType || 'Not specified';
+            document.getElementById('viewLicense').textContent = licenseNumber || 'Not provided';
+            document.getElementById('viewRiderName').textContent = firstName + ' ' + lastName;
+
+            alert('✓ Profile updated successfully!');
+            toggleEditMode();
+          } else {
+            alert('Error: ' + (data.error || 'Failed to update profile'));
+          }
+        })
+        .catch(error => {
+          console.error('Error saving profile:', error);
+          button.textContent = originalText;
+          button.disabled = false;
+          alert('Error saving profile. Please try again.');
+        });
+      }
+
+      // Open change password modal
+      function openChangePasswordModal() {
+        document.getElementById('changePasswordModal').style.display = 'flex';
+      }
+
+      // Close change password modal
+      function closeChangePasswordModal() {
+        document.getElementById('changePasswordModal').style.display = 'none';
+        document.getElementById('changePasswordForm').reset();
+      }
+
+      // Change password
+      function changePassword() {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          alert('Please fill in all password fields');
+          return;
+        }
+
+        if (newPassword !== confirmPassword) {
+          alert('New passwords do not match');
+          return;
+        }
+
+        if (newPassword.length < 6) {
+          alert('Password must be at least 6 characters');
+          return;
+        }
+
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '⏳ Updating...';
+        button.disabled = true;
+
+        fetch('/api/rider/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          button.textContent = originalText;
+          button.disabled = false;
+
+          if (data.success) {
+            alert('✓ Password changed successfully!');
+            closeChangePasswordModal();
+          } else {
+            alert('Error: ' + (data.error || 'Failed to change password'));
+          }
+        })
+        .catch(error => {
+          console.error('Error changing password:', error);
+          button.textContent = originalText;
+          button.disabled = false;
+          alert('Error changing password. Please try again.');
+        });
+      }
+
       // Upload profile image
       function uploadProfileImage(input) {
         if (!input.files || !input.files[0]) return;
@@ -1176,6 +1623,36 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
         console.log('Rider Dashboard initialized');
       });
     </script>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" style="position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1000">
+      <div style="background:#fff;border-radius:10px;padding:24px;max-width:450px;box-shadow:0 4px 20px rgba(0,0,0,0.2)">
+        <button onclick="closeChangePasswordModal()" style="float:right;background:none;border:none;font-size:24px;cursor:pointer;color:#999">×</button>
+        <h2 style="margin:0 0 20px;font-size:18px">Change Password</h2>
+        <form id="changePasswordForm" style="display:grid;gap:14px">
+          <div>
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">Current Password</label>
+            <input type="password" id="currentPassword" placeholder="Enter current password" 
+                   style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">New Password</label>
+            <input type="password" id="newPassword" placeholder="Enter new password" 
+                   style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box">
+            <div style="font-size:11px;color:#666;margin-top:4px">Must be at least 6 characters</div>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:6px;font-weight:600">Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="Confirm new password" 
+                   style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box">
+          </div>
+        </form>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px">
+          <button onclick="closeChangePasswordModal()" style="padding:10px 20px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:6px;cursor:pointer;font-weight:500">Cancel</button>
+          <button onclick="changePassword()" style="padding:10px 20px;border:none;background:#3b82f6;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;transition:all 0.2s" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">Update Password</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Logout Confirmation Modal -->
     <div id="logoutModal" style="position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1000">

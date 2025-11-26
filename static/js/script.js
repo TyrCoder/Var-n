@@ -320,14 +320,11 @@ function updateCartBadge(){
 
 async function addItemToCart(data){
   if(!data) return false;
-function addItemToCart(data){
-  if(!data) return;
-  if(!data) return;
+  
   const name = data.title || 'Item';
   const price = typeof data.price === 'number' ? data.price : (parseFloat((data.priceText||'').replace(/[^0-9\.]/g,'')) || 0);
   const id = (data.id) || name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   const image_url = data.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
-  const cart = readCart();
   
   // Show loading feedback
   if(snackbar){
@@ -343,6 +340,7 @@ function addItemToCart(data){
       snackbar.classList.add('show');
       setTimeout(()=> snackbar.classList.remove('show'), 2200);
     }
+    return success;
   } else {
     // Fallback to localStorage
     const cart = readCart();
@@ -361,22 +359,7 @@ function addItemToCart(data){
       snackbar.classList.add('show');
       setTimeout(()=> snackbar.classList.remove('show'), 2200);
     }
-    return false;
-  // Check if item already exists
-  const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
-  
-  if (existingItemIndex > -1) {
-    cart[existingItemIndex].quantity += (data.qty || 1);
-  } else {
-    cart.push({ name, price, id, quantity: (data.qty || 1), image_url });
-  }
-  
-  writeCart(cart);
-  updateCartBadge();
-  if(snackbar){
-    snackbar.textContent = `${name} added to cart`;
-    snackbar.classList.add('show');
-    setTimeout(()=> snackbar.classList.remove('show'), 2200);
+    return true;
   }
 }
 

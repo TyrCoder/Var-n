@@ -1415,6 +1415,30 @@
           .then(response => response.json())
           .then(data => {
             if (data.success && data.orders && data.orders.length > 0) {
+              // Ensure all decimal values are converted to floats before use
+              data.orders.forEach(order => {
+                // Convert order amount
+                if (order.total_amount !== null && order.total_amount !== undefined) {
+                  order.total_amount = parseFloat(order.total_amount);
+                }
+                
+                // Convert item prices and quantities
+                if (order.items && Array.isArray(order.items)) {
+                  order.items.forEach(item => {
+                    if (item.unit_price !== null && item.unit_price !== undefined) {
+                      item.unit_price = parseFloat(item.unit_price);
+                      item.price = parseFloat(item.unit_price); // Ensure 'price' alias is also float
+                    }
+                    if (item.quantity !== null && item.quantity !== undefined) {
+                      item.quantity = parseInt(item.quantity);
+                    }
+                    if (item.subtotal !== null && item.subtotal !== undefined) {
+                      item.subtotal = parseFloat(item.subtotal);
+                    }
+                  });
+                }
+              });
+              
               allOrdersData = data.orders;
               updateOrderCounts();
               displayOrders('all');
@@ -1441,12 +1465,13 @@
       }
 
       function updateOrderCounts() {
+        // Map backend statuses to tab categories
         const counts = {
           all: allOrdersData.length,
           pending: allOrdersData.filter(o => o.order_status === 'pending').length,
-          processing: allOrdersData.filter(o => o.order_status === 'processing').length,
-          shipped: allOrdersData.filter(o => o.order_status === 'shipped').length,
-          delivered: allOrdersData.filter(o => o.order_status === 'delivered').length,
+          processing: allOrdersData.filter(o => ['confirmed', 'waiting_for_pickup'].includes(o.order_status)).length,
+          shipped: allOrdersData.filter(o => ['released_to_rider', 'shipped'].includes(o.order_status)).length,
+          delivered: allOrdersData.filter(o => ['delivered', 'completed'].includes(o.order_status)).length,
           cancelled: allOrdersData.filter(o => o.order_status === 'cancelled').length
         };
 
@@ -1478,10 +1503,11 @@
 
         if (status !== 'all') {
           filteredOrders = allOrdersData.filter(order => {
+            // Map backend statuses to tab categories
             if (status === 'pending') return order.order_status === 'pending';
-            if (status === 'processing') return order.order_status === 'processing';
-            if (status === 'shipped') return order.order_status === 'shipped';
-            if (status === 'delivered') return order.order_status === 'delivered';
+            if (status === 'processing') return ['confirmed', 'waiting_for_pickup'].includes(order.order_status);
+            if (status === 'shipped') return ['released_to_rider', 'shipped'].includes(order.order_status);
+            if (status === 'delivered') return ['delivered', 'completed'].includes(order.order_status);
             if (status === 'cancelled') return order.order_status === 'cancelled';
             return true;
           });
@@ -1491,7 +1517,7 @@
           const emptyMessage = {
             all: 'You have no orders yet',
             pending: 'No pending payments',
-            processing: 'No orders to ship',
+            processing: 'No orders to prepare',
             shipped: 'No orders in transit',
             delivered: 'No completed orders',
             cancelled: 'No cancelled orders'
@@ -1509,37 +1535,90 @@
 
         ordersList.innerHTML = filteredOrders.map(order => {
           const orderId = order.id || order.order_id;
-          const statusBadgeColor = {
-            pending: '#ef4444',
-            processing: '#f59e0b',
-            shipped: '#3b82f6',
-            delivered: '#10b981',
-            cancelled: '#6b7280'
-          };
-
-          const statusLabels = {
-            pending: 'To Pay',
-            processing: 'To Ship',
-            shipped: 'To Receive',
-            delivered: 'Completed',
-            cancelled: 'Cancelled'
-          };
+          
+          // Map backend statuses to display colors
+          let statusBadgeColor = '#999';
+          let statusLabel = order.order_status;
+          
+          if (order.order_status === 'pending') {
+            statusBadgeColor = '#ef4444';
+            statusLabel = 'To Pay';
+          } else if (['confirmed', 'waiting_for_pickup'].includes(order.order_status)) {
+            statusBadgeColor = '#f59e0b';
+            statusLabel = 'To Ship';
+          } else if (['released_to_rider', 'shipped'].includes(order.order_status)) {
+            statusBadgeColor = '#3b82f6';
+            statusLabel = 'To Receive';
+          } else if (['delivered', 'completed'].includes(order.order_status)) {
+            statusBadgeColor = '#10b981';
+            statusLabel = order.order_status === 'completed' ? 'Completed' : 'Ready to Receive';
+          } else if (order.order_status === 'cancelled') {
+            statusBadgeColor = '#6b7280';
+            statusLabel = 'Cancelled';
+          }
 
           const items = order.items || [];
           const firstItem = items.length > 0 ? items[0] : null;
           
-          const itemsHtml = items.slice(0, 3).map(item => `
+          const itemsHtml = items.slice(0, 3).map(item => {
+            // Ensure numeric types
+            const qty = parseInt(item.quantity || 1);
+            const price = parseFloat(item.price || item.unit_price || 0);
+            const lineTotal = qty * price;
+            
+            return `
             <div class="order-item">
               <img src="${item.image_url || '/static/images/placeholder.jpg'}" alt="${item.product_name}" class="item-image" onerror="this.src='/static/images/placeholder.jpg'">
               <div class="item-details">
                 <div class="item-name">${item.product_name || 'Product'}</div>
-                <div class="item-meta">Qty: ${item.quantity || 1} × ₱${parseFloat(item.price || 0).toFixed(2)}</div>
-                <div class="item-price">₱${parseFloat((item.quantity || 1) * (item.price || 0)).toFixed(2)}</div>
+                <div class="item-meta">Qty: ${qty} × ₱${price.toFixed(2)}</div>
+                <div class="item-price">₱${lineTotal.toFixed(2)}</div>
               </div>
             </div>
-          `).join('');
+          `;
+          }).join('');
 
           const itemsCountExtra = items.length > 3 ? items.length - 3 : 0;
+
+          // Create transaction stage indicator with new status mapping
+          const stageSteps = [
+            { status: 'pending', label: 'To Pay', icon: '💳' },
+            { status: 'confirmed', label: 'Seller Confirmed', icon: '✔️' },
+            { status: 'waiting_for_pickup', label: 'Ready for Pickup', icon: '📦' },
+            { status: 'released_to_rider', label: 'In Transit', icon: '🚚' },
+            { status: 'delivered', label: 'Delivered', icon: '📦' },
+            { status: 'completed', label: 'Completed', icon: '✓' }
+          ];
+
+          // Find current stage based on order_status
+          let currentStageIndex = -1;
+          const orderStatusMap = {
+            'pending': 0,
+            'confirmed': 1,
+            'waiting_for_pickup': 2,
+            'released_to_rider': 3,
+            'shipped': 3,
+            'delivered': 4,
+            'completed': 5
+          };
+          currentStageIndex = orderStatusMap[order.order_status] !== undefined ? orderStatusMap[order.order_status] : -1;
+          
+          const stageIndicator = `
+            <div style="display:flex;gap:4px;align-items:center;padding:12px 16px;background:#f9fafb;border-top:1px solid #f0f0f0;font-size:12px;color:#999;flex-wrap:wrap;overflow-x:auto">
+              ${stageSteps.map((step, idx) => {
+                const isActive = idx === currentStageIndex;
+                const isCompleted = idx < currentStageIndex;
+                const color = isCompleted ? '#10b981' : isActive ? '#3b82f6' : '#d1d5db';
+                return `
+                  <div style="display:flex;align-items:center;gap:6px;color:${color};font-weight:${isActive ? '600' : '500'};white-space:nowrap">
+                    <span>${step.icon}</span>
+                    <span>${step.label}</span>
+                    ${idx < stageSteps.length - 1 ? `<span style="color:#d1d5db;margin:0 4px">›</span>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
 
           return `
             <div class="order-card">
@@ -1548,8 +1627,8 @@
                   <div class="order-number">Order #${order.order_number || order.id}</div>
                   <div class="order-date">${new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
                 </div>
-                <span class="order-status-badge" style="background:${statusBadgeColor[order.order_status] || '#999'}20;color:${statusBadgeColor[order.order_status] || '#999'};border:1px solid ${statusBadgeColor[order.order_status] || '#999'}40">
-                  ${statusLabels[order.order_status] || order.order_status}
+                <span class="order-status-badge" style="background:${statusBadgeColor}20;color:${statusBadgeColor};border:1px solid ${statusBadgeColor}40">
+                  ${statusLabel}
                 </span>
               </div>
               
@@ -1583,6 +1662,56 @@
                   </div>
                 </div>
               </div>
+              
+              ${stageIndicator}
+              
+              ${order.order_status === 'delivered' ? `
+              <div style="display:flex;gap:8px;padding:12px 16px;background:#f0fdf4;border-top:1px solid #dcfce7;flex-wrap:wrap">
+                <button onclick="completeOrder(${orderId})" style="flex:1;min-width:160px;padding:10px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                  <span>✓</span> Confirm Received
+                </button>
+                <button onclick="showReturnDialog(${orderId})" style="flex:1;min-width:160px;padding:10px 14px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                  <span>↩</span> Report Issue
+                </button>
+              </div>
+              ` : ''}
+              
+              ${['delivered', 'completed'].includes(order.order_status) ? `
+              <div style="padding:16px;background:#fafafa;border-top:1px solid #f0f0f0">
+                <div style="margin-bottom:12px">
+                  <h4 style="margin:0 0 12px 0;font-size:14px;font-weight:600;color:#000">Share Your Feedback</h4>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+                    ${(order.items || []).map((item, idx) => `
+                      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+                        <!-- Product Name -->
+                        <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:#000;max-height:30px;overflow:hidden;text-overflow:ellipsis">${item.product_name || 'Product'}</div>
+                        
+                        <!-- Star Rating -->
+                        <div style="margin-bottom:12px">
+                          <div style="font-size:11px;color:#999;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Rating</div>
+                          <div style="display:flex;gap:4px" id="rating-stars-${orderId}-${idx}">
+                            ${[1,2,3,4,5].map(star => `
+                              <span onclick="setProductRating(${orderId}, ${item.product_id}, ${star}, ${idx})" style="font-size:22px;cursor:pointer;opacity:0.3;transition:all 0.2s;color:#fbbf24" class="rating-star" data-order="${orderId}" data-product="${item.product_id}" data-star="${star}" data-idx="${idx}">★</span>
+                            `).join('')}
+                          </div>
+                        </div>
+                        
+                        <!-- Review Text -->
+                        <textarea id="review-text-${orderId}-${idx}" placeholder="Share your thoughts about this product (optional)" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:10px;box-sizing:border-box" maxlength="500"></textarea>
+                        
+                        <!-- Character Count -->
+                        <div style="font-size:11px;color:#999;margin-bottom:10px;text-align:right" id="char-count-${orderId}-${idx}">0/500</div>
+                        
+                        <!-- Submit Button -->
+                        <button onclick="submitProductReview(${orderId}, ${item.product_id}, ${idx})" style="width:100%;padding:8px 10px;background:#10b981;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                          Submit Review
+                        </button>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              ` : ''}
             </div>
           `;
         }).join('');
@@ -1600,6 +1729,33 @@
           const data = await response.json();
           
           if (data.success) {
+            // Ensure all decimal values are converted to floats
+            if (data.order) {
+              ['total_amount', 'subtotal', 'shipping_fee', 'tax_amount', 'discount_amount'].forEach(key => {
+                if (data.order[key] !== null && data.order[key] !== undefined) {
+                  data.order[key] = parseFloat(data.order[key]);
+                }
+              });
+            }
+            
+            // Ensure all item prices are floats
+            if (data.items && Array.isArray(data.items)) {
+              data.items.forEach(item => {
+                if (item.unit_price !== null && item.unit_price !== undefined) {
+                  item.unit_price = parseFloat(item.unit_price);
+                }
+                if (item.price !== null && item.price !== undefined) {
+                  item.price = parseFloat(item.price);
+                }
+                if (item.quantity !== null && item.quantity !== undefined) {
+                  item.quantity = parseInt(item.quantity);
+                }
+                if (item.subtotal !== null && item.subtotal !== undefined) {
+                  item.subtotal = parseFloat(item.subtotal);
+                }
+              });
+            }
+            
             displayOrderDetailsModal(data.order, data.items, data.shipment, data.shipping_address, data.billing_address);
             openOrderDetailsModal();
           } else {
@@ -1636,7 +1792,12 @@
         document.getElementById('orderDetailPayment').textContent = order.payment_status ? order.payment_status.toUpperCase() : 'PENDING';
 
         // Update items
-        const itemsHtml = items && items.length > 0 ? items.map(item => `
+        const itemsHtml = items && items.length > 0 ? items.map(item => {
+          const qty = parseInt(item.quantity || 1);
+          const unitPrice = parseFloat(item.unit_price || 0);
+          const lineTotal = qty * unitPrice;
+          
+          return `
           <div style="display:flex;gap:12px;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
             <img src="${item.image_url || 'https://via.placeholder.com/80'}" alt="${item.product_name}" style="width:80px;height:80px;border-radius:6px;object-fit:cover;background:#fff">
             <div style="flex:1">
@@ -1647,12 +1808,13 @@
                 ${item.color ? `Color: ${item.color}` : ''}
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center">
-                <span style="color:#666;font-size:14px">Qty: ${item.quantity || 1}</span>
-                <span style="font-weight:600">₱${parseFloat((item.quantity || 1) * (item.unit_price || 0)).toFixed(2)}</span>
+                <span style="color:#666;font-size:14px">Qty: ${qty}</span>
+                <span style="font-weight:600">₱${lineTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
-        `).join('') : '<div style="text-align:center;padding:20px;color:#999">No items in this order</div>';
+        `;
+        }).join('') : '<div style="text-align:center;padding:20px;color:#999">No items in this order</div>';
 
         document.getElementById('orderDetailItems').innerHTML = itemsHtml;
 
@@ -1761,6 +1923,159 @@
           modal.setAttribute('aria-hidden', 'true');
           document.body.style.overflow = 'auto';
         }
+      }
+
+      // Complete order function
+      async function completeOrder(orderId) {
+        if (!confirm('✅ Confirm that you have received this order in good condition?')) return;
+        
+        try {
+          const response = await fetch(`/api/order/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, action: 'completed' })
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            alert('✅ Order confirmed as received! Thank you for shopping with us.');
+            loadMyOrders();
+          } else {
+            alert('❌ Error: ' + (data.error || 'Failed to complete order'));
+          }
+        } catch (error) {
+          console.error('Error completing order:', error);
+          alert('❌ Error completing order');
+        }
+      }
+
+      // Show return/damaged dialog
+      function showReturnDialog(orderId) {
+        const message = `Please select the issue:
+        
+1 = Product Damaged
+2 = Wrong Item Received
+3 = Not as Described
+4 = Other Issue
+
+Enter number (1-4) or describe the problem:`;
+        
+        const reason = prompt(message);
+        if (reason && reason.trim()) {
+          returnOrDamagedOrder(orderId, reason);
+        }
+      }
+
+      // Return or mark as damaged
+      async function returnOrDamagedOrder(orderId, reason) {
+        try {
+          const response = await fetch(`/api/order/return`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, reason: reason })
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            alert('📋 Return/Issue request submitted!\n\nOur support team will contact you within 24 hours.');
+            loadMyOrders();
+          } else {
+            alert('❌ Error: ' + (data.error || 'Failed to submit request'));
+          }
+        } catch (error) {
+          console.error('Error submitting return:', error);
+          alert('❌ Error submitting request');
+        }
+      }
+
+      // Track product ratings and reviews
+      let productRatings = {};
+      let productReviews = {};
+
+      // Set product rating when stars are clicked
+      function setProductRating(orderId, productId, rating, idx) {
+        productRatings[`${orderId}-${productId}`] = rating;
+        
+        // Update star display
+        const starsContainer = document.getElementById(`rating-stars-${orderId}-${idx}`);
+        if (starsContainer) {
+          const stars = starsContainer.querySelectorAll('.rating-star');
+          stars.forEach((star, i) => {
+            if (i < rating) {
+              star.style.opacity = '1';
+              star.style.color = '#fbbf24';
+            } else {
+              star.style.opacity = '0.3';
+              star.style.color = '#fbbf24';
+            }
+          });
+        }
+      }
+
+      // Update character count for review
+      function updateCharCount(orderId, idx) {
+        const textarea = document.getElementById(`review-text-${orderId}-${idx}`);
+        const countDisplay = document.getElementById(`char-count-${orderId}-${idx}`);
+        if (textarea && countDisplay) {
+          countDisplay.textContent = `${textarea.value.length}/500`;
+        }
+      }
+
+      // Add event listeners for character count
+      document.addEventListener('input', function(e) {
+        if (e.target.id && e.target.id.startsWith('review-text-')) {
+          const idParts = e.target.id.replace('review-text-', '').split('-');
+          const orderId = idParts[0];
+          const idx = idParts[1];
+          updateCharCount(orderId, idx);
+        }
+      });
+
+      // Submit product review with rating
+      async function submitProductReview(orderId, productId, itemIdx) {
+        const ratingKey = `${orderId}-${productId}`;
+        const rating = productRatings[ratingKey];
+        
+        const reviewText = document.getElementById(`review-text-${orderId}-${itemIdx}`);
+        const reviewContent = reviewText ? reviewText.value.trim() : '';
+
+        if (!rating) {
+          alert('⭐ Please select a rating first');
+          return;
+        }
+
+        // Comment is optional, but at least rating is required
+        try {
+          const response = await fetch('/api/submit-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              product_id: productId,
+              order_id: orderId,
+              rating: rating,
+              title: `${rating} star review`,
+              comment: reviewContent || `Rated ${rating} star(s) from order #${orderId}`
+            })
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            alert(`✅ Thank you! Your review has been submitted.\n\n⭐ Rating: ${rating}/5\n💬 Comment: ${reviewContent || '(No comment)'}`);
+            delete productRatings[ratingKey];
+            if (reviewText) reviewText.value = '';
+            loadMyOrders();
+          } else {
+            alert('❌ Error: ' + (data.error || 'Failed to submit review'));
+          }
+        } catch (error) {
+          console.error('Error submitting review:', error);
+          alert('❌ Error submitting review');
+        }
+      }
+
+      // Legacy function - kept for compatibility
+      async function submitProductRating(orderId, productId, idx) {
+        await submitProductReview(orderId, productId, idx);
       }
 
       function performOrderAction(orderId) {

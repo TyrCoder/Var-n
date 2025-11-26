@@ -204,6 +204,13 @@
           <div class="search"><input placeholder="Search products, orders..."/></div>
           <div class="avatar">
             <span class="tag store-name">Brand: {{ seller.store_name if seller else 'Your Brand' }}</span>
+            <span class="tag" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">🗺️ 
+              {% if seller and seller.island_group %}
+                {{ seller.island_group }}
+              {% else %}
+                Not Set
+              {% endif %}
+            </span>
             <span class="tag status-badge {% if seller and seller.status == 'approved' %}status-active{% else %}status-pending{% endif %}">
               {{ seller.status.title() if seller else 'Pending' }}
             </span>
@@ -423,153 +430,205 @@
                 </div>
                 
                 <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="sizesSection">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Available Sizes *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select sizes or add custom sizes below</small>
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Available Sizes per Color *</h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select a color tab above, then choose sizes for that specific color</small>
                   
-                  <!-- Clothing Sizes (default) -->
-                  <div id="clothingSizes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="XS" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>XS</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="S" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>S</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="M" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>M</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="L" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>L</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="XL" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>XL</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="2XL" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>2XL</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="3XL" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>3XL</span>
-                    </label>
+                  <!-- Per-Color Sizes Container -->
+                  <div id="perColorSizesContainer" style="display: none;">
+                    <!-- Clothing Sizes (default) -->
+                    <div id="clothingSizes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="XS" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>XS</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="S" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>S</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="M" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>M</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="L" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>L</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="XL" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>XL</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="2XL" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>2XL</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="3XL" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>3XL</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="4XL" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>4XL</span>
+                      </label>
+                    </div>
+                    
+                    <!-- Shoe Sizes (hidden by default) - US Sizes -->
+                    <div id="shoeSizes" style="display: none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px;">
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="5" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>5</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="6" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>6</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="7" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>7</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="8" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>8</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="9" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>9</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="10" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>10</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="11" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>11</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="12" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>12</span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" class="color-size-checkbox" value="13" style="margin-right: 6px;" onchange="updateStockInputs()">
+                        <span>13</span>
+                      </label>
+                    </div>
+                    
+                    <div style="margin-top: 12px;">
+                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s) for <span id="current-color-size-label" style="font-weight: 600; color: #3b82f6;">this color</span></label>
+                      <input type="text" id="custom-sizes-per-color" placeholder="e.g. 4XL, 5XL, 36, 37, 38 (comma-separated)" 
+                        style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" 
+                        oninput="updateStockInputs()" 
+                        onchange="updateStockInputs()" 
+                        onblur="updateStockInputs()">
+                      <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Custom sizes for this color only</small>
+                    </div>
                   </div>
                   
-                  <!-- Shoe Sizes (hidden by default) - US Sizes -->
-                  <div id="shoeSizes" style="display: none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="5" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>5</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="6" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>6</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="7" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>7</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="8" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>8</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="9" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>9</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="10" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>10</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="11" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>11</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="12" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>12</span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="sizes" value="13" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>13</span>
-                    </label>
-                  </div>
-                  
-                  <div style="margin-top: 12px;">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s)</label>
-                    <input type="text" id="custom-sizes" placeholder="e.g. 4XL, 5XL, 28W, 32W (comma-separated)" 
-                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" 
-                      oninput="updateStockInputs()" 
-                      onchange="updateStockInputs()" 
-                      onblur="updateStockInputs()">
-                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">You can type here even without checking boxes above</small>
-                  </div>
+                  <!-- Placeholder when no color selected -->
+                  <p id="sizesPlaceholder" style="color: var(--muted); font-style: italic; margin: 20px 0;">👉 Select a color tab above to add sizes for that color</p>
                 </div>
                 
                 <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="colorsSection">
                   <h3 style="margin: 0 0 12px; font-size: 16px;">Available Colors *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select colors or add custom colors below</small>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Black" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Black</span>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Click a color to select it and set its sizes below</small>
+                  
+                  <!-- Color Tab Buttons -->
+                  <div id="colorTabs" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                    <!-- Tab buttons will be generated by JavaScript -->
+                  </div>
+                  
+                  <!-- Predefined Colors (with visual color swatches) -->
+                  <div id="predefinedColors" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px;">
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Black" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #000000; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Black</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="White" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>White</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="White" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #FFFFFF; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>White</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Gray" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Gray</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Gray" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #808080; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Gray</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Navy" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Navy</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Navy" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #000080; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Navy</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Blue" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Blue</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Blue" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #0000FF; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Blue</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Red" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Red</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Red" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #FF0000; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Red</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Green" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Green</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Green" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #008000; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Green</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Brown" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Brown</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Brown" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #8B4513; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Brown</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Beige" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Beige</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Beige" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #F5F5DC; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Beige</span>
+                      </span>
                     </label>
-                    <label style="display: flex; align-items: center; cursor: pointer;">
-                      <input type="checkbox" name="colors" value="Khaki" style="margin-right: 6px;" onchange="updateStockInputs()">
-                      <span>Khaki</span>
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                      <input type="checkbox" name="colors" value="Khaki" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 20px; height: 20px; background: #F0E68C; border: 1px solid #ccc; border-radius: 4px;"></span>
+                        <span>Khaki</span>
+                      </span>
                     </label>
                   </div>
+                  
                   <div style="margin-top: 12px;">
                     <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Color(s)</label>
                     <input type="text" id="custom-colors" placeholder="e.g. Burgundy, Olive, Charcoal (comma-separated)" 
                       style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" 
-                      oninput="updateStockInputs()" 
-                      onchange="updateStockInputs()" 
-                      onblur="updateStockInputs()">
+                      oninput="updateColorTabs()" 
+                      onchange="updateColorTabs()" 
+                      onblur="updateColorTabs()">
                     <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">You can type here even without checking boxes above</small>
                   </div>
                 </div>
                 
+                <!-- Hidden input to track selected color for stock table -->
+                <input type="hidden" id="selected-color" value="">
+                <input type="hidden" id="selected-color-sizes" value=""
+                
                 <div id="size-color-stocks" style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #f0f9ff;">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Stock per Size & Color</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Enter stock quantity for each size-color combination</small>
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Stock per Size in <span id="stock-table-color">Selected Color</span></h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Enter stock quantity for each size in the selected color</small>
                   <div id="stock-inputs" style="display: grid; gap: 8px;">
-                    <p style="color: var(--muted); font-style: italic;">Select sizes and colors above to set stock quantities</p>
+                    <p style="color: var(--muted); font-style: italic;">👉 Click on a color tab above to set stock for that color</p>
                   </div>
                 </div>
                 
@@ -627,9 +686,8 @@
         'inventory': `
           <div class="card">
             <div class="inner">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <div style="margin-bottom: 20px;">
                 <h2 style="margin: 0;">📦 Inventory Management</h2>
-                <input type="text" id="inventory-search" placeholder="Search products..." style="padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; width: 250px;" onkeyup="loadInventory()">
               </div>
               <div id="inventory-list" style="overflow-x: auto;">Loading inventory...</div>
             </div>
@@ -797,13 +855,13 @@
               <h2 style="margin: 0 0 16px;">Brand Settings</h2>
               <form id="brand-settings-form" style="max-width: 600px;">
                 <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Store Name</label>
-                  <input type="text" id="store-name" placeholder="Enter store name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Name *</label>
+                  <input type="text" id="store-name" placeholder="Enter brand name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Store Description</label>
-                  <textarea id="store-description" placeholder="Tell customers about your store" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;"></textarea>
+                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Description *</label>
+                  <textarea id="store-description" placeholder="Tell customers about your brand" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required></textarea>
                 </div>
                 
                 <div style="margin-bottom: 20px;">
@@ -820,10 +878,21 @@
                   <label style="display: block; margin-bottom: 8px; font-weight: 500;">Store Address</label>
                   <input type="text" id="store-address" placeholder="Enter store address" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                 </div>
+
+                <div style="margin-bottom: 20px;">
+                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">🗺️ Service Island Location</label>
+                  <select id="island-group" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px;">
+                    <option value="">Select your service island...</option>
+                    <option value="Luzon">🏝️ Luzon</option>
+                    <option value="Visayas">🏝️ Visayas</option>
+                    <option value="Mindanao">🏝️ Mindanao</option>
+                  </select>
+                  <p style="margin: 8px 0 0; font-size: 12px; color: #666;">Your store will be matched with riders serving this island group</p>
+                </div>
                 
                 <div style="display: flex; gap: 12px;">
                   <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Settings</button>
-                  <button type="button" onclick="loadBrandSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
+                  <button type="button" onclick="reloadBrandSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
                 </div>
               </form>
             </div>
@@ -850,28 +919,25 @@
                   <input type="text" id="phone-number" placeholder="Enter phone number" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                 </div>
                 
-                <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
-                
-                <h3 style="margin: 0 0 16px; font-size: 14px;">Change Password</h3>
-                
                 <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Current Password</label>
-                  <input type="password" id="current-password" placeholder="Enter current password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">New Password</label>
-                  <input type="password" id="new-password" placeholder="Enter new password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                </div>
-                
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Confirm New Password</label>
-                  <input type="password" id="confirm-password" placeholder="Confirm new password" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address *</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="email" id="email-address" placeholder="Enter email address" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                    <button type="button" id="verify-email-btn" onclick="sendEmailOTP()" class="action-btn" style="background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Verify Email</button>
+                  </div>
+                  <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Click "Verify Email" to send OTP verification code</small>
+                  <div id="otp-verification-section" style="display: none; margin-top: 12px; padding: 12px; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 6px;">
+                    <input type="text" id="otp-code" placeholder="Enter 6-digit OTP code" style="width: 100%; padding: 10px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 8px; box-sizing: border-box;">
+                    <button type="button" id="verify-otp-btn" onclick="verifyEmailOTP()" class="action-btn" style="width: 100%; background: #10b981; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Verify OTP</button>
+                  </div>
+                  <div id="email-verified-message" style="display: none; margin-top: 12px; padding: 12px; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; color: #15803d; font-weight: 500;">
+                    ✓ Email verified successfully
+                  </div>
                 </div>
                 
                 <div style="display: flex; gap: 12px;">
                   <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Changes</button>
-                  <button type="button" onclick="loadAccountSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
+                  <button type="button" onclick="reloadAccountSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
                 </div>
               </form>
             </div>
@@ -1117,10 +1183,14 @@
         // Now create FormData after custom values are copied
         const formData = new FormData(form);
         
+        // Add colorSizesMapping as JSON
+        formData.append('color_sizes_mapping', JSON.stringify(colorSizesMapping));
+        console.log('Color sizes mapping being sent:', colorSizesMapping);
+        
         // Debug: Log all form data being sent
         console.log('=== Form Data Being Sent ===');
         for (let [key, value] of formData.entries()) {
-          if (key.startsWith('stock_') || key.includes('size') || key.includes('color')) {
+          if (key.startsWith('stock_') || key.includes('size') || key.includes('color') || key === 'color_sizes_mapping') {
             console.log(`${key}: ${value}`);
           }
         }
@@ -1158,6 +1228,9 @@
             // Reset category to trigger size/color sections
             document.getElementById('categorySelect').value = '';
             toggleSizeColorSections();
+            // Reset color/size mappings
+            colorSizesMapping = {};
+            selectedColor = null;
             // Load products list
             loadPage('products');
           } else if (status === 400) {
@@ -1179,46 +1252,153 @@
       }
       
       // Function to update stock inputs based on selected sizes and colors
-      function updateStockInputs() {
-        console.log('Updating stock inputs...');
+      // Store color-size mapping: each color has its own list of sizes
+      let colorSizesMapping = {}; // { Red: ['S', 'M', 'L'], Black: ['M', 'L', 'XL'] }
+      let selectedColor = null;
+      let sizeType = 'clothing'; // 'clothing' or 'shoes'
+
+      function updateColorTabs() {
+        console.log('Updating color tabs...');
         
-        const sizes = [];
         const colors = [];
         
-        // Get checked sizes ONLY - do NOT add all available sizes
-        const checkedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value);
-        sizes.push(...checkedSizes);
-        
-        // Get checked colors ONLY - do NOT add all available colors
+        // Get checked colors
         const checkedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
         colors.push(...checkedColors);
         
-        // Add custom sizes
-        const customSizesInput = document.getElementById('custom-sizes');
-        const customSizes = customSizesInput && customSizesInput.value.trim() 
-          ? customSizesInput.value.split(',').map(s => s.trim()).filter(s => s)
-          : [];
-        
-        // Add custom colors
+        // Get custom colors
         const customColorsInput = document.getElementById('custom-colors');
         const customColors = customColorsInput && customColorsInput.value.trim()
           ? customColorsInput.value.split(',').map(c => c.trim()).filter(c => c)
           : [];
+        colors.push(...customColors);
         
-        // If custom sizes exist and no checkboxes are checked, use only custom sizes
-        if (checkedSizes.length === 0 && customSizes.length > 0) {
-          sizes.push(...customSizes);
-          console.log('Using only custom sizes:', customSizes);
+        console.log('All colors:', colors);
+        
+        const colorTabsDiv = document.getElementById('colorTabs');
+        
+        if (colors.length === 0) {
+          colorTabsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">Select colors above to create tabs</p>';
+          selectedColor = null;
+          updateStockInputs();
+          return;
         }
         
-        // Always add custom colors (combine with checked colors)
-        if (customColors.length > 0) {
-          colors.push(...customColors);
-          console.log('Added custom colors:', customColors);
+        // Generate color tabs
+        let tabsHtml = '';
+        colors.forEach(color => {
+          const isSelected = selectedColor === color;
+          tabsHtml += `<button type="button" id="color-tab-${color}" class="color-tab ${isSelected ? 'active' : ''}" 
+            onclick="selectColor('${color}')" 
+            style="padding: 10px 16px; border: 2px solid ${isSelected ? '#3b82f6' : '#ddd'}; background: ${isSelected ? '#3b82f6' : '#fff'}; 
+            color: ${isSelected ? '#fff' : '#0a0a0a'}; border-radius: 6px; cursor: pointer; font-weight: ${isSelected ? '600' : '500'}; 
+            transition: all 0.2s;">
+            ${color}
+          </button>`;
+        });
+        
+        colorTabsDiv.innerHTML = tabsHtml;
+        
+        // If no color was selected, select the first one
+        if (!selectedColor && colors.length > 0) {
+          selectColor(colors[0]);
+        }
+      }
+
+      function selectColor(color) {
+        console.log(`Selected color: ${color}`);
+        selectedColor = color;
+        
+        // Update hidden input
+        document.getElementById('selected-color').value = color;
+        
+        // Update tab appearances
+        document.querySelectorAll('.color-tab').forEach(tab => {
+          const tabColor = tab.textContent.trim();
+          const isSelected = tabColor === color;
+          tab.style.borderColor = isSelected ? '#3b82f6' : '#ddd';
+          tab.style.background = isSelected ? '#3b82f6' : '#fff';
+          tab.style.color = isSelected ? '#fff' : '#0a0a0a';
+          tab.style.fontWeight = isSelected ? '600' : '500';
+        });
+        
+        // Update the color name in stock table title
+        document.getElementById('stock-table-color').textContent = color;
+        
+        // Show sizes section and update for this color
+        updateSizesForColor();
+        
+        // Update stock inputs for this color
+        updateStockInputs();
+      }
+
+      function updateSizesForColor() {
+        console.log('Updating sizes for color:', selectedColor);
+        
+        const placeholder = document.getElementById('sizesPlaceholder');
+        const container = document.getElementById('perColorSizesContainer');
+        
+        // Show placeholder if no color selected
+        if (!selectedColor) {
+          if (placeholder) placeholder.style.display = 'block';
+          if (container) container.style.display = 'none';
+          return;
         }
         
-        console.log('Total sizes:', sizes);
-        console.log('Total colors:', colors);
+        // Show sizes container
+        if (placeholder) placeholder.style.display = 'none';
+        if (container) container.style.display = 'block';
+        
+        // Update the label to show current color
+        document.getElementById('current-color-size-label').textContent = selectedColor;
+        
+        // Check if this color already has saved sizes
+        const savedSizes = colorSizesMapping[selectedColor];
+        console.log(`Loading saved sizes for ${selectedColor}:`, savedSizes);
+        
+        // Restore previously selected sizes for this color
+        document.querySelectorAll('.color-size-checkbox').forEach(checkbox => {
+          if (savedSizes && savedSizes.includes(checkbox.value)) {
+            checkbox.checked = true;
+          } else {
+            checkbox.checked = false;
+          }
+        });
+        
+        // Restore custom sizes input if it was saved
+        const customSizesInput = document.getElementById('custom-sizes-per-color');
+        if (customSizesInput) {
+          // Extract custom sizes from the saved sizes array
+          const customSizes = savedSizes ? savedSizes.filter(size => {
+            return !['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5', '6', '7', '8', '9', '10', '11', '12', '13'].includes(size);
+          }) : [];
+          customSizesInput.value = customSizes.join(', ');
+        }
+        
+        console.log(`Color ${selectedColor} sizes restored`);
+        
+        // Update stock table with new sizes
+        updateStockInputs();
+      }
+
+      function updateStockInputs() {
+        console.log('Updating stock inputs for color:', selectedColor);
+        
+        const sizes = [];
+        
+        // Get checked sizes from per-color checkboxes
+        const checkedSizes = Array.from(document.querySelectorAll('.color-size-checkbox:checked')).map(cb => cb.value);
+        sizes.push(...checkedSizes);
+        
+        // Get custom sizes for this color
+        const customSizesInput = document.getElementById('custom-sizes-per-color');
+        const customSizes = customSizesInput && customSizesInput.value.trim() 
+          ? customSizesInput.value.split(',').map(s => s.trim()).filter(s => s)
+          : [];
+        
+        sizes.push(...customSizes);
+        
+        console.log('Sizes for stock table:', sizes);
         
         const stockInputsDiv = document.getElementById('stock-inputs');
         
@@ -1227,8 +1407,9 @@
           return;
         }
         
-        if (sizes.length === 0 || colors.length === 0) {
-          stockInputsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">💡 Select sizes and colors above (or add custom ones) to see the stock table</p>';
+        // If no color selected or no sizes selected, show placeholder
+        if (!selectedColor || sizes.length === 0) {
+          stockInputsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">👉 Select sizes for this color above to set stock</p>';
           return;
         }
         
@@ -1242,35 +1423,37 @@
         });
         console.log('Preserved stock values:', existingValues);
         
+        // Store selected sizes in colorSizesMapping for this color (including custom sizes)
+        colorSizesMapping[selectedColor] = sizes;
+        console.log('Updated colorSizesMapping:', colorSizesMapping);
+        
+        // Generate stock table for ONLY the selected color
         let html = '<div style="max-height: 400px; overflow-y: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead><tr style="background: #e5e7eb; position: sticky; top: 0;"><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Size</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Color</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Stock Qty</th><th style="padding: 8px; text-align: center; border: 1px solid var(--line); width: 50px;">Action</th></tr></thead>';
         html += '<tbody>';
         
         sizes.forEach(size => {
-          colors.forEach(color => {
-            // Create a safe name for the input by replacing special characters
-            const safeName = `stock_${size.replace(/[^a-zA-Z0-9]/g, '_')}_${color.replace(/[^a-zA-Z0-9]/g, '_')}`;
-            // Use preserved value if it exists, otherwise default to 0
-            const stockValue = existingValues[safeName] || '0';
-            console.log(`Creating stock input: size="${size}", color="${color}", name="${safeName}", value="${stockValue}"`);
-            html += `<tr style="transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6';" onmouseout="this.style.backgroundColor='';">
-              <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${size}</td>
-              <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${color}</td>
-              <td style="padding: 8px; border: 1px solid var(--line);">
-                <input type="number" name="${safeName}" min="0" value="${stockValue}" required 
-                  style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
-              </td>
-              <td style="padding: 8px; border: 1px solid var(--line); text-align: center;">
-                <button type="button" onclick="removeStockRow(this)" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 18px; padding: 4px 8px; transition: transform 0.2s;" title="Remove this size-color combination" onmouseover="this.style.transform='scale(1.2)';" onmouseout="this.style.transform='scale(1)';">✕</button>
-              </td>
-            </tr>`;
-          });
+          // IMPORTANT: Only create stock input for the selected color
+          const safeName = `stock_${size.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedColor.replace(/[^a-zA-Z0-9]/g, '_')}`;
+          const stockValue = existingValues[safeName] || '0';
+          console.log(`Creating stock input for selected color: size="${size}", color="${selectedColor}", name="${safeName}", value="${stockValue}"`);
+          html += `<tr style="transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6';" onmouseout="this.style.backgroundColor='';">
+            <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${size}</td>
+            <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${selectedColor}</td>
+            <td style="padding: 8px; border: 1px solid var(--line);">
+              <input type="number" name="${safeName}" min="0" value="${stockValue}" required 
+                style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+            </td>
+            <td style="padding: 8px; border: 1px solid var(--line); text-align: center;">
+              <button type="button" onclick="removeStockRow(this)" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 18px; padding: 4px 8px; transition: transform 0.2s;" title="Remove this size-color combination" onmouseover="this.style.transform='scale(1.2)';" onmouseout="this.style.transform='scale(1)';">✕</button>
+            </td>
+          </tr>`;
         });
         
         html += '</tbody></table></div>';
         stockInputsDiv.innerHTML = html;
-        console.log('Stock table generated with', sizes.length * colors.length, 'combinations');
+        console.log(`Stock table generated for color "${selectedColor}" with ${sizes.length} sizes`);
       }
 
       function removeStockRow(button) {
@@ -1354,12 +1537,33 @@
               if (brandForm) {
                 brandForm.addEventListener('submit', (e) => {
                   e.preventDefault();
+                  
+                  // Validate required fields
+                  const storeName = document.getElementById('store-name').value.trim();
+                  const storeDesc = document.getElementById('store-description').value.trim();
+                  
+                  if (!storeName) {
+                    alert('⚠️ Please enter a brand name');
+                    return;
+                  }
+                  
+                  if (!storeDesc) {
+                    alert('⚠️ Please enter a brand description');
+                    return;
+                  }
+                  
+                  // Show confirmation popup
+                  if (!confirm('Are you sure you want to save these brand settings?')) {
+                    return;
+                  }
+                  
                   const formData = new FormData();
-                  formData.append('store_name', document.getElementById('store-name').value);
-                  formData.append('description', document.getElementById('store-description').value);
+                  formData.append('store_name', storeName);
+                  formData.append('description', storeDesc);
                   formData.append('contact_email', document.getElementById('contact-email').value);
                   formData.append('contact_phone', document.getElementById('contact-phone').value);
                   formData.append('address', document.getElementById('store-address').value);
+                  formData.append('island_group', document.getElementById('island-group').value);
                   
                   fetch('/seller/brand-settings', { method: 'POST', body: formData })
                     .then(response => response.json())
@@ -1381,20 +1585,28 @@
               if (accountForm) {
                 accountForm.addEventListener('submit', (e) => {
                   e.preventDefault();
-                  const newPassword = document.getElementById('new-password').value;
-                  const confirmPassword = document.getElementById('confirm-password').value;
                   
-                  // Validate passwords match if changing password
-                  if (newPassword && newPassword !== confirmPassword) {
-                    alert('❌ Passwords do not match!');
+                  // Show confirmation popup
+                  if (!confirm('Are you sure you want to save these account settings?')) {
                     return;
+                  }
+                  
+                  // Check if email was verified (if it was changed)
+                  const newEmail = document.getElementById('email-address').value.trim();
+                  const currentEmail = document.getElementById('account-email').textContent;
+                  
+                  if (newEmail && newEmail !== currentEmail) {
+                    const emailVerified = document.getElementById('email-verified-message').style.display !== 'none';
+                    if (!emailVerified) {
+                      alert('⚠️ Please verify the new email address before saving');
+                      return;
+                    }
                   }
                   
                   const formData = new FormData();
                   formData.append('full_name', document.getElementById('full-name').value);
                   formData.append('phone_number', document.getElementById('phone-number').value);
-                  formData.append('current_password', document.getElementById('current-password').value);
-                  formData.append('new_password', document.getElementById('new-password').value);
+                  formData.append('email', newEmail);
                   
                   fetch('/seller/account-settings', { method: 'POST', body: formData })
                     .then(response => response.json())
@@ -1576,9 +1788,9 @@
           const statusColors = {
             'pending': '#ff9800',
             'confirmed': '#2196f3',
+            'waiting_for_pickup': '#8b5cf6',
             'processing': '#ff5722',
             'shipped': '#4caf50',
-            'released_to_rider': '#4caf50',
             'delivered': '#9c27b0',
             'cancelled': '#f44336',
             'returned': '#795548'
@@ -1587,9 +1799,9 @@
           const statusEmojis = {
             'pending': '⏳',
             'confirmed': '✔️',
+            'waiting_for_pickup': '⏸️',
             'processing': '🔄',
             'shipped': '📦',
-            'released_to_rider': '🚚',
             'delivered': '✅',
             'cancelled': '❌',
             'returned': '↩️'
@@ -1617,15 +1829,22 @@
               <td style="padding:10px; font-size:12px; color:#666;">${orderDate}</td>
               <td style="padding:10px; text-align:center;">
                 <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;align-items:center">
-                  <button class="action-btn" onclick="viewOrderDetails(${order.id})" style="font-size:12px; padding:4px 8px;">View</button>
+                  <button class="action-btn" onclick="viewOrderDetails(${order.id})" style="font-size:12px; padding:4px 8px;">👁️ View</button>
                   ${order.order_status === 'pending' ? 
                     `<button class="action-btn" onclick="confirmOrder(${order.id})" style="font-size:12px; padding:4px 8px; background:#2196f3; color:#fff;">✓ Confirm</button>` :
                   order.order_status === 'confirmed' ? 
-                    `<button class="action-btn" onclick="releaseToRider(${order.id})" style="font-size:12px; padding:4px 8px; background:#4caf50; color:#fff;">🚚 Release to Rider</button>` :
-                  order.order_status === 'released_to_rider' ? 
-                    `<span style="background:#4caf50;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">🚚 Released to Rider</span>` :
-                  order.order_status !== 'delivered' && order.order_status !== 'cancelled' ? 
-                    `<button class="action-btn" onclick="openStatusModal(${order.id}, '${order.order_status}')" style="font-size:12px; padding:4px 8px;">Update</button>` : ''}
+                    `<button class="action-btn" onclick="setToWaitingPickup(${order.id})" style="font-size:12px; padding:4px 8px; background:#8b5cf6; color:#fff;">⏸️ Mark Waiting</button>` :
+                  order.order_status === 'waiting_for_pickup' ? 
+                    `<span style="background:#8b5cf6;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">⏸️ Awaiting Rider</span>` :
+                  order.order_status === 'released_to_rider' || order.order_status === 'shipped' ? 
+                    `
+                    <button class="action-btn" onclick="viewDeliveryStatus(${order.id})" style="font-size:12px; padding:4px 8px; background:#10b981; color:#fff;">📍 Track</button>
+                    ${order.order_status === 'shipped' ? `<button class="action-btn" onclick="confirmDelivery(${order.id})" style="font-size:12px; padding:4px 8px; background:#059669; color:#fff;">✅ Delivered</button>` : ''}
+                    ` :
+                  order.order_status === 'delivered' ? 
+                    `<span style="background:#10b981;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">✅ Delivered</span>` :
+                  order.order_status !== 'cancelled' ? 
+                    `<button class="action-btn" onclick="viewDeliveryStatus(${order.id})" style="font-size:12px; padding:4px 8px; background:#3b82f6; color:#fff;">📍 Track</button>` : ''}
                 </div>
               </td>
               </td>
@@ -1669,8 +1888,8 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
       // Define valid status transitions (forward-only, no backwards allowed)
       const orderStatusFlow = {
         'pending': ['confirmed'],
-        'confirmed': ['released_to_rider'],
-        'released_to_rider': ['delivered'],
+        'confirmed': ['waiting_for_pickup'],
+        'waiting_for_pickup': ['delivered'],
         'delivered': [], // Final state
         'cancelled': [], // Final state
         'returned': []   // Final state
@@ -1937,14 +2156,92 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         });
       }
 
-      function releaseToRider(orderId) {
-        console.log('🚚 Releasing order to rider:', orderId);
+      function setToWaitingPickup(orderId) {
+        console.log('⏸️ Setting order to waiting for pickup:', orderId);
         
-        if (!confirm('Release this order to rider for delivery?')) return;
+        if (!confirm('Mark this order as Waiting for Pick Up? Riders will be able to accept this order.')) {
+          return;
+        }
         
         const formData = new FormData();
         formData.append('order_id', orderId);
-        formData.append('new_status', 'released_to_rider');
+        formData.append('new_status', 'waiting_for_pickup');
+        
+        fetch('/seller/update-order-status', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Response:', data);
+          if (data.success) {
+            alert('Order marked as Waiting for Pick Up!');
+            loadOrders('confirmed');
+          } else {
+            alert('Error: ' + (data.error || data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error updating order status:', error);
+          alert('Error updating order: ' + error.message);
+        });
+      }
+
+      function viewDeliveryStatus(orderId) {
+        console.log('📍 Viewing delivery status for order:', orderId);
+        const order = allOrders.find(o => o.id === orderId);
+        
+        if (!order) {
+          alert('Order not found');
+          return;
+        }
+        
+        // Map shipment status to readable status
+        const statusMap = {
+          'pending': 'Pending Pickup',
+          'picked_up': 'Picked Up',
+          'in_transit': 'In Transit',
+          'out_for_delivery': 'Out for Delivery',
+          'delivered': 'Delivered',
+          'failed': 'Delivery Failed',
+          'assigned_to_rider': 'Assigned to Rider'
+        };
+        
+        const riderName = order.rider_name ? `${order.rider_name}` : 'Assigned Rider';
+        const currentStatus = statusMap[order.shipment_status] || order.shipment_status;
+        
+        const details = `
+📦 DELIVERY TRACKING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Order #${order.order_number}
+Customer: ${order.customer_name || 'N/A'}
+
+🚚 Rider: ${riderName}
+📍 Current Status: ${currentStatus}
+📍 Delivery to: ${order.shipping_city || ''}, ${order.shipping_province || ''}
+
+⏰ Order Time: ${new Date(order.created_at).toLocaleString()}
+        `;
+        
+        alert(details);
+      }
+
+      function confirmDelivery(orderId) {
+        console.log('✅ Confirming delivery for order:', orderId);
+        const order = allOrders.find(o => o.id === orderId);
+        
+        if (!order) {
+          alert('Order not found');
+          return;
+        }
+        
+        if (!confirm(`Confirm that Order #${order.order_number} has been delivered to ${order.customer_name}?`)) {
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        formData.append('new_status', 'delivered');
         
         fetch('/seller/update-order-status', {
           method: 'POST',
@@ -1953,16 +2250,160 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('✅ Order released to rider! Rider can now start delivery.');
-            loadOrders(currentOrderFilter);
+            alert('✅ Order marked as delivered!');
+            loadOrders('all');
             fetchOrderCount();
           } else {
-            alert('❌ Failed to release order: ' + (data.error || data.message || 'Unknown error'));
+            alert('Error: ' + (data.error || data.message || 'Unknown error'));
           }
         })
         .catch(error => {
-          console.error('❌ Error releasing order:', error);
-          alert('Error releasing order: ' + error.message);
+          console.error('Error confirming delivery:', error);
+          alert('Error confirming delivery: ' + error.message);
+        });
+      }
+
+      function releaseToRider(orderId) {
+        console.log('🚚 Releasing order to rider:', orderId);
+        
+        // Show rider selection modal
+        showRiderSelectionModal(orderId);
+      }
+
+      function showRiderSelectionModal(orderId) {
+        const order = allOrders.find(o => o.id === orderId);
+        if (!order) {
+          alert('Order not found');
+          return;
+        }
+
+        // Show loading state
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000;';
+        modal.innerHTML = `
+          <div style="background:#fff; padding:32px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.3); max-width:600px; width:90%;">
+            <button onclick="this.closest('[style*=fixed]').remove()" style="float:right; background:none; border:none; font-size:24px; cursor:pointer; color:#999;">×</button>
+            <h2 style="margin:0 0 8px; font-size:22px; font-weight:600; color:#0a0a0a;">🚚 Select Rider for Delivery</h2>
+            <p style="margin:0 0 24px; color:#666; font-size:14px;">Choose a rider to deliver Order #${order.order_number}</p>
+            <div id="seller-island" style="background:#e3f2fd; border-left:4px solid #2196f3; padding:12px; margin-bottom:20px; border-radius:4px; font-size:13px; color:#1565c0;">
+              📍 <strong>Order Delivery Region:</strong> <span id="seller-island-text">Loading...</span>
+            </div>
+            <div id="rider-list" style="min-height:150px; display:flex; align-items:center; justify-content:center; color:#999;">
+              ⏳ Loading available riders...
+            </div>
+            <div id="rider-error" style="display:none; padding:12px; background:#fee; color:#c33; border-radius:4px; margin-bottom:16px; border-left:3px solid #f44;"></div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Fetch available riders (filtered by order's delivery location)
+        fetch(`/api/sellers/available-riders?order_id=${orderId}`)
+          .then(r => r.json())
+          .then(data => {
+            // Display delivery location info
+            let locationInfo = 'your area';
+            if (data.delivery_location && data.delivery_location.city) {
+              locationInfo = `${data.delivery_location.city}, ${data.delivery_location.province}`;
+            }
+            
+            if (!data.success || !data.riders || data.riders.length === 0) {
+              document.getElementById('rider-list').innerHTML = `
+                <div style="text-align:center; padding:24px;">
+                  <p style="color:#999; font-size:14px;">⚠️ No available riders found for ${data.delivery_region || 'your area'}</p>
+                  <p style="color:#999; font-size:12px; margin-top:8px;">📍 Order delivery to: ${locationInfo}</p>
+                  <p style="color:#999; font-size:12px; margin-top:8px;">Make sure riders have their service area set to ${data.delivery_region || 'All areas'}</p>
+                  <button onclick="this.closest('[style*=fixed]').remove()" style="margin-top:12px; padding:8px 16px; background:#999; color:#fff; border:none; border-radius:4px; cursor:pointer;">Close</button>
+                </div>
+              `;
+              return;
+            }
+
+            // Update seller island info to show delivery region
+            if (data.delivery_region) {
+              document.getElementById('seller-island').innerHTML = `📍 <strong>Delivery Region:</strong> 🏝️ ${data.delivery_region} (Order to: ${locationInfo})`;
+            }
+
+            // Display riders with selection buttons
+            let riderHTML = '<div style="display:flex;flex-direction:column;gap:12px;">';
+            
+            data.riders.forEach(rider => {
+              const riderName = rider.first_name && rider.last_name ? `${rider.first_name} ${rider.last_name}` : 'Rider #' + rider.id;
+              const vehicleType = rider.vehicle_type || 'Unknown';
+              const rating = rider.rating ? `⭐ ${parseFloat(rider.rating).toFixed(1)}` : 'No ratings';
+              const deliveries = rider.total_deliveries || 0;
+              const riderRegion = rider.sub_region || rider.service_area || 'All areas';
+              
+              riderHTML += `
+                <div style="border:2px solid #e5e7eb; border-radius:8px; padding:16px; display:flex; justify-content:space-between; align-items:center; hover:{background:#f9f9f9};cursor:pointer;" onclick="assignRiderToOrder(${orderId}, ${rider.id}, '${riderName.replace(/'/g, "\\'")}')" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='#fff'">
+                  <div>
+                    <div style="font-weight:600; color:#0a0a0a; font-size:15px;">👤 ${riderName}</div>
+                    <div style="font-size:13px; color:#666; margin-top:4px;">
+                      🚗 ${vehicleType} | ${rating} | ${deliveries} deliveries
+                    </div>
+                    <div style="font-size:12px; color:#2196f3; margin-top:4px; font-weight:500;">
+                      📍 Service Region: ${riderRegion}
+                    </div>
+                  </div>
+                  <button style="padding:8px 16px; background:#4caf50; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;" onclick="event.stopPropagation(); assignRiderToOrder(${orderId}, ${rider.id}, '${riderName.replace(/'/g, "\\'")}')" onmouseover="this.background='#45a049'" onmouseout="this.background='#4caf50'">
+                    ✓ Select
+                  </button>
+                </div>
+              `;
+            });
+
+            riderHTML += '</div>';
+            document.getElementById('rider-list').innerHTML = riderHTML;
+          })
+          .catch(error => {
+            console.error('Error loading riders:', error);
+            document.getElementById('rider-error').style.display = 'block';
+            document.getElementById('rider-error').textContent = '❌ Failed to load riders: ' + error.message;
+            document.getElementById('rider-list').innerHTML = `
+              <div style="text-align:center; padding:24px;">
+                <button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 16px; background:#999; color:#fff; border:none; border-radius:4px; cursor:pointer;">Close</button>
+              </div>
+            `;
+          });
+      }
+
+      function assignRiderToOrder(orderId, riderId, riderName) {
+        console.log(`✅ Assigning rider ${riderId} (${riderName}) to order ${orderId}`);
+        
+        if (!confirm(`Assign ${riderName} as the rider for this delivery?`)) {
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+        formData.append('rider_id', riderId);
+        formData.append('new_status', 'released_to_rider');
+
+        fetch('/seller/release-to-rider', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Release to rider response:', data);
+          
+          if (data.success) {
+            // Close modal
+            document.querySelectorAll('[style*="fixed"]').forEach(el => {
+              if (el.style.background && el.style.background.includes('rgba(0,0,0,0.6)')) {
+                el.remove();
+              }
+            });
+            
+            alert(`✅ Order released to ${riderName}! Rider can now start delivery.`);
+            loadOrders(currentOrderFilter);
+            fetchOrderCount();
+          } else {
+            alert('❌ Failed to assign rider: ' + (data.error || data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error assigning rider:', error);
+          alert('Error assigning rider: ' + error.message);
         });
       }
 
@@ -2148,20 +2589,11 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
 
       // ============ INVENTORY MANAGEMENT ============
       function loadInventory() {
-        const searchTerm = document.getElementById('inventory-search')?.value || '';
         fetch('/seller/inventory')
           .then(response => response.json())
           .then(data => {
             if (data.success && data.inventory) {
-              let inventory = data.inventory;
-              
-              // Filter by search term
-              if (searchTerm) {
-                inventory = inventory.filter(item => 
-                  item.product_name.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-              }
-              
+              const inventory = data.inventory;
               displayInventory(inventory);
             } else {
               document.getElementById('inventory-list').innerHTML = '<p style="color:#999;padding:40px;">No inventory items found</p>';
@@ -2761,9 +3193,15 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
               document.getElementById('contact-email').value = settings.contact_email || '';
               document.getElementById('contact-phone').value = settings.contact_phone || '';
               document.getElementById('store-address').value = settings.address || '';
+              document.getElementById('island-group').value = settings.island_group || 'Luzon';
             }
           })
           .catch(error => console.error('Error loading brand settings:', error));
+      }
+
+      function reloadBrandSettings() {
+        loadBrandSettings();
+        alert('✅ Brand settings reloaded!');
       }
 
       function loadAccountSettings() {
@@ -2780,11 +3218,12 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
               document.getElementById('account-email').textContent = account.email || '';
               document.getElementById('full-name').value = account.full_name || '';
               document.getElementById('phone-number').value = account.phone_number || '';
+              document.getElementById('email-address').value = account.email || '';
               
-              // Clear password fields
-              document.getElementById('current-password').value = '';
-              document.getElementById('new-password').value = '';
-              document.getElementById('confirm-password').value = '';
+              // Reset OTP verification UI
+              document.getElementById('otp-verification-section').style.display = 'none';
+              document.getElementById('email-verified-message').style.display = 'none';
+              document.getElementById('otp-code').value = '';
             } else {
               console.error('Account settings error:', data.error);
               document.getElementById('account-username').textContent = 'Error: ' + (data.error || 'Unknown error');
@@ -2794,6 +3233,90 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
             console.error('Error loading account settings:', error);
             document.getElementById('account-username').textContent = 'Error loading settings';
           });
+      }
+
+      function reloadAccountSettings() {
+        loadAccountSettings();
+        alert('✅ Account settings reloaded!');
+      }
+
+      function sendEmailOTP() {
+        const email = document.getElementById('email-address').value.trim();
+        if (!email) {
+          alert('⚠️ Please enter an email address');
+          return;
+        }
+        
+        if (!email.includes('@')) {
+          alert('⚠️ Please enter a valid email address');
+          return;
+        }
+
+        const btn = document.getElementById('verify-email-btn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        fetch('/send-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: email, verification_type: 'email', purpose: 'email_change'})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ OTP code sent to ' + email);
+            document.getElementById('otp-verification-section').style.display = 'block';
+            document.getElementById('otp-code').focus();
+          } else {
+            alert('❌ Error: ' + (data.message || data.error || 'Could not send OTP'));
+          }
+          btn.disabled = false;
+          btn.textContent = 'Verify Email';
+        })
+        .catch(error => {
+          alert('❌ Error sending OTP: ' + error.message);
+          btn.disabled = false;
+          btn.textContent = 'Verify Email';
+        });
+      }
+
+      function verifyEmailOTP() {
+        const email = document.getElementById('email-address').value.trim();
+        const otp = document.getElementById('otp-code').value.trim();
+        
+        if (!otp || otp.length !== 6) {
+          alert('⚠️ Please enter a valid 6-digit OTP code');
+          return;
+        }
+
+        const btn = document.getElementById('verify-otp-btn');
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+
+        fetch('/verify-otp', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email: email, otp_code: otp, purpose: 'email_change'})
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Email verified successfully!');
+            document.getElementById('otp-verification-section').style.display = 'none';
+            document.getElementById('email-verified-message').style.display = 'block';
+            document.getElementById('verify-email-btn').disabled = true;
+            document.getElementById('verify-email-btn').textContent = '✓ Verified';
+          } else {
+            alert('❌ Error: ' + (data.message || data.error || 'Invalid OTP code'));
+          }
+          btn.disabled = false;
+          btn.textContent = 'Verify OTP';
+        })
+        .catch(error => {
+          alert('❌ Error verifying OTP: ' + error.message);
+          btn.disabled = false;
+          btn.textContent = 'Verify OTP';
+        });
       }
 
       function deletePromotion(promoId) {

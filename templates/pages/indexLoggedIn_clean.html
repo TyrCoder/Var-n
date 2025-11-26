@@ -425,6 +425,11 @@
         const targetSection = document.getElementById(sectionName);
         if (targetSection) {
           targetSection.style.display = 'block';
+          
+          // Load My Orders and start auto-refresh if showing My Orders
+          if (sectionName === 'myOrders') {
+            loadMyOrders();
+          }
         }
 
         // Update active nav link
@@ -589,36 +594,165 @@
         });
       });
 
-      // Load user's orders for My Orders section
+      // Load user's orders for My Orders section with real-time updates
+      let myOrdersRefreshInterval = null;
+      
       function loadMyOrders() {
         fetch('/api/my-orders')
           .then(response => response.json())
           .then(data => {
             const ordersList = document.getElementById('myOrdersList');
             if (data.success && data.orders && data.orders.length > 0) {
-              ordersList.innerHTML = data.orders.map(order => `
-                <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
-                    <div>
-                      <h3 style="margin:0 0 4px;font-size:18px">Order #${order.order_number}</h3>
-                      <p style="margin:0;color:#666;font-size:14px">${new Date(order.created_at).toLocaleDateString()}</p>
+              // Map new order statuses to stages
+              const orderStatusToStage = {
+                'pending': 'waiting_for_seller',
+                'confirmed': 'confirmed',
+                'waiting_for_pickup': 'ready_for_pickup',
+                'released_to_rider': 'in_transit',
+                'delivered': 'delivered',
+                'cancelled': 'cancelled'
+              };
+
+              const stageDefinitions = [
+                { key: 'waiting_for_seller', label: 'Waiting for Seller', icon: '⏳', color: '#ef4444' },
+                { key: 'confirmed', label: 'Seller Confirmed', icon: '✔️', color: '#f59e0b' },
+                { key: 'ready_for_pickup', label: 'Ready for Pickup', icon: '📦', color: '#8b5cf6' },
+                { key: 'in_transit', label: 'In Transit', icon: '🚚', color: '#3b82f6' },
+                { key: 'delivered', label: 'Delivered', icon: '✅', color: '#10b981' }
+              ];
+
+              ordersList.innerHTML = data.orders.map(order => {
+                const orderStatus = order.order_status || 'pending';
+                const displayStatus = order.display_status || 'Processing...';
+                const statusIcon = order.status_icon || '📋';
+                const stageKey = orderStatusToStage[orderStatus] || 'pending';
+                
+                // Find current stage
+                const currentStageIndex = stageDefinitions.findIndex(s => s.key === stageKey);
+                
+                const stageFlow = stageDefinitions.map((step, idx) => {
+                  const isActive = idx === currentStageIndex;
+                  const isCompleted = idx < currentStageIndex;
+                  const statusColor = isCompleted ? '#10b981' : isActive ? step.color : '#d1d5db';
+                  const textColor = isCompleted || isActive ? statusColor : '#999';
+                  
+                  return `
+                    <div style="display:flex;align-items:center;gap:4px;color:${textColor};font-weight:${isActive ? '600' : isCompleted ? '600' : '500'};font-size:12px;transition:all 0.3s">
+                      <span>${step.icon}</span>
+                      <span>${step.label}</span>
+                      ${idx < stageDefinitions.length - 1 ? `<span style="color:#d1d5db;margin:0 4px">›</span>` : ''}
                     </div>
-                    <span style="background:#3b82f6;color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">${order.status}</span>
+                  `;
+                }).join('');
+
+                const stageColor = stageDefinitions[currentStageIndex]?.color || '#666';
+                
+                return `
+                  <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,0.1);border-left:4px solid ${stageColor};transition:all 0.3s" data-order-id="${order.id}">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+                      <div>
+                        <h3 style="margin:0 0 4px;font-size:18px">Order #${order.order_number}</h3>
+                        <p style="margin:0;color:#666;font-size:14px">${new Date(order.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                        <span style="background:${stageColor}20;color:${stageColor};padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid ${stageColor}40">${displayStatus}</span>
+                        <span style="font-size:11px;color:#999">${statusIcon}</span>
+                      </div>
+                    </div>
+                    <div style="margin-bottom:16px">
+                      <p style="margin:0;font-weight:600">Total: ₱${parseFloat(order.total_amount || 0).toFixed(2)}</p>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;padding:12px;background:#f9fafb;border-radius:8px;flex-wrap:wrap;overflow-x:auto">
+                      ${stageFlow}
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                      ${orderStatus === 'delivered' ? `
+                        <button onclick="confirmReceived(${order.id})" style="flex:1;min-width:140px;padding:10px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                          <span>✓</span> Confirm Received
+                        </button>
+                      ` : ''}
+                      <button onclick="viewOrderDetails(${order.id})" style="flex:1;min-width:140px;padding:10px 14px;background:#3b82f6;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                        <span>👁️</span> Details
+                      </button>
+                      ${orderStatus !== 'cancelled' && orderStatus !== 'pending' ? `
+                        <button onclick="refreshOrderStatus(${order.id})" style="padding:10px 14px;background:#6b7280;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'" title="Refresh status">
+                          <span>🔄</span>
+                        </button>
+                      ` : ''}
+                    </div>
                   </div>
-                  <div style="margin-bottom:16px">
-                    <p style="margin:0;font-weight:600">Total: ₱${parseFloat(order.total_amount).toFixed(2)}</p>
-                  </div>
-                  <a href="/order/${order.id}" style="color:#3b82f6;text-decoration:none;font-weight:500">View Details →</a>
-                </div>
-              `).join('');
+                `;
+              }).join('');
+              
+              // Start auto-refresh for orders in progress
+              startOrderAutoRefresh();
             } else {
               ordersList.innerHTML = '<div style="text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Orders Yet</h3><p style="color:#999;margin:0">Your order history will appear here.</p></div>';
+              if (myOrdersRefreshInterval) clearInterval(myOrdersRefreshInterval);
             }
           })
           .catch(error => {
             console.error('Error loading orders:', error);
             document.getElementById('myOrdersList').innerHTML = '<div style="text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">Error Loading Orders</h3><p style="color:#999;margin:0">Please try again later.</p></div>';
           });
+      }
+
+      // Auto-refresh orders every 5 seconds
+      function startOrderAutoRefresh() {
+        if (myOrdersRefreshInterval) clearInterval(myOrdersRefreshInterval);
+        
+        myOrdersRefreshInterval = setInterval(() => {
+          const myOrdersSection = document.getElementById('myOrders');
+          // Only refresh if My Orders section is visible
+          if (myOrdersSection && myOrdersSection.style.display !== 'none') {
+            loadMyOrders();
+          }
+        }, 5000); // Refresh every 5 seconds
+      }
+
+      // Refresh specific order status
+      function refreshOrderStatus(orderId) {
+        fetch(`/api/my-orders`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.orders) {
+              const order = data.orders.find(o => o.id === orderId);
+              if (order) {
+                alert(`✅ Order Status Updated\n\n${order.display_status}`);
+                loadMyOrders();
+              }
+            }
+          })
+          .catch(error => console.error('Error refreshing status:', error));
+      }
+
+      // Confirm order received
+      function confirmReceived(orderId) {
+        if (!confirm('✅ Confirm that you have received this order in good condition?')) return;
+        
+        fetch(`/api/order/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: orderId, action: 'completed' })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ Order confirmed as received! Thank you for shopping with us.');
+            loadMyOrders();
+          } else {
+            alert('Error: ' + (data.error || data.message || 'Unable to confirm'));
+          }
+        })
+        .catch(error => {
+          console.error('Error confirming order:', error);
+          alert('Error confirming order. Please try again.');
+        });
+      }
+
+      // View order details
+      function viewOrderDetails(orderId) {
+        window.location.href = `/order/${orderId}`;
       }
 
       // Cart functions (placeholders for cart functionality)
@@ -635,6 +769,46 @@
       function proceedToCheckout() {
         // Implement checkout logic
         window.location.href = '/checkout';
+      }
+
+      // Complete order function
+      // Show return/damaged dialog
+      function showReturnDialog(orderId) {
+        const message = `Please select the issue:
+        
+1 = Product Damaged
+2 = Wrong Item Received
+3 = Not as Described
+4 = Other Issue
+
+Enter number (1-4) or describe the problem:`;
+        
+        const reason = prompt(message);
+        if (reason && reason.trim()) {
+          returnOrDamagedOrder(orderId, reason);
+        }
+      }
+
+      // Return or mark as damaged
+      async function returnOrDamagedOrder(orderId, reason) {
+        try {
+          const response = await fetch(`/api/order/return`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, reason: reason })
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            alert('📋 Return/Issue request submitted!\n\nOur support team will contact you within 24 hours.');
+            loadMyOrders();
+          } else {
+            alert('❌ Error: ' + (data.error || 'Failed to submit request'));
+          }
+        } catch (error) {
+          console.error('Error submitting return:', error);
+          alert('❌ Error submitting request');
+        }
       }
     </script>
   </body>
