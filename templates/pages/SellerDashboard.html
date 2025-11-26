@@ -633,10 +633,29 @@
                 </div>
                 
                 <div id="ingredientsSection" style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa; display: none;">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Ingredients *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">List all key ingredients in this grooming product</small>
-                  <textarea id="ingredients" name="ingredients" rows="5" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; font-family: monospace; font-size: 13px;" placeholder="e.g. Aloe Vera&#10;Vitamin E&#10;Coconut Oil&#10;Tea Tree Extract&#10;Shea Butter"></textarea>
-                  <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 6px;">Enter one ingredient per line. Include all active ingredients and major components.</small>
+                  <h3 style="margin: 0 0 12px; font-size: 16px;">Product Ingredients *</h3>
+                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Add all key ingredients in this grooming product</small>
+                  
+                  <!-- Ingredients Table -->
+                  <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+                    <thead>
+                      <tr style="background: #e5e7eb; border: 1px solid var(--line);">
+                        <th style="padding: 10px; text-align: left; border: 1px solid var(--line); font-weight: 600;">Ingredient Name</th>
+                        <th style="padding: 10px; text-align: left; border: 1px solid var(--line); font-weight: 600;">Percentage (%)</th>
+                        <th style="padding: 10px; text-align: center; border: 1px solid var(--line); font-weight: 600;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ingredientsTableBody">
+                      <!-- Rows will be added here dynamically -->
+                    </tbody>
+                  </table>
+                  
+                  <!-- Add Ingredient Row Button -->
+                  <button type="button" class="action-btn" onclick="addIngredientRow()" style="padding: 8px 16px; margin-bottom: 12px; font-size: 13px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">+ Add Ingredient</button>
+                  
+                  <!-- Hidden ingredients input for form submission -->
+                  <textarea id="ingredients" name="ingredients" rows="1" style="display: none;" placeholder="Ingredients JSON"></textarea>
+                  <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 6px;">Add at least one ingredient to continue</small>
                 </div>
                 
                 <input type="hidden" name="custom-sizes" id="custom-sizes-hidden">
@@ -949,6 +968,8 @@
 
       // Function to toggle size and color sections based on category
       function toggleSizeColorSections() {
+        console.log('🔄 toggleSizeColorSections() CALLED');
+        
         const categorySelect = document.getElementById('categorySelect');
         const sizesSection = document.getElementById('sizesSection');
         const colorsSection = document.getElementById('colorsSection');
@@ -958,97 +979,127 @@
         const clothingSizes = document.getElementById('clothingSizes');
         const shoeSizes = document.getElementById('shoeSizes');
         
-        if (categorySelect && sizesSection && colorsSection && stockSection) {
-          const categoryId = categorySelect.value;
-          const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-          const categorySlug = selectedOption ? selectedOption.getAttribute('data-slug') || '' : '';
-          
-          if (!categoryId) {
-            // No category selected, hide all sections
-            sizesSection.style.display = 'none';
-            colorsSection.style.display = 'none';
-            stockSection.style.display = 'none';
-            if (ingredientsSection) ingredientsSection.style.display = 'none';
-            return;
-          }
-          
-          // Check if it's a grooming category (check slug or name)
-          const isGrooming = categorySlug && (categorySlug.toLowerCase().includes('grooming') || selectedOption.textContent.toLowerCase().includes('grooming'));
-          
-          if (isGrooming) {
-            // Hide sizes, colors, and stock sections for grooming products
-            sizesSection.style.display = 'none';
-            colorsSection.style.display = 'none';
-            stockSection.style.display = 'none';
-            
-            // Show ingredients section for grooming products
-            if (ingredientsSection) {
-              ingredientsSection.style.display = 'block';
-              if (ingredientsInput) ingredientsInput.required = true;
-            }
-            
-            // Remove required attribute from checkboxes
-            document.querySelectorAll('input[name="sizes"], input[name="colors"]').forEach(input => {
-              input.removeAttribute('required');
-              input.checked = false; // Uncheck all
-            });
-          } else if (categorySlug && (categorySlug.toLowerCase().includes('shoe') || categorySlug.toLowerCase().includes('footwear') || selectedOption.textContent.toLowerCase().includes('shoe'))) {
-            // Show sizes and colors sections for shoes
-            sizesSection.style.display = 'block';
-            colorsSection.style.display = 'block';
-            stockSection.style.display = 'block';
-            
-            // Show shoe sizes, hide clothing sizes
-            if (clothingSizes) clothingSizes.style.display = 'none';
-            if (shoeSizes) shoeSizes.style.display = 'grid';
-            
-            // Uncheck clothing sizes
-            document.querySelectorAll('#clothingSizes input[name="sizes"]').forEach(input => {
-              input.checked = false;
-            });
-            
-            // Hide ingredients section
-            if (ingredientsSection) {
-              ingredientsSection.style.display = 'none';
-              if (ingredientsInput) ingredientsInput.required = false;
-            }
-            
-            // Update placeholder for custom sizes
-            const customSizesInput = document.getElementById('custom-sizes');
-            if (customSizesInput) {
-              customSizesInput.placeholder = 'e.g. 5.5, 6.5, 7.5, 14, 15 (comma-separated)';
-            }
-          } else {
-            // Show sections for other categories (clothing)
-            sizesSection.style.display = 'block';
-            colorsSection.style.display = 'block';
-            stockSection.style.display = 'block';
-            
-            // Show clothing sizes, hide shoe sizes
-            if (clothingSizes) clothingSizes.style.display = 'grid';
-            if (shoeSizes) shoeSizes.style.display = 'none';
-            
-            // Uncheck shoe sizes
-            document.querySelectorAll('#shoeSizes input[name="sizes"]').forEach(input => {
-              input.checked = false;
-            });
-            
-            // Hide ingredients section for non-grooming products
-            if (ingredientsSection) {
-              ingredientsSection.style.display = 'none';
-              if (ingredientsInput) ingredientsInput.required = false;
-            }
-            
-            // Reset placeholder for custom sizes
-            const customSizesInput = document.getElementById('custom-sizes');
-            if (customSizesInput) {
-              customSizesInput.placeholder = 'e.g. 4XL, 5XL, 28W, 32W (comma-separated)';
-            }
-          }
-          
-          // Update stock inputs whenever category changes
-          updateStockInputs();
+        console.log('✅ All elements found:', { 
+          categorySelect: !!categorySelect, 
+          sizesSection: !!sizesSection, 
+          colorsSection: !!colorsSection, 
+          stockSection: !!stockSection,
+          ingredientsSection: !!ingredientsSection
+        });
+        
+        if (!categorySelect) {
+          console.error('❌ Category select not found!');
+          return;
         }
+        
+        if (!sizesSection || !colorsSection || !stockSection) {
+          console.error('❌ Size/Color/Stock sections not found!');
+          console.log('sizesSection:', sizesSection, 'colorsSection:', colorsSection, 'stockSection:', stockSection);
+          return;
+        }
+        
+        const categoryId = categorySelect.value;
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        const categorySlug = selectedOption ? selectedOption.dataset.slug || selectedOption.getAttribute('data-slug') || '' : '';
+        const categoryText = selectedOption ? selectedOption.textContent.toLowerCase() : '';
+        
+        console.log('📋 Category Info:', { 
+          categoryId, 
+          categorySlug, 
+          categoryText,
+          selectedText: selectedOption ? selectedOption.textContent : 'N/A'
+        });
+        
+        if (!categoryId) {
+          console.log('⚠️ No category selected');
+          sizesSection.style.display = 'none';
+          colorsSection.style.display = 'none';
+          stockSection.style.display = 'none';
+          if (ingredientsSection) ingredientsSection.style.display = 'none';
+          return;
+        }
+        
+        // Check if it's a grooming category
+        const isGrooming = categoryText.includes('grooming') || (categorySlug && categorySlug.toLowerCase().includes('grooming'));
+        
+        console.log('🔍 isGrooming check:', isGrooming, '(categoryText includes grooming:', categoryText.includes('grooming'), ', slug includes grooming:', categorySlug && categorySlug.toLowerCase().includes('grooming'), ')');
+        
+        if (isGrooming) {
+          console.log('✅✅✅ GROOMING PRODUCT DETECTED - Hiding sizes/colors, showing ingredients');
+          
+          // Hide sizes, colors, and stock sections for grooming products
+          sizesSection.style.display = 'none';
+          colorsSection.style.display = 'none';
+          stockSection.style.display = 'none';
+          
+          console.log('Hidden sections display:', { 
+            sizesSection: sizesSection.style.display, 
+            colorsSection: colorsSection.style.display,
+            stockSection: stockSection.style.display
+          });
+          
+          // Show ingredients section for grooming products
+          if (ingredientsSection) {
+            ingredientsSection.style.display = 'block';
+            if (ingredientsInput) ingredientsInput.required = true;
+            console.log('✅ Showing ingredientsSection. Display:', ingredientsSection.style.display);
+            
+            // Initialize the ingredients table if empty
+            initializeIngredientsTable();
+          }
+          
+          // Remove required attribute from checkboxes
+          document.querySelectorAll('input[name="sizes"], input[name="colors"]').forEach(input => {
+            input.removeAttribute('required');
+            input.checked = false;
+          });
+        } else if (categoryText.includes('shoe') || categoryText.includes('footwear') || (categorySlug && (categorySlug.toLowerCase().includes('shoe') || categorySlug.toLowerCase().includes('footwear')))) {
+          console.log('👟 SHOE PRODUCT DETECTED');
+          // Show sizes and colors sections for shoes
+          sizesSection.style.display = 'block';
+          colorsSection.style.display = 'block';
+          stockSection.style.display = 'block';
+          
+          // Show shoe sizes, hide clothing sizes
+          if (clothingSizes) clothingSizes.style.display = 'none';
+          if (shoeSizes) shoeSizes.style.display = 'grid';
+          
+          // Uncheck clothing sizes
+          document.querySelectorAll('#clothingSizes input[name="sizes"]').forEach(input => {
+            input.checked = false;
+          });
+          
+          // Hide ingredients section
+          if (ingredientsSection) {
+            ingredientsSection.style.display = 'none';
+            if (ingredientsInput) ingredientsInput.required = false;
+          }
+        } else {
+          console.log('👕 OTHER PRODUCT (clothing/accessories) DETECTED');
+          // Show sections for other categories (clothing)
+          sizesSection.style.display = 'block';
+          colorsSection.style.display = 'block';
+          stockSection.style.display = 'block';
+          
+          // Show clothing sizes, hide shoe sizes
+          if (clothingSizes) clothingSizes.style.display = 'grid';
+          if (shoeSizes) shoeSizes.style.display = 'none';
+          
+          // Uncheck shoe sizes
+          document.querySelectorAll('#shoeSizes input[name="sizes"]').forEach(input => {
+            input.checked = false;
+          });
+          
+          // Hide ingredients section for non-grooming products
+          if (ingredientsSection) {
+            ingredientsSection.style.display = 'none';
+            if (ingredientsInput) ingredientsInput.required = false;
+          }
+        }
+        
+        console.log('✅ toggleSizeColorSections() COMPLETE');
+        // Update stock inputs whenever category changes
+        updateStockInputs();
       }
 
       // Function to copy custom values to hidden inputs before form submission
@@ -1095,10 +1146,30 @@
         
         // Check if category requires sizes and colors (not grooming)
         const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-        const categorySlug = selectedOption ? selectedOption.getAttribute('data-slug') || '' : '';
-        const isGrooming = categorySlug && (categorySlug.toLowerCase().includes('grooming') || selectedOption.textContent.toLowerCase().includes('grooming'));
+        const categorySlug = selectedOption ? selectedOption.dataset.slug || selectedOption.getAttribute('data-slug') || '' : '';
+        const categoryText = selectedOption ? selectedOption.textContent.toLowerCase() : '';
+        const isGrooming = categoryText.includes('grooming') || (categorySlug && categorySlug.toLowerCase().includes('grooming'));
         
-        if (!isGrooming) {
+        if (isGrooming) {
+          // Validate ingredients for grooming products
+          const ingredientRows = document.querySelectorAll('#ingredientsTableBody tr');
+          let hasValidIngredients = false;
+          
+          ingredientRows.forEach(row => {
+            const nameInput = row.querySelector('.ingredient-name');
+            if (nameInput && nameInput.value.trim()) {
+              hasValidIngredients = true;
+            }
+          });
+          
+          if (!hasValidIngredients) {
+            alert('⚠️ Please add at least one ingredient');
+            return;
+          }
+          
+          // Update ingredients field before submission
+          updateIngredientsField();
+        } else {
           const selectedSizes = document.querySelectorAll('input[name="sizes"]:checked');
           const customSizesInput = document.getElementById('custom-sizes');
           const customSizes = customSizesInput ? customSizesInput.value.trim() : '';
@@ -1379,6 +1450,75 @@
         
         // Update stock table with new sizes
         updateStockInputs();
+      }
+
+      // ============ INGREDIENTS TABLE FUNCTIONS ============
+      let ingredientRowCount = 0;
+
+      function addIngredientRow() {
+        ingredientRowCount++;
+        const tbody = document.getElementById('ingredientsTableBody');
+        const rowId = `ingredient-row-${ingredientRowCount}`;
+        
+        const row = document.createElement('tr');
+        row.id = rowId;
+        row.style.border = '1px solid var(--line)';
+        row.innerHTML = `
+          <td style="padding: 10px; border: 1px solid var(--line);">
+            <input type="text" class="ingredient-name" placeholder="e.g. Aloe Vera" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px;" />
+          </td>
+          <td style="padding: 10px; border: 1px solid var(--line);">
+            <input type="number" class="ingredient-percentage" placeholder="e.g. 15" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px;" />
+          </td>
+          <td style="padding: 10px; border: 1px solid var(--line); text-align: center;">
+            <button type="button" class="action-btn" onclick="removeIngredientRow('${rowId}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Remove</button>
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+        updateIngredientsField();
+      }
+
+      function removeIngredientRow(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+          row.remove();
+          updateIngredientsField();
+        }
+      }
+
+      function updateIngredientsField() {
+        const rows = document.querySelectorAll('#ingredientsTableBody tr');
+        const ingredients = [];
+        
+        rows.forEach(row => {
+          const nameInput = row.querySelector('.ingredient-name');
+          const percentageInput = row.querySelector('.ingredient-percentage');
+          
+          if (nameInput && nameInput.value.trim()) {
+            const percentage = percentageInput && percentageInput.value ? parseInt(percentageInput.value) : 0;
+            ingredients.push({
+              name: nameInput.value.trim(),
+              percentage: percentage
+            });
+          }
+        });
+        
+        // Update hidden textarea with JSON
+        const ingredientsInput = document.getElementById('ingredients');
+        if (ingredientsInput) {
+          ingredientsInput.value = JSON.stringify(ingredients);
+        }
+        
+        console.log('Updated ingredients:', ingredients);
+      }
+
+      // Initialize with one empty row when ingredientsSection is shown
+      function initializeIngredientsTable() {
+        const tbody = document.getElementById('ingredientsTableBody');
+        if (tbody && tbody.children.length === 0) {
+          addIngredientRow();
+        }
       }
 
       function updateStockInputs() {
