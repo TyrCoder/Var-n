@@ -204,23 +204,30 @@
     </div>
 
     <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-inner container">
-        <div class="hero-copy">
-          <h2>Refined Elegance for the Modern Gentleman</h2>
-          <p class="muted">Where sophistication meets contemporary style. Each piece is meticulously crafted to elevate your presence.</p>
-          <p><a href="javascript:void(0)" onclick="showSection('browse')" class="btn-cta">Discover Collection</a></p>
+    <section class="hero" style="background:linear-gradient(135deg,#0a0a0a 0%,#1a1a1a 100%);min-height:60vh;display:flex;align-items:center;position:relative;overflow:hidden">
+      <div class="hero-inner container" style="position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 48px;width:100%">
+        <div class="hero-copy" style="color:#fff;max-width:600px">
+          <div style="margin-bottom:12px">
+            <span style="font-size:12px;color:#999;font-weight:500;letter-spacing:2px;text-transform:uppercase">Curated Collection</span>
+          </div>
+          <h1 style="margin:0 0 16px;font-size:48px;font-weight:700;line-height:1.2;letter-spacing:-0.5px">Refined Elegance</h1>
+          <p style="margin:0 0 24px;font-size:16px;color:#ccc;line-height:1.6">Sophisticated menswear crafted for the modern gentleman.</p>
+          <div style="display:flex;gap:12px">
+            <a href="javascript:void(0)" onclick="showSection('browse')" style="background:#fff;color:#0a0a0a;padding:11px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;transition:all 0.3s;display:inline-block" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#fff'">Shop Now</a>
+            <a href="javascript:void(0)" onclick="showSection('about')" style="background:transparent;color:#fff;border:1px solid #fff;padding:11px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;transition:all 0.3s;display:inline-block" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">Learn More</a>
+          </div>
         </div>
-        <div class="hero-media" aria-hidden="true"></div>
       </div>
     </section>
 
     <!-- Journal Section on Homepage -->
-    <section id="journalSection" style="background:#fafafa;padding:60px 20px;min-height:calc(100vh - 75px)">
+    <section id="journalSection" style="background:#fafafa;padding:60px 20px">
       <div class="container" style="max-width:1200px;margin:0 auto">
-        <h2 style="margin:0 0 40px;text-align:center;font-size:32px;font-weight:600">Journal</h2>
-        <div id="journalGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;margin-bottom:40px">
-          <!-- Journal entries will be loaded here from database -->
+        <div style="text-align:center;margin-bottom:40px">
+          <h2 style="margin:0 0 12px;font-size:32px;font-weight:600;color:#0a0a0a">Stories & Insights</h2>
+          <p style="margin:0;font-size:14px;color:#666;max-width:400px;margin:12px auto 0">Fashion insights and style guides for the modern man.</p>
+        </div>
+        <div id="journalGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px">
         </div>
       </div>
     </section>
@@ -257,10 +264,9 @@
           </div>
         </div>
 
-        <!-- Category Filter Buttons -->
-        <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:center" id="categoriesContainer">
-          <button class="category-btn active" data-category="" onclick="handleCategoryFilter(event, '')" style="padding:10px 16px;border:1px solid #ddd;border-radius:6px;background:#0a0a0a;color:#fff;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s">All</button>
-          <!-- Categories will be loaded here -->
+        <!-- Category Filter - Organized by Type -->
+        <div id="categoriesContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;margin-bottom:40px">
+          <!-- Categories will be loaded here organized by type -->
         </div>
         
         <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
@@ -572,7 +578,7 @@
       }
 
       // Function to load and display products in browse section
-      // Load categories for filter buttons
+      // Load categories for filter buttons organized by type
       function loadCategories() {
         fetch('/api/categories')
           .then(response => response.json())
@@ -580,19 +586,124 @@
             if (data.success && data.categories) {
               const categoriesContainer = document.getElementById('categoriesContainer');
               if (categoriesContainer) {
-                // Keep the "All" button and add category buttons
-                const allBtn = categoriesContainer.querySelector('.category-btn[data-category=""]');
-                const existingBtns = categoriesContainer.querySelectorAll('.category-btn[data-category!=""]');
-                existingBtns.forEach(btn => btn.remove());
+                categoriesContainer.innerHTML = ''; // Clear existing content
                 
+                // Add "All" button first
+                const allSection = document.createElement('div');
+                allSection.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s';
+                
+                const allTitle = document.createElement('h3');
+                allTitle.style.cssText = 'margin:0;font-size:14px;font-weight:600;color:#0a0a0a;text-transform:uppercase;letter-spacing:0.5px';
+                allTitle.textContent = 'All';
+                allSection.appendChild(allTitle);
+                
+                const allLink = document.createElement('a');
+                allLink.href = 'javascript:void(0)';
+                allLink.setAttribute('data-category', '');
+                allLink.style.cssText = 'color:#666;text-decoration:none;font-size:13px;display:block;margin-top:8px';
+                allLink.textContent = 'View All';
+                allLink.onclick = (e) => {
+                  e.preventDefault();
+                  handleCategoryFilter(e, '');
+                };
+                allSection.appendChild(allLink);
+                
+                allSection.onmouseover = () => {
+                  allSection.style.background = '#fafafa';
+                  allSection.style.borderColor = '#d1d5db';
+                };
+                allSection.onmouseout = () => {
+                  allSection.style.background = '#fff';
+                  allSection.style.borderColor = '#e5e7eb';
+                };
+                
+                categoriesContainer.appendChild(allSection);
+                
+                // Group categories by type
+                const categoriesByType = {};
                 data.categories.forEach(category => {
-                  const btn = document.createElement('button');
-                  btn.className = 'category-btn';
-                  btn.setAttribute('data-category', category.id);
-                  btn.style.cssText = 'padding:10px 16px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#0a0a0a;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.2s';
-                  btn.textContent = category.name;
-                  btn.onclick = (e) => handleCategoryFilter(e, category.id);
-                  categoriesContainer.appendChild(btn);
+                  const type = category.category_type || 'OTHER';
+                  if (!categoriesByType[type]) {
+                    categoriesByType[type] = [];
+                  }
+                  categoriesByType[type].push(category);
+                });
+                
+                // Define order of types
+                const typeOrder = ['TOPS', 'BOTTOMS', 'FOOTWEAR', 'ACCESSORIES', 'GROOMING PRODUCTS'];
+                
+                // Display categories organized by type
+                typeOrder.forEach((type, typeIndex) => {
+                  if (categoriesByType[type]) {
+                    const typeSection = document.createElement('div');
+                    typeSection.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;transition:all 0.2s';
+                    
+                    const typeHeader = document.createElement('div');
+                    typeHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none';
+                    
+                    const typeTitle = document.createElement('h3');
+                    typeTitle.style.cssText = 'margin:0;font-size:14px;font-weight:600;color:#0a0a0a;text-transform:uppercase;letter-spacing:0.5px';
+                    typeTitle.textContent = type;
+                    typeHeader.appendChild(typeTitle);
+                    
+                    const toggleIcon = document.createElement('span');
+                    toggleIcon.style.cssText = 'font-size:14px;color:#0a0a0a;transition:transform 0.3s;transform:rotate(90deg);display:block;width:16px;text-align:center';
+                    toggleIcon.textContent = '▶';
+                    typeHeader.appendChild(toggleIcon);
+                    
+                    typeSection.appendChild(typeHeader);
+                    
+                    const categoryList = document.createElement('div');
+                    categoryList.style.cssText = 'display:none;flex-direction:column;gap:8px;margin-top:12px';
+                    
+                    let isExpanded = false; // Start collapsed
+                    
+                    categoriesByType[type].forEach(category => {
+                      const link = document.createElement('a');
+                      link.href = 'javascript:void(0)';
+                      link.setAttribute('data-category', category.id);
+                      link.style.cssText = 'color:#666;text-decoration:none;font-size:13px;padding:6px 0;transition:all 0.2s;cursor:pointer;display:block';
+                      link.textContent = category.name;
+                      link.onmouseover = () => {
+                        link.style.color = '#0a0a0a';
+                        link.style.paddingLeft = '6px';
+                      };
+                      link.onmouseout = () => {
+                        link.style.color = '#666';
+                        link.style.paddingLeft = '0';
+                      };
+                      link.onclick = (e) => {
+                        e.preventDefault();
+                        handleCategoryFilter(e, category.id);
+                      };
+                      categoryList.appendChild(link);
+                    });
+                    
+                    typeSection.appendChild(categoryList);
+                    
+                    // Toggle functionality
+                    typeHeader.onclick = () => {
+                      isExpanded = !isExpanded;
+                      if (isExpanded) {
+                        categoryList.style.display = 'flex';
+                        toggleIcon.style.transform = 'rotate(-90deg)';
+                      } else {
+                        categoryList.style.display = 'none';
+                        toggleIcon.style.transform = 'rotate(90deg)';
+                      }
+                    };
+                    
+                    typeSection.onmouseover = () => {
+                      typeSection.style.background = '#fafafa';
+                      typeSection.style.borderColor = '#d1d5db';
+                    };
+                    typeSection.onmouseout = () => {
+                      typeSection.style.background = '#fff';
+                      typeSection.style.borderColor = '#e5e7eb';
+                    };
+                    
+                    categoriesContainer.appendChild(typeSection);
+                  }
                 });
               }
             }
@@ -614,20 +725,21 @@
       // Handle category filter button click
       function handleCategoryFilter(event, categoryId) {
         event.preventDefault();
-        // Update button states
-        const buttons = document.querySelectorAll('.category-btn');
-        buttons.forEach(btn => {
-          const isActive = btn.getAttribute('data-category') == categoryId;
-          if (isActive) {
-            btn.style.background = '#0a0a0a';
-            btn.style.color = '#fff';
-            btn.style.borderColor = '#0a0a0a';
+        
+        // Highlight selected category in the grouped layout
+        const allLinks = document.querySelectorAll('#categoriesContainer a');
+        allLinks.forEach(link => {
+          if (link.getAttribute('data-category') == categoryId) {
+            link.style.color = '#0a0a0a';
+            link.style.fontWeight = '600';
+            link.style.paddingLeft = '8px';
           } else {
-            btn.style.background = '#fff';
-            btn.style.color = '#0a0a0a';
-            btn.style.borderColor = '#ddd';
+            link.style.color = '#666';
+            link.style.fontWeight = '400';
+            link.style.paddingLeft = '0';
           }
         });
+        
         // Load products with selected category
         loadBrowseProducts(categoryId);
       }
@@ -636,11 +748,11 @@
         const searchInput = document.getElementById('browseSearch');
         
         const search = searchInput ? searchInput.value.trim() : '';
-        // If categoryId not provided, check which button is active
+        // If categoryId not provided, check which link is active
         let selectedCategoryId = categoryId;
         if (selectedCategoryId === undefined) {
-          const activeBtn = document.querySelector('.category-btn[style*="background: #0a0a0a"]') || document.querySelector('.category-btn.active');
-          selectedCategoryId = activeBtn ? activeBtn.getAttribute('data-category') : '';
+          const activeLink = document.querySelector('#categoriesContainer a[style*="font-weight: 600"]') || document.querySelector('#categoriesContainer a[style*="fontWeight: 600"]');
+          selectedCategoryId = activeLink ? activeLink.getAttribute('data-category') : '';
         }
         
         // Build query string
@@ -741,26 +853,26 @@
             const journalGrid = document.getElementById('journalGrid');
             if (data.success && data.entries && data.entries.length > 0) {
               journalGrid.innerHTML = data.entries.map(entry => `
-                <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.1);transition:transform 0.2s;cursor:pointer" 
-                         onmouseover="this.style.transform='translateY(-4px)'" 
-                         onmouseout="this.style.transform='translateY(0)'"
+                <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s ease;cursor:pointer;display:flex;flex-direction:column;height:100%" 
+                         onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.12)'" 
+                         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'"
                          ${entry.link_url ? `onclick="window.open('${entry.link_url}', '_blank')"` : ''}>
-                  <div style="height:200px;background:#f5f5f5;background-image:url('${entry.image_url || 'https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
-                  <div style="padding:20px">
-                    <h3 style="margin:0 0 10px;font-size:18px;font-weight:600">${entry.title}</h3>
-                    <p style="margin:0;color:#666;line-height:1.5;font-size:14px">${entry.description || ''}</p>
-                    ${entry.link_url ? '<a href="' + entry.link_url + '" target="_blank" class="btn-cta" style="display:inline-block;margin-top:16px;font-size:14px">Read More</a>' : ''}
+                  <div style="height:180px;background:#f5f5f5;background-image:url('${entry.image_url || 'https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
+                  <div style="padding:20px;display:flex;flex-direction:column;flex:1">
+                    <h3 style="margin:0 0 8px;font-size:16px;font-weight:600;color:#0a0a0a;line-height:1.3">${entry.title}</h3>
+                    <p style="margin:0 0 12px;color:#666;line-height:1.5;font-size:13px;flex:1">${entry.description || ''}</p>
+                    ${entry.link_url ? '<a href="' + entry.link_url + '" target="_blank" style="color:#0a0a0a;text-decoration:none;font-weight:500;font-size:13px;transition:all 0.2s">Read More →</a>' : ''}
                   </div>
                 </article>
               `).join('');
             } else {
-              journalGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;padding:40px">No journal entries available yet.</p>';
+              journalGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px"><p style="margin:0;color:#999;font-size:14px">No journal entries available yet.</p></div>';
             }
           })
           .catch(error => {
             console.error('Error loading journal entries:', error);
             const journalGrid = document.getElementById('journalGrid');
-            journalGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#999;padding:40px">No journal entries available yet.</p>';
+            journalGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px"><p style="margin:0;color:#999;font-size:14px">No journal entries available yet.</p></div>';
           });
       }
 
@@ -768,6 +880,9 @@
       document.addEventListener('DOMContentLoaded', function() {
         loadJournalEntries();
         setupOTPInputs();
+        
+        // Load categories on page load
+        loadCategories();
         
         // Load browse products on page load
         loadBrowseProducts();

@@ -5726,10 +5726,19 @@ def api_categories():
         cursor = conn.cursor(dictionary=True)
         
         cursor.execute("""
-            SELECT id, name, slug
+            SELECT id, name, slug, category_type
             FROM categories
             WHERE is_active = TRUE
-            ORDER BY name ASC
+            ORDER BY 
+                CASE 
+                    WHEN category_type = 'TOPS' THEN 1
+                    WHEN category_type = 'BOTTOMS' THEN 2
+                    WHEN category_type = 'FOOTWEAR' THEN 3
+                    WHEN category_type = 'ACCESSORIES' THEN 4
+                    WHEN category_type = 'GROOMING PRODUCTS' THEN 5
+                    ELSE 6
+                END,
+                name ASC
         """)
         categories = cursor.fetchall()
         
