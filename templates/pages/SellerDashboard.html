@@ -386,285 +386,347 @@
       const pageTemplates = {
         'add-product': `
           <div class="card">
-            <div class="inner" style="max-width: 800px; margin: 0 auto;">
-              <h2 style="margin: 0 0 20px;">Add New Product</h2>
-              <form id="addProductForm" action="/seller/add-product" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 16px;">
-                <div>
-                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Product Name *</label>
-                  <input type="text" name="name" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="Enter product name">
-                </div>
-                
-                <div>
-                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Description</label>
-                  <textarea name="description" rows="4" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="Product description"></textarea>
-                </div>
-                
-                <div>
-                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Category/Genre *</label>
-                  <select id="categorySelect" name="category_id" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" onchange="toggleSizeColorSections()">
-                    <option value="">Select a category</option>
-                    <!-- Categories will be loaded by JavaScript -->
-                  </select>
-                </div>
-                
-                <div>
-                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Product Images *</label>
-                  <input type="file" id="productImages" name="product_images" accept="image/*" multiple required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
-                  <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Upload multiple product images (JPG, PNG, max 5MB each). First image will be the primary image.</small>
+            <div class="inner" style="max-width: 900px; margin: 0 auto;">
+              <h2 style="margin: 0 0 24px; padding-bottom: 16px; border-bottom: 2px solid var(--line);">📦 Add New Product</h2>
+              <form id="addProductForm" action="/seller/add-product" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 24px;">
+              
+                <!-- ═══════════════════════════════════════════ BASIC INFORMATION ═══════════════════════════════════════════ -->
+                <div style="padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+                  <h3 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #0a0a0a;"><span style="background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">1</span> Basic Information</h3>
                   
-                  <!-- Image Preview Area -->
-                  <div id="imagePreviewContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-top: 12px;">
-                    <!-- Previews will be inserted here -->
+                  <div style="display: grid; gap: 14px;">
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">Product Name *</label>
+                      <input type="text" name="name" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; transition: border-color 0.2s;" placeholder="Enter product name">
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">Description</label>
+                      <textarea name="description" rows="4" style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; resize: vertical; transition: border-color 0.2s;" placeholder="Describe your product (features, materials, care instructions, etc.)"></textarea>
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">Category/Genre *</label>
+                      <select id="categorySelect" name="category_id" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; background: white; cursor: pointer; transition: border-color 0.2s;" onchange="toggleSizeColorSections()">
+                        <option value="">Select a category</option>
+                        <!-- Categories will be loaded by JavaScript -->
+                      </select>
+                      <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">This determines which fields you'll need to fill</small>
+                    </div>
                   </div>
                 </div>
                 
-                <div>
-                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">Price (₱) *</label>
-                  <input type="number" name="price" step="0.01" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="0.00">
-                </div>
-                
-                <div>
-                  <label style="display: block; margin-bottom: 6px; font-weight: 500;">SKU</label>
-                  <input type="text" name="sku" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" placeholder="Product SKU (optional)">
-                  <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Stock Keeping Unit for inventory tracking (auto-generated if left empty)</small>
-                </div>
-                
-                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="sizesSection">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Available Sizes per Color *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select a color tab above, then choose sizes for that specific color</small>
+                <!-- ═══════════════════════════════════════════ PRODUCT IMAGES ═══════════════════════════════════════════ -->
+                <div style="padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+                  <h3 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #0a0a0a;"><span style="background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">2</span> Product Images</h3>
                   
-                  <!-- Per-Color Sizes Container -->
-                  <div id="perColorSizesContainer" style="display: none;">
-                    <!-- Clothing Sizes (default) -->
-                    <div id="clothingSizes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px;">
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="XS" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>XS</span>
+                  <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #0a0a0a;">Upload Images *</label>
+                    <div style="border: 2px dashed #3b82f6; border-radius: 8px; padding: 20px; text-align: center; background: #f0f9ff; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#0a0a0a'; this.style.background='#f3f4f6'" onmouseout="this.style.borderColor='#3b82f6'; this.style.background='#f0f9ff'">
+                      <input type="file" id="productImages" name="product_images" accept="image/*" multiple required style="width: 0; height: 0; position: absolute;" onchange="document.querySelector('[onmouseover]').querySelector('span:last-child').click()">
+                      <span style="display: block; font-size: 28px; margin-bottom: 8px;">📸</span>
+                      <span style="display: block; font-weight: 500; color: #0a0a0a; margin-bottom: 4px;">Click or drag images here</span>
+                      <span style="display: block; font-size: 12px; color: var(--muted);">JPG, PNG (max 5MB each) • Multiple images allowed</span>
+                    </div>
+                    <input type="file" id="productImages" name="product_images" accept="image/*" multiple required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; margin-top: 8px; font-size: 13px;">
+                    
+                    <!-- Image Preview Area -->
+                    <div id="imagePreviewContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 16px;">
+                      <!-- Previews will be inserted here -->
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- ═══════════════════════════════════════════ PRICING & SKU ═══════════════════════════════════════════ -->
+                <div style="padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+                  <h3 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #0a0a0a;"><span style="background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">3</span> Pricing & Inventory</h3>
+                  
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">Price (₱) *</label>
+                      <input type="number" name="price" step="0.01" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; transition: border-color 0.2s;" placeholder="0.00">
+                      <small style="color: var(--muted); font-size: 11px; margin-top: 4px; display: block;">Selling price of your product</small>
+                    </div>
+                    
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">SKU</label>
+                      <input type="text" name="sku" style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; transition: border-color 0.2s;" placeholder="Auto-generated if empty">
+                      <small style="color: var(--muted); font-size: 11px; margin-top: 4px; display: block;">Stock Keeping Unit (optional)</small>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- ═══════════════════════════════════════════ PRODUCT VARIANTS (FOR APPAREL/SHOES) ═══════════════════════════════════════════ -->
+                <div id="variantsSection" style="padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+                  <h3 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #0a0a0a;"><span style="background: #10b981; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">4</span> Product Variants</h3>
+                  <small style="color: var(--muted); font-size: 13px; margin-bottom: 16px; display: block;">Define colors and sizes available for this product. You'll set stock quantities for each combination.</small>
+                  
+                  <!-- ─────────────────── COLORS ─────────────── -->
+                  <div style="margin-bottom: 20px; padding: 14px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;" id="colorsSection">
+                    <h4 style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #0a0a0a;">🎨 Available Colors *</h4>
+                    <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select predefined colors or add custom ones</small>
+                    
+                    <!-- Predefined Colors (with visual color swatches) -->
+                    <div id="predefinedColors" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s; hover-bg: #f3f4f6;">
+                        <input type="checkbox" name="colors" value="Black" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #000000; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Black</span>
+                        </span>
                       </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="S" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>S</span>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="White" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #FFFFFF; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>White</span>
+                        </span>
                       </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="M" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>M</span>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Gray" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #808080; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Gray</span>
+                        </span>
                       </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="L" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>L</span>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Navy" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #000080; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Navy</span>
+                        </span>
                       </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="XL" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>XL</span>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Blue" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #0000FF; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Blue</span>
+                        </span>
                       </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="2XL" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>2XL</span>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Red" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #FF0000; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Red</span>
+                        </span>
                       </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="3XL" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>3XL</span>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Green" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #008000; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Green</span>
+                        </span>
                       </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="4XL" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>4XL</span>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Brown" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #8B4513; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Brown</span>
+                        </span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Beige" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #F5F5DC; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Beige</span>
+                        </span>
+                      </label>
+                      <label style="display: flex; align-items: center; cursor: pointer; gap: 8px; padding: 8px; border: 1px solid transparent; border-radius: 6px; transition: all 0.2s;">
+                        <input type="checkbox" name="colors" value="Khaki" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
+                        <span style="display: flex; align-items: center; gap: 6px; font-size: 13px;">
+                          <span style="width: 18px; height: 18px; background: #F0E68C; border: 1px solid #ccc; border-radius: 3px;"></span>
+                          <span>Khaki</span>
+                        </span>
                       </label>
                     </div>
                     
-                    <!-- Shoe Sizes (hidden by default) - US Sizes -->
-                    <div id="shoeSizes" style="display: none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px;">
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="5" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>5</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="6" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>6</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="7" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>7</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="8" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>8</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="9" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>9</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="10" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>10</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="11" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>11</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="12" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>12</span>
-                      </label>
-                      <label style="display: flex; align-items: center; cursor: pointer;">
-                        <input type="checkbox" class="color-size-checkbox" value="13" style="margin-right: 6px;" onchange="updateStockInputs()">
-                        <span>13</span>
-                      </label>
+                    <div>
+                      <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #0a0a0a;">Custom Colors</label>
+                      <input type="text" id="custom-colors" placeholder="e.g. Burgundy, Olive, Charcoal (comma-separated)" 
+                        style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px;" 
+                        oninput="updateColorTabs()" 
+                        onchange="updateColorTabs()" 
+                        onblur="updateColorTabs()">
+                      <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Add custom colors not listed above</small>
+                    </div>
+                  </div>
+                  
+                  <!-- ─────────────────── COLOR TABS ─────────────── -->
+                  <div style="margin-bottom: 20px; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+                    <p style="margin: 0 0 10px; font-size: 13px; font-weight: 500; color: #0a0a0a;">👇 Select a color to set its sizes:</p>
+                    <div id="colorTabs" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px;">
+                      <!-- Tab buttons will be generated by JavaScript -->
+                    </div>
+                  </div>
+                  
+                  <!-- ─────────────────── SIZES ─────────────── -->
+                  <div style="margin-bottom: 20px; padding: 14px; background: white; border: 1px solid #e5e7eb; border-radius: 6px;" id="sizesSection">
+                    <h4 style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #0a0a0a;">📏 Available Sizes *</h4>
+                    <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Select a color tab above first, then choose sizes for that color</small>
+                    
+                    <!-- Per-Color Sizes Container -->
+                    <div id="perColorSizesContainer" style="display: none;">
+                      <!-- Clothing Sizes (default) -->
+                      <div id="clothingSizes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="XS" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">XS</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="S" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">S</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="M" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">M</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="L" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">L</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="XL" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">XL</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="2XL" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">2XL</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="3XL" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">3XL</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="4XL" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">4XL</span>
+                        </label>
+                      </div>
+                      
+                      <!-- Shoe Sizes (hidden by default) - US Sizes -->
+                      <div id="shoeSizes" style="display: none; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="5" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">5</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="6" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">6</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="7" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">7</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="8" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">8</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="9" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">9</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="10" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">10</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="11" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">11</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="12" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">12</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; gap: 6px;">
+                          <input type="checkbox" class="color-size-checkbox" value="13" style="margin: 0; width: 14px; height: 14px;" onchange="updateStockInputs()">
+                          <span style="font-size: 13px;">13</span>
+                        </label>
+                      </div>
+                      
+                      <div>
+                        <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #0a0a0a;">Custom Sizes</label>
+                        <input type="text" id="custom-sizes-per-color" placeholder="e.g. 36, 37, 38, 5XL (comma-separated)" 
+                          style="width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px;" 
+                          oninput="updateStockInputs()" 
+                          onchange="updateStockInputs()" 
+                          onblur="updateStockInputs()">
+                        <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Add custom sizes for <span id="current-color-size-label" style="font-weight: 600; color: #3b82f6;">selected color</span></small>
+                      </div>
                     </div>
                     
-                    <div style="margin-top: 12px;">
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Size(s) for <span id="current-color-size-label" style="font-weight: 600; color: #3b82f6;">this color</span></label>
-                      <input type="text" id="custom-sizes-per-color" placeholder="e.g. 4XL, 5XL, 36, 37, 38 (comma-separated)" 
-                        style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" 
-                        oninput="updateStockInputs()" 
-                        onchange="updateStockInputs()" 
-                        onblur="updateStockInputs()">
-                      <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">Custom sizes for this color only</small>
-                    </div>
-                  </div>
-                  
-                  <!-- Placeholder when no color selected -->
-                  <p id="sizesPlaceholder" style="color: var(--muted); font-style: italic; margin: 20px 0;">👉 Select a color tab above to add sizes for that color</p>
-                </div>
-                
-                <div style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa;" id="colorsSection">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Available Colors *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Click a color to select it and set its sizes below</small>
-                  
-                  <!-- Color Tab Buttons -->
-                  <div id="colorTabs" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-bottom: 16px;">
-                    <!-- Tab buttons will be generated by JavaScript -->
-                  </div>
-                  
-                  <!-- Predefined Colors (with visual color swatches) -->
-                  <div id="predefinedColors" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px;">
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Black" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #000000; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Black</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="White" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #FFFFFF; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>White</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Gray" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #808080; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Gray</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Navy" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #000080; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Navy</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Blue" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #0000FF; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Blue</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Red" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #FF0000; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Red</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Green" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #008000; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Green</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Brown" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #8B4513; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Brown</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Beige" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #F5F5DC; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Beige</span>
-                      </span>
-                    </label>
-                    <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
-                      <input type="checkbox" name="colors" value="Khaki" style="margin: 0; width: 16px; height: 16px;" onchange="updateColorTabs()">
-                      <span style="display: flex; align-items: center; gap: 6px;">
-                        <span style="width: 20px; height: 20px; background: #F0E68C; border: 1px solid #ccc; border-radius: 4px;"></span>
-                        <span>Khaki</span>
-                      </span>
-                    </label>
-                  </div>
-                  
-                  <div style="margin-top: 12px;">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 500;">Add Custom Color(s)</label>
-                    <input type="text" id="custom-colors" placeholder="e.g. Burgundy, Olive, Charcoal (comma-separated)" 
-                      style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px;" 
-                      oninput="updateColorTabs()" 
-                      onchange="updateColorTabs()" 
-                      onblur="updateColorTabs()">
-                    <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 4px;">You can type here even without checking boxes above</small>
+                    <!-- Placeholder when no color selected -->
+                    <p id="sizesPlaceholder" style="color: var(--muted); font-style: italic; margin: 0; padding: 12px; text-align: center; background: #f9fafb; border-radius: 4px;">👉 Select a color tab above to add sizes for that color</p>
                   </div>
                 </div>
                 
-                <!-- Hidden input to track selected color for stock table -->
-                <input type="hidden" id="selected-color" value="">
-                <input type="hidden" id="selected-color-sizes" value=""
-                
-                <div id="size-color-stocks" style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #f0f9ff;">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Stock per Size in <span id="stock-table-color">Selected Color</span></h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Enter stock quantity for each size in the selected color</small>
-                  <div id="stock-inputs" style="display: grid; gap: 8px;">
-                    <p style="color: var(--muted); font-style: italic;">👉 Click on a color tab above to set stock for that color</p>
+                <!-- ═══════════════════════════════════════════ INGREDIENTS (FOR GROOMING) ═══════════════════════════════════════════ -->
+                <div id="ingredientsSection" style="display: none; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+                  <h3 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #0a0a0a;"><span style="background: #10b981; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">4</span> Product Ingredients *</h3>
+                  <small style="color: var(--muted); font-size: 13px; margin-bottom: 12px; display: block;">📝 Enter all ingredients at once. One ingredient per line.</small>
+                  
+                  <!-- Ingredients Input Field -->
+                  <div style="margin-bottom: 14px;">
+                    <textarea id="ingredientsInput" name="ingredientsInput" 
+                      style="width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; font-family: 'Monaco', 'Courier New', monospace; resize: vertical; min-height: 120px;" 
+                      placeholder="Example:&#10;Aloe Vera&#10;Water&#10;Glycerin&#10;Vitamin E"></textarea>
                   </div>
-                </div>
-                
-                <div id="ingredientsSection" style="border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: #fafafa; display: none;">
-                  <h3 style="margin: 0 0 12px; font-size: 16px;">Product Ingredients *</h3>
-                  <small style="color: var(--muted); font-size: 12px; display: block; margin-bottom: 12px;">Add all key ingredients in this grooming product</small>
                   
-                  <!-- Ingredients Table -->
-                  <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
-                    <thead>
-                      <tr style="background: #e5e7eb; border: 1px solid var(--line);">
-                        <th style="padding: 10px; text-align: left; border: 1px solid var(--line); font-weight: 600;">Ingredient Name</th>
-                        <th style="padding: 10px; text-align: left; border: 1px solid var(--line); font-weight: 600;">Percentage (%)</th>
-                        <th style="padding: 10px; text-align: center; border: 1px solid var(--line); font-weight: 600;">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody id="ingredientsTableBody">
-                      <!-- Rows will be added here dynamically -->
-                    </tbody>
-                  </table>
+                  <!-- Format Guide -->
+                  <div style="background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 6px; padding: 12px; margin-bottom: 14px; font-size: 12px; color: #166534;">
+                    <strong style="display: block; margin-bottom: 6px;">📋 Format Guide:</strong>
+                    <ul style="margin: 0; padding-left: 18px; line-height: 1.5;">
+                      <li>Each ingredient on a new line</li>
+                      <li>Just type the ingredient name</li>
+                      <li>No special formatting needed</li>
+                      <li>Example: <code style="background: white; padding: 2px 4px; border-radius: 3px;">Aloe Vera</code></li>
+                    </ul>
+                  </div>
                   
-                  <!-- Add Ingredient Row Button -->
-                  <button type="button" class="action-btn" onclick="addIngredientRow()" style="padding: 8px 16px; margin-bottom: 12px; font-size: 13px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">+ Add Ingredient</button>
+                  <!-- Parse Button -->
+                  <button type="button" class="action-btn" onclick="parseIngredientsFromTextarea()" 
+                    style="padding: 10px 16px; margin-bottom: 12px; font-size: 13px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background 0.2s; width: 100%;">
+                    ✓ Add Ingredients
+                  </button>
+                  
+                  <!-- Ingredients Preview Table -->
+                  <div style="overflow-x: auto; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 6px; display: none;" id="ingredientsPreviewContainer">
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <thead>
+                        <tr style="background: #f3f4f6;">
+                          <th style="padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--line); font-weight: 600; font-size: 13px; color: #0a0a0a;">Ingredient Name</th>
+                          <th style="padding: 10px 12px; text-align: center; border-bottom: 2px solid var(--line); font-weight: 600; font-size: 13px; color: #0a0a0a; width: 80px;">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="ingredientsTableBody">
+                        <!-- Rows will be added here after parsing -->
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <!-- Status Message -->
+                  <div id="ingredientsStatus" style="padding: 10px 12px; border-radius: 6px; font-size: 12px; text-align: center; color: #666; display: none;"></div>
                   
                   <!-- Hidden ingredients input for form submission -->
                   <textarea id="ingredients" name="ingredients" rows="1" style="display: none;" placeholder="Ingredients JSON"></textarea>
-                  <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 6px;">Add at least one ingredient to continue</small>
+                  <small id="ingredientsHint" style="color: var(--muted); font-size: 11px; display: block; margin-top: 6px;">👇 Fill in the ingredients above and click "Add Ingredients"</small>
+                </div>
+                
+                <!-- ═══════════════════════════════════════════ STOCK & PRICING ═══════════════════════════════════════════ -->
+                <div id="size-color-stocks" style="padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+                  <h3 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #0a0a0a;"><span style="background: #f59e0b; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">5</span> Stock Quantities</h3>
+                  <small style="color: var(--muted); font-size: 13px; margin-bottom: 16px; display: block;">Set stock quantity for each size in the <strong id="stock-table-color">selected color</strong></small>
+                  <div id="stock-inputs" style="border: 1px solid var(--line); border-radius: 6px; overflow: hidden;">
+                    <p style="color: var(--muted); font-style: italic; margin: 0; padding: 16px; text-align: center; background: #f9fafb;">👉 Select a color and sizes to set stock quantities</p>
+                  </div>
+                </div>
+                
+                <!-- ═══════════════════════════════════════════ SUBMIT ═══════════════════════════════════════════ -->
+                <div style="display: flex; gap: 12px;">
+                  <button type="button" class="action-btn" style="padding: 12px 24px; background: #0a0a0a; color: #fff; font-weight: 600; font-size: 14px; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;" onclick="confirmAddProduct()">✓ Add Product</button>
+                  <button type="button" class="action-btn" onclick="loadPage('products')" style="padding: 12px 24px; background: #f3f4f6; color: #0a0a0a; font-weight: 500; font-size: 14px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; transition: all 0.2s;">Cancel</button>
                 </div>
                 
                 <input type="hidden" name="custom-sizes" id="custom-sizes-hidden">
                 <input type="hidden" name="custom-colors" id="custom-colors-hidden">
-                
-                <div style="display: flex; gap: 12px; margin-top: 10px;">
-                  <button type="button" class="action-btn" style="padding: 12px 24px;" onclick="confirmAddProduct()">Add Product</button>
-                  <button type="button" class="action-btn" onclick="loadPage('products')" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
-                </div>
               </form>
             </div>
           </div>
@@ -968,9 +1030,10 @@
 
       // Function to toggle size and color sections based on category
       function toggleSizeColorSections() {
-        console.log('🔄 toggleSizeColorSections() CALLED');
+        console.log('🔄 toggleSizeColorSections() CALLED - Adjusting layout based on category');
         
         const categorySelect = document.getElementById('categorySelect');
+        const variantsSection = document.getElementById('variantsSection');
         const sizesSection = document.getElementById('sizesSection');
         const colorsSection = document.getElementById('colorsSection');
         const stockSection = document.getElementById('size-color-stocks');
@@ -979,22 +1042,13 @@
         const clothingSizes = document.getElementById('clothingSizes');
         const shoeSizes = document.getElementById('shoeSizes');
         
-        console.log('✅ All elements found:', { 
-          categorySelect: !!categorySelect, 
-          sizesSection: !!sizesSection, 
-          colorsSection: !!colorsSection, 
-          stockSection: !!stockSection,
-          ingredientsSection: !!ingredientsSection
-        });
-        
         if (!categorySelect) {
           console.error('❌ Category select not found!');
           return;
         }
         
-        if (!sizesSection || !colorsSection || !stockSection) {
-          console.error('❌ Size/Color/Stock sections not found!');
-          console.log('sizesSection:', sizesSection, 'colorsSection:', colorsSection, 'stockSection:', stockSection);
+        if (!variantsSection || !sizesSection || !colorsSection || !stockSection) {
+          console.error('❌ Sections not found!');
           return;
         }
         
@@ -1003,59 +1057,56 @@
         const categorySlug = selectedOption ? selectedOption.dataset.slug || selectedOption.getAttribute('data-slug') || '' : '';
         const categoryText = selectedOption ? selectedOption.textContent.toLowerCase() : '';
         
-        console.log('📋 Category Info:', { 
-          categoryId, 
-          categorySlug, 
-          categoryText,
-          selectedText: selectedOption ? selectedOption.textContent : 'N/A'
-        });
+        console.log('📋 Category:', { categoryId, categorySlug, categoryText });
         
         if (!categoryId) {
-          console.log('⚠️ No category selected');
-          sizesSection.style.display = 'none';
-          colorsSection.style.display = 'none';
-          stockSection.style.display = 'none';
+          // No category selected - hide everything
+          console.log('⚠️ No category selected - hiding all variants and ingredients');
+          variantsSection.style.display = 'none';
           if (ingredientsSection) ingredientsSection.style.display = 'none';
           return;
         }
         
-        // Check if it's a grooming category
+        // Determine category type
         const isGrooming = categoryText.includes('grooming') || (categorySlug && categorySlug.toLowerCase().includes('grooming'));
+        const isShoe = categoryText.includes('shoe') || categoryText.includes('footwear') || (categorySlug && (categorySlug.toLowerCase().includes('shoe') || categorySlug.toLowerCase().includes('footwear')));
         
-        console.log('🔍 isGrooming check:', isGrooming, '(categoryText includes grooming:', categoryText.includes('grooming'), ', slug includes grooming:', categorySlug && categorySlug.toLowerCase().includes('grooming'), ')');
+        console.log('🔍 Category detection:', { isGrooming, isShoe, categoryText });
         
         if (isGrooming) {
-          console.log('✅✅✅ GROOMING PRODUCT DETECTED - Hiding sizes/colors, showing ingredients');
+          // ═════════════════════════ GROOMING PRODUCTS ═════════════════════════
+          console.log('✅ GROOMING PRODUCT MODE - Showing ingredients, hiding variants');
           
-          // Hide sizes, colors, and stock sections for grooming products
+          // Hide variants section (colors/sizes)
+          variantsSection.style.display = 'none';
           sizesSection.style.display = 'none';
           colorsSection.style.display = 'none';
           stockSection.style.display = 'none';
           
-          console.log('Hidden sections display:', { 
-            sizesSection: sizesSection.style.display, 
-            colorsSection: colorsSection.style.display,
-            stockSection: stockSection.style.display
-          });
-          
-          // Show ingredients section for grooming products
+          // Show ingredients section
           if (ingredientsSection) {
             ingredientsSection.style.display = 'block';
-            if (ingredientsInput) ingredientsInput.required = true;
-            console.log('✅ Showing ingredientsSection. Display:', ingredientsSection.style.display);
+            console.log('✅ Showing ingredients section');
             
-            // Initialize the ingredients table if empty
+            // Initialize ingredients table if empty
             initializeIngredientsTable();
           }
           
-          // Remove required attribute from checkboxes
+          // Make ingredients required
+          if (ingredientsInput) ingredientsInput.required = true;
+          
+          // Clear any selected colors/sizes
           document.querySelectorAll('input[name="sizes"], input[name="colors"]').forEach(input => {
             input.removeAttribute('required');
             input.checked = false;
           });
-        } else if (categoryText.includes('shoe') || categoryText.includes('footwear') || (categorySlug && (categorySlug.toLowerCase().includes('shoe') || categorySlug.toLowerCase().includes('footwear')))) {
-          console.log('👟 SHOE PRODUCT DETECTED');
-          // Show sizes and colors sections for shoes
+          
+        } else if (isShoe) {
+          // ═════════════════════════ SHOE PRODUCTS ═════════════════════════
+          console.log('👟 SHOE PRODUCT MODE - Showing variants with shoe sizes');
+          
+          // Show variants section
+          variantsSection.style.display = 'block';
           sizesSection.style.display = 'block';
           colorsSection.style.display = 'block';
           stockSection.style.display = 'block';
@@ -1064,19 +1115,23 @@
           if (clothingSizes) clothingSizes.style.display = 'none';
           if (shoeSizes) shoeSizes.style.display = 'grid';
           
-          // Uncheck clothing sizes
-          document.querySelectorAll('#clothingSizes input[name="sizes"]').forEach(input => {
-            input.checked = false;
-          });
-          
           // Hide ingredients section
           if (ingredientsSection) {
             ingredientsSection.style.display = 'none';
             if (ingredientsInput) ingredientsInput.required = false;
           }
+          
+          // Uncheck clothing sizes
+          document.querySelectorAll('#clothingSizes input[name="sizes"]').forEach(input => input.checked = false);
+          
+          console.log('✅ Shoe mode: showing shoe sizes (5-13)');
+          
         } else {
-          console.log('👕 OTHER PRODUCT (clothing/accessories) DETECTED');
-          // Show sections for other categories (clothing)
+          // ═════════════════════════ OTHER PRODUCTS (APPAREL, ACCESSORIES, ETC) ═════════════════════════
+          console.log('👕 OTHER PRODUCT MODE - Showing variants with clothing sizes');
+          
+          // Show variants section
+          variantsSection.style.display = 'block';
           sizesSection.style.display = 'block';
           colorsSection.style.display = 'block';
           stockSection.style.display = 'block';
@@ -1085,19 +1140,20 @@
           if (clothingSizes) clothingSizes.style.display = 'grid';
           if (shoeSizes) shoeSizes.style.display = 'none';
           
-          // Uncheck shoe sizes
-          document.querySelectorAll('#shoeSizes input[name="sizes"]').forEach(input => {
-            input.checked = false;
-          });
-          
-          // Hide ingredients section for non-grooming products
+          // Hide ingredients section
           if (ingredientsSection) {
             ingredientsSection.style.display = 'none';
             if (ingredientsInput) ingredientsInput.required = false;
           }
+          
+          // Uncheck shoe sizes
+          document.querySelectorAll('#shoeSizes input[name="sizes"]').forEach(input => input.checked = false);
+          
+          console.log('✅ Apparel mode: showing clothing sizes (XS-4XL)');
         }
         
         console.log('✅ toggleSizeColorSections() COMPLETE');
+        
         // Update stock inputs whenever category changes
         updateStockInputs();
       }
@@ -1153,17 +1209,9 @@
         if (isGrooming) {
           // Validate ingredients for grooming products
           const ingredientRows = document.querySelectorAll('#ingredientsTableBody tr');
-          let hasValidIngredients = false;
           
-          ingredientRows.forEach(row => {
-            const nameInput = row.querySelector('.ingredient-name');
-            if (nameInput && nameInput.value.trim()) {
-              hasValidIngredients = true;
-            }
-          });
-          
-          if (!hasValidIngredients) {
-            alert('⚠️ Please add at least one ingredient');
+          if (ingredientRows.length === 0) {
+            alert('⚠️ Please add at least one ingredient.\n\n1. Enter ingredients in the text field (format: Ingredient Name: Percentage)\n2. Click "Parse & Add Ingredients"\n3. Verify in the preview table');
             return;
           }
           
@@ -1454,36 +1502,97 @@
 
       // ============ INGREDIENTS TABLE FUNCTIONS ============
       let ingredientRowCount = 0;
+      let parsedIngredients = [];
 
-      function addIngredientRow() {
-        ingredientRowCount++;
+      function parseIngredientsFromTextarea() {
+        console.log('🔍 Parsing ingredients from textarea...');
+        const textarea = document.getElementById('ingredientsInput');
+        const statusDiv = document.getElementById('ingredientsStatus');
+        const previewContainer = document.getElementById('ingredientsPreviewContainer');
         const tbody = document.getElementById('ingredientsTableBody');
-        const rowId = `ingredient-row-${ingredientRowCount}`;
         
-        const row = document.createElement('tr');
-        row.id = rowId;
-        row.style.border = '1px solid var(--line)';
-        row.innerHTML = `
-          <td style="padding: 10px; border: 1px solid var(--line);">
-            <input type="text" class="ingredient-name" placeholder="e.g. Aloe Vera" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px;" />
-          </td>
-          <td style="padding: 10px; border: 1px solid var(--line);">
-            <input type="number" class="ingredient-percentage" placeholder="e.g. 15" min="0" max="100" style="width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 4px; font-size: 13px;" />
-          </td>
-          <td style="padding: 10px; border: 1px solid var(--line); text-align: center;">
-            <button type="button" class="action-btn" onclick="removeIngredientRow('${rowId}')" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Remove</button>
-          </td>
-        `;
+        if (!textarea.value.trim()) {
+          statusDiv.textContent = '⚠️ Please enter ingredients above';
+          statusDiv.style.color = '#d97706';
+          statusDiv.style.background = '#fffbeb';
+          statusDiv.style.display = 'block';
+          previewContainer.style.display = 'none';
+          return;
+        }
         
-        tbody.appendChild(row);
+        parsedIngredients = [];
+        const lines = textarea.value.split('\n').filter(line => line.trim());
+        let successCount = 0;
+        
+        lines.forEach((line, index) => {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) return;
+          
+          // Simply use the line as the ingredient name
+          const name = trimmedLine;
+          
+          if (!name) {
+            return;
+          }
+          
+          parsedIngredients.push({ name });
+          successCount++;
+        });
+        
+        if (successCount === 0) {
+          statusDiv.textContent = '⚠️ No valid ingredients found';
+          statusDiv.style.color = '#d97706';
+          statusDiv.style.background = '#fffbeb';
+          statusDiv.style.display = 'block';
+          previewContainer.style.display = 'none';
+          return;
+        }
+        
+        // Display success message
+        statusDiv.textContent = `✅ Successfully added ${successCount} ingredient(s)`;
+        statusDiv.style.color = '#166534';
+        statusDiv.style.background = '#dcfce7';
+        statusDiv.style.display = 'block';
+        
+        // Render preview table
+        tbody.innerHTML = '';
+        parsedIngredients.forEach((ingredient, idx) => {
+          const rowId = `ingredient-row-${idx}`;
+          const row = document.createElement('tr');
+          row.id = rowId;
+          row.style.transition = 'background-color 0.2s';
+          row.innerHTML = `
+            <td style="padding: 10px 12px; border: 1px solid var(--line); font-size: 13px;">${ingredient.name}</td>
+            <td style="padding: 10px 12px; border: 1px solid var(--line); text-align: center;">
+              <button type="button" class="action-btn" onclick="removeIngredientRow('${rowId}')" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✕ Remove</button>
+            </td>
+          `;
+          row.addEventListener('mouseover', () => row.style.backgroundColor = '#f9fafb');
+          row.addEventListener('mouseout', () => row.style.backgroundColor = '');
+          tbody.appendChild(row);
+        });
+        
+        previewContainer.style.display = 'block';
         updateIngredientsField();
+        console.log('✅ Ingredients parsed:', parsedIngredients);
       }
 
       function removeIngredientRow(rowId) {
+        console.log('Removing ingredient row:', rowId);
         const row = document.getElementById(rowId);
         if (row) {
-          row.remove();
-          updateIngredientsField();
+          row.style.animation = 'fadeOut 0.3s ease-out forwards';
+          setTimeout(() => {
+            row.remove();
+            updateIngredientsField();
+            
+            // Hide preview if no rows left
+            const tbody = document.getElementById('ingredientsTableBody');
+            if (tbody.children.length === 0) {
+              document.getElementById('ingredientsPreviewContainer').style.display = 'none';
+              document.getElementById('ingredientsStatus').style.display = 'none';
+            }
+          }, 300);
         }
       }
 
@@ -1492,15 +1601,13 @@
         const ingredients = [];
         
         rows.forEach(row => {
-          const nameInput = row.querySelector('.ingredient-name');
-          const percentageInput = row.querySelector('.ingredient-percentage');
-          
-          if (nameInput && nameInput.value.trim()) {
-            const percentage = percentageInput && percentageInput.value ? parseInt(percentageInput.value) : 0;
-            ingredients.push({
-              name: nameInput.value.trim(),
-              percentage: percentage
-            });
+          const cells = row.querySelectorAll('td');
+          if (cells.length >= 1) {
+            const name = cells[0].textContent.trim();
+            
+            if (name) {
+              ingredients.push({ name });
+            }
           }
         });
         
@@ -1510,15 +1617,17 @@
           ingredientsInput.value = JSON.stringify(ingredients);
         }
         
-        console.log('Updated ingredients:', ingredients);
+        console.log('Updated ingredients field:', ingredients);
       }
 
-      // Initialize with one empty row when ingredientsSection is shown
+      // Initialize ingredients section (no need to add empty row anymore)
       function initializeIngredientsTable() {
-        const tbody = document.getElementById('ingredientsTableBody');
-        if (tbody && tbody.children.length === 0) {
-          addIngredientRow();
-        }
+        // Clear any previous state
+        document.getElementById('ingredientsInput').value = '';
+        document.getElementById('ingredientsTableBody').innerHTML = '';
+        document.getElementById('ingredientsPreviewContainer').style.display = 'none';
+        document.getElementById('ingredientsStatus').style.display = 'none';
+        console.log('✓ Ingredients section initialized');
       }
 
       function updateStockInputs() {
