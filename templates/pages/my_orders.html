@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders — Varón</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Commissioner', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fafafa;
+      min-height: 100vh;
+      padding-top: 75px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px 48px;
+    }
+
+    .header {
+      background: white;
+      padding: 32px 48px;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      color: #000000;
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .back-btn {
+      background: #000000;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .back-btn:hover {
+      background: #2d2d2d;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .orders-section {
+      background: white;
+      padding: 40px 48px;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      border: 1px solid #e5e7eb;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      color: #000000;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0;
+    }
+
+    .orders-table thead {
+      background: #fafafa;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .orders-table th {
+      padding: 16px 20px;
+      text-align: left;
+      font-weight: 600;
+      color: #000000;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .orders-table td {
+      padding: 20px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #0a0a0a;
+      font-size: 14px;
+    }
+
+    .orders-table tbody tr {
+      transition: all 0.2s ease;
+    }
+
+    .orders-table tbody tr:hover {
+      background: #fafafa;
+      cursor: pointer;
+    }
+
+    .orders-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .status-confirmed {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+
+    .status-waiting {
+      background: #fed7aa;
+      color: #9a3412;
+      border: 1px solid #fdba74;
+    }
+
+    .status-shipped {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .status-delivered {
+      background: #dcfce7;
+      color: #14532d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-cancelled {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .order-number {
+      font-weight: 500;
+      color: #0a0a0a;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #9ca3af;
+    }
+
+    .empty-state-icon {
+      font-size: 72px;
+      margin-bottom: 24px;
+      opacity: 0.6;
+    }
+
+    .empty-state-text {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .track-btn {
+      background: #000000;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      letter-spacing: 0.02em;
+    }
+
+    .track-btn:hover {
+      background: #2d2d2d;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .track-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Progress Timeline */
+    .timeline-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .timeline-content {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      max-width: 650px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .timeline-header h3 {
+      font-family: 'Playfair Display', serif;
+      color: #000000;
+      font-size: 26px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .close-btn {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #6b7280;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+      background: #f0f0f0;
+      color: #000000;
+      transform: rotate(90deg);
+    }
+
+    .timeline {
+      position: relative;
+      padding-left: 45px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 16px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: #e5e7eb;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 36px;
+      padding-left: 24px;
+    }
+
+    .timeline-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -31px;
+      top: 6px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      border: 3px solid #d1d5db;
+      transition: all 0.3s ease;
+    }
+
+    .timeline-item.active::before {
+      background: #000000;
+      border-color: #000000;
+      box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+      width: 18px;
+      height: 18px;
+      left: -32px;
+      top: 5px;
+    }
+
+    .timeline-item.completed::before {
+      background: #10b981;
+      border-color: #10b981;
+    }
+
+    .timeline-label {
+      font-weight: 600;
+      color: #0a0a0a;
+      margin-bottom: 6px;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+
+    .timeline-item.active .timeline-label {
+      color: #000000;
+      font-weight: 700;
+    }
+
+    .timeline-description {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+
+    .timeline-time {
+      color: #9ca3af;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .order-details-section {
+      margin-top: 40px;
+      padding-top: 32px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .order-details-section h4 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: #000000;
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      background: #fafafa;
+      border-radius: 10px;
+      border: 1px solid #f0f0f0;
+      transition: all 0.2s ease;
+    }
+
+    .detail-row:hover {
+      background: #f5f5f5;
+      border-color: #e5e7eb;
+    }
+
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .detail-label {
+      font-weight: 600;
+      color: #6b7280;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .detail-value {
+      font-weight: 500;
+      color: #0a0a0a;
+      font-size: 14px;
+      text-align: right;
+      max-width: 60%;
+      word-break: break-word;
+    }
+
+    /* Rating Buttons */
+    .rating-btn {
+      background: #000000;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-left: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .rating-btn:hover {
+      background: #2d2d2d;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .rating-btn.secondary {
+      background: white;
+      color: #000000;
+      border: 1px solid #e5e7eb;
+    }
+
+    .rating-btn.secondary:hover {
+      background: #fafafa;
+      border-color: #000000;
+    }
+
+    /* Rating Modal */
+    .rating-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1001;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .rating-content {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .rating-content h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: #000000;
+      margin-bottom: 24px;
+      letter-spacing: -0.01em;
+    }
+
+    .star-rating {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 32px 0;
+      font-size: 48px;
+    }
+
+    .star {
+      cursor: pointer;
+      color: #e5e7eb;
+      transition: all 0.2s ease;
+    }
+
+    .star:hover,
+    .star.active {
+      color: #fbbf24;
+      transform: scale(1.1);
+    }
+
+    .rating-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      font-family: 'Commissioner', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      margin-bottom: 20px;
+      transition: border-color 0.2s ease;
+    }
+
+    .rating-textarea:focus {
+      outline: none;
+      border-color: #000000;
+    }
+
+    .rating-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .rating-submit-btn,
+    .rating-cancel-btn {
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      border: none;
+    }
+
+    .rating-submit-btn {
+      background: #000000;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .rating-submit-btn:hover {
+      background: #2d2d2d;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .rating-submit-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .rating-cancel-btn {
+      background: white;
+      color: #000000;
+      border: 1px solid #e5e7eb;
+    }
+
+    .rating-cancel-btn:hover {
+      background: #fafafa;
+      border-color: #000000;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding-top: 60px;
+      }
+
+      .container {
+        padding: 20px 16px;
+      }
+
+      .header {
+        padding: 20px 24px;
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .orders-section {
+        padding: 24px 16px;
+      }
+
+      .orders-table {
+        font-size: 13px;
+      }
+
+      .orders-table th,
+      .orders-table td {
+        padding: 12px 10px;
+      }
+
+      .timeline-content {
+        padding: 24px;
+      }
+
+      .timeline-header h3 {
+        font-size: 22px;
+      }
+
+      .detail-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .detail-value {
+        text-align: left;
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📦 My Orders</h1>
+      <a href="{{ url_for('buyer_dashboard') }}" class="back-btn">← Back to Home</a>
+    </div>
+
+    <div class="orders-section">
+      <h2 class="section-title">Order History</h2>
+      
+      <div id="ordersContainer">
+        <div class="empty-state">
+          <div class="empty-state-icon">⏳</div>
+          <div class="empty-state-text">Loading your orders...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline Modal -->
+  <div id="timelineModal" class="timeline-modal">
+    <div class="timeline-content">
+      <div class="timeline-header">
+        <h3>Order Tracking</h3>
+        <button class="close-btn" onclick="closeTimeline()">&times;</button>
+      </div>
+      
+      <div id="timelineContainer"></div>
+    </div>
+  </div>
+
+  <!-- Rating Modal -->
+  <div id="ratingModal" class="rating-modal">
+    <div class="rating-content">
+      <h3 id="ratingTitle">Rate Product</h3>
+      <div class="star-rating" id="starRating">
+        <span class="star" data-rating="1" onclick="selectRating(1)">★</span>
+        <span class="star" data-rating="2" onclick="selectRating(2)">★</span>
+        <span class="star" data-rating="3" onclick="selectRating(3)">★</span>
+        <span class="star" data-rating="4" onclick="selectRating(4)">★</span>
+        <span class="star" data-rating="5" onclick="selectRating(5)">★</span>
+      </div>
+      <textarea 
+        id="ratingComment" 
+        class="rating-textarea" 
+        placeholder="Share your experience (optional)..."
+      ></textarea>
+      <div class="rating-actions">
+        <button class="rating-cancel-btn" onclick="closeRatingModal()">Cancel</button>
+        <button class="rating-submit-btn" id="submitRatingBtn" onclick="submitRating()" disabled>Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allOrders = [];
+
+    // Load orders on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadOrders();
+    });
+
+    function loadOrders() {
+      fetch('/api/my-orders')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            allOrders = data.orders;
+            displayOrders(data.orders);
+          } else {
+            showEmptyState('Failed to load orders');
+          }
+        })
+        .catch(error => {
+          console.error('Error loading orders:', error);
+          showEmptyState('Error loading orders');
+        });
+    }
+
+    function displayOrders(orders) {
+      const container = document.getElementById('ordersContainer');
+      
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-text">No orders yet</div>
+            <p style="color: #9ca3af; margin-top: 10px;">Start shopping to see your orders here!</p>
+          </div>
+        `;
+        return;
+      }
+
+      const tableHTML = `
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>Product Name</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orders.map(order => {
+              const productNames = order.items && order.items.length > 0 
+                ? order.items.map(item => item.product_name).join(', ') 
+                : 'Products';
+              const displayName = productNames.length > 50 
+                ? productNames.substring(0, 50) + '...' 
+                : productNames;
+              
+              // Add rating buttons for delivered orders
+              let actionButtons = `
+                <button class="track-btn" onclick="showTimeline(${order.id})">
+                  📍 Track Order
+                </button>
+              `;
+              
+              if (order.order_status === 'delivered') {
+                // Get first product for rating
+                const firstProduct = order.items && order.items.length > 0 ? order.items[0] : null;
+                if (firstProduct) {
+                  if (order.has_product_review) {
+                    actionButtons += `
+                      <button class="rating-btn secondary" disabled style="opacity: 0.5; cursor: not-allowed;">
+                        ✓ Reviewed
+                      </button>
+                    `;
+                  } else {
+                    actionButtons += `
+                      <button class="rating-btn secondary" onclick="openProductRatingModal(${order.id}, ${firstProduct.product_id})">
+                        ⭐ Rate Product
+                      </button>
+                    `;
+                  }
+                }
+                
+                // Add rider rating button if rider exists
+                if (order.rider_id && order.rider_id !== null && order.rider_id !== 0) {
+                  if (order.has_rider_rating) {
+                    actionButtons += `
+                      <button class="rating-btn secondary" disabled style="opacity: 0.5; cursor: not-allowed;">
+                        ✓ Rider Rated
+                      </button>
+                    `;
+                  } else {
+                    actionButtons += `
+                      <button class="rating-btn secondary" onclick="openRiderRatingModal(${order.id}, ${order.rider_id})">
+                        🚚 Rate Rider
+                      </button>
+                    `;
+                  }
+                } else {
+                  // Debug: Show if no rider assigned
+                  console.log('Order #' + order.id + ' - No rider assigned. rider_id:', order.rider_id);
+                }
+              }
+              
+              return `
+                <tr>
+                  <td class="order-number">${displayName}</td>
+                  <td>${formatDate(order.created_at)}</td>
+                  <td>₱${parseFloat(order.total_amount).toFixed(2)}</td>
+                  <td>
+                    <span class="status-badge ${getStatusClass(order.order_status)}">
+                      ${order.status_icon || ''} ${order.display_status || order.order_status}
+                    </span>
+                  </td>
+                  <td>
+                    <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+                      ${actionButtons}
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+
+      container.innerHTML = tableHTML;
+    }
+
+    function getStatusClass(status) {
+      const statusMap = {
+        'pending': 'status-pending',
+        'confirmed': 'status-confirmed',
+        'waiting_for_pickup': 'status-waiting',
+        'processing': 'status-waiting',
+        'shipped': 'status-shipped',
+        'released_to_rider': 'status-shipped',
+        'delivered': 'status-delivered',
+        'cancelled': 'status-cancelled',
+        'returned': 'status-cancelled'
+      };
+      return statusMap[status] || 'status-pending';
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      // Adjust for timezone - assuming server is UTC, convert to local time
+      return date.toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
+    function showTimeline(orderId) {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      const modal = document.getElementById('timelineModal');
+      const container = document.getElementById('timelineContainer');
+
+      // Define order stages
+      const stages = [
+        {
+          status: 'pending',
+          label: 'Order Placed',
+          description: 'Your order has been received',
+          icon: '🛒'
+        },
+        {
+          status: 'confirmed',
+          label: 'Seller Confirmed',
+          description: 'Seller is preparing your order',
+          icon: '✅'
+        },
+        {
+          status: 'waiting_for_pickup',
+          label: 'Ready for Pickup',
+          description: 'Order is ready, waiting for courier',
+          icon: '📦'
+        },
+        {
+          status: 'released_to_rider',
+          label: 'Out for Delivery',
+          description: 'Courier is on the way',
+          icon: '🚚'
+        },
+        {
+          status: 'delivered',
+          label: 'Delivered',
+          description: 'Order has been delivered',
+          icon: '🎉'
+        }
+      ];
+
+      const currentStatus = order.order_status;
+      const statusOrder = ['pending', 'confirmed', 'waiting_for_pickup', 'released_to_rider', 'delivered'];
+      const currentIndex = statusOrder.indexOf(currentStatus);
+
+      const timelineHTML = `
+        <div class="timeline">
+          ${stages.map((stage, index) => {
+            const isCompleted = index < currentIndex;
+            const isActive = index === currentIndex;
+            const statusClass = isCompleted ? 'completed' : (isActive ? 'active' : '');
+            
+            return `
+              <div class="timeline-item ${statusClass}">
+                <div class="timeline-label">${stage.icon} ${stage.label}</div>
+                <div class="timeline-description">${stage.description}</div>
+                ${isCompleted || isActive ? `<div class="timeline-time">${formatDate(order.created_at)}</div>` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="order-details-section">
+          <h4 style="margin-bottom: 20px; color: #333;">Order Details</h4>
+          <div class="detail-row">
+            <span class="detail-label">Order Number:</span>
+            <span class="detail-value">#${order.order_number}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Products:</span>
+            <span class="detail-value">${order.items && order.items.length > 0 ? order.items.map(item => item.product_name).join(', ') : 'N/A'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Total Amount:</span>
+            <span class="detail-value">₱${parseFloat(order.total_amount).toFixed(2)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Order Date:</span>
+            <span class="detail-value">${formatDate(order.created_at)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Current Status:</span>
+            <span class="detail-value">${order.display_status || order.order_status}</span>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = timelineHTML;
+      modal.style.display = 'flex';
+    }
+
+    function closeTimeline() {
+      const modal = document.getElementById('timelineModal');
+      modal.style.display = 'none';
+    }
+
+    function showEmptyState(message) {
+      const container = document.getElementById('ordersContainer');
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">⚠️</div>
+          <div class="empty-state-text">${message}</div>
+        </div>
+      `;
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const timelineModal = document.getElementById('timelineModal');
+      const ratingModal = document.getElementById('ratingModal');
+      if (event.target === timelineModal) {
+        closeTimeline();
+      }
+      if (event.target === ratingModal) {
+        closeRatingModal();
+      }
+    }
+
+    // Rating Modal Variables
+    let currentRating = 0;
+    let currentRatingType = null; // 'product' or 'rider'
+    let currentOrderId = null;
+    let currentTargetId = null; // product_id or rider_id
+
+    function openProductRatingModal(orderId, productId) {
+      currentRatingType = 'product';
+      currentOrderId = orderId;
+      currentTargetId = productId;
+      
+      document.getElementById('ratingTitle').textContent = 'Rate Product';
+      document.getElementById('ratingComment').placeholder = 'Share your experience with this product (optional)...';
+      resetRating();
+      
+      const modal = document.getElementById('ratingModal');
+      modal.style.display = 'flex';
+    }
+
+    function openRiderRatingModal(orderId, riderId) {
+      currentRatingType = 'rider';
+      currentOrderId = orderId;
+      currentTargetId = riderId;
+      
+      document.getElementById('ratingTitle').textContent = 'Rate Rider';
+      document.getElementById('ratingComment').placeholder = 'Share your experience with the delivery service (optional)...';
+      resetRating();
+      
+      const modal = document.getElementById('ratingModal');
+      modal.style.display = 'flex';
+    }
+
+    function closeRatingModal() {
+      const modal = document.getElementById('ratingModal');
+      modal.style.display = 'none';
+      resetRating();
+      currentRating = 0;
+      currentRatingType = null;
+      currentOrderId = null;
+      currentTargetId = null;
+    }
+
+    function selectRating(rating) {
+      currentRating = rating;
+      const stars = document.querySelectorAll('.star');
+      const submitBtn = document.getElementById('submitRatingBtn');
+      
+      stars.forEach((star, index) => {
+        if (index < rating) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      });
+      
+      submitBtn.disabled = false;
+    }
+
+    function resetRating() {
+      currentRating = 0;
+      document.getElementById('ratingComment').value = '';
+      document.querySelectorAll('.star').forEach(star => star.classList.remove('active'));
+      document.getElementById('submitRatingBtn').disabled = true;
+    }
+
+    async function submitRating() {
+      if (currentRating === 0 || !currentRatingType || !currentOrderId || !currentTargetId) {
+        alert('Please select a rating');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitRatingBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      const comment = document.getElementById('ratingComment').value;
+
+      try {
+        let endpoint, payload;
+        
+        if (currentRatingType === 'product') {
+          endpoint = '/api/submit-review';
+          payload = {
+            product_id: currentTargetId,
+            order_id: currentOrderId,
+            rating: currentRating,
+            comment: comment,
+            title: `${currentRating} star review`
+          };
+        } else if (currentRatingType === 'rider') {
+          endpoint = '/api/submit-rider-rating';
+          payload = {
+            rider_id: currentTargetId,
+            order_id: currentOrderId,
+            rating: currentRating,
+            comment: comment
+          };
+        }
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert(`${currentRatingType === 'product' ? 'Product review' : 'Rider rating'} submitted successfully!`);
+          closeRatingModal();
+          loadOrders(); // Reload orders to update UI
+        } else {
+          alert(result.error || 'Failed to submit rating');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit';
+        }
+      } catch (error) {
+        console.error('Error submitting rating:', error);
+        alert('Error submitting rating. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+      }
+    }
+  </script>
+</body>
+</html>

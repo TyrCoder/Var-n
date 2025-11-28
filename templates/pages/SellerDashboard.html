@@ -390,6 +390,7 @@
       // Declare global variables early so they're available when needed
       let pageTemplates = {};
       let allOrders = []; // Global orders array for filtering
+      let currentOrderFilter = 'confirmed'; // Track current filter state
 
       function updateOrderCount(count) {
         const badge = document.getElementById('order-count-badge');
@@ -952,6 +953,9 @@
                 </button>
                 <button class="action-btn" data-filter-btn="confirmed" onclick="filterOrders('confirmed')" style="background: #2196f3; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
                   ✔️ Confirmed <span class="confirmed-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
+                </button>
+                <button class="action-btn" data-filter-btn="waiting_for_pickup" onclick="filterOrders('waiting_for_pickup')" style="background: #f59e0b; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
+                  ⏰ Waiting <span class="waiting-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
                 </button>
                 <button class="action-btn" data-filter-btn="released_to_rider" onclick="filterOrders('released_to_rider')" style="background: #10b981; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
                   🚚 Released <span class="released-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
@@ -1916,6 +1920,9 @@
 
       function loadOrders(initialFilter = 'confirmed') {
         console.log('[FETCH] Fetching orders from /seller/orders');
+        
+        // Update current filter
+        currentOrderFilter = initialFilter;
 
         fetch('/seller/orders', { credentials: 'include' })
           .then(response => {
@@ -2098,6 +2105,9 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
       // Filter orders by status
       function filterOrders(status) {
         console.log('📋 Filtering orders by status:', status);
+        
+        // Update current filter state
+        currentOrderFilter = status;
         
         // Update active button
         const filterButtons = document.querySelectorAll('[data-filter-btn]');
@@ -2373,6 +2383,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         const counts = {
           pending: 0,
           confirmed: 0,
+          waiting_for_pickup: 0,
           released_to_rider: 0,
           delivered: 0
         };
@@ -2386,6 +2397,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         // Update badge elements
         const pendingBtn = document.querySelector('[data-filter-btn="pending"]');
         const confirmedBtn = document.querySelector('[data-filter-btn="confirmed"]');
+        const waitingBtn = document.querySelector('[data-filter-btn="waiting_for_pickup"]');
         const releasedBtn = document.querySelector('[data-filter-btn="released_to_rider"]');
         const deliveredBtn = document.querySelector('[data-filter-btn="delivered"]');
 
@@ -2396,6 +2408,10 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         if (confirmedBtn) {
           const span = confirmedBtn.querySelector('.confirmed-count');
           if (span) span.textContent = counts.confirmed;
+        }
+        if (waitingBtn) {
+          const span = waitingBtn.querySelector('.waiting-count');
+          if (span) span.textContent = counts.waiting_for_pickup;
         }
         if (releasedBtn) {
           const span = releasedBtn.querySelector('.released-count');
