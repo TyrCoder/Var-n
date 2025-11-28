@@ -1379,15 +1379,7 @@
         const isGrooming = categoryText.includes('grooming') || (categorySlug && categorySlug.toLowerCase().includes('grooming'));
 
         if (isGrooming) {
-
-          const ingredientRows = document.querySelectorAll('#ingredientsTableBody tr');
-
-          if (ingredientRows.length === 0) {
-            alert('⚠️ Please add at least one ingredient.\n\n1. Enter ingredients in the text field (format: Ingredient Name: Percentage)\n2. Click "Parse & Add Ingredients"\n3. Verify in the preview table');
-            return;
-          }
-
-
+          // Ingredients are optional for grooming products
           updateIngredientsField();
         } else {
           const selectedSizes = document.querySelectorAll('input[name="sizes"]:checked');
