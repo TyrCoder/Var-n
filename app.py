@@ -963,41 +963,12 @@ def product_page(product_id):
                     key = f"{v['size']}_{v['color']}"
                     stock_map[key] = v['stock_quantity']
                 
-                # If no variants exist, create default ones based on product name/category
+                # If no variants exist, product has no variations - leave empty
                 if len(variants) == 0:
-                    print(f"[DEBUG] No variants found for product {product_id}, creating defaults...")
-                    # Try to infer color from product name
-                    product_name_lower = product['name'].lower()
-                    
-                    default_colors = []
-                    # Check for color keywords in the product name
-                    if 'black' in product_name_lower:
-                        default_colors.append('Black')
-                    elif 'white' in product_name_lower:
-                        default_colors.append('White')
-                    elif 'blue' in product_name_lower:
-                        default_colors.append('Blue')
-                    elif 'red' in product_name_lower:
-                        default_colors.append('Red')
-                    elif 'gray' in product_name_lower or 'grey' in product_name_lower:
-                        default_colors.append('Gray')
-                    else:
-                        # Default to Black if color not detected
-                        default_colors.append('Black')
-                    
-                    # Set default size
-                    default_sizes = ['One Size'] if 'shoe' not in product_name_lower and 'footwear' not in product_name_lower else ['US 8']
-                    
-                    colors = default_colors
-                    sizes = default_sizes
-                    
-                    # Create default stock map entry
-                    for size in sizes:
-                        for color in colors:
-                            key = f"{size}_{color}"
-                            stock_map[key] = 100  # Assume 100 in stock if not specified
-                    
-                    print(f"[DEBUG] Created default colors: {colors}, sizes: {sizes}")
+                    print(f"[DEBUG] No variants found for product {product_id}. Product has no size/color variations.")
+                    colors = []
+                    sizes = []
+                    stock_map = {'Standard_One Size': 100}  # Default stock for products without variations
 
             cursor.close()
             conn.close()

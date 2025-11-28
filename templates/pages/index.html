@@ -256,22 +256,20 @@
       <div class="container" style="margin-top:90px;padding-bottom:60px">
         <h2 style="margin:24px 0">Browse Collection</h2>
 
-        <!-- Search Bar and Category Filter -->
-        <div style="display:flex;gap:12px;margin-bottom:24px;align-items:center">
+        <!-- Search Bar -->
+        <div style="display:flex;gap:12px;margin-bottom:32px;align-items:center">
           <div style="flex:1;min-width:250px;position:relative">
             <input type="text" id="browseSearch" placeholder="Search products..." style="width:100%;padding:12px 16px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none" onkeyup="handleBrowseSearch(event)">
-            <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#999;pointer-events:none">🔍</span>
-          </div>
-          <div style="min-width:220px">
-            <select id="categoryDropdown" onchange="handleCategoryDropdown()" style="width:100%;padding:12px 16px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none;cursor:pointer;background:#fff;appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"12\" height=\"8\" viewBox=\"0 0 12 8\"><path fill=\"%23999\" d=\"M6 8L0 2h12z\"/></svg>');background-repeat:no-repeat;background-position:right 12px center;padding-right:36px">
-              <option value="">All Categories</option>
-            </select>
+            <span onclick="loadBrowseProducts()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#999;cursor:pointer;padding:8px" onmouseover="this.style.color='#0a0a0a'" onmouseout="this.style.color='#999'">🔍</span>
           </div>
         </div>
 
-        <!-- Category Filter - Organized by Type -->
-        <div id="categoriesContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;margin-bottom:40px">
-          <!-- Categories will be loaded here organized by type -->
+        <!-- Shop by Category -->
+        <div style="margin-bottom:48px">
+          <h3 style="font-size:20px;font-weight:600;margin:0 0 24px;color:#0a0a0a;text-align:center">Shop by category</h3>
+          <div id="categoriesContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:24px;max-width:900px;margin:0 auto">
+            <!-- Categories will be loaded here -->
+          </div>
         </div>
 
         <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
@@ -593,38 +591,16 @@
               if (categoriesContainer) {
                 categoriesContainer.innerHTML = '';
 
-
-                const allSection = document.createElement('div');
-                allSection.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s';
-
-                const allTitle = document.createElement('h3');
-                allTitle.style.cssText = 'margin:0;font-size:14px;font-weight:600;color:#0a0a0a;text-transform:uppercase;letter-spacing:0.5px';
-                allTitle.textContent = 'All';
-                allSection.appendChild(allTitle);
-
-                const allLink = document.createElement('a');
-                allLink.href = 'javascript:void(0)';
-                allLink.setAttribute('data-category', '');
-                allLink.style.cssText = 'color:#666;text-decoration:none;font-size:13px;display:block;margin-top:8px;font-weight:600;color:#0a0a0a';
-                allLink.textContent = 'View All';
-                allLink.onclick = (e) => {
-                  e.preventDefault();
-                  handleCategoryFilter(e, '');
-                };
-                allSection.appendChild(allLink);
-
-                allSection.onmouseover = () => {
-                  allSection.style.background = '#fafafa';
-                  allSection.style.borderColor = '#d1d5db';
-                };
-                allSection.onmouseout = () => {
-                  allSection.style.background = '#fff';
-                  allSection.style.borderColor = '#e5e7eb';
+                // Category images/icons mapping
+                const categoryInfo = {
+                  'TOPS': { icon: '👔', name: 'Tops' },
+                  'BOTTOMS': { icon: '👖', name: 'Bottoms' },
+                  'FOOTWEAR': { icon: '👞', name: 'Footwear' },
+                  'ACCESSORIES': { icon: '👜', name: 'Accessories' },
+                  'GROOMING PRODUCTS': { icon: '🧴', name: 'Grooming' }
                 };
 
-                categoriesContainer.appendChild(allSection);
-
-
+                // Group categories by type
                 const categoriesByType = {};
                 data.categories.forEach(category => {
                   const type = category.category_type || 'OTHER';
@@ -637,116 +613,92 @@
 
                 const typeOrder = ['TOPS', 'BOTTOMS', 'FOOTWEAR', 'ACCESSORIES', 'GROOMING PRODUCTS'];
 
+                // Create category cards with dropdown
+                typeOrder.forEach(type => {
+                  if (categoriesByType[type] && categoryInfo[type]) {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'text-align:center;cursor:pointer;transition:transform 0.2s;position:relative';
+                    
+                    const imageBox = document.createElement('div');
+                    imageBox.style.cssText = 'background:#f5f5f5;border-radius:8px;padding:30px;margin-bottom:10px;font-size:52px;display:flex;align-items:center;justify-content:center;height:110px;transition:background 0.2s';
+                    imageBox.textContent = categoryInfo[type].icon;
+                    card.appendChild(imageBox);
 
-                typeOrder.forEach((type, typeIndex) => {
-                  if (categoriesByType[type]) {
-                    const typeSection = document.createElement('div');
-                    typeSection.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;transition:all 0.2s';
+                    const label = document.createElement('div');
+                    label.style.cssText = 'font-size:13px;font-weight:500;color:#0a0a0a';
+                    label.textContent = categoryInfo[type].name;
+                    card.appendChild(label);
 
-                    const typeHeader = document.createElement('div');
-                    typeHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;padding:16px;background:#fafafa;border-bottom:1px solid #e5e7eb;transition:background 0.2s';
+                    // Create dropdown for subcategories
+                    const dropdown = document.createElement('div');
+                    dropdown.style.cssText = 'display:none;position:absolute;top:100%;left:50%;transform:translateX(-50%);background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:12px;min-width:220px;z-index:1000;margin-top:8px;text-align:left';
+                    
+                    // Add "View All" option for main category
+                    const viewAllOption = document.createElement('div');
+                    viewAllOption.style.cssText = 'padding:10px 12px;cursor:pointer;font-size:13px;font-weight:600;color:#0a0a0a;border-bottom:1px solid #e5e7eb;margin-bottom:8px';
+                    viewAllOption.textContent = `${categoryInfo[type].name} (Main Category)`;
+                    viewAllOption.onclick = (e) => {
+                      e.stopPropagation();
+                      const categoryIds = categoriesByType[type].map(cat => cat.id);
+                      loadBrowseProducts(categoryIds);
+                      dropdown.style.display = 'none';
+                    };
+                    viewAllOption.onmouseover = () => viewAllOption.style.background = '#f3f4f6';
+                    viewAllOption.onmouseout = () => viewAllOption.style.background = 'transparent';
+                    dropdown.appendChild(viewAllOption);
 
-                    const typeTitle = document.createElement('h3');
-                    typeTitle.style.cssText = 'margin:0;font-size:14px;font-weight:600;color:#0a0a0a;text-transform:uppercase;letter-spacing:0.5px';
-                    typeTitle.textContent = type;
-                    typeHeader.appendChild(typeTitle);
-
-                    const toggleIcon = document.createElement('span');
-                    toggleIcon.style.cssText = 'font-size:14px;color:#0a0a0a;transition:transform 0.3s;transform:rotate(90deg);display:block;width:16px;text-align:center';
-                    toggleIcon.textContent = '▶';
-                    typeHeader.appendChild(toggleIcon);
-
-                    typeSection.appendChild(typeHeader);
-
-                    const categoryList = document.createElement('div');
-                    categoryList.style.cssText = 'display:grid;grid-template-columns:1fr;gap:0;padding:12px 16px;background:#fff';
-
-                    let isExpanded = typeIndex === 0;
-
+                    // Add subcategories
                     categoriesByType[type].forEach(category => {
-                      const link = document.createElement('a');
-                      link.href = 'javascript:void(0)';
-                      link.setAttribute('data-category', category.id);
-                      link.style.cssText = 'color:#666;text-decoration:none;font-size:13px;padding:8px 0;border-bottom:1px solid #f3f4f6;transition:all 0.2s;cursor:pointer;display:block';
-                      link.textContent = category.name;
-                      link.onmouseover = () => {
-                        link.style.color = '#0a0a0a';
-                        link.style.paddingLeft = '6px';
-                        link.style.fontWeight = '500';
+                      const option = document.createElement('div');
+                      option.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:13px;color:#666';
+                      option.textContent = category.name;
+                      option.onclick = (e) => {
+                        e.stopPropagation();
+                        loadBrowseProducts([category.id]);
+                        dropdown.style.display = 'none';
                       };
-                      link.onmouseout = () => {
-                        link.style.color = '#666';
-                        link.style.paddingLeft = '0';
-                        link.style.fontWeight = '400';
+                      option.onmouseover = () => {
+                        option.style.background = '#f3f4f6';
+                        option.style.color = '#0a0a0a';
                       };
-                      link.onclick = (e) => {
-                        e.preventDefault();
-                        handleCategoryFilter(e, category.id);
+                      option.onmouseout = () => {
+                        option.style.background = 'transparent';
+                        option.style.color = '#666';
                       };
-                      categoryList.appendChild(link);
+                      dropdown.appendChild(option);
                     });
 
-                    typeSection.appendChild(categoryList);
+                    card.appendChild(dropdown);
 
-
-                    typeHeader.onclick = () => {
-                      isExpanded = !isExpanded;
-                      if (isExpanded) {
-                        categoryList.style.display = 'grid';
-                        toggleIcon.style.transform = 'rotate(-90deg)';
-                        typeHeader.style.background = '#f0f0f0';
-                      } else {
-                        categoryList.style.display = 'none';
-                        toggleIcon.style.transform = 'rotate(90deg)';
-                        typeHeader.style.background = '#fafafa';
-                      }
+                    // Toggle dropdown on click
+                    card.onclick = (e) => {
+                      e.stopPropagation();
+                      // Close all other dropdowns
+                      document.querySelectorAll('#categoriesContainer > div > div:last-child').forEach(d => {
+                        if (d !== dropdown) d.style.display = 'none';
+                      });
+                      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
                     };
 
-                    typeHeader.onmouseover = () => {
-                      typeHeader.style.background = '#f0f0f0';
+                    card.onmouseover = () => {
+                      card.style.transform = 'translateY(-4px)';
+                      imageBox.style.background = '#e5e5e5';
                     };
-                    typeHeader.onmouseout = () => {
-                      typeHeader.style.background = isExpanded ? '#f0f0f0' : '#fafafa';
-                    };
-
-                    if (!isExpanded) {
-                      categoryList.style.display = 'none';
-                    }
-
-                    typeSection.onmouseover = () => {
-                      typeSection.style.borderColor = '#d1d5db';
-                      typeSection.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-                    };
-                    typeSection.onmouseout = () => {
-                      typeSection.style.borderColor = '#e5e7eb';
-                      typeSection.style.boxShadow = 'none';
+                    card.onmouseout = () => {
+                      card.style.transform = 'translateY(0)';
+                      imageBox.style.background = '#f5f5f5';
                     };
 
-                    categoriesContainer.appendChild(typeSection);
+                    categoriesContainer.appendChild(card);
                   }
                 });
 
-                // Populate dropdown
-                const dropdown = document.getElementById('categoryDropdown');
-                if (dropdown) {
-                  // Clear existing options except first
-                  dropdown.innerHTML = '<option value="">All Categories</option>';
-                  
-                  // Add categories grouped by type
-                  typeOrder.forEach(type => {
-                    if (categoriesByType[type]) {
-                      const optgroup = document.createElement('optgroup');
-                      optgroup.label = type;
-                      categoriesByType[type].forEach(category => {
-                        const option = document.createElement('option');
-                        option.value = category.id;
-                        option.textContent = category.name;
-                        optgroup.appendChild(option);
-                      });
-                      dropdown.appendChild(optgroup);
-                    }
+                // Close dropdowns when clicking outside
+                document.addEventListener('click', () => {
+                  document.querySelectorAll('#categoriesContainer > div > div:last-child').forEach(d => {
+                    d.style.display = 'none';
                   });
-                }
+                });
               }
             }
           })
