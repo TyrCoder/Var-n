@@ -1023,29 +1023,13 @@
           <span class="user-button-arrow">▼</span>
         </button>
         <div id="userDropdown" class="dropdown-content">
-          <a href="{{ url_for('buyer_dashboard') }}">
+          <a href="{{ url_for('account_details') }}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
             My Account
           </a>
-          <a href="{{ url_for('buyer_dashboard') }}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="9" cy="21" r="1"></circle>
-              <circle cx="20" cy="21" r="1"></circle>
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-            </svg>
-            My Orders
-          </a>
-          <a href="{{ url_for('buyer_dashboard') }}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="1"></circle>
-              <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m0 5.08l-4.24 4.24M20.78 4.22l-4.24 4.24m0 5.08l4.24 4.24"></path>
-            </svg>
-            Settings
-          </a>
-          <hr style="margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;">
           <a href="{{ url_for('logout') }}" style="color: #ef4444;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -1347,23 +1331,9 @@
         }
       });
 
-
+      // ======= COLOR HEX MAPPING AND INITIALIZATION =======
       const categoryName = '{{ product.category_name }}';
       const isGroomingProduct = categoryName && categoryName.toLowerCase().includes('grooming');
-
-      let selectedColor = {% if not colors %}'Standard'{% else %}null{% endif %};
-      let selectedSize = {% if not sizes %}'One Size'{% else %}null{% endif %};
-
-      // Store all available sizes
-      const allSizes = {{ sizes|tojson|safe }};
-      const stockMap = {{ stock_map|tojson|safe }};
-
-
-      if (isGroomingProduct && !{{ colors|length }} && {{ sizes|length }}) {
-        selectedColor = 'Standard';
-        document.getElementById('selectedColorName').textContent = 'Standard';
-      }
-
 
       const colorHex = {
         'Black': '#000000', 'White': '#FFFFFF', 'Gray': '#808080', 'Grey': '#808080',
@@ -1377,7 +1347,7 @@
         'Lavender': '#E6E6FA', 'Mint': '#98FF98', 'Sky Blue': '#87CEEB', 'Dark Blue': '#00008B'
       };
 
-      // Function to generate hex color from string if not in map
+      // Function to get hex color from color name
       function getHexColor(colorName) {
         if (colorHex[colorName]) return colorHex[colorName];
         
@@ -1407,45 +1377,77 @@
         return `hsl(${hue}, 70%, 50%)`;
       }
 
-      document.querySelectorAll('.color-swatch').forEach(swatch => {
-        const color = swatch.getAttribute('data-color');
-        if (!color) return;
-
-        // Handle multi-color combinations (e.g., "Black/Yellow")
-        if (color.includes('/')) {
-          const colorParts = color.split('/').map(c => c.trim());
-          const hexColors = colorParts.map(c => getHexColor(c));
-
-          if (colorParts.length === 2) {
-            swatch.style.background = `linear-gradient(135deg, ${hexColors[0]} 50%, ${hexColors[1]} 50%)`;
-          } else if (colorParts.length === 3) {
-            swatch.style.background = `linear-gradient(135deg, ${hexColors[0]} 33%, ${hexColors[1]} 33%, ${hexColors[1]} 66%, ${hexColors[2]} 66%)`;
-          } else {
-            const segments = colorParts.length;
-            const percentPerColor = 100 / segments;
-            let gradient = 'linear-gradient(135deg';
-            hexColors.forEach((hex, i) => {
-              const start = i * percentPerColor;
-              const end = (i + 1) * percentPerColor;
-              gradient += `, ${hex} ${start}%, ${hex} ${end}%`;
-            });
-            gradient += ')';
-            swatch.style.background = gradient;
+      // Function to initialize color swatches with actual colors
+      function initializeColorSwatches() {
+        console.log('[COLOR INIT] Starting color swatch initialization...');
+        const swatches = document.querySelectorAll('.color-swatch');
+        console.log(`[COLOR INIT] Found ${swatches.length} color swatches`);
+        
+        swatches.forEach(swatch => {
+          const color = swatch.getAttribute('data-color');
+          if (!color) {
+            console.log('[COLOR INIT] Swatch missing data-color attribute');
+            return;
           }
-        } else {
-          // Single color
-          const hex = getHexColor(color);
-          swatch.style.background = hex;
-        }
 
-        // Add color name as tooltip
-        swatch.setAttribute('title', color);
-        swatch.style.border = '2px solid #ddd';
-        swatch.style.transition = 'transform 0.2s, box-shadow 0.2s';
-      });
+          console.log(`[COLOR INIT] Processing color: ${color}`);
+
+          // Handle multi-color combinations (e.g., "Black/Yellow")
+          if (color.includes('/')) {
+            const colorParts = color.split('/').map(c => c.trim());
+            const hexColors = colorParts.map(c => getHexColor(c));
+
+            if (colorParts.length === 2) {
+              swatch.style.background = `linear-gradient(135deg, ${hexColors[0]} 50%, ${hexColors[1]} 50%)`;
+            } else if (colorParts.length === 3) {
+              swatch.style.background = `linear-gradient(135deg, ${hexColors[0]} 33%, ${hexColors[1]} 33%, ${hexColors[1]} 66%, ${hexColors[2]} 66%)`;
+            } else {
+              const segments = colorParts.length;
+              const percentPerColor = 100 / segments;
+              let gradient = 'linear-gradient(135deg';
+              hexColors.forEach((hex, i) => {
+                const start = i * percentPerColor;
+                const end = (i + 1) * percentPerColor;
+                gradient += `, ${hex} ${start}%, ${hex} ${end}%`;
+              });
+              gradient += ')';
+              swatch.style.background = gradient;
+            }
+          } else {
+            // Single color
+            const hex = getHexColor(color);
+            swatch.style.background = hex;
+            console.log(`[COLOR INIT] Applied color to ${color}: ${hex}`);
+          }
+
+          // Add color name as tooltip
+          swatch.setAttribute('title', color);
+          swatch.style.border = '2px solid #ddd';
+          swatch.style.transition = 'transform 0.2s, box-shadow 0.2s';
+        });
+      }
+
+      // Initialize colors once DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeColorSwatches);
+      } else {
+        // DOM is already loaded
+        setTimeout(initializeColorSwatches, 100);
+      }
+
+      let selectedColor = {% if not colors %}'Standard'{% else %}null{% endif %};
+      let selectedSize = {% if not sizes %}'One Size'{% else %}null{% endif %};
+
+      // Store all available sizes
+      const allSizes = {{ sizes|tojson|safe }};
+      const stockMap = {{ stock_map|tojson|safe }};
 
 
-      // Handle white/light color borders      function changeMainImage(imageUrl, thumbnail) {
+      if (isGroomingProduct && !{{ colors|length }} && {{ sizes|length }}) {
+        selectedColor = 'Standard';
+        document.getElementById('selectedColorName').textContent = 'Standard';
+      }
+      function changeMainImage(imageUrl, thumbnail) {
         const mainImg = document.querySelector('#mainImage img');
         if (mainImg) {
           mainImg.src = imageUrl;
@@ -1621,13 +1623,23 @@
 
       function increaseQuantity() {
         const input = document.getElementById('quantity');
-        input.value = parseInt(input.value) + 1;
+        if (input) {
+          const currentValue = parseInt(input.value) || 1;
+          input.value = currentValue + 1;
+          console.log('[QUANTITY] Increased to:', input.value);
+        }
       }
 
       function decreaseQuantity() {
         const input = document.getElementById('quantity');
-        if (parseInt(input.value) > 1) {
-          input.value = parseInt(input.value) - 1;
+        if (input) {
+          const currentValue = parseInt(input.value) || 1;
+          if (currentValue > 1) {
+            input.value = currentValue - 1;
+            console.log('[QUANTITY] Decreased to:', input.value);
+          } else {
+            console.log('[QUANTITY] Cannot go below 1');
+          }
         }
       }
 

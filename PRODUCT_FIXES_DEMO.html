@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Page Fixes - Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a1a1a;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+        }
+        .fix-item {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9fafb;
+            border-left: 4px solid #2563eb;
+            border-radius: 4px;
+        }
+        .fix-title {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin: 0 0 10px 0;
+        }
+        .fix-description {
+            color: #4b5563;
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .status-ok {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .color-demo {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .color-swatch {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .color-swatch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .qty-demo {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .qty-btn {
+            width: 48px;
+            height: 48px;
+            border: 2px solid #e8e8e8;
+            background: #ffffff;
+            cursor: pointer;
+            font-size: 22px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .qty-btn:hover {
+            border-color: #d4d4d4;
+            background: #fafafa;
+            transform: translateY(-2px);
+        }
+        .qty-input {
+            width: 80px;
+            height: 48px;
+            text-align: center;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #000;
+            background: #fafafa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Product Page Fixes - Complete Implementation</h1>
+        
+        <div class="fix-item">
+            <div class="fix-title">Fix #1: Color Swatches Display Actual Colors ✓</div>
+            <div class="fix-description">
+                Color swatches now display the actual color that the seller added for the product, not just gray boxes.
+            </div>
+            <strong>Demo - Available Colors:</strong>
+            <div class="color-demo">
+                <div class="color-swatch" style="background-color: #000000; color: white;">Black</div>
+                <div class="color-swatch" style="background-color: #FFFFFF; border: 2px solid #ccc;">White</div>
+                <div class="color-swatch" style="background-color: #FF0000; color: white;">Red</div>
+                <div class="color-swatch" style="background-color: #0000FF; color: white;">Blue</div>
+                <div class="color-swatch" style="background-color: #FFD700;">Yellow</div>
+                <div class="color-swatch" style="background-color: #008000; color: white;">Green</div>
+            </div>
+            <strong>How it works:</strong>
+            <div class="code-block">
+// Product: "ASAP Tec Black"
+// Detected color: "Black"
+// Applied hex: #000000
+// Result: Actual black color on swatch button
+            </div>
+            <div class="status-ok">Status: IMPLEMENTED ✓</div>
+        </div>
+
+        <div class="fix-item">
+            <div class="fix-title">Fix #2: Seller Product Sizes Display Correctly ✓</div>
+            <div class="fix-description">
+                Sizes now show what the seller actually input for the product, either from database variants or intelligent fallback.
+            </div>
+            <strong>Size Selection Example:</strong>
+            <div class="color-demo">
+                <button style="padding: 10px 15px; border: 2px solid #e8e8e8; border-radius: 6px; cursor: pointer;">S</button>
+                <button style="padding: 10px 15px; border: 2px solid #e8e8e8; border-radius: 6px; cursor: pointer;">M</button>
+                <button style="padding: 10px 15px; border: 2px solid #e8e8e8; border-radius: 6px; cursor: pointer;">L</button>
+                <button style="padding: 10px 15px; border: 2px solid #e8e8e8; border-radius: 6px; cursor: pointer;">XL</button>
+            </div>
+            <strong>Data Flow:</strong>
+            <div class="code-block">
+Backend (app.py):
+  - Query product_variants table
+  - If empty → Infer from product name/category
+  - If apparel → "One Size"
+  - If shoes → "US 8"
+  
+Frontend (product.html):
+  - Display sizes in grid
+  - Allow user to select
+  - Filter by color if needed
+            </div>
+            <div class="status-ok">Status: IMPLEMENTED ✓</div>
+        </div>
+
+        <div class="fix-item">
+            <div class="fix-title">Fix #3: Quantity +/- Buttons Now Fully Functional ✓</div>
+            <div class="fix-description">
+                Users can now increase and decrease the product quantity using the +/- buttons before adding to cart.
+            </div>
+            <strong>Interactive Demo:</strong>
+            <div class="qty-demo">
+                <button class="qty-btn" onclick="decreaseQty()">−</button>
+                <input type="number" class="qty-input" id="demoQty" value="1" min="1" readonly>
+                <button class="qty-btn" onclick="increaseQty()">+</button>
+            </div>
+            <strong>JavaScript Implementation:</strong>
+            <div class="code-block">
+function increaseQuantity() {
+  const input = document.getElementById('quantity');
+  if (input) {
+    const currentValue = parseInt(input.value) || 1;
+    input.value = currentValue + 1;
+    console.log('[QUANTITY] Increased to:', input.value);
+  }
+}
+
+function decreaseQuantity() {
+  const input = document.getElementById('quantity');
+  if (input) {
+    const currentValue = parseInt(input.value) || 1;
+    if (currentValue > 1) {
+      input.value = currentValue - 1;
+      console.log('[QUANTITY] Decreased to:', input.value);
+    }
+  }
+}
+            </div>
+            <div class="status-ok">Status: IMPLEMENTED ✓</div>
+        </div>
+
+        <div class="fix-item">
+            <div class="fix-title">Additional Improvements</div>
+            <ul style="color: #4b5563; line-height: 1.8;">
+                <li><strong>Color Hex Mapping:</strong> 24+ predefined colors with accurate hex codes</li>
+                <li><strong>Fallback Colors:</strong> Unknown colors generate unique colors from name hash</li>
+                <li><strong>Multi-Color Support:</strong> Supports color combinations like "Black/Yellow" with gradients</li>
+                <li><strong>Browser Console Logging:</strong> Debug logs help troubleshoot issues
+                    <div class="code-block" style="margin-top: 5px;">
+[COLOR INIT] Found 1 color swatches
+[COLOR INIT] Processing color: Black
+[COLOR INIT] Applied color to Black: #000000
+[QUANTITY] Increased to: 2
+                    </div>
+                </li>
+                <li><strong>Backward Compatible:</strong> Works with existing variants and fallback logic</li>
+                <li><strong>Performance Optimized:</strong> Color initialization delayed until DOM ready</li>
+            </ul>
+        </div>
+
+        <div class="fix-item" style="border-left-color: #10b981; background: #f0fdf4;">
+            <div class="fix-title" style="color: #10b981;">Testing Instructions</div>
+            <ol style="color: #4b5563; line-height: 1.8;">
+                <li><strong>Start Flask:</strong> <code>python app.py</code></li>
+                <li><strong>Navigate to:</strong> <code>http://localhost:5000/product/1</code></li>
+                <li><strong>Open DevTools:</strong> Press F12 → Console tab</li>
+                <li><strong>Verify colors:</strong> Swatches show actual colors (not gray)</li>
+                <li><strong>Test sizes:</strong> Click a color to see available sizes</li>
+                <li><strong>Test quantity:</strong> Click +/- buttons, check console for <code>[QUANTITY]</code> logs</li>
+                <li><strong>Test selection:</strong> After selecting color & size, "Add to Cart" button should enable</li>
+            </ol>
+        </div>
+
+        <div class="fix-item" style="border-left-color: #f59e0b; background: #fffbeb;">
+            <div class="fix-title" style="color: #d97706;">Files Modified</div>
+            <ul style="color: #4b5563; line-height: 1.8;">
+                <li><code>app.py</code> - Lines 920-955: Fallback color/size detection</li>
+                <li><code>templates/pages/product.html</code> - Lines 1326-1660:
+                    <ul>
+                        <li>Color hex mapping (line 1355)</li>
+                        <li>getHexColor() function (line 1372)</li>
+                        <li>initializeColorSwatches() function (line 1397)</li>
+                        <li>Enhanced quantity functions (lines 1641-1660)</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function increaseQty() {
+            const input = document.getElementById('demoQty');
+            input.value = parseInt(input.value) + 1;
+        }
+
+        function decreaseQty() {
+            const input = document.getElementById('demoQty');
+            const current = parseInt(input.value);
+            if (current > 1) {
+                input.value = current - 1;
+            }
+        }
+    </script>
+</body>
+</html>

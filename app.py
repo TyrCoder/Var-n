@@ -376,6 +376,46 @@ def init_db():
             FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
+        # Create seller notifications table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS seller_notifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            seller_id INT NOT NULL,
+            order_id INT NOT NULL,
+            notification_type ENUM('new_order', 'order_confirmed', 'order_released', 'order_cancelled', 'rider_assigned', 'delivery_complete') DEFAULT 'new_order',
+            title VARCHAR(200) NOT NULL,
+            message TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT FALSE,
+            read_at TIMESTAMP NULL,
+            action_url VARCHAR(500),
+            priority ENUM('low', 'normal', 'high', 'urgent') DEFAULT 'normal',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            INDEX idx_seller (seller_id),
+            INDEX idx_order (order_id),
+            INDEX idx_unread (seller_id, is_read),
+            INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+        # Create order status history table
+        cursor.execute('''CREATE TABLE IF NOT EXISTS order_status_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            order_id INT NOT NULL,
+            seller_id INT NOT NULL,
+            old_status VARCHAR(50),
+            new_status VARCHAR(50) NOT NULL,
+            changed_by INT NOT NULL,
+            reason TEXT,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+            FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE RESTRICT,
+            INDEX idx_order (order_id),
+            INDEX idx_seller (seller_id),
+            INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
         try:
             cursor.execute('ALTER TABLE shipments ADD COLUMN seller_confirmed BOOLEAN DEFAULT FALSE')
@@ -917,9 +957,47 @@ def product_page(product_id):
                 print(f"[DEBUG] Product {product_id}: Found {len(variants)} variants, {len(sizes)} sizes, {len(colors)} colors")
                 print(f"[DEBUG] Sizes: {sizes}")
                 print(f"[DEBUG] Colors: {colors}")
+                
+                # Build stock map
                 for v in variants:
                     key = f"{v['size']}_{v['color']}"
                     stock_map[key] = v['stock_quantity']
+                
+                # If no variants exist, create default ones based on product name/category
+                if len(variants) == 0:
+                    print(f"[DEBUG] No variants found for product {product_id}, creating defaults...")
+                    # Try to infer color from product name
+                    product_name_lower = product['name'].lower()
+                    
+                    default_colors = []
+                    # Check for color keywords in the product name
+                    if 'black' in product_name_lower:
+                        default_colors.append('Black')
+                    elif 'white' in product_name_lower:
+                        default_colors.append('White')
+                    elif 'blue' in product_name_lower:
+                        default_colors.append('Blue')
+                    elif 'red' in product_name_lower:
+                        default_colors.append('Red')
+                    elif 'gray' in product_name_lower or 'grey' in product_name_lower:
+                        default_colors.append('Gray')
+                    else:
+                        # Default to Black if color not detected
+                        default_colors.append('Black')
+                    
+                    # Set default size
+                    default_sizes = ['One Size'] if 'shoe' not in product_name_lower and 'footwear' not in product_name_lower else ['US 8']
+                    
+                    colors = default_colors
+                    sizes = default_sizes
+                    
+                    # Create default stock map entry
+                    for size in sizes:
+                        for color in colors:
+                            key = f"{size}_{color}"
+                            stock_map[key] = 100  # Assume 100 in stock if not specified
+                    
+                    print(f"[DEBUG] Created default colors: {colors}, sizes: {sizes}")
 
             cursor.close()
             conn.close()
@@ -1477,6 +1555,26 @@ def place_order():
 
         conn.commit()
 
+        # Create notification for seller about new order
+        create_seller_notification(
+            seller_id=seller_id,
+            order_id=order_id,
+            notification_type='new_order',
+            title='New Order Received',
+            message=f'New order {order_number} received with {len(items)} item(s). Total: PHP {total_amount:.2f}',
+            priority='high'
+        )
+
+        # Record order status change in history
+        record_order_status_change(
+            order_id=order_id,
+            seller_id=seller_id,
+            old_status=None,
+            new_status='pending',
+            changed_by_user_id=user_id,
+            reason='Order placed by customer',
+            notes=f'Order created with {len(items)} items. Order number: {order_number}'
+        )
 
         buyer_email = shipping.get('email', '')
         if not buyer_email:
@@ -4033,6 +4131,62 @@ def seller_promotions():
         return jsonify({'success': False, 'error': str(err)}), 500
 
 
+def create_seller_notification(seller_id, order_id, notification_type, title, message, priority='normal'):
+    """Create a notification for seller when order is placed or status changes"""
+    try:
+        conn = get_db()
+        if not conn:
+            print(f"[NOTIFICATION] Failed to create notification: DB connection failed")
+            return False
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        # Determine action URL based on notification type
+        action_url = f'/seller-dashboard?tab=orders&order_id={order_id}'
+        
+        cursor.execute('''
+            INSERT INTO seller_notifications (
+                seller_id, order_id, notification_type, title, message,
+                is_read, action_url, priority, created_at
+            ) VALUES (%s, %s, %s, %s, %s, FALSE, %s, %s, NOW())
+        ''', (seller_id, order_id, notification_type, title, message, action_url, priority))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"[NOTIFICATION] Created {notification_type} notification for seller {seller_id}, order {order_id}")
+        return True
+    except Exception as e:
+        print(f"[NOTIFICATION ERROR] Failed to create notification: {e}")
+        return False
+
+def record_order_status_change(order_id, seller_id, old_status, new_status, changed_by_user_id, reason='', notes=''):
+    """Record order status change in history table"""
+    try:
+        conn = get_db()
+        if not conn:
+            print(f"[STATUS HISTORY] Failed to record status change: DB connection failed")
+            return False
+        
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute('''
+            INSERT INTO order_status_history (
+                order_id, seller_id, old_status, new_status, changed_by, reason, notes, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+        ''', (order_id, seller_id, old_status, new_status, changed_by_user_id, reason, notes))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        print(f"[STATUS HISTORY] Recorded status change for order {order_id}: {old_status} → {new_status}")
+        return True
+    except Exception as e:
+        print(f"[STATUS HISTORY ERROR] Failed to record status change: {e}")
+        return False
+
 def send_email(to_email, subject, html_body):
     """Send email notification (using simple SMTP or print for development)"""
     try:
@@ -5717,30 +5871,51 @@ def api_products():
 
 @app.route('/api/categories')
 def api_categories():
-    """Get all active categories for browsing with category_type"""
+    """Get all active categories organized hierarchically (parent with children)"""
     try:
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
 
-        # Get all active categories (both parent and leaf categories)
+        # Get all parent categories (where parent_id IS NULL)
         cursor.execute("""
-            SELECT id, name, slug, category_type, parent_id, is_active
+            SELECT id, name, slug, category_type, is_active
             FROM categories
-            WHERE is_active = TRUE
-            ORDER BY category_type ASC, name ASC
+            WHERE is_active = TRUE AND parent_id IS NULL
+            ORDER BY name ASC
         """)
-        all_categories = cursor.fetchall()
+        parent_categories = cursor.fetchall()
 
-        # Convert to proper format
         categories_response = []
-        for cat in all_categories:
-            categories_response.append({
-                'id': cat['id'],
-                'name': cat['name'],
-                'slug': cat['slug'],
-                'category_type': cat['category_type'] or 'OTHER',
-                'parent_id': cat['parent_id']
-            })
+        
+        for parent in parent_categories:
+            # Get child categories for this parent
+            cursor.execute("""
+                SELECT id, name, slug, category_type, parent_id
+                FROM categories
+                WHERE is_active = TRUE AND parent_id = %s
+                ORDER BY name ASC
+            """, (parent['id'],))
+            children = cursor.fetchall()
+            
+            parent_obj = {
+                'id': parent['id'],
+                'name': parent['name'],
+                'slug': parent['slug'],
+                'category_type': parent['category_type'] or 'general',
+                'children': []
+            }
+            
+            # Add children to parent
+            for child in children:
+                parent_obj['children'].append({
+                    'id': child['id'],
+                    'name': child['name'],
+                    'slug': child['slug'],
+                    'category_type': child['category_type'] or 'general',
+                    'parent_id': child['parent_id']
+                })
+            
+            categories_response.append(parent_obj)
 
         cursor.close()
         conn.close()
@@ -5750,6 +5925,7 @@ def api_categories():
             'categories': categories_response
         }), 200
     except Exception as e:
+        print(f"[ERROR] Failed to load categories: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -9869,6 +10045,27 @@ def seller_confirm_order():
 
         conn.commit()
 
+        # Create notification for seller confirming order
+        create_seller_notification(
+            seller_id=seller_id,
+            order_id=order_id,
+            notification_type='order_confirmed',
+            title='Order Confirmed',
+            message=f'Order {order_id} has been confirmed and is being processed',
+            priority='normal'
+        )
+
+        # Record order status change
+        record_order_status_change(
+            order_id=order_id,
+            seller_id=seller_id,
+            old_status='pending',
+            new_status='confirmed',
+            changed_by_user_id=user_id,
+            reason='Seller confirmed order',
+            notes='Order status changed from pending to confirmed'
+        )
+
 
         cursor.execute('SELECT id FROM shipments WHERE order_id = %s', (order_id,))
         shipment = cursor.fetchone()
@@ -10394,6 +10591,302 @@ def approve_rider_delivery():
         print(f"[ERROR] approve_rider_delivery: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+# ===== NEW SELLER NOTIFICATION & ORDER MANAGEMENT ENDPOINTS =====
+
+@app.route('/api/seller/notifications', methods=['GET'])
+def get_seller_notifications():
+    """Get all notifications for logged-in seller with optional filtering"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+        user_id = session['user_id']
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get seller_id
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+
+        seller_id = seller_result['id']
+
+        # Get filter parameters
+        unread_only = request.args.get('unread_only', 'false').lower() == 'true'
+        limit = int(request.args.get('limit', 50))
+
+        # Build query
+        query = '''
+            SELECT 
+                id, order_id, notification_type, title, message, 
+                is_read, read_at, action_url, priority, created_at
+            FROM seller_notifications
+            WHERE seller_id = %s
+        '''
+        params = [seller_id]
+
+        if unread_only:
+            query += ' AND is_read = FALSE'
+
+        query += ' ORDER BY created_at DESC LIMIT %s'
+        params.append(limit)
+
+        cursor.execute(query, params)
+        notifications = cursor.fetchall()
+
+        # Format timestamps
+        for notif in notifications:
+            if notif.get('created_at'):
+                notif['created_at'] = notif['created_at'].isoformat()
+            if notif.get('read_at'):
+                notif['read_at'] = notif['read_at'].isoformat()
+
+        # Get unread count
+        cursor.execute(
+            'SELECT COUNT(*) as count FROM seller_notifications WHERE seller_id = %s AND is_read = FALSE',
+            (seller_id,)
+        )
+        unread_count = cursor.fetchone()['count']
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'notifications': notifications,
+            'unread_count': unread_count,
+            'total_count': len(notifications)
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] get_seller_notifications: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/seller/notifications/<int:notification_id>/read', methods=['POST'])
+def mark_notification_read(notification_id):
+    """Mark a specific notification as read"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+        user_id = session['user_id']
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Verify seller owns this notification
+        cursor.execute('''
+            SELECT sn.id, s.id as seller_id
+            FROM seller_notifications sn
+            JOIN sellers s ON sn.seller_id = s.id
+            WHERE sn.id = %s AND s.user_id = %s
+        ''', (notification_id, user_id))
+
+        notif_check = cursor.fetchone()
+        if not notif_check:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Notification not found'}), 404
+
+        # Mark as read
+        cursor.execute('''
+            UPDATE seller_notifications
+            SET is_read = TRUE, read_at = NOW()
+            WHERE id = %s
+        ''', (notification_id,))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        print(f"[✅] Notification {notification_id} marked as read")
+
+        return jsonify({
+            'success': True,
+            'message': 'Notification marked as read'
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] mark_notification_read: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/seller/orders/status/<status>', methods=['GET'])
+def get_orders_by_status(status):
+    """Get orders filtered by status (pending, confirmed, released, delivered, all)"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+        user_id = session['user_id']
+        valid_statuses = ['pending', 'confirmed', 'released_to_rider', 'delivered', 'cancelled', 'all']
+
+        if status not in valid_statuses:
+            return jsonify({'success': False, 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}), 400
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get seller_id
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+
+        seller_id = seller_result['id']
+
+        # Query orders for this seller
+        query = '''
+            SELECT DISTINCT
+                o.id,
+                o.order_number,
+                o.user_id,
+                o.total_amount,
+                o.order_status,
+                o.created_at,
+                o.updated_at,
+                CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+                u.email as customer_email,
+                (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count,
+                IFNULL(s.status, 'pending') as shipment_status,
+                IFNULL(s.rider_id, 0) as rider_id,
+                a.city as shipping_city,
+                a.province as shipping_province
+            FROM orders o
+            INNER JOIN order_items oi ON o.id = oi.order_id
+            INNER JOIN products p ON oi.product_id = p.id
+            LEFT JOIN users u ON o.user_id = u.id
+            LEFT JOIN shipments s ON s.order_id = o.id
+            LEFT JOIN addresses a ON o.shipping_address_id = a.id
+            WHERE p.seller_id = %s
+        '''
+        params = [seller_id]
+
+        if status != 'all':
+            query += ' AND o.order_status = %s'
+            params.append(status)
+
+        query += ' ORDER BY o.created_at DESC'
+
+        cursor.execute(query, params)
+        orders = cursor.fetchall()
+
+        # Format timestamps and amounts
+        for order in orders:
+            if order.get('created_at'):
+                order['created_at'] = order['created_at'].isoformat()
+            if order.get('updated_at'):
+                order['updated_at'] = order['updated_at'].isoformat()
+            if order.get('total_amount'):
+                order['total_amount'] = float(order['total_amount'])
+
+        cursor.close()
+        conn.close()
+
+        print(f"[DEBUG] get_orders_by_status: Found {len(orders)} orders with status={status} for seller_id={seller_id}")
+
+        return jsonify({
+            'success': True,
+            'orders': orders,
+            'status': status,
+            'count': len(orders)
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] get_orders_by_status: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/seller/order/<int:order_id>/release', methods=['POST'])
+def release_order_to_rider(order_id):
+    """Release an order for rider pickup/delivery (change status to released_to_rider)"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+        user_id = session['user_id']
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get seller_id
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller_result = cursor.fetchone()
+        if not seller_result:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Not a seller'}), 403
+
+        seller_id = seller_result['id']
+
+        # Verify seller owns this order
+        verify_query = '''
+            SELECT o.id, o.order_status
+            FROM orders o
+            INNER JOIN order_items oi ON o.id = oi.order_id
+            INNER JOIN products p ON oi.product_id = p.id
+            WHERE o.id = %s AND p.seller_id = %s
+            LIMIT 1
+        '''
+
+        cursor.execute(verify_query, (order_id, seller_id))
+        order_check = cursor.fetchone()
+
+        if not order_check:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found or you do not have permission'}), 403
+
+        old_status = order_check['order_status']
+
+        # Update order status to released_to_rider
+        cursor.execute('''
+            UPDATE orders
+            SET order_status = 'released_to_rider', updated_at = NOW()
+            WHERE id = %s
+        ''', (order_id,))
+
+        conn.commit()
+
+        # Create notification
+        create_seller_notification(
+            seller_id=seller_id,
+            order_id=order_id,
+            notification_type='order_released',
+            title='Order Released to Rider',
+            message=f'Order {order_id} has been released for pickup and delivery',
+            priority='normal'
+        )
+
+        # Record status change
+        record_order_status_change(
+            order_id=order_id,
+            seller_id=seller_id,
+            old_status=old_status,
+            new_status='released_to_rider',
+            changed_by_user_id=user_id,
+            reason='Seller released order for delivery',
+            notes='Order released to rider network'
+        )
+
+        cursor.close()
+        conn.close()
+
+        print(f"[✅] Order {order_id} released to rider by seller {seller_id}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Order released for delivery! Available riders in the area will be notified.'
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] release_order_to_rider: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/logout')

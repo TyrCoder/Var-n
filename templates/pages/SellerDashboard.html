@@ -387,8 +387,9 @@
     <script>
       console.log('✅ [INIT] SellerDashboard script starting...');
 
-      // Declare functions early so they're available when needed
+      // Declare global variables early so they're available when needed
       let pageTemplates = {};
+      let allOrders = []; // Global orders array for filtering
 
       function updateOrderCount(count) {
         const badge = document.getElementById('order-count-badge');
@@ -932,25 +933,36 @@
         'orders': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 16px;">Order Management</h2>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">📦 Order Management</h2>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <button style="background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;" onclick="loadNotifications()">
+                    🔔 Notifications
+                    <span id="notification-badge" style="background: #ef4444; color: white; border-radius: 999px; padding: 2px 6px; font-size: 10px; font-weight: 600; margin-left: 6px; display: none;">0</span>
+                  </button>
+                </div>
+              </div>
 
-              <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                <button class="action-btn" data-filter-btn="all" onclick="filterOrders('all')" style="background: #666; color: #fff; padding: 8px 16px; font-size: 13px;">
+              <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px;">
+                <button class="action-btn" data-filter-btn="all" onclick="filterOrders('all')" style="background: #666; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
                   📋 All Orders
                 </button>
-                <button class="action-btn" data-filter-btn="pending" onclick="filterOrders('pending')" style="background: #ff9800; color: #fff; padding: 8px 16px; font-size: 13px;">
-                  ⏳ Pending
+                <button class="action-btn" data-filter-btn="pending" onclick="filterOrders('pending')" style="background: #ff9800; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
+                  ⏳ Pending <span class="pending-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
                 </button>
-                <button class="action-btn" data-filter-btn="confirmed" onclick="filterOrders('confirmed')" style="background: #2196f3; color: #fff; padding: 8px 16px; font-size: 13px;">
-                  ✔️ Confirmed
+                <button class="action-btn" data-filter-btn="confirmed" onclick="filterOrders('confirmed')" style="background: #2196f3; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
+                  ✔️ Confirmed <span class="confirmed-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
                 </button>
-                <button class="action-btn" data-filter-btn="release_to_rider" onclick="filterOrders('release_to_rider')" style="background: #4caf50; color: #fff; padding: 8px 16px; font-size: 13px;">
-                  🚚 Release to Rider
+                <button class="action-btn" data-filter-btn="released_to_rider" onclick="filterOrders('released_to_rider')" style="background: #10b981; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
+                  🚚 Released <span class="released-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
+                </button>
+                <button class="action-btn" data-filter-btn="delivered" onclick="filterOrders('delivered')" style="background: #8b5cf6; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
+                  ✅ Delivered <span class="delivered-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
                 </button>
               </div>
 
               <div id="orders-list" style="overflow-x: auto;">
-                <p style="color: #999;">Click a status filter to view orders...</p>
+                <p style="color: #999; text-align: center; padding: 40px;">Click a status filter to view orders...</p>
               </div>
             </div>
           </div>
@@ -1816,41 +1828,6 @@
         console.log('[SUCCESS] Ingredients section initialized');
       }
 
-      function toggleSizeColorSections() {
-        const categorySelect = document.getElementById('categorySelect');
-        if (!categorySelect) return;
-        
-        const selectedCategoryId = categorySelect.value;
-        
-        // Fetch category details to determine category_type
-        fetch(`/api/categories/${selectedCategoryId}`)
-          .then(response => response.json())
-          .then(data => {
-            const categoryType = data.category_type || 'general';
-            
-            const ingredientsSection = document.getElementById('ingredientsSection');
-            const variantsSection = document.getElementById('variantsSection');
-            
-            if (categoryType === 'grooming') {
-              // Show ingredients, hide colors/sizes
-              if (ingredientsSection) ingredientsSection.style.display = 'block';
-              if (variantsSection) variantsSection.style.display = 'none';
-              console.log('[CATEGORY] Grooming product - showing ingredients');
-            } else {
-              // Show colors/sizes, hide ingredients
-              if (ingredientsSection) ingredientsSection.style.display = 'none';
-              if (variantsSection) variantsSection.style.display = 'block';
-              console.log('[CATEGORY] Apparel product - showing variants');
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching category:', error);
-            // Default to showing variants (apparel)
-            document.getElementById('ingredientsSection').style.display = 'none';
-            document.getElementById('variantsSection').style.display = 'block';
-          });
-      }
-
       function updateStockInputs() {
         console.log('[UPDATE] Updating stock inputs for color:', selectedColor);
 
@@ -1955,7 +1932,7 @@
               allOrders = data.orders;
               console.log('[SUCCESS] All orders stored:', allOrders.length);
               updateOrderCount(allOrders.length);
-
+              updateStatusCounts();
 
               if (initialFilter && initialFilter !== 'all') {
                 filterOrders(initialFilter);
@@ -1966,6 +1943,7 @@
               console.warn('❌ No orders in response or invalid format:', data);
               allOrders = [];
               updateOrderCount(0);
+              updateStatusCounts();
               const ordersList = document.getElementById('orders-list');
               if (ordersList) {
                 ordersList.innerHTML = '<p style="color:#999;padding:40px;text-align:center;">No orders yet</p>';
@@ -1975,6 +1953,7 @@
           .catch(error => {
             console.error('❌ Error loading orders:', error);
             updateOrderCount(0);
+            updateStatusCounts();
             const ordersList = document.getElementById('orders-list');
             if (ordersList) {
               ordersList.innerHTML = `<p style="color:#d32f2f;padding:40px;text-align:center;">Error loading orders: ${error.message}</p>`;
@@ -2386,6 +2365,186 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         });
       }
 
+      // ===== NEW: Notification and Status Tracking Functions =====
+
+      function updateStatusCounts() {
+        if (!allOrders || allOrders.length === 0) return;
+
+        const counts = {
+          pending: 0,
+          confirmed: 0,
+          released_to_rider: 0,
+          delivered: 0
+        };
+
+        allOrders.forEach(order => {
+          if (counts.hasOwnProperty(order.order_status)) {
+            counts[order.order_status]++;
+          }
+        });
+
+        // Update badge elements
+        const pendingBtn = document.querySelector('[data-filter-btn="pending"]');
+        const confirmedBtn = document.querySelector('[data-filter-btn="confirmed"]');
+        const releasedBtn = document.querySelector('[data-filter-btn="released_to_rider"]');
+        const deliveredBtn = document.querySelector('[data-filter-btn="delivered"]');
+
+        if (pendingBtn) {
+          const span = pendingBtn.querySelector('.pending-count');
+          if (span) span.textContent = counts.pending;
+        }
+        if (confirmedBtn) {
+          const span = confirmedBtn.querySelector('.confirmed-count');
+          if (span) span.textContent = counts.confirmed;
+        }
+        if (releasedBtn) {
+          const span = releasedBtn.querySelector('.released-count');
+          if (span) span.textContent = counts.released_to_rider;
+        }
+        if (deliveredBtn) {
+          const span = deliveredBtn.querySelector('.delivered-count');
+          if (span) span.textContent = counts.delivered;
+        }
+      }
+
+      function loadNotifications() {
+        console.log('[FETCH] Loading seller notifications...');
+
+        fetch('/api/seller/notifications?unread_only=false&limit=20', { credentials: 'include' })
+          .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then(data => {
+            if (data.success && data.notifications) {
+              displayNotifications(data.notifications, data.unread_count);
+            } else {
+              alert('Failed to load notifications');
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error loading notifications:', error);
+            alert('Error loading notifications: ' + error.message);
+          });
+      }
+
+      function displayNotifications(notifications, unreadCount) {
+        const content = document.getElementById('dashboardContent');
+        if (!content) return;
+
+        // Update notification badge
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+          if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = 'inline-block';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+
+        let html = `
+          <div class="card">
+            <div class="inner">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">🔔 Notifications</h2>
+                <button onclick="loadPage('orders')" style="background: #0a0a0a; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;">← Back to Orders</button>
+              </div>
+
+              <div style="max-height: 600px; overflow-y: auto;">
+        `;
+
+        if (notifications.length === 0) {
+          html += '<p style="color: #999; text-align: center; padding: 40px;">No notifications yet</p>';
+        } else {
+          notifications.forEach(notif => {
+            const createdDate = new Date(notif.created_at).toLocaleDateString();
+            const createdTime = new Date(notif.created_at).toLocaleTimeString();
+            const isRead = notif.is_read ? 'opacity: 0.6;' : '';
+            const typeEmojis = {
+              'new_order': '📦',
+              'order_confirmed': '✔️',
+              'order_released': '🚚',
+              'order_cancelled': '❌',
+              'rider_assigned': '🏍️',
+              'delivery_complete': '✅'
+            };
+            const emoji = typeEmojis[notif.notification_type] || '📢';
+
+            html += `
+              <div style="background: #f9fafb; border-left: 4px solid ${notif.priority === 'high' ? '#ef4444' : '#3b82f6'}; padding: 14px; margin-bottom: 10px; border-radius: 6px; ${isRead}" onclick="${!notif.is_read ? `markNotificationRead(${notif.id})` : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: start; gap: 10px;">
+                  <div style="flex: 1;">
+                    <p style="margin: 0 0 6px; font-weight: 600; color: #0a0a0a; font-size: 14px;">
+                      ${emoji} ${notif.title}
+                    </p>
+                    <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px;">${notif.message}</p>
+                    <p style="margin: 0; font-size: 11px; color: #9ca3af;">${createdDate} at ${createdTime}</p>
+                  </div>
+                  ${!notif.is_read ? `<span style="background: #3b82f6; color: white; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px;"></span>` : ''}
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        html += `
+              </div>
+            </div>
+          </div>
+        `;
+
+        content.innerHTML = html;
+      }
+
+      function markNotificationRead(notificationId) {
+        console.log('[POST] Marking notification as read:', notificationId);
+
+        fetch(`/api/seller/notifications/${notificationId}/read`, {
+          method: 'POST',
+          credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            console.log('✅ Notification marked as read');
+            loadNotifications();
+          }
+        })
+        .catch(error => console.error('❌ Error marking notification read:', error));
+      }
+
+      function releaseOrderToRider(orderId) {
+        console.log('[INFO] Releasing order to rider:', orderId);
+
+        if (!confirm('Release this order for rider pickup? Available riders in the area will be notified.')) {
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+
+        fetch(`/api/seller/order/${orderId}/release`, {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✅ ' + data.message);
+            loadOrders('confirmed');
+            loadNotifications();
+          } else {
+            alert('❌ Failed to release order: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error releasing order:', error);
+          alert('Error releasing order: ' + error.message);
+        });
+      }
+
       function confirmOrder(orderId) {
         console.log('[INFO] Confirming order:', orderId);
 
@@ -2406,6 +2565,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
               '✅ Order confirmed! A rider in your area will accept it soon.';
             alert(message);
             loadOrders(currentOrderFilter);
+            updateStatusCounts();
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
             alert('❌ Failed to confirm order: ' + (data.error || data.message || 'Unknown error'));
@@ -3285,9 +3445,11 @@ Customer: ${order.customer_name || 'N/A'}
         const categorySelect = document.getElementById('categorySelect');
         if (!categorySelect) return;
 
+        console.log('[INIT] Loading categories...');
         fetch('/api/categories')
           .then(response => response.json())
           .then(data => {
+            console.log('[SUCCESS] Categories loaded:', data);
             if (data.success && data.categories) {
               categorySelect.innerHTML = '<option value="">Select a category</option>';
               
@@ -3323,9 +3485,15 @@ Customer: ${order.customer_name || 'N/A'}
                 
                 categorySelect.appendChild(optgroup);
               });
+              console.log('[SUCCESS] All categories loaded into dropdown');
+            } else {
+              console.warn('[ERROR] Invalid categories response:', data);
             }
           })
-          .catch(error => console.error('Error loading categories:', error));
+          .catch(error => {
+            console.error('[ERROR] Failed to load categories:', error);
+            categorySelect.innerHTML = '<option value="">Error loading categories - ' + error.message + '</option>';
+          });
       }
 
       function loadSalesAnalytics() {
@@ -4110,15 +4278,29 @@ Customer: ${order.customer_name || 'N/A'}
 
       // Logout Modal Functions
       function confirmLogout(event) {
-        event.preventDefault();
-        document.getElementById('logoutModal').style.display = 'flex';
+        if (event) event.preventDefault();
+        console.log('[LOGOUT] Opening logout confirmation modal');
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+          modal.style.display = 'flex';
+        } else {
+          console.error('[LOGOUT] Logout modal not found!');
+          if (confirm('Are you sure you want to logout?')) {
+            window.location.href = '/logout';
+          }
+        }
       }
 
       function closeLogoutModal() {
-        document.getElementById('logoutModal').style.display = 'none';
+        console.log('[LOGOUT] Closing logout modal');
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+          modal.style.display = 'none';
+        }
       }
 
       function proceedLogout() {
+        console.log('[LOGOUT] Proceeding with logout');
         window.location.href = '/logout';
       }
 
