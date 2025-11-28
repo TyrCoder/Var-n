@@ -14,11 +14,11 @@ print("=" * 100)
 print("DEBUGGING PRODUCT IMAGES FOR ORDERS")
 print("=" * 100)
 
-# Check 1: Products and their images
+
 print("\n1. PRODUCTS WITH IMAGES:")
 print("-" * 100)
 cursor.execute('''
-    SELECT p.id, p.name, COUNT(pi.id) as total_images, 
+    SELECT p.id, p.name, COUNT(pi.id) as total_images,
            SUM(CASE WHEN pi.is_primary = 1 THEN 1 ELSE 0 END) as primary_count
     FROM products p
     LEFT JOIN product_images pi ON p.id = pi.product_id
@@ -30,7 +30,7 @@ cursor.execute('''
 for row in cursor.fetchall():
     print(f"Product ID: {row['id']:3d}, Name: {row['name']:30s}, Total Images: {row['total_images']}, Primary: {row['primary_count']}")
 
-# Check 2: Sample order with items
+
 print("\n\n2. SAMPLE ORDER WITH ITEMS AND IMAGES:")
 print("-" * 100)
 cursor.execute('''
@@ -45,8 +45,8 @@ sample_order = cursor.fetchone()
 if sample_order:
     order_id = sample_order['id']
     print(f"Order ID: {order_id}, Order Number: {sample_order['order_number']}, Items: {sample_order['item_count']}")
-    
-    # Get order items with image URLs
+
+
     cursor.execute('''
         SELECT oi.id, oi.product_id, p.name, oi.quantity,
                pi.image_url, pi.is_primary
@@ -55,12 +55,12 @@ if sample_order:
         LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
         WHERE oi.order_id = %s
     ''', (order_id,))
-    
+
     print("\nOrder Items:")
     for item in cursor.fetchall():
         print(f"  Item ID: {item['id']}, Product: {item['name']}, Image: {item['image_url']}, Primary: {item['is_primary']}")
 
-# Check 3: Products with NO primary image
+
 print("\n\n3. PRODUCTS WITH MISSING PRIMARY IMAGES:")
 print("-" * 100)
 cursor.execute('''

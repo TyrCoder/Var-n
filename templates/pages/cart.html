@@ -475,13 +475,13 @@
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
-      // User dropdown toggle
+
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('show');
       }
 
-      // Close dropdown when clicking outside
+
       window.addEventListener('click', function(e) {
         if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
           const dropdown = document.getElementById('userDropdown');
@@ -491,7 +491,7 @@
         }
       });
 
-      // Logout confirmation function
+
       function confirmLogout() {
         document.getElementById('logoutModal').style.display = 'flex';
       }
@@ -504,9 +504,9 @@
         window.location.href = '{{ url_for("logout") }}';
       }
 
-      // Load cart content on page load
+
       document.addEventListener('DOMContentLoaded', async () => {
-        // Fetch buyer name
+
         fetch('/get_buyer_name')
           .then(response => response.json())
           .then(data => {
@@ -518,11 +518,11 @@
           })
           .catch(error => console.error('Error fetching buyer name:', error));
 
-        // Load cart content
+
         await loadCartPage();
       });
 
-      // Load cart page content
+
       async function loadCartPage() {
         const cartContent = document.getElementById('cartContent');
 
@@ -614,7 +614,7 @@
         }
       }
 
-      // Update cart item quantity
+
       async function updateCartQuantity(cartId, newQuantity) {
         if (newQuantity < 1) {
           await removeCartItem(cartId);
@@ -624,22 +624,22 @@
         if (window.VaronCart) {
           const success = await VaronCart.update(cartId, newQuantity);
           if (success) {
-            await loadCartPage(); // Reload cart content
+            await loadCartPage();
           }
         }
       }
 
-      // Remove cart item
+
       async function removeCartItem(cartId) {
         if (window.VaronCart) {
           const success = await VaronCart.remove(cartId);
           if (success) {
-            await loadCartPage(); // Reload cart content
+            await loadCartPage();
           }
         }
       }
 
-      // Proceed to checkout
+
       function proceedToCheckout() {
         window.location.href = '/checkout';
       }

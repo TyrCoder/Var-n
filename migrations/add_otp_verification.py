@@ -2,13 +2,13 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
+
 load_dotenv()
 
 def add_otp_table():
     """Add OTP verification table to existing database"""
 
-    # Database configuration
+
     db_config = {
         'host': os.getenv('DB_HOST', 'localhost'),
         'user': os.getenv('DB_USER', 'root'),
@@ -17,13 +17,13 @@ def add_otp_table():
     }
 
     try:
-        # Connect to database
+
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
         print("Connected to database successfully")
 
-        # Check if OTP table already exists
+
         cursor.execute("SHOW TABLES LIKE 'otp_verifications'")
         if cursor.fetchone():
             print("OTP table already exists. Skipping migration.")
@@ -31,7 +31,7 @@ def add_otp_table():
             conn.close()
             return
 
-        # Create OTP table
+
         create_table_sql = """
         CREATE TABLE otp_verifications (
             id INT AUTO_INCREMENT PRIMARY KEY,

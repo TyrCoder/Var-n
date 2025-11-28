@@ -9,7 +9,7 @@ conn = mysql.connector.connect(
 
 cursor = conn.cursor(dictionary=True)
 
-# Get all sellers (including approved ones to see latest)
+
 cursor.execute('''
     SELECT s.*, u.email, u.first_name, u.last_name, u.phone
     FROM sellers s

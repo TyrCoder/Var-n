@@ -4,7 +4,7 @@ conn = get_db()
 cursor = conn.cursor(dictionary=True)
 
 try:
-    # Check confirmed orders
+
     cursor.execute("""
         SELECT o.id, o.order_number, o.order_status, s.id as shipment_id, s.status as shipment_status, s.rider_id
         FROM orders o
@@ -13,15 +13,15 @@ try:
         LIMIT 5
     """)
     orders = cursor.fetchall()
-    
+
     if orders:
         print("Confirmed/Released Orders:")
         for order in orders:
             print(f"  Order {order['order_number']}: status={order['order_status']}, shipment_status={order['shipment_status']}, rider_id={order['rider_id']}")
     else:
         print("No confirmed or released orders found")
-        
-        # Create a test order in confirmed status
+
+
         print("\nCreating a test order in 'confirmed' status...")
         cursor.execute("""
             INSERT INTO orders (order_number, user_id, seller_id, shipping_address_id, subtotal, total_amount, order_status, payment_status)
@@ -35,7 +35,7 @@ try:
         conn.commit()
         if cursor.rowcount > 0:
             print(f"✅ Created test order")
-        
+
 except Exception as e:
     print(f"❌ Error: {e}")
 finally:

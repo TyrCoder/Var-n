@@ -29,13 +29,13 @@ def check_pending_products():
     conn = get_db()
     if not conn:
         return
-    
+
     cursor = conn.cursor(dictionary=True)
-    
+
     print("\n" + "="*60)
     print("PENDING PRODUCTS (is_active = 0)")
     print("="*60)
-    
+
     cursor.execute('''
         SELECT p.id, p.name, p.is_active, s.store_name, p.created_at
         FROM products p
@@ -43,9 +43,9 @@ def check_pending_products():
         WHERE p.is_active = 0
         ORDER BY p.created_at DESC
     ''')
-    
+
     pending = cursor.fetchall()
-    
+
     if pending:
         print(f"\n✅ Found {len(pending)} pending product(s):\n")
         for prod in pending:
@@ -57,7 +57,7 @@ def check_pending_products():
             print("-" * 50)
     else:
         print("\n⚠️  No pending products found!")
-    
+
     cursor.close()
     conn.close()
     return pending
@@ -67,13 +67,13 @@ def check_approved_products():
     conn = get_db()
     if not conn:
         return
-    
+
     cursor = conn.cursor(dictionary=True)
-    
+
     print("\n" + "="*60)
     print("APPROVED PRODUCTS (is_active = 1)")
     print("="*60)
-    
+
     cursor.execute('''
         SELECT p.id, p.name, p.is_active, s.store_name, p.created_at
         FROM products p
@@ -82,9 +82,9 @@ def check_approved_products():
         ORDER BY p.created_at DESC
         LIMIT 5
     ''')
-    
+
     approved = cursor.fetchall()
-    
+
     if approved:
         print(f"\n✅ Found {len(approved)} approved product(s):\n")
         for prod in approved:
@@ -95,7 +95,7 @@ def check_approved_products():
             print("-" * 50)
     else:
         print("\n⚠️  No approved products found!")
-    
+
     cursor.close()
     conn.close()
     return approved
@@ -105,42 +105,42 @@ def check_product_details(product_id):
     conn = get_db()
     if not conn:
         return
-    
+
     cursor = conn.cursor(dictionary=True)
-    
+
     print(f"\n" + "="*60)
     print(f"PRODUCT DETAILS (ID: {product_id})")
     print("="*60 + "\n")
-    
-    # Get product info
+
+
     cursor.execute('''
         SELECT p.*, s.store_name, s.user_id
         FROM products p
         LEFT JOIN sellers s ON p.seller_id = s.id
         WHERE p.id = %s
     ''', (product_id,))
-    
+
     product = cursor.fetchone()
-    
+
     if not product:
         print(f"❌ Product {product_id} not found!")
         cursor.close()
         conn.close()
         return
-    
+
     print(f"Product Name: {product['name']}")
     print(f"Price: ₱{product['price']}")
     print(f"Seller: {product['store_name']}")
     print(f"Is Active: {product['is_active']} {'✅ (Approved)' if product['is_active'] else '⏳ (Pending)'}")
     print(f"Created: {product['created_at']}")
-    
-    # Check images
+
+
     cursor.execute('''
         SELECT image_url, is_primary
         FROM product_images
         WHERE product_id = %s
     ''', (product_id,))
-    
+
     images = cursor.fetchall()
     print(f"\nImages ({len(images)}):")
     if images:
@@ -148,14 +148,14 @@ def check_product_details(product_id):
             print(f"  - {img['image_url']} {'(Primary)' if img['is_primary'] else ''}")
     else:
         print("  ❌ No images found!")
-    
-    # Check inventory
+
+
     cursor.execute('''
         SELECT stock_quantity, low_stock_threshold
         FROM inventory
         WHERE product_id = %s
     ''', (product_id,))
-    
+
     inventory = cursor.fetchone()
     if inventory:
         print(f"\nInventory:")
@@ -163,21 +163,21 @@ def check_product_details(product_id):
         print(f"  - Low Stock Threshold: {inventory['low_stock_threshold']}")
     else:
         print(f"\n❌ No inventory found!")
-    
-    # Check variants
+
+
     cursor.execute('''
         SELECT size, color, stock_quantity
         FROM product_variants
         WHERE product_id = %s
         LIMIT 10
     ''', (product_id,))
-    
+
     variants = cursor.fetchall()
     if variants:
         print(f"\nVariants ({len(variants)}):")
         for variant in variants:
             print(f"  - {variant['size']} / {variant['color']}: {variant['stock_quantity']} pcs")
-    
+
     cursor.close()
     conn.close()
 
@@ -186,20 +186,20 @@ def test_product_flow():
     print("\n" + "="*60)
     print("PRODUCT FLOW VERIFICATION")
     print("="*60)
-    
-    # Check pending
+
+
     pending = check_pending_products()
-    
-    # Check approved
+
+
     approved = check_approved_products()
-    
-    # Summary
+
+
     print("\n" + "="*60)
     print("SUMMARY")
     print("="*60)
     print(f"Pending Products: {len(pending) if pending else 0}")
     print(f"Approved Products: {len(approved) if approved else 0}")
-    
+
     if pending:
         print("\n✅ FLOW WORKING:")
         print("  1. Products are being created with is_active=0")
@@ -212,8 +212,8 @@ def test_product_flow():
 
 if __name__ == "__main__":
     test_product_flow()
-    
-    # Optional: Check a specific product if you have one
+
+
     print("\n" + "="*60)
     print("To check a specific product, uncomment the line below and add product ID:")
     print("="*60)

@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from app import get_db
 
-# Check database for product images
+
 conn = get_db()
 cursor = conn.cursor(dictionary=True)
 
@@ -28,7 +28,7 @@ if results:
         print(f"  Image URL: {row['image_url']}")
         print(f"  Primary: {row['is_primary']}")
         if row['image_url']:
-            # Check if file exists
+
             file_path = row['image_url'].replace('/static/', 'static/')
             exists = os.path.exists(file_path)
             print(f"  File exists: {exists} ({file_path})")
@@ -56,7 +56,7 @@ print("API TEST: /api/products endpoint")
 print("="*80)
 
 cursor.execute("""
-    SELECT 
+    SELECT
         p.id,
         p.name,
         p.price,

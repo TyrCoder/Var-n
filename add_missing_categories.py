@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Script to add missing product categories to the database
 """
@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database configuration
+
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
@@ -16,7 +16,7 @@ DB_CONFIG = {
     'database': os.getenv('DB_NAME', 'varon')
 }
 
-# Categories to add
+
 CATEGORIES = [
     ('Grooming Products', 'grooming-products', True),
     ('Activewear & Fitness', 'activewear-fitness', True),
@@ -33,23 +33,23 @@ def add_categories():
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
-        
+
         added = 0
         skipped = 0
-        
+
         for name, slug, is_active in CATEGORIES:
-            # Check if category already exists
+
             cursor.execute(
                 "SELECT id FROM categories WHERE slug = %s",
                 (slug,)
             )
             existing = cursor.fetchone()
-            
+
             if existing:
                 print(f"✓ Category '{name}' already exists")
                 skipped += 1
             else:
-                # Insert new category
+
                 cursor.execute(
                     "INSERT INTO categories (name, slug, is_active) VALUES (%s, %s, %s)",
                     (name, slug, is_active)
@@ -57,16 +57,16 @@ def add_categories():
                 conn.commit()
                 print(f"✓ Added category: {name}")
                 added += 1
-        
+
         cursor.close()
         conn.close()
-        
+
         print(f"\n✓ Process complete: {added} added, {skipped} skipped")
-        
+
     except Exception as e:
         print(f"✗ Error: {str(e)}")
         return False
-    
+
     return True
 
 if __name__ == '__main__':

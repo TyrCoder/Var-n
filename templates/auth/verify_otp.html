@@ -217,21 +217,21 @@
         let countdown = 30;
         let timerInterval;
 
-        // Auto-focus OTP input
+
         otpInput.focus();
 
-        // Format OTP input (only allow numbers)
+
         otpInput.addEventListener('input', function(e) {
-          // Remove non-numeric characters
+
           this.value = this.value.replace(/[^0-9]/g, '');
 
-          // Auto-submit when 6 digits entered
+
           if (this.value.length === 6) {
             verifyBtn.click();
           }
         });
 
-        // Handle form submission
+
         otpForm.addEventListener('submit', async function(e) {
           e.preventDefault();
 
@@ -243,7 +243,7 @@
             return;
           }
 
-          // Disable button and show loading
+
           verifyBtn.disabled = true;
           verifyBtn.textContent = 'Verifying...';
 
@@ -282,7 +282,7 @@
           }
         });
 
-        // Handle resend
+
         resendBtn.addEventListener('click', async function() {
           resendBtn.disabled = true;
           resendBtn.textContent = 'Sending...';
@@ -349,7 +349,7 @@
           }, 1000);
         }
 
-        // Start initial timer
+
         startResendTimer();
       });
     </script>

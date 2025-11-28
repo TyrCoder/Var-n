@@ -2,7 +2,7 @@ import mysql.connector
 import os
 from pathlib import Path
 
-# Database config
+
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
@@ -10,7 +10,7 @@ DB_CONFIG = {
     'database': 'varon'
 }
 
-# Get database images
+
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor(dictionary=True)
 cursor.execute("""
@@ -23,7 +23,7 @@ db_products = cursor.fetchall()
 cursor.close()
 conn.close()
 
-# Get filesystem images
+
 static_dir = Path(r"c:\Users\windows\OneDrive\Documents\GitHub\Var-n\static\images\products")
 fs_files = set(f.name for f in static_dir.glob("*") if f.is_file())
 
@@ -40,11 +40,11 @@ for product in db_products:
         print(f"   NO IMAGE IN DATABASE")
         missing_count += 1
         continue
-    
-    # Extract filename from URL path
+
+
     filename = product['image_url'].split('/')[-1]
     file_exists = filename in fs_files
-    
+
     if file_exists:
         print(f"\n✅ Product {product['id']}: {product['name']}")
         print(f"   Image: {filename}")

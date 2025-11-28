@@ -541,7 +541,7 @@
           <!-- Shipping Information -->
           <div class="checkout-section">
             <h2>Shipping Information</h2>
-            
+
             <!-- Saved Addresses Selection -->
             <div class="form-group" id="savedAddressesContainer" style="display:none">
               <label for="savedAddressSelect">Use Saved Address (Optional) *</label>
@@ -550,7 +550,7 @@
               </select>
               <small style="color:#999;margin-top:4px;display:block">Or fill in the form below to use a new address</small>
             </div>
-            
+
             <div class="form-row">
               <div class="form-group">
                 <label for="firstName">First Name *</label>
@@ -599,7 +599,7 @@
               <label for="notes">Delivery Notes (Optional)</label>
               <textarea id="notes" name="notes" placeholder="Add any special instructions for delivery..."></textarea>
             </div>
-            
+
             <!-- Save Address Checkbox -->
             <div class="save-address-checkbox">
               <input type="checkbox" id="saveAddress" name="saveAddress">
@@ -676,13 +676,13 @@
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
-      // User dropdown toggle
+
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('show');
       }
 
-      // Close dropdown when clicking outside
+
       window.addEventListener('click', function(e) {
         if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
           const dropdown = document.getElementById('userDropdown');
@@ -692,7 +692,7 @@
         }
       });
 
-      // Payment method selection
+
       document.querySelectorAll('.payment-option').forEach(option => {
         option.addEventListener('click', function() {
           document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
@@ -701,45 +701,45 @@
         });
       });
 
-      // Phone number prefix handling
+
       function setupPhonePrefix() {
         const phoneInput = document.getElementById('phone');
         if (!phoneInput) return;
 
-        // Ensure +63 prefix is always present
+
         function ensurePrefix() {
           if (!phoneInput.value.startsWith('+63')) {
             phoneInput.value = '+63' + phoneInput.value.replace(/^\+?63?/, '');
           }
         }
 
-        // Initialize with +63 if empty
+
         if (!phoneInput.value || phoneInput.value === '') {
           phoneInput.value = '+63';
         }
 
-        // Handle input events
+
         phoneInput.addEventListener('input', function(e) {
           let value = e.target.value;
-          
-          // Remove any existing +63 to avoid duplication
+
+
           value = value.replace(/^\+?63?/, '');
-          
-          // Add +63 prefix
+
+
           e.target.value = '+63' + value;
-          
-          // Prevent deletion of +63 prefix
+
+
           if (e.target.value.length < 3) {
             e.target.value = '+63';
           }
         });
 
-        // Handle focus - move cursor after +63
+
         phoneInput.addEventListener('focus', function(e) {
           if (e.target.value === '+63') {
             e.target.setSelectionRange(3, 3);
           } else if (e.target.value.startsWith('+63')) {
-            // Keep cursor at current position if there's content after +63
+
             const cursorPos = e.target.selectionStart;
             if (cursorPos < 3) {
               e.target.setSelectionRange(3, 3);
@@ -747,17 +747,17 @@
           }
         });
 
-        // Handle keydown - prevent deletion of +63
+
         phoneInput.addEventListener('keydown', function(e) {
           const cursorPos = e.target.selectionStart;
-          
-          // Prevent backspace/delete if cursor is at or before +63
+
+
           if ((e.key === 'Backspace' || e.key === 'Delete') && cursorPos <= 3) {
             e.preventDefault();
             return false;
           }
-          
-          // Prevent selection and deletion of +63
+
+
           if (e.target.selectionStart < 3 && (e.key === 'Backspace' || e.key === 'Delete')) {
             e.preventDefault();
             e.target.setSelectionRange(3, 3);
@@ -765,29 +765,29 @@
           }
         });
 
-        // Handle paste - ensure +63 prefix
+
         phoneInput.addEventListener('paste', function(e) {
           e.preventDefault();
           const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-          let cleaned = pastedText.replace(/[^0-9]/g, ''); // Remove non-digits
-          cleaned = cleaned.replace(/^63?/, ''); // Remove country code if present
+          let cleaned = pastedText.replace(/[^0-9]/g, '');
+          cleaned = cleaned.replace(/^63?/, '');
           phoneInput.value = '+63' + cleaned;
           phoneInput.setSelectionRange(phoneInput.value.length, phoneInput.value.length);
         });
 
-        // Ensure prefix on blur
+
         phoneInput.addEventListener('blur', ensurePrefix);
       }
 
-      // Load cart items and buyer info on page load
+
       document.addEventListener('DOMContentLoaded', async () => {
-        // Setup phone number prefix
+
         setupPhonePrefix();
 
-        // Load saved addresses
+
         await loadSavedAddresses();
 
-        // Fetch buyer name
+
         fetch('/get_buyer_name')
           .then(response => response.json())
           .then(data => {
@@ -799,11 +799,11 @@
           })
           .catch(error => console.error('Error fetching buyer name:', error));
 
-        // Load order summary
+
         await loadOrderSummary();
       });
 
-      // Load order summary from cart
+
       async function loadOrderSummary() {
         const orderItems = document.getElementById('orderItems');
         const subtotalEl = document.getElementById('subtotal');
@@ -865,28 +865,28 @@
         }
       }
 
-      // Load saved addresses from database
+
       async function loadSavedAddresses() {
         try {
           const response = await fetch('/get-shipping-addresses');
           const data = await response.json();
-          
+
           if (data.success && data.addresses && data.addresses.length > 0) {
             const container = document.getElementById('savedAddressesContainer');
             const select = document.getElementById('savedAddressSelect');
-            
-            // Show the saved addresses section
+
+
             container.style.display = 'block';
-            
-            // Add addresses to dropdown
+
+
             data.addresses.forEach(addr => {
               const option = document.createElement('option');
               option.value = addr.id;
               option.textContent = `${addr.address_type || 'Address'} - ${addr.street_address}, ${addr.city}${addr.is_default ? ' (Default)' : ''}`;
               select.appendChild(option);
             });
-            
-            // Auto-select default address
+
+
             const defaultAddr = data.addresses.find(addr => addr.is_default);
             if (defaultAddr) {
               select.value = defaultAddr.id;
@@ -898,10 +898,10 @@
         }
       }
 
-      // Load a specific saved address into the form
+
       function loadSavedAddress(addressId) {
         if (!addressId) {
-          // Clear all fields when "Select a saved address or enter new" is chosen
+
           document.getElementById('firstName').value = '';
           document.getElementById('lastName').value = '';
           document.getElementById('email').value = '';
@@ -914,18 +914,18 @@
           document.getElementById('notes').value = '';
           return;
         }
-        
+
         fetch(`/get-address/${addressId}`)
           .then(response => response.json())
           .then(data => {
             if (data.success && data.address) {
               const addr = data.address;
-              // Split full_name into first and last name
+
               const nameParts = (addr.full_name || '').split(' ');
               const firstName = nameParts[0] || '';
               const lastName = nameParts.slice(1).join(' ') || '';
-              
-              // Fill form fields
+
+
               document.getElementById('firstName').value = firstName;
               document.getElementById('lastName').value = lastName;
               document.getElementById('phone').value = addr.phone || '+63';
@@ -939,7 +939,7 @@
           .catch(error => console.error('Error loading address:', error));
       }
 
-      // Place order function
+
       async function confirmAndPlaceOrder() {
         const form = document.getElementById('checkoutForm');
         if (!form.checkValidity()) {
@@ -947,7 +947,7 @@
           return;
         }
 
-        // Get cart items
+
         if (!window.VaronCart) {
           alert('Cart system not loaded. Please refresh the page.');
           return;
@@ -962,7 +962,7 @@
         const formData = new FormData(form);
         const saveAddress = document.getElementById('saveAddress').checked;
 
-        // Calculate totals
+
         let subtotal = 0;
         const items = cartItems.map(item => {
           const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
@@ -1002,7 +1002,7 @@
           save_address: saveAddress
         };
 
-        // Disable button and show loading
+
         const placeOrderBtn = document.getElementById('placeOrderBtn');
         const originalText = placeOrderBtn.textContent;
         placeOrderBtn.disabled = true;
@@ -1020,14 +1020,14 @@
           const result = await response.json();
 
           if (result.success) {
-            // Clear cart after successful order
+
             await VaronCart.clear();
-            
-            // Show success alert with order number
+
+
             const orderNumber = result.order_number || 'your order';
             alert(`✅ Order Confirmed!\n\nOrder Number: ${orderNumber}\n\nYour order is now confirmed. Waiting for a rider to accept and deliver it.\n\nYou will be redirected to your order confirmation page.`);
-            
-            // Redirect to order confirmation after alert
+
+
             window.location.href = `/order-confirmation/${result.order_number}`;
           } else {
             alert('❌ Error confirming order: ' + (result.message || 'Unknown error'));
@@ -1036,13 +1036,13 @@
           console.error('Error confirming order:', error);
           alert('Error confirming order. Please try again.');
         } finally {
-          // Re-enable button
+
           placeOrderBtn.disabled = false;
           placeOrderBtn.textContent = originalText;
         }
       }
 
-      // Old placeOrder function - kept for reference but not used
+
       async function placeOrder() {
         return confirmAndPlaceOrder();
       }

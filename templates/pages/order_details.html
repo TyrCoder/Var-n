@@ -213,7 +213,7 @@
 
     <div class="order-details-container">
       <a href="/indexLoggedIn.html#myOrders" class="btn-back">← Back to Orders</a>
-      
+
       <!-- Order Header -->
       <div class="detail-card">
         <div class="detail-header">
@@ -227,7 +227,7 @@
             {{ status_info['emoji'] }} {{ status.upper() }}
           </span>
         </div>
-        
+
         <div class="info-row">
           <span class="info-label">Order Total</span>
           <span class="info-value" style="font-size:20px;color:#0a0a0a">₱{{ "%.2f"|format(order.total_amount|float) }}</span>
@@ -240,7 +240,7 @@
           <span class="info-label">Payment Status</span>
           <span class="info-value" style="color:{% if order.payment_status == 'paid' %}#10b981{% else %}#f59e0b{% endif %}">{{ order.payment_status.upper() }}</span>
         </div>
-        
+
         <!-- Confirm Order Button (only shows for pending orders) -->
         {% if order.order_status == 'pending' %}
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f3f4f6">
@@ -347,7 +347,7 @@
           <strong style="color:#3b82f6">{{ shipment.tracking_number }}</strong>
         </div>
         {% endif %}
-        
+
         <div class="timeline">
           {% if shipment.seller_confirmed or order.order_status in ['confirmed', 'processing', 'shipped', 'delivered'] %}
           <div class="timeline-item">
@@ -364,7 +364,7 @@
             <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Waiting for seller approval</p>
           </div>
           {% endif %}
-          
+
           {% if shipment.status in ['picked_up', 'in_transit', 'out_for_delivery', 'delivered'] %}
           <div class="timeline-item">
             <div class="timeline-dot"></div>
@@ -382,7 +382,7 @@
             <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Waiting for rider pickup</p>
           </div>
           {% endif %}
-          
+
           {% if shipment.status in ['in_transit', 'out_for_delivery', 'delivered'] %}
           <div class="timeline-item">
             <div class="timeline-dot"></div>
@@ -398,7 +398,7 @@
             <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Pending rider update</p>
           </div>
           {% endif %}
-          
+
           {% if shipment.status in ['out_for_delivery', 'delivered'] %}
           <div class="timeline-item">
             <div class="timeline-dot"></div>
@@ -414,7 +414,7 @@
             <p style="margin:4px 0 0;color:#999;font-size:14px">⏳ Waiting for rider update</p>
           </div>
           {% endif %}
-          
+
           {% if shipment.status == 'delivered' %}
           <div class="timeline-item">
             <div class="timeline-dot" style="background:#10b981;box-shadow:0 0 0 2px #10b981"></div>
@@ -482,7 +482,7 @@
         </button>
         {% endif %}
       </div>
-      
+
       <!-- Order Received Button (Only shows when order is delivered) -->
       {% if order.order_status == 'delivered' %}
       <div id="orderReceivedSection" style="margin-top:24px;padding:20px;background:#f0fdf4;border:2px solid #10b981;border-radius:12px;text-align:center">
@@ -512,23 +512,23 @@
     <script>
       async function confirmOrderStatus() {
         const btn = document.getElementById('confirmOrderBtn');
-        
+
         if (!btn) return;
-        
+
         if (!confirm('Confirm this order? This will change the status to CONFIRMED.')) return;
-        
-        // Disable button and show loading
+
+
         btn.disabled = true;
         btn.textContent = 'Confirming...';
-        
+
         try {
           const response = await fetch('/api/confirm-order/{{ order.id }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           });
-          
+
           const data = await response.json();
-          
+
           if (data.success) {
             alert('✅ Order confirmed successfully!');
             location.reload();
@@ -544,24 +544,24 @@
           btn.textContent = '✓ Confirm Order';
         }
       }
-      
+
       async function confirmOrderReceived() {
         const btn = document.getElementById('orderReceivedBtn');
-        
+
         if (!btn) return;
-        
-        // Disable button and show loading
+
+
         btn.disabled = true;
         btn.textContent = 'Confirming...';
-        
+
         try {
           const response = await fetch('/api/order-received/{{ order.id }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           });
-          
+
           const data = await response.json();
-          
+
           if (data.success) {
             alert('✅ ' + data.message);
             location.reload();
@@ -577,10 +577,10 @@
           btn.textContent = '✓ Order Received';
         }
       }
-      
+
       function cancelOrder(orderNumber) {
         if (!confirm('Are you sure you want to cancel this order?')) return;
-        
+
         fetch('/api/cancel-order', {
           method: 'POST',
           headers: {
@@ -602,14 +602,14 @@
           alert('Error cancelling order');
         });
       }
-      
-      // User dropdown functionality
+
+
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('show');
       }
-      
-      // Close dropdown when clicking outside
+
+
       window.addEventListener('click', function(e) {
         if (!e.target.matches('.user-button')) {
           const dropdown = document.getElementById('userDropdown');
@@ -618,8 +618,8 @@
           }
         }
       });
-      
-      // Fetch buyer's first name on page load
+
+
       window.addEventListener('DOMContentLoaded', function() {
         fetch('/get_buyer_name')
           .then(response => response.json())

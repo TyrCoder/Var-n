@@ -15,7 +15,7 @@
 				--error: #ef4444;
 				--success: #10b981;
 			}
-			
+
 			html, body {
 				height: 100%;
 				margin: 0;
@@ -24,7 +24,7 @@
 				background: #f9fafb;
 				line-height: 1.5;
 			}
-			
+
 			.layout {
 				display: grid;
 				grid-template-columns: 1fr 480px;
@@ -32,11 +32,11 @@
 				align-items: center;
 				background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
 			}
-			
+
 			.left {
 				padding: 64px 80px;
 			}
-			
+
 			.brand {
 				display: flex;
 				align-items: center;
@@ -45,21 +45,21 @@
 				font-size: 22px;
 				color: var(--accent);
 			}
-			
+
 			.hero-title {
 				font-size: 42px;
 				color: var(--accent);
 				margin: 24px 0 16px;
 				line-height: 1.2;
 			}
-			
+
 			.hero-sub {
 				color: var(--muted);
 				max-width: 520px;
 				font-size: 16px;
 				margin: 0;
 			}
-			
+
 			.illustration {
 				margin-top: 40px;
 				max-width: 480px;
@@ -74,7 +74,7 @@
 				background: #ffffff;
 				height: 100%;
 			}
-			
+
 			.card {
 				width: 100%;
 				max-width: 400px;
@@ -83,13 +83,13 @@
 				box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.05);
 				padding: 32px;
 			}
-			
+
 			.card h2 {
 				margin: 0 0 8px;
 				font-size: 24px;
 				color: var(--accent);
 			}
-			
+
 			.sub {
 				color: var(--muted);
 				margin-bottom: 28px;
@@ -99,7 +99,7 @@
 			.form-group {
 				margin-bottom: 20px;
 			}
-			
+
 			.form-group label {
 				display: block;
 				font-size: 14px;
@@ -107,7 +107,7 @@
 				color: var(--accent);
 				margin-bottom: 8px;
 			}
-			
+
 			.form-input, .form-select {
 				width: 100%;
 				padding: 12px 16px;
@@ -118,11 +118,11 @@
 				transition: all 0.2s;
 				box-sizing: border-box;
 			}
-			
+
 			.form-input:hover, .form-select:hover {
 				border-color: #d1d5db;
 			}
-			
+
 			.form-input:focus, .form-select:focus {
 				outline: none;
 				border-color: var(--accent);
@@ -184,7 +184,7 @@
 				gap: 12px;
 				margin: 24px 0;
 			}
-			
+
 			.tnc-row input[type="checkbox"] {
 				width: 18px;
 				height: 18px;
@@ -192,19 +192,19 @@
 				border-radius: 4px;
 				cursor: pointer;
 			}
-			
+
 			.tnc-row label {
 				font-size: 14px;
 				color: var(--muted);
 				cursor: pointer;
 			}
-			
+
 			.tnc-row a {
 				color: var(--accent);
 				text-decoration: none;
 				font-weight: 500;
 			}
-			
+
 			.tnc-row a:hover {
 				text-decoration: underline;
 			}
@@ -222,12 +222,12 @@
 				cursor: pointer;
 				transition: all 0.2s;
 			}
-			
+
 			.btn:hover {
 				background: #000000;
 				transform: translateY(-1px);
 			}
-			
+
 			.btn:active {
 				transform: translateY(0);
 			}
@@ -238,7 +238,7 @@
 				margin-top: 20px;
 				text-align: center;
 			}
-			
+
 			.small-note a {
 				color: var(--accent);
 				text-decoration: none;
@@ -269,20 +269,20 @@
 				.layout {
 					grid-template-columns: 1fr;
 				}
-				
+
 				.left {
 					padding: 40px;
 					text-align: center;
 				}
-				
+
 				.hero-sub {
 					margin: 0 auto;
 				}
-				
+
 				.illustration {
 					margin: 32px auto;
 				}
-				
+
 				.card-wrap {
 					padding: 32px 24px;
 				}
@@ -360,7 +360,7 @@
 					<!-- Vehicle details (plate numbers and driver's license) will be dynamically added here when a vehicle type is selected -->
 					<div id="vehicleDetailsContainer" style="display: none; margin-bottom: 20px;">
 					</div>
-					
+
 					<label for="riderRegion">Select Your Service Area</label>
 					<select id="riderRegion" name="region" class="form-select" required onchange="toggleRegionProvinces(this.value)">
 						<option value="">Select a region</option>
@@ -370,12 +370,12 @@
 						<option value="Visayas">Visayas</option>
 						<option value="Mindanao">Mindanao</option>
 					</select>
-					
+
 					<!-- Provinces Container -->
 					<div id="provincesContainer" style="display:none;margin-top:20px">
 						<!-- Provinces will be dynamically shown here -->
 					</div>
-					
+
 					<!-- Hidden input to store selected service areas -->
 					<input type="hidden" id="serviceAreaInput" name="service_area" required>
 				</div>						<div class="form-group">
@@ -404,7 +404,7 @@
 
 		<script>
 
-			// Form validation helper functions
+
 			function validateEmail(email) {
 				const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 				return re.test(email.toLowerCase());
@@ -424,20 +424,20 @@
 				}, 5000);
 			}
 
-			// Form validation
+
 			document.getElementById('riderSignup').addEventListener('submit', function(e) {
 				e.preventDefault();
 				e.stopPropagation();
 				const form = e.target;
-				
-				// Ensure service area is updated BEFORE creating FormData
+
+
 				updateServiceArea();
-				
-				// Small delay to ensure DOM is updated
+
+
 				setTimeout(function() {
 					const formData = new FormData(form);
 
-					// Validate required fields
+
 					const firstName = formData.get('first_name');
 					const lastName = formData.get('last_name');
 					const email = formData.get('email');
@@ -448,26 +448,26 @@
 					const serviceAreaValue = formData.get('service_area');
 					const tnc = formData.get('tnc');
 
-			// Create error message div if it doesn't exist
+
 			let errorDiv = document.getElementById('errorDisplay');
 			errorDiv.style.display = 'none';
-			
-			// Check if passwords match
+
+
 			if (password !== confirmPassword) {
 				errorDiv.textContent = 'Passwords do not match';
 				errorDiv.style.display = 'block';
 				return;
 			}
-			
-			// Validate password strength (at least 6 characters with letters and numbers)
+
+
 			const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
 			if (!passwordRegex.test(password)) {
 				errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
 				errorDiv.style.display = 'block';
 				return;
 			}
-			
-			// Check if at least one vehicle type is selected
+
+
 			const vehicleTypes = formData.getAll('vehicle_type');
 			if (vehicleTypes.length === 0) {
 				errorDiv.textContent = 'Please select at least one vehicle type';
@@ -475,52 +475,52 @@
 				return;
 			}
 
-					// Validate service area - MUST be first check
+
 					const selectedRegion1 = formData.get('region');
 					const provinceCheckboxes1 = document.querySelectorAll('input[name="province"]:checked');
 					const selectedProvinces1 = Array.from(provinceCheckboxes1).map(cb => cb.value);
-					
+
 					console.log('=== Service Area Validation ===');
 					console.log('Region:', selectedRegion1);
 					console.log('Provinces from DOM:', selectedProvinces1);
-					
+
 					if (!selectedRegion1 || selectedRegion1.trim() === '') {
 						errorDiv.textContent = 'Please select a region';
 						errorDiv.style.display = 'block';
 						return;
 					}
-					
-					// Build service area from region (required) and provinces (optional)
+
+
 					const serviceAreas1 = [selectedRegion1];
 					if (selectedProvinces1.length > 0) {
 						serviceAreas1.push(...selectedProvinces1);
 					}
 					const serviceAreaFinal = serviceAreas1.join(',');
-					
-					// Set the service area input value immediately
+
+
 					const serviceAreaInput1 = document.getElementById('serviceAreaInput');
 					serviceAreaInput1.value = serviceAreaFinal;
-					
-					// Update FormData with service area
+
+
 					formData.set('service_area', serviceAreaFinal);
-					
+
 					console.log('Service Area set to:', serviceAreaFinal);
 
-					// Validate all required fields
+
 					if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
 						errorDiv.textContent = 'All fields are required';
 						errorDiv.style.display = 'block';
 						return;
 					}
 
-					// Validate email format
+
 					if (!email.includes('@') || !email.includes('.')) {
 						errorDiv.textContent = 'Please enter a valid email address';
 						errorDiv.style.display = 'block';
 						return;
 					}
 
-					// Validate phone number
+
 					const cleanPhone = phone.replace(/[\+\-\s]/g, '');
 					if (!cleanPhone.match(/^\d+$/)) {
 						errorDiv.textContent = 'Please enter a valid phone number';
@@ -528,25 +528,25 @@
 						return;
 					}
 
-					// Vehicle type validation already done above
 
-					// Check Terms & Conditions
+
+
 					if (!tnc) {
 						errorDiv.textContent = 'Please agree to the Terms & Conditions to continue';
 						errorDiv.style.display = 'block';
 						return;
 					}
 
-					// Final update of service area - ensure it's set to region at minimum
+
 					const selectedRegion2 = formData.get('region');
 					const provinceCheckboxes2 = document.querySelectorAll('input[name="province"]:checked');
 					const selectedProvinces2 = Array.from(provinceCheckboxes2).map(cb => cb.value);
-					
+
 					console.log('=== Final Validation ===');
 					console.log('Region:', selectedRegion2);
 					console.log('Provinces (from DOM):', selectedProvinces2);
-					
-					// Build service area from region (required) and provinces (optional)
+
+
 					let finalServiceArea = '';
 					if (selectedRegion2) {
 						const serviceAreas2 = [selectedRegion2];
@@ -555,27 +555,27 @@
 						}
 						finalServiceArea = serviceAreas2.join(',');
 					}
-					
-					// Validate that we have a region
+
+
 					if (!selectedRegion2 || selectedRegion2.trim() === '') {
 						errorDiv.textContent = 'Please select a region';
 						errorDiv.style.display = 'block';
 						return;
 					}
-					
-					// Ensure service area is set (at minimum to region)
+
+
 					if (!finalServiceArea || finalServiceArea.trim() === '') {
 						finalServiceArea = selectedRegion2;
 					}
-					
-					// Set the hidden input value
+
+
 					const serviceAreaInput2 = document.getElementById('serviceAreaInput');
 					serviceAreaInput2.value = finalServiceArea;
-					
-					// CRITICAL: Explicitly set service_area in FormData before sending
+
+
 					formData.set('service_area', finalServiceArea);
-					
-					// Verify it's set
+
+
 					const verifyServiceArea = formData.get('service_area');
 					console.log('Service Area in FormData after set:', verifyServiceArea);
 					console.log('All FormData entries:', Array.from(formData.entries()));
@@ -584,8 +584,8 @@
 						errorDiv.style.display = 'block';
 						return;
 					}
-					
-					// Debug: Log to console
+
+
 					console.log('=== Form Submission Debug ===');
 					console.log('Selected Region:', selectedRegion2);
 					console.log('Selected Provinces:', selectedProvinces2);
@@ -594,13 +594,13 @@
 					console.log('FormData service_area:', formData.get('service_area'));
 					console.log('All FormData entries:', Array.from(formData.entries()));
 
-					// Disable submit button
+
 					const submitBtn = form.querySelector('button[type="submit"]');
 					const originalText = submitBtn.textContent;
 					submitBtn.disabled = true;
 					submitBtn.textContent = 'Sending OTP...';
 
-					// Submit the form via AJAX
+
 					fetch('/signup/rider', {
 						method: 'POST',
 						body: formData
@@ -612,7 +612,7 @@
 					.then(data => {
 						console.log('Response data:', data);
 						if (data.success) {
-							// Redirect to OTP verification page
+
 							window.location.href = data.redirect;
 						} else {
 							errorDiv.textContent = data.message || 'An error occurred';
@@ -628,10 +628,10 @@
 						submitBtn.disabled = false;
 						submitBtn.textContent = originalText;
 					});
-				}, 100); // Small delay to ensure DOM updates
+				}, 100);
 			});
 
-			// Live validation feedback
+
 			const emailInput = document.querySelector('[name="email"]');
 			const phoneInput = document.querySelector('[name="phone"]');
 
@@ -645,38 +645,38 @@
 				e.target.style.borderColor = e.target.value && !isValid ? 'var(--error)' : '';
 			});
 
-			// Auto-format phone number with +63 prefix
+
 			phoneInput.addEventListener('input', function(e) {
 				let value = e.target.value;
-				// Always ensure +63 prefix
+
 				if (!value.startsWith('+63')) {
 					value = '+63 ' + value.replace(/^\+63\s*/, '');
 					e.target.value = value;
 				}
-				// Prevent deleting the +63 prefix
+
 				if (value.length < 4) {
 					e.target.value = '+63 ';
 				}
 			});
-			
+
 			phoneInput.addEventListener('keydown', function(e) {
-				// Prevent backspace from deleting the +63 prefix
+
 				if (e.key === 'Backspace' && e.target.selectionStart <= 4) {
 					e.preventDefault();
 				}
 			});
-			
-			// Dynamic vehicle details based on selection
+
+
 			function updateVehicleDetails() {
 				console.log('updateVehicleDetails called');
 				const vehicleCheckboxes = document.querySelectorAll('input[name="vehicle_type"]:checked');
 				const container = document.getElementById('vehicleDetailsContainer');
-				
+
 				if (!container) {
 					console.error('vehicleDetailsContainer not found!');
 					return;
 				}
-				
+
 				const selectedVehicles = Array.from(vehicleCheckboxes).map(cb => {
 					const labelElement = cb.closest('.vehicle-option').querySelector('label');
 					const labelText = labelElement ? labelElement.querySelector('span:last-child').textContent : cb.value;
@@ -685,22 +685,22 @@
 						label: labelText
 					};
 				});
-				
+
 				console.log('Selected vehicles:', selectedVehicles);
-				
-				// Clear existing fields
+
+
 				container.innerHTML = '';
-				
-				// If no vehicles selected, hide the container
+
+
 				if (selectedVehicles.length === 0) {
 					container.style.display = 'none';
 					return;
 				}
-				
-				// Show the container
+
+
 				container.style.display = 'block';
-				
-				// Add driver's license field FIRST (at the top)
+
+
 				const licenseSection = document.createElement('div');
 				licenseSection.className = 'form-group';
 				licenseSection.style.marginBottom = '20px';
@@ -709,71 +709,71 @@
 					<input id="licenseNumber" name="license_number" class="form-input" type="text" placeholder="Enter your driver's license number" required />
 				`;
 				container.appendChild(licenseSection);
-				
-				// Create fields for each selected vehicle (plate numbers)
+
+
 				selectedVehicles.forEach((vehicle, index) => {
 					const vehicleSection = document.createElement('div');
 					vehicleSection.className = 'form-group';
 					vehicleSection.style.marginBottom = '20px';
-					
+
 					vehicleSection.innerHTML = `
 						<label for="vehiclePlate_${vehicle.value}">${vehicle.label} Plate Number</label>
 						<input id="vehiclePlate_${vehicle.value}" name="vehicle_plate_${vehicle.value}" class="form-input" type="text" placeholder="Enter ${vehicle.label.toLowerCase()} plate number" required />
 					`;
-					
+
 					container.appendChild(vehicleSection);
 				});
-				
+
 				console.log('Vehicle details updated:', selectedVehicles.length, 'vehicles selected');
 				console.log('Container innerHTML length:', container.innerHTML.length);
 			}
-			
-			// Make updateVehicleDetails globally accessible
+
+
 			window.updateVehicleDetails = updateVehicleDetails;
-			
-			// Set up event listeners when DOM is ready
+
+
 			function initializeVehicleListeners() {
 				const checkboxes = document.querySelectorAll('input[name="vehicle_type"]');
 				console.log('Initializing listeners for', checkboxes.length, 'vehicle checkboxes');
-				
+
 				checkboxes.forEach(checkbox => {
-					// Add event listener (inline handler already exists in HTML)
+
 					checkbox.addEventListener('change', function() {
 						console.log('Vehicle type changed:', this.value, this.checked);
 						updateVehicleDetails();
 					});
 				});
-				
-				// Initial call to check if any vehicles are pre-selected
+
+
 				updateVehicleDetails();
 			}
-			
-			// Initialize when DOM is ready
+
+
 			if (document.readyState === 'loading') {
 				document.addEventListener('DOMContentLoaded', initializeVehicleListeners);
 			} else {
-				// DOM already loaded, initialize immediately
+
 				initializeVehicleListeners();
 			}
 
-			// Region and Province Data
+
 			const regionProvinces = {
 				'North Luzon': [
-					'Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan', 
+					'Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan',
 					'Baguio City', 'Benguet', 'Abra', 'Kalinga', 'Apayao', 'Mountain Province',
 					'Cagayan', 'Isabela', 'Nueva Vizcaya', 'Quirino', 'Batanes'
 				],
 				'Central Luzon': [
-					'Pampanga', 'Tarlac', 'Nueva Ecija', 'Zambales', 'Bataan', 
+					'Pampanga', 'Tarlac', 'Nueva Ecija', 'Zambales', 'Bataan',
 					'Bulacan', 'Aurora', 'Angeles City', 'Olongapo City', 'San Fernando City'
 				],
 				'South Luzon': [
-					'Laguna', 'Batangas', 'Cavite', 'Rizal', 'Quezon', 
+					'Laguna', 'Batangas', 'Cavite', 'Rizal', 'Quezon',
 					'Antipolo City', 'Lucena City', 'Batangas City', 'Lipa City', 'Tagaytay City',
 					'Calamba City', 'Los Baños', 'Biñan City', 'Cabuyao', 'San Pablo City',
 					'Albay', 'Camarines Norte', 'Camarines Sur', 'Catanduanes', 'Masbate', 'Sorsogon',
 					'Marinduque', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan', 'Romblon',
-					'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 
+					'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong',
 					'Marikina', 'Pasay', 'Parañaque', 'Las Piñas', 'Muntinlupa', 'Caloocan',
 					'Malabon', 'Navotas', 'Valenzuela', 'San Juan'
 				],
@@ -795,16 +795,16 @@
 				]
 			};
 
-		// Make functions globally accessible for inline handlers
+
 		window.toggleRegionProvinces = function(region) {
 			const container = document.getElementById('provincesContainer');
 			const provinces = regionProvinces[region] || [];
-			
-			// Clear existing provinces
+
+
 			container.innerHTML = '';
-			
+
 			if (region && provinces.length > 0) {
-				// Show provinces for this region
+
 				container.innerHTML = `
 					<div style="margin-bottom:12px">
 						<label style="font-size:14px;font-weight:600;color:var(--accent)">Serve Specific Provinces/Cities in ${region}? (Optional)</label>
@@ -823,17 +823,17 @@
 			} else {
 				container.style.display = 'none';
 			}
-			
+
 			updateServiceArea();
-		}			// Update hidden service area input with selected regions and provinces
+		}
 			window.updateServiceArea = function() {
 				const regionSelect = document.getElementById('riderRegion');
 				const selectedRegion = regionSelect ? regionSelect.value : '';
 				const selectedProvinces = Array.from(document.querySelectorAll('input[name="province"]:checked')).map(cb => cb.value);
-				
+
 				const serviceAreaInput = document.getElementById('serviceAreaInput');
-				
-				// Combine region and provinces - region is required, provinces are optional
+
+
 				const serviceAreas = [];
 				if (selectedRegion) {
 					serviceAreas.push(selectedRegion);
@@ -842,17 +842,17 @@
 					}
 					serviceAreaInput.value = serviceAreas.join(',');
 				} else {
-					// No region selected
+
 					serviceAreaInput.value = '';
 				}
-				
-				// Debug logging
+
+
 				console.log('updateServiceArea called:');
 				console.log('  Region:', selectedRegion);
 				console.log('  Provinces:', selectedProvinces);
 				console.log('  Final value:', serviceAreaInput.value);
-				
-				// Update validation - only require region
+
+
 				if (selectedRegion) {
 					serviceAreaInput.setCustomValidity('');
 				} else {
@@ -860,22 +860,22 @@
 				}
 			}
 
-			// Clear error display when user starts typing in any field
+
 			document.querySelectorAll('.form-input, .form-select').forEach(input => {
 				input.addEventListener('input', () => {
 					document.getElementById('errorDisplay').style.display = 'none';
 				});
 			});
 
-			// Handle flash messages
+
 			function showFlashMessage(message, category) {
 				const flashContainer = document.getElementById('flashed-messages');
 				const messageDiv = document.createElement('div');
 				messageDiv.className = `alert alert-${category}`;
 				messageDiv.textContent = message;
 				flashContainer.appendChild(messageDiv);
-				
-				// Auto-hide after 5 seconds
+
+
 				setTimeout(() => {
 					messageDiv.style.opacity = '0';
 					messageDiv.style.transition = 'opacity 0.5s';
@@ -883,7 +883,7 @@
 				}, 5000);
 			}
 
-			// Process server flash messages on page load
+
 			window.addEventListener('load', function() {
 				const serverFlash = document.getElementById('server-flash');
 				if (serverFlash) {
@@ -892,7 +892,7 @@
 						messages.forEach(([category, message]) => {
 							showFlashMessage(message, category);
 						});
-						serverFlash.remove(); // Remove after processing
+						serverFlash.remove();
 					} catch (e) {
 						console.error('Error processing flash messages:', e);
 					}

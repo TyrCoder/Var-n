@@ -16,7 +16,7 @@
 				--error: #ef4444;
 				--success: #10b981;
 			}
-			
+
 			html, body {
 				height: 100%;
 				margin: 0;
@@ -25,7 +25,7 @@
 				background: #f9fafb;
 				line-height: 1.5;
 			}
-			
+
 			.layout {
 				display: grid;
 				grid-template-columns: 1fr 480px;
@@ -33,11 +33,11 @@
 				align-items: center;
 				background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
 			}
-			
+
 			.left {
 				padding: 64px 80px;
 			}
-			
+
 			.brand {
 				display: flex;
 				align-items: center;
@@ -46,21 +46,21 @@
 				font-size: 22px;
 				color: var(--accent);
 			}
-			
+
 			.hero-title {
 				font-size: 42px;
 				color: var(--accent);
 				margin: 24px 0 16px;
 				line-height: 1.2;
 			}
-			
+
 			.hero-sub {
 				color: var(--muted);
 				max-width: 520px;
 				font-size: 16px;
 				margin: 0;
 			}
-			
+
 			.illustration {
 				margin-top: 40px;
 				max-width: 480px;
@@ -75,7 +75,7 @@
 				background: #ffffff;
 				height: 100%;
 			}
-			
+
 			.card {
 				width: 100%;
 				max-width: 400px;
@@ -84,13 +84,13 @@
 				box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.05);
 				padding: 32px;
 			}
-			
+
 			.card h2 {
 				margin: 0 0 8px;
 				font-size: 24px;
 				color: var(--accent);
 			}
-			
+
 			.sub {
 				color: var(--muted);
 				margin-bottom: 28px;
@@ -102,12 +102,12 @@
 				margin-bottom: 20px;
 				border-radius: 8px;
 			}
-			
+
 			.alert-error {
 				background: #fee2e2;
 				color: #991b1b;
 			}
-			
+
 			.alert-success {
 				background: #dcfce7;
 				color: #15803d;
@@ -116,7 +116,7 @@
 			.form-group {
 				margin-bottom: 20px;
 			}
-			
+
 			.form-group label {
 				display: block;
 				font-size: 14px;
@@ -124,7 +124,7 @@
 				color: var(--accent);
 				margin-bottom: 8px;
 			}
-			
+
 			.form-input {
 				width: 100%;
 				padding: 12px 16px;
@@ -135,11 +135,11 @@
 				transition: all 0.2s;
 				box-sizing: border-box;
 			}
-			
+
 			.form-input:hover {
 				border-color: #d1d5db;
 			}
-			
+
 			.form-input:focus {
 				outline: none;
 				border-color: var(--accent);
@@ -152,7 +152,7 @@
 				gap: 12px;
 				margin: 24px 0;
 			}
-			
+
 			.tnc-row input[type="checkbox"] {
 				width: 18px;
 				height: 18px;
@@ -160,19 +160,19 @@
 				border-radius: 4px;
 				cursor: pointer;
 			}
-			
+
 			.tnc-row label {
 				font-size: 14px;
 				color: var(--muted);
 				cursor: pointer;
 			}
-			
+
 			.tnc-row a {
 				color: var(--accent);
 				text-decoration: none;
 				font-weight: 500;
 			}
-			
+
 			.tnc-row a:hover {
 				text-decoration: underline;
 			}
@@ -190,12 +190,12 @@
 				cursor: pointer;
 				transition: all 0.2s;
 			}
-			
+
 			.btn:hover {
 				background: #000000;
 				transform: translateY(-1px);
 			}
-			
+
 			.btn:active {
 				transform: translateY(0);
 			}
@@ -206,13 +206,13 @@
 				margin-top: 20px;
 				text-align: center;
 			}
-			
+
 			.small-note a {
 				color: var(--accent);
 				text-decoration: none;
 				font-weight: 500;
 			}
-			
+
 			.small-note a:hover {
 				text-decoration: underline;
 			}
@@ -221,20 +221,20 @@
 				.layout {
 					grid-template-columns: 1fr;
 				}
-				
+
 				.left {
 					padding: 40px;
 					text-align: center;
 				}
-				
+
 				.hero-sub {
 					margin: 0 auto;
 				}
-				
+
 				.illustration {
 					margin: 32px auto;
 				}
-				
+
 				.card-wrap {
 					padding: 32px 24px;
 				}
@@ -314,38 +314,38 @@
 		</div>
 
 		<script>
-			// Toggle password visibility
+
 			function togglePasswordVisibility(inputId, buttonId) {
 				const input = document.getElementById(inputId);
 				const icon = document.getElementById(buttonId + 'Icon');
 				if (input.type === 'password') {
 					input.type = 'text';
-					// Change to eye-off icon
+
 					icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line>';
 				} else {
 					input.type = 'password';
-					// Change back to eye icon
+
 					icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle>';
 				}
 			}
 
-			// Auto-format phone number with +63 prefix
+
 			const sellerPhoneInput = document.getElementById('sellerPhone');
 			sellerPhoneInput.addEventListener('input', function(e) {
 				let value = e.target.value;
-				// Always ensure +63 prefix
+
 				if (!value.startsWith('+63')) {
 					value = '+63 ' + value.replace(/^\+63\s*/, '');
 					e.target.value = value;
 				}
-				// Prevent deleting the +63 prefix
+
 				if (value.length < 4) {
 					e.target.value = '+63 ';
 				}
 			});
-			
+
 			sellerPhoneInput.addEventListener('keydown', function(e) {
-				// Prevent backspace from deleting the +63 prefix
+
 				if (e.key === 'Backspace' && e.target.selectionStart <= 4) {
 					e.preventDefault();
 				}
@@ -356,15 +356,15 @@
 				const form = e.target;
 				const formData = new FormData(form);
 
-				// Get all required fields
+
 				const email = formData.get('email');
 				const password = formData.get('password');
 				const confirmPassword = formData.get('confirm_password');
 				const phone = formData.get('phone');
 				const shopName = formData.get('shop_name');
 				const tnc = formData.get('tnc');
-				
-				// Create error display div if it doesn't exist
+
+
 				let errorDiv = document.getElementById('errorDisplay');
 				if (!errorDiv) {
 					errorDiv = document.createElement('div');
@@ -375,27 +375,27 @@
 				}
 				errorDiv.style.display = 'none';
 
-				// Validate all required fields
+
 				if (!email || !password || !confirmPassword || !phone || !shopName) {
 					errorDiv.textContent = 'All fields are required';
 					errorDiv.style.display = 'block';
 					return;
 				}
 
-				// Check Terms & Conditions
+
 				if (!tnc) {
 					alert('Please agree to the Terms & Conditions to continue');
 					return;
 				}
 
-				// Validate email format
+
 				if (!email.includes('@') || !email.includes('.')) {
 					errorDiv.textContent = 'Please enter a valid email address';
 					errorDiv.style.display = 'block';
 					return;
 				}
 
-				// Validate phone number
+
 				const cleanPhone = phone.replace(/[\+\-\s]/g, '');
 				if (!cleanPhone.match(/^\d+$/)) {
 					errorDiv.textContent = 'Please enter a valid phone number';
@@ -403,14 +403,14 @@
 					return;
 				}
 
-				// Check if passwords match
+
 				if (password !== confirmPassword) {
 					errorDiv.textContent = 'Passwords do not match';
 					errorDiv.style.display = 'block';
 					return;
 				}
-				
-				// Validate password strength (at least 6 characters with letters and numbers)
+
+
 				const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
 				if (!passwordRegex.test(password)) {
 					errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
@@ -418,13 +418,13 @@
 					return;
 				}
 
-				// Disable submit button
+
 				const submitBtn = form.querySelector('button[type="submit"]');
 				const originalText = submitBtn.textContent;
 				submitBtn.disabled = true;
 				submitBtn.textContent = 'Sending OTP...';
 
-				// Submit the form via AJAX
+
 				fetch('/signupSeller', {
 					method: 'POST',
 					body: formData
@@ -432,10 +432,10 @@
 				.then(response => response.json())
 				.then(data => {
 					if (data.success) {
-						// Redirect to OTP verification page
+
 						window.location.href = data.redirect;
 					} else {
-						// Show popup for phone number already used
+
 						if (data.message.includes('phone number') || data.message.includes('Phone number')) {
 							alert(data.message);
 						} else {

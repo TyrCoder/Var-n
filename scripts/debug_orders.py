@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 import mysql.connector
 
 conn = mysql.connector.connect(
@@ -35,7 +35,7 @@ print("\n" + "=" * 60)
 print("TEST QUERY: Orders for seller_id=1")
 print("=" * 60)
 query = """
-    SELECT 
+    SELECT
         o.id,
         o.order_number,
         o.seller_id,

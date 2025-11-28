@@ -4,16 +4,16 @@ conn = get_db()
 cursor = conn.cursor()
 
 try:
-    # Update all delivered orders to released_to_rider
+
     cursor.execute("""
-        UPDATE orders 
-        SET order_status = 'released_to_rider' 
+        UPDATE orders
+        SET order_status = 'released_to_rider'
         WHERE order_status = 'delivered'
     """)
     conn.commit()
-    
+
     print(f"✅ Updated {cursor.rowcount} orders from 'delivered' to 'released_to_rider'")
-    
+
 except Exception as e:
     print(f"❌ Error: {e}")
 finally:

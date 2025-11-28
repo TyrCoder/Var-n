@@ -9,13 +9,13 @@ from datetime import datetime, timedelta
 import requests
 from dotenv import load_dotenv
 
-# Load environment variables
+
 load_dotenv()
 
 class OTPService:
     """OTP Service for email and SMS verification"""
 
-    # Email configuration from .env
+
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
     MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'true').lower() == 'true'
@@ -23,11 +23,11 @@ class OTPService:
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@varon.com')
 
-    # SMS configuration
+
     SEMAPHORE_API_KEY = os.getenv('SEMAPHORE_API_KEY')
     SEMAPHORE_SENDER_NAME = os.getenv('SEMAPHORE_SENDER_NAME', 'VARON')
 
-    # Twilio configuration (alternative)
+
     TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
     TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
     TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
@@ -56,13 +56,13 @@ class OTPService:
         try:
             cursor = conn.cursor()
 
-            # Generate OTP
+
             otp_code = OTPService.generate_otp()
 
-            # Calculate expiry (10 minutes from now)
+
             expires_at = datetime.now() + timedelta(minutes=10)
 
-            # Insert OTP record
+
             cursor.execute('''
                 INSERT INTO otp_verifications
                 (email, phone, otp_code, otp_type, purpose, expires_at, ip_address, attempts, used_at)
@@ -79,7 +79,7 @@ class OTPService:
             print(f"Error creating OTP record: {e}")
             import traceback
             traceback.print_exc()
-            # Try to rollback if connection is still open
+
             try:
                 conn.rollback()
             except:
@@ -100,18 +100,18 @@ class OTPService:
             bool: True if sent successfully, False otherwise
         """
         try:
-            # Check if email credentials are configured
+
             if not OTPService.MAIL_USERNAME or not OTPService.MAIL_PASSWORD:
                 print("Error: Email credentials (MAIL_USERNAME and MAIL_PASSWORD) are not configured in environment variables")
                 return False
 
-            # Create message
+
             msg = MIMEMultipart()
             msg['From'] = OTPService.MAIL_DEFAULT_SENDER
             msg['To'] = email
             msg['Subject'] = f'Varón - Your OTP Code'
 
-            # Email body
+
             purpose_text = {
                 'registration': 'account registration',
                 'login': 'login verification',
@@ -149,7 +149,7 @@ class OTPService:
 
             msg.attach(MIMEText(body, 'html'))
 
-            # Send email
+
             server = smtplib.SMTP(OTPService.MAIL_SERVER, OTPService.MAIL_PORT)
             if OTPService.MAIL_USE_TLS:
                 server.starttls()
@@ -176,63 +176,63 @@ class OTPService:
         """
         Get email-to-SMS gateway address for a phone number (FREE method)
         Supports Philippine carriers and common international carriers
-        
+
         Philippine Carriers Supported:
         - Globe/TM/GOMO: @globe.com.ph
         - Smart/TNT: @smart.com.ph
         - Sun: @sun.com.ph
         - DITO: @dito.ph
-        
+
         US/Canada Carriers Supported:
         - AT&T: @txt.att.net
         - Verizon: @vtext.com
         - T-Mobile: @tmomail.net
         - Sprint: @messaging.sprintpcs.com
-        
+
         Args:
             phone: Phone number (with or without country code)
-            
+
         Returns:
             str: Email gateway address or None if carrier not supported
         """
-        # Clean phone number - remove all non-digit characters
+
         clean_phone = phone.replace('+', '').replace('-', '').replace(' ', '').replace('(', '').replace(')', '').replace('.', '')
-        
+
         print(f"🔍 Carrier detection for phone: {phone} -> cleaned: {clean_phone}")
-        
-        # Philippine carriers (+63)
+
+
         if clean_phone.startswith('63'):
-            # Remove country code
+
             local_number = clean_phone[2:]
-            # Remove leading 0 if present
+
             if local_number.startswith('0'):
                 local_number = local_number[1:]
-            
+
             print(f"   Local number after processing: {local_number} (length: {len(local_number)})")
-            
-            # Get last 10 digits (Philippine mobile numbers are 10 digits)
+
+
             if len(local_number) >= 10:
-                mobile_number = local_number[-10:]  # Get last 10 digits
+                mobile_number = local_number[-10:]
                 print(f"   Mobile number: {mobile_number}")
-                
-                # Carrier detection based on prefix (first 3 digits)
+
+
                 prefix = mobile_number[:3]
                 print(f"   Detected prefix: {prefix}")
-                
-                # Globe/TM/GOMO prefixes (most common)
-                # GOMO is a digital service by Globe, uses same gateway
+
+
+
                 globe_prefixes = ['817', '905', '906', '915', '916', '917', '926', '927', '935', '936', '937', '994', '995', '996', '997', '975', '976', '977', '978', '979', '980', '981', '982', '983', '984', '985', '986', '987', '988', '989', '990', '991', '992', '993']
-                
-                # Smart/TNT prefixes
+
+
                 smart_prefixes = ['813', '907', '908', '909', '910', '912', '918', '919', '920', '921', '928', '929', '930', '931', '932', '933', '934', '938', '939', '940', '941', '942', '943', '944', '946', '947', '948', '949', '950', '951', '961', '998', '999', '970', '971', '972', '973', '974']
-                
-                # Sun prefix
+
+
                 sun_prefixes = ['922', '923', '924', '925']
-                
-                # DITO prefixes (newer carrier, launched 2021)
-                # DITO uses prefix 895, 896, 897, 898, 899
+
+
+
                 dito_prefixes = ['895', '896', '897', '898', '899']
-                
+
                 if prefix in globe_prefixes:
                     gateway = f"{mobile_number}@globe.com.ph"
                     print(f"   ✅ Detected Globe/TM/GOMO -> {gateway}")
@@ -246,32 +246,32 @@ class OTPService:
                     print(f"   ✅ Detected Sun -> {gateway}")
                     return gateway
                 elif prefix in dito_prefixes:
-                    # DITO uses email-to-SMS gateway: number@dito.ph
+
                     gateway = f"{mobile_number}@dito.ph"
                     print(f"   ✅ Detected DITO -> {gateway}")
                     return gateway
                 else:
-                    # Default to Globe for unknown prefixes (most common carrier)
+
                     gateway = f"{mobile_number}@globe.com.ph"
                     print(f"   ⚠️ Unknown carrier prefix {prefix}, defaulting to Globe -> {gateway}")
                     return gateway
             else:
                 print(f"   ❌ Invalid Philippine number length: {len(local_number)} (expected 10 digits)")
                 return None
-        
-        # US/Canada carriers (+1)
+
+
         elif clean_phone.startswith('1') and len(clean_phone) == 11:
-            mobile_number = clean_phone[1:]  # Remove country code
-            # Default to AT&T (most common)
+            mobile_number = clean_phone[1:]
+
             return f"{mobile_number}@txt.att.net"
-        
+
         return None
 
     @staticmethod
     def get_supported_carriers():
         """
         Get list of supported carriers for email-to-SMS gateway
-        
+
         Returns:
             dict: Dictionary of supported countries and carriers
         """
@@ -294,7 +294,7 @@ class OTPService:
     def send_sms_otp(phone, otp_code, purpose='registration'):
         """
         Send OTP via SMS using FREE email-to-SMS gateway
-        
+
         First tries email-to-SMS gateway (free), then falls back to Semaphore API if configured
 
         Args:
@@ -306,24 +306,24 @@ class OTPService:
             bool: True if sent successfully, False otherwise
         """
         try:
-            # Format phone number (ensure it starts with country code)
-            # Remove any existing +63 or + signs first
+
+
             clean_phone = phone.replace('+', '').replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
-            
-            # Determine formatted phone
+
+
             if clean_phone.startswith('63'):
-                # Already has country code
+
                 formatted_phone = '+63' + clean_phone[2:]
             elif clean_phone.startswith('0'):
-                # Philippine number starting with 0
+
                 formatted_phone = '+63' + clean_phone[1:]
             elif len(clean_phone) == 10 and clean_phone.isdigit():
-                # 10-digit Philippine number without prefix
+
                 formatted_phone = '+63' + clean_phone
             else:
-                # Keep as is if it already has +63
+
                 formatted_phone = phone if phone.startswith('+63') else '+63' + clean_phone
-            
+
             print(f"📱 Formatting phone: {phone} -> {formatted_phone}")
 
             purpose_text = {
@@ -336,37 +336,37 @@ class OTPService:
 
             message = f"Varón: Your OTP code is {otp_code}. Use this to complete your {purpose_text}. Valid for 10 minutes."
 
-            # Try FREE email-to-SMS gateway first
+
             email_gateway = OTPService.get_carrier_email_gateway(formatted_phone)
             print(f"🔍 Email gateway lookup for {formatted_phone}: {email_gateway}")
-            
+
             if email_gateway:
                 try:
-                    # Use existing email service to send to SMS gateway
+
                     if not OTPService.MAIL_USERNAME or not OTPService.MAIL_PASSWORD:
                         print("⚠️ Email credentials not configured, cannot use email-to-SMS gateway")
                         print(f"   Please set MAIL_USERNAME and MAIL_PASSWORD in .env file")
                     else:
-                        # Create simple text email for SMS gateway
-                        # SMS gateways work best with plain text, no HTML
+
+
                         msg = MIMEText(message, 'plain', 'utf-8')
-                        msg['From'] = OTPService.MAIL_USERNAME  # Use actual email address
+                        msg['From'] = OTPService.MAIL_USERNAME
                         msg['To'] = email_gateway
-                        msg['Subject'] = ''  # SMS gateways ignore subject, but some need empty string
-                        
+                        msg['Subject'] = ''
+
                         print(f"📧 Sending email to SMS gateway: {email_gateway}")
                         print(f"   From: {OTPService.MAIL_USERNAME}")
                         print(f"   Message: {message}")
-                        
-                        # Send email
+
+
                         print(f"   Connecting to SMTP server: {OTPService.MAIL_SERVER}:{OTPService.MAIL_PORT}")
                         server = smtplib.SMTP(OTPService.MAIL_SERVER, OTPService.MAIL_PORT)
-                        server.set_debuglevel(0)  # Set to 1 for detailed debug, 0 for production
-                        
+                        server.set_debuglevel(0)
+
                         if OTPService.MAIL_USE_TLS:
                             print(f"   Starting TLS...")
                             server.starttls()
-                        
+
                         print(f"   Logging in with: {OTPService.MAIL_USERNAME}")
                         server.login(OTPService.MAIL_USERNAME, OTPService.MAIL_PASSWORD)
                         print(f"   ✅ Login successful")
@@ -394,7 +394,7 @@ class OTPService:
                 print(f"   Cleaned phone: {clean_phone}")
                 print(f"   Supported carriers: Globe, Smart, Sun, DITO (Philippines)")
 
-            # Fallback to Semaphore API if configured
+
             if OTPService.SEMAPHORE_API_KEY:
                 response = requests.post(
                     'https://api.semaphore.co/api/v4/messages',
@@ -427,28 +427,28 @@ class OTPService:
     def send_order_confirmation_email(email, order_number, order_data):
         """
         Send order confirmation email to buyer
-        
+
         Args:
             email: Buyer's email address
             order_number: Order number
             order_data: Dictionary containing order details (items, total, shipping_address, etc.)
-        
+
         Returns:
             bool: True if sent successfully, False otherwise
         """
         try:
-            # Check if email credentials are configured
+
             if not OTPService.MAIL_USERNAME or not OTPService.MAIL_PASSWORD:
                 print("Error: Email credentials (MAIL_USERNAME and MAIL_PASSWORD) are not configured")
                 return False
 
-            # Create message
+
             msg = MIMEMultipart()
             msg['From'] = OTPService.MAIL_DEFAULT_SENDER
             msg['To'] = email
             msg['Subject'] = f'Varón - Order Confirmation #{order_number}'
 
-            # Format order items
+
             items_html = ""
             for item in order_data.get('items', []):
                 items_html += f"""
@@ -463,7 +463,7 @@ class OTPService:
                 </tr>
                 """
 
-            # Format shipping address
+
             shipping = order_data.get('shipping', {})
             shipping_address = f"""
             {shipping.get('firstName', '')} {shipping.get('lastName', '')}<br>
@@ -473,7 +473,7 @@ class OTPService:
             Phone: {shipping.get('phone', '')}
             """
 
-            # Email body
+
             body = f"""
             <html>
             <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
@@ -504,7 +504,7 @@ class OTPService:
                                 {items_html}
                             </tbody>
                         </table>
-                        
+
                         <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #374151;">
                                 <span>Subtotal:</span>
@@ -551,7 +551,7 @@ class OTPService:
 
             msg.attach(MIMEText(body, 'html'))
 
-            # Send email
+
             server = smtplib.SMTP(OTPService.MAIL_SERVER, OTPService.MAIL_PORT)
             if OTPService.MAIL_USE_TLS:
                 server.starttls()
@@ -591,16 +591,16 @@ class OTPService:
             tuple: (is_valid, message)
         """
         try:
-            # Strip whitespace from OTP code
+
             otp_code = str(otp_code).strip() if otp_code else ''
-            
+
             if not otp_code:
                 return False, "OTP code is required"
-            
+
             cursor = conn.cursor(dictionary=True)
 
-            # Find the OTP record - try with and without purpose first
-            # This helps if the enum wasn't updated yet
+
+
             query = """
                 SELECT id, otp_code, expires_at, attempts, used_at, purpose, email, phone
                 FROM otp_verifications
@@ -620,8 +620,8 @@ class OTPService:
 
             cursor.execute(query, params)
             otp_record = cursor.fetchone()
-            
-            # If no record found and purpose was specified, try without purpose filter
+
+
             if not otp_record and purpose:
                 print(f"⚠️ OTP not found with purpose filter, trying without purpose...")
                 query_no_purpose = """
@@ -630,47 +630,47 @@ class OTPService:
                     WHERE otp_code = %s AND expires_at > NOW() AND used_at IS NULL
                 """
                 params_no_purpose = [otp_code]
-                
+
                 if email:
                     query_no_purpose += " AND email = %s"
                     params_no_purpose.append(email)
                 elif phone:
                     query_no_purpose += " AND phone = %s"
                     params_no_purpose.append(phone)
-                
+
                 query_no_purpose += " ORDER BY created_at DESC LIMIT 1"
                 cursor.execute(query_no_purpose, params_no_purpose)
                 otp_record = cursor.fetchone()
-                
+
                 if otp_record:
                     print(f"✅ Found OTP record (purpose: {otp_record.get('purpose')}, expected: {purpose})")
-                    # Check if purpose matches (case-insensitive)
+
                     if otp_record.get('purpose', '').lower() != purpose.lower():
                         print(f"⚠️ Purpose mismatch: stored='{otp_record.get('purpose')}', expected='{purpose}'")
-                        # Still allow verification if email/phone matches
+
 
             if not otp_record:
-                # Check if OTP exists but is expired or used
+
                 check_expired_query = """
                     SELECT expires_at, used_at, purpose, email, phone
                     FROM otp_verifications
                     WHERE otp_code = %s
                 """
                 check_params = [otp_code]
-                
+
                 if email:
                     check_expired_query += " AND email = %s"
                     check_params.append(email)
                 elif phone:
                     check_expired_query += " AND phone = %s"
                     check_params.append(phone)
-                
+
                 check_expired_query += " ORDER BY created_at DESC LIMIT 1"
                 cursor.execute(check_expired_query, check_params)
                 expired_record = cursor.fetchone()
-                
+
                 cursor.close()
-                
+
                 if expired_record:
                     if expired_record.get('used_at'):
                         return False, "This OTP code has already been used"
@@ -681,22 +681,22 @@ class OTPService:
                             expires_at = datetime.strptime(expires_at, '%Y-%m-%d %H:%M:%S')
                         if expires_at < datetime.now():
                             return False, "This OTP code has expired. Please request a new code. OTP codes expire after 10 minutes."
-                
-                # Debug: Log what we're looking for
+
+
                 print(f"❌ OTP verification failed:")
                 print(f"   OTP Code: {otp_code}")
                 print(f"   Email: {email}")
                 print(f"   Phone: {phone}")
                 print(f"   Purpose: {purpose}")
-                
+
                 return False, "Invalid or expired OTP code. OTP codes expire after 10 minutes. Please check the code and try again."
 
-            # Check attempts
+
             if otp_record['attempts'] >= 3:
                 cursor.close()
                 return False, "Too many failed attempts. Please request a new OTP"
 
-            # Mark as verified
+
             cursor.execute(
                 "UPDATE otp_verifications SET used_at = NOW(), attempts = attempts + 1 WHERE id = %s",
                 (otp_record['id'],)

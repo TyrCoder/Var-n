@@ -445,7 +445,7 @@
       <div id="myOrders" class="content-section" style="display:none">
         <div class="container" style="max-width:1200px;margin:40px auto;padding:20px">
           <h2 style="margin-bottom:32px;text-align:center;font-size:28px;font-weight:600">My Orders</h2>
-          
+
           <!-- Status Filter Tabs -->
           <div style="display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;border-bottom:2px solid #f0f0f0;padding-bottom:16px">
             <button class="order-status-tab active" onclick="filterOrdersByStatus('all')" data-status="all" style="padding:12px 20px;border:none;background:none;font-size:14px;font-weight:600;color:#000;cursor:pointer;position:relative;transition:all 0.3s">
@@ -499,7 +499,7 @@
           .order-status-tab:hover {
             color: #0a0a0a;
           }
-          
+
           .order-card {
             background: #fff;
             border: 1px solid #e5e7eb;
@@ -511,7 +511,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             border-color: #d1d5db;
           }
-          
+
           .order-header {
             display: flex;
             justify-content: space-between;
@@ -520,24 +520,24 @@
             background: #fafafa;
             border-bottom: 1px solid #f0f0f0;
           }
-          
+
           .order-info {
             display: flex;
             flex-direction: column;
             gap: 6px;
           }
-          
+
           .order-number {
             font-size: 14px;
             font-weight: 600;
             color: #0a0a0a;
           }
-          
+
           .order-date {
             font-size: 12px;
             color: #999;
           }
-          
+
           .order-status-badge {
             padding: 6px 14px;
             border-radius: 20px;
@@ -545,15 +545,15 @@
             font-weight: 600;
             white-space: nowrap;
           }
-          
+
           .order-body {
             padding: 20px;
           }
-          
+
           .order-items {
             margin-bottom: 16px;
           }
-          
+
           .order-item {
             display: flex;
             gap: 12px;
@@ -561,13 +561,13 @@
             padding-bottom: 16px;
             border-bottom: 1px solid #f0f0f0;
           }
-          
+
           .order-item:last-child {
             margin-bottom: 0;
             padding-bottom: 0;
             border-bottom: none;
           }
-          
+
           .item-image {
             width: 80px;
             height: 80px;
@@ -576,33 +576,33 @@
             object-fit: cover;
             flex-shrink: 0;
           }
-          
+
           .item-details {
             flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
           }
-          
+
           .item-name {
             font-size: 14px;
             font-weight: 500;
             color: #0a0a0a;
             margin-bottom: 4px;
           }
-          
+
           .item-meta {
             font-size: 12px;
             color: #999;
             margin-bottom: 8px;
           }
-          
+
           .item-price {
             font-size: 14px;
             font-weight: 600;
             color: #0a0a0a;
           }
-          
+
           .order-footer {
             display: flex;
             justify-content: space-between;
@@ -610,30 +610,30 @@
             padding-top: 16px;
             border-top: 1px solid #f0f0f0;
           }
-          
+
           .order-total {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
           }
-          
+
           .order-total-label {
             font-size: 12px;
             color: #999;
             margin-bottom: 4px;
           }
-          
+
           .order-total-amount {
             font-size: 18px;
             font-weight: 700;
             color: #0a0a0a;
           }
-          
+
           .order-actions {
             display: flex;
             gap: 10px;
           }
-          
+
           .order-btn {
             padding: 10px 18px;
             border-radius: 8px;
@@ -645,23 +645,23 @@
             cursor: pointer;
             transition: all 0.3s ease;
           }
-          
+
           .order-btn:hover {
             border-color: #0a0a0a;
             background: #f9fafb;
           }
-          
+
           .order-btn-primary {
             background: #0a0a0a;
             color: #fff;
             border-color: #0a0a0a;
           }
-          
+
           .order-btn-primary:hover {
             background: #1a1a1a;
             border-color: #1a1a1a;
           }
-          
+
           .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -669,20 +669,20 @@
             border-radius: 12px;
             border: 1px dashed #e5e7eb;
           }
-          
+
           .empty-state-icon {
             font-size: 48px;
             margin-bottom: 16px;
             opacity: 0.3;
           }
-          
+
           .empty-state-title {
             font-size: 16px;
             font-weight: 600;
             color: #0a0a0a;
             margin-bottom: 8px;
           }
-          
+
           .empty-state-text {
             font-size: 14px;
             color: #999;
@@ -694,7 +694,7 @@
       <div id="browse" class="content-section" style="display:none">
         <div class="container" style="padding-bottom:60px">
           <h2 style="margin:24px 0">Browse Collection</h2>
-          
+
           <!-- Search Bar -->
           <div style="display:flex;gap:12px;margin-bottom:24px;align-items:center">
             <div style="flex:1;min-width:250px;position:relative">
@@ -707,7 +707,7 @@
           <div id="categoriesContainer" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;margin-bottom:40px">
             <!-- Categories will be loaded here organized by type -->
           </div>
-          
+
           <div id="browseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px;margin-bottom:40px">
             <!-- Products will be loaded here -->
           </div>
@@ -923,13 +923,13 @@
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
-      // User dropdown toggle
+
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('show');
       }
 
-      // Close dropdown when clicking outside
+
       window.addEventListener('click', function(e) {
         if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
           const dropdown = document.getElementById('userDropdown');
@@ -939,7 +939,7 @@
         }
       });
 
-      // Logout confirmation function
+
       function confirmLogout() {
         openModal('logoutModal');
       }
@@ -948,35 +948,35 @@
         window.location.href = '/logout';
       }
 
-      // Section navigation
+
       function showSection(sectionName) {
-        // Hide all sections
+
         document.querySelectorAll('.content-section').forEach(section => {
           section.style.display = 'none';
         });
 
-        // Get hero and journal sections
+
         const heroSection = document.getElementById('heroSection');
         const journalSection = document.getElementById('journalSection');
 
-        // Show/hide hero and journal based on section
+
         if (sectionName === 'home') {
-          // Show hero and journal on home
+
           if (heroSection) heroSection.style.display = 'block';
           if (journalSection) journalSection.style.display = 'block';
         } else {
-          // Hide hero and journal on other sections
+
           if (heroSection) heroSection.style.display = 'none';
           if (journalSection) journalSection.style.display = 'none';
-          
-          // Show selected section
+
+
           const targetSection = document.getElementById(sectionName);
           if (targetSection) {
             targetSection.style.display = 'block';
           }
         }
 
-        // Load data for specific sections
+
         if (sectionName === 'browse') {
           loadCategories();
           loadBrowseProducts();
@@ -984,7 +984,7 @@
           loadMyOrders();
         }
 
-        // Update active nav link
+
         document.querySelectorAll('.top-nav-links a').forEach(link => {
           link.classList.remove('active');
         });
@@ -994,7 +994,7 @@
         }
       }
 
-      // Modal functions
+
       function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -1011,7 +1011,7 @@
         }
       }
 
-      // Fetch the buyer's account details on page load
+
       window.addEventListener('DOMContentLoaded', (event) => {
         fetch('/get_buyer_name')
           .then(response => response.json())
@@ -1020,14 +1020,14 @@
             const lastName = data.lastName || '';
             const email = data.email || '-';
             const phone = data.phone || '-';
-            
-            // Update button
+
+
             document.getElementById('buyerFirstName').textContent = firstName;
             document.getElementById('buyerInitial').textContent = firstName.charAt(0).toUpperCase();
           })
           .catch(error => console.error('Error fetching buyer details:', error));
 
-        // Load user profile with picture for navbar
+
         fetch('/api/user-profile-navbar')
           .then(response => response.json())
           .then(data => {
@@ -1035,32 +1035,32 @@
             if (data.success) {
               const firstName = data.first_name || 'User';
               const profileImage = data.profile_image;
-              
+
               console.log('Profile image URL:', profileImage);
-              
-              // Update name and initial
+
+
               document.getElementById('buyerFirstName').textContent = firstName;
               document.getElementById('initialText').textContent = firstName.charAt(0).toUpperCase();
-              
-              // Update profile picture if available
+
+
               if (profileImage && profileImage.trim() !== '') {
                 const profileImg = document.getElementById('profileImg');
                 const initialText = document.getElementById('initialText');
                 const buyerInitial = document.getElementById('buyerInitial');
-                
+
                 console.log('Setting profile image...');
                 profileImg.src = profileImage;
                 profileImg.style.display = 'block';
                 initialText.style.display = 'none';
-                
-                // Update image on load to ensure it displays
+
+
                 profileImg.onload = function() {
                   console.log('Profile image loaded successfully');
                   buyerInitial.classList.remove('default-avatar');
                 };
                 profileImg.onerror = function() {
                   console.log('Profile image failed to load');
-                  // If image fails to load, show initial instead
+
                   profileImg.style.display = 'none';
                   initialText.style.display = 'block';
                   buyerInitial.classList.add('default-avatar');
@@ -1076,19 +1076,19 @@
             console.error('Error fetching navbar profile:', error);
           });
 
-        // Load cart count from database
+
         if (window.VaronCart) {
           VaronCart.updateBadge();
         }
 
-        // Show home section by default
+
         showSection('home');
 
-        // Load journal entries on home
+
         loadJournalEntries();
       });
 
-      // Load journal entries from API
+
       function loadJournalEntries() {
         fetch('/api/journal-entries')
           .then(response => response.json())
@@ -1096,8 +1096,8 @@
             const journalGrid = document.getElementById('journalGrid');
             if (data.success && data.entries && data.entries.length > 0) {
               journalGrid.innerHTML = data.entries.map(entry => `
-                <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s ease;cursor:pointer;display:flex;flex-direction:column;height:100%;" 
-                         onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.12)'" 
+                <article style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all 0.2s ease;cursor:pointer;display:flex;flex-direction:column;height:100%;"
+                         onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.12)'"
                          onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'"
                          ${entry.link_url ? `onclick="window.open('${entry.link_url}', '_blank')"` : ''}>
                   <div style="height:180px;background:#f5f5f5;background-image:url('${entry.image_url || 'https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=800&auto=format&fit=crop'}');background-size:cover;background-position:center"></div>
@@ -1119,7 +1119,7 @@
           });
       }
 
-      // Load featured products from API (for home section)
+
       function loadFeaturedProducts() {
         fetch('/api/products?limit=4')
           .then(response => response.json())
@@ -1128,7 +1128,7 @@
               const featuredGrid = document.getElementById('featuredGrid');
               const filtered = data.products.slice(0, 4);
               featuredGrid.innerHTML = filtered.map(product => {
-                const colorSwatches = product.colors && product.colors.length > 0 
+                const colorSwatches = product.colors && product.colors.length > 0
                   ? `<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
                       ${product.colors.slice(0, 5).map(color => `
                         <div style="width:20px;height:20px;border-radius:50%;background:${color};border:1px solid #e0e0e0;" title="${color}"></div>
@@ -1136,7 +1136,7 @@
                       ${product.colors.length > 5 ? `<span style="font-size:11px;color:#999;align-self:center;">+${product.colors.length - 5}</span>` : ''}
                     </div>`
                   : '';
-                
+
                 return `
                   <article class="product" style="cursor:pointer" onclick="window.location.href='/product/${product.id}'">
                     <div class="product-image">
@@ -1157,7 +1157,7 @@
           .catch(error => console.error('Error loading featured products:', error));
       }
 
-      // Helper function to generate color swatch background (supports multi-color)
+
       function getColorBackground(colorName) {
         const colorHex = {
           'Black': '#000000', 'White': '#FFFFFF', 'Gray': '#808080', 'Grey': '#808080',
@@ -1168,8 +1168,8 @@
           'Maroon': '#800000', 'Tan': '#D2B48C', 'Ivory': '#FFFFF0', 'Silver': '#C0C0C0',
           'Gold': '#FFD700', 'Indigo': '#4B0082', 'Teal': '#008080', 'Cyan': '#00FFFF'
         };
-        
-        // Check if color contains a slash (multi-color)
+
+
         if (colorName.includes('/')) {
           const colors = colorName.split('/').map(c => c.trim());
           const gradientColors = colors.map(c => {
@@ -1186,7 +1186,7 @@
             if (!hex) hex = '#' + c.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0'), 0).substr(0, 6);
             return hex;
           });
-          
+
           if (colors.length === 2) {
             return `linear-gradient(135deg, ${gradientColors[0]} 50%, ${gradientColors[1]} 50%)`;
           } else if (colors.length === 3) {
@@ -1201,7 +1201,7 @@
             return gradient;
           }
         } else {
-          // Single color
+
           let hex = colorHex[colorName];
           if (!hex) {
             const colorLower = colorName.toLowerCase();
@@ -1217,8 +1217,8 @@
         }
       }
 
-      // Load browse products from API
-      // Load categories for filter buttons
+
+
       function loadCategories() {
         fetch('/api/categories')
           .then(response => response.json())
@@ -1226,17 +1226,17 @@
             if (data.success && data.categories) {
               const categoriesContainer = document.getElementById('categoriesContainer');
               if (categoriesContainer) {
-                categoriesContainer.innerHTML = ''; // Clear existing content
-                
-                // Add "All" button first
+                categoriesContainer.innerHTML = '';
+
+
                 const allSection = document.createElement('div');
                 allSection.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all 0.2s';
-                
+
                 const allTitle = document.createElement('h3');
                 allTitle.style.cssText = 'margin:0;font-size:14px;font-weight:600;color:#0a0a0a;text-transform:uppercase;letter-spacing:0.5px';
                 allTitle.textContent = 'All';
                 allSection.appendChild(allTitle);
-                
+
                 const allLink = document.createElement('a');
                 allLink.href = 'javascript:void(0)';
                 allLink.setAttribute('data-category', '');
@@ -1247,7 +1247,7 @@
                   handleCategoryFilter(e, '');
                 };
                 allSection.appendChild(allLink);
-                
+
                 allSection.onmouseover = () => {
                   allSection.style.background = '#fafafa';
                   allSection.style.borderColor = '#d1d5db';
@@ -1256,10 +1256,10 @@
                   allSection.style.background = '#fff';
                   allSection.style.borderColor = '#e5e7eb';
                 };
-                
+
                 categoriesContainer.appendChild(allSection);
-                
-                // Group categories by type
+
+
                 const categoriesByType = {};
                 data.categories.forEach(category => {
                   const type = category.category_type || 'OTHER';
@@ -1268,36 +1268,36 @@
                   }
                   categoriesByType[type].push(category);
                 });
-                
-                // Define order of types
+
+
                 const typeOrder = ['TOPS', 'BOTTOMS', 'FOOTWEAR', 'ACCESSORIES', 'GROOMING PRODUCTS'];
-                
-                // Display categories organized by type
+
+
                 typeOrder.forEach((type, typeIndex) => {
                   if (categoriesByType[type]) {
                     const typeSection = document.createElement('div');
                     typeSection.style.cssText = 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:16px;transition:all 0.2s';
-                    
+
                     const typeHeader = document.createElement('div');
                     typeHeader.style.cssText = 'display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none';
-                    
+
                     const typeTitle = document.createElement('h3');
                     typeTitle.style.cssText = 'margin:0;font-size:14px;font-weight:600;color:#0a0a0a;text-transform:uppercase;letter-spacing:0.5px';
                     typeTitle.textContent = type;
                     typeHeader.appendChild(typeTitle);
-                    
+
                     const toggleIcon = document.createElement('span');
                     toggleIcon.style.cssText = 'font-size:14px;color:#0a0a0a;transition:transform 0.3s;transform:rotate(90deg);display:block;width:16px;text-align:center';
                     toggleIcon.textContent = '▶';
                     typeHeader.appendChild(toggleIcon);
-                    
+
                     typeSection.appendChild(typeHeader);
-                    
+
                     const categoryList = document.createElement('div');
                     categoryList.style.cssText = 'display:none;flex-direction:column;gap:8px;margin-top:12px';
-                    
-                    let isExpanded = false; // Start collapsed
-                    
+
+                    let isExpanded = false;
+
                     categoriesByType[type].forEach(category => {
                       const link = document.createElement('a');
                       link.href = 'javascript:void(0)';
@@ -1318,10 +1318,10 @@
                       };
                       categoryList.appendChild(link);
                     });
-                    
+
                     typeSection.appendChild(categoryList);
-                    
-                    // Toggle functionality
+
+
                     typeHeader.onclick = () => {
                       isExpanded = !isExpanded;
                       if (isExpanded) {
@@ -1332,7 +1332,7 @@
                         toggleIcon.style.transform = 'rotate(90deg)';
                       }
                     };
-                    
+
                     typeSection.onmouseover = () => {
                       typeSection.style.background = '#fafafa';
                       typeSection.style.borderColor = '#d1d5db';
@@ -1341,7 +1341,7 @@
                       typeSection.style.background = '#fff';
                       typeSection.style.borderColor = '#e5e7eb';
                     };
-                    
+
                     categoriesContainer.appendChild(typeSection);
                   }
                 });
@@ -1353,20 +1353,20 @@
           });
       }
 
-      // Handle search input
+
       let searchTimeout;
       function handleBrowseSearch(event) {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
           loadBrowseProducts();
-        }, 300); // Debounce search by 300ms
+        }, 300);
       }
 
-      // Handle category filter button click
+
       function handleCategoryFilter(event, categoryId) {
         event.preventDefault();
-        
-        // Highlight selected category in the grouped layout
+
+
         const allLinks = document.querySelectorAll('#categoriesContainer a');
         allLinks.forEach(link => {
           if (link.getAttribute('data-category') == categoryId) {
@@ -1379,37 +1379,37 @@
             link.style.paddingLeft = '0';
           }
         });
-        
-        // Load products with selected category
+
+
         loadBrowseProducts(categoryId);
       }
 
       function loadBrowseProducts(categoryId) {
         const searchInput = document.getElementById('browseSearch');
-        
+
         const search = searchInput ? searchInput.value.trim() : '';
-        // If categoryId not provided, check which link is active
+
         let selectedCategoryId = categoryId;
         if (selectedCategoryId === undefined) {
           const activeLink = document.querySelector('#categoriesContainer a[style*="font-weight: 600"]') || document.querySelector('#categoriesContainer a[style*="fontWeight: 600"]');
           selectedCategoryId = activeLink ? activeLink.getAttribute('data-category') : '';
         }
-        
-        // Build query string
+
+
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (selectedCategoryId) params.append('category_id', selectedCategoryId);
         params.append('limit', '50');
-        
+
         fetch(`/api/products?${params.toString()}`)
           .then(response => response.json())
           .then(data => {
             const browseGrid = document.getElementById('browseGrid');
             if (!browseGrid) return;
-            
+
             if (data.success && data.products && data.products.length > 0) {
               browseGrid.innerHTML = data.products.map(product => {
-                const colorSwatches = product.colors && product.colors.length > 0 
+                const colorSwatches = product.colors && product.colors.length > 0
                   ? `<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
                       ${product.colors.slice(0, 5).map(color => `
                         <div style="width:20px;height:20px;border-radius:50%;background:${getColorBackground(color)};border:1px solid #e0e0e0;" title="${color}"></div>
@@ -1417,7 +1417,7 @@
                       ${product.colors.length > 5 ? `<span style="font-size:11px;color:#999;align-self:center;">+${product.colors.length - 5}</span>` : ''}
                     </div>`
                   : '';
-                
+
                 return `
                   <article class="product" style="cursor:pointer" onclick="window.location.href='/product/${product.id}'">
                     <div class="product-image">
@@ -1454,7 +1454,7 @@
           });
       }
 
-      // Handle order tracking form submission
+
       document.getElementById('trackingForm').addEventListener('submit', function(event) {
         event.preventDefault();
         const orderNumber = document.getElementById('trackOrderNumber').value;
@@ -1514,7 +1514,7 @@
         });
       });
 
-      // Load user's orders for My Orders section
+
       let allOrdersData = [];
       let currentStatusFilter = 'all';
 
@@ -1523,19 +1523,19 @@
           .then(response => response.json())
           .then(data => {
             if (data.success && data.orders && data.orders.length > 0) {
-              // Ensure all decimal values are converted to floats before use
+
               data.orders.forEach(order => {
-                // Convert order amount
+
                 if (order.total_amount !== null && order.total_amount !== undefined) {
                   order.total_amount = parseFloat(order.total_amount);
                 }
-                
-                // Convert item prices and quantities
+
+
                 if (order.items && Array.isArray(order.items)) {
                   order.items.forEach(item => {
                     if (item.unit_price !== null && item.unit_price !== undefined) {
                       item.unit_price = parseFloat(item.unit_price);
-                      item.price = parseFloat(item.unit_price); // Ensure 'price' alias is also float
+                      item.price = parseFloat(item.unit_price);
                     }
                     if (item.quantity !== null && item.quantity !== undefined) {
                       item.quantity = parseInt(item.quantity);
@@ -1546,7 +1546,7 @@
                   });
                 }
               });
-              
+
               allOrdersData = data.orders;
               updateOrderCounts();
               displayOrders('all');
@@ -1573,7 +1573,7 @@
       }
 
       function updateOrderCounts() {
-        // Map backend statuses to tab categories
+
         const counts = {
           all: allOrdersData.length,
           pending: allOrdersData.filter(o => o.order_status === 'pending').length,
@@ -1583,7 +1583,7 @@
           cancelled: allOrdersData.filter(o => o.order_status === 'cancelled').length
         };
 
-        // Update count badges
+
         document.querySelectorAll('.order-status-tab').forEach(tab => {
           const status = tab.getAttribute('data-status');
           const countSpan = tab.querySelector('.order-count');
@@ -1595,13 +1595,13 @@
 
       function filterOrdersByStatus(status) {
         currentStatusFilter = status;
-        
-        // Update active tab
+
+
         document.querySelectorAll('.order-status-tab').forEach(tab => {
           tab.classList.remove('active');
         });
         document.querySelector(`[data-status="${status}"]`).classList.add('active');
-        
+
         displayOrders(status);
       }
 
@@ -1611,7 +1611,7 @@
 
         if (status !== 'all') {
           filteredOrders = allOrdersData.filter(order => {
-            // Map backend statuses to tab categories
+
             if (status === 'pending') return order.order_status === 'pending';
             if (status === 'processing') return ['confirmed', 'waiting_for_pickup'].includes(order.order_status);
             if (status === 'shipped') return ['released_to_rider', 'shipped'].includes(order.order_status);
@@ -1643,11 +1643,11 @@
 
         ordersList.innerHTML = filteredOrders.map(order => {
           const orderId = order.id || order.order_id;
-          
-          // Map backend statuses to display colors
+
+
           let statusBadgeColor = '#999';
           let statusLabel = order.order_status;
-          
+
           if (order.order_status === 'pending') {
             statusBadgeColor = '#ef4444';
             statusLabel = 'To Pay';
@@ -1667,13 +1667,13 @@
 
           const items = order.items || [];
           const firstItem = items.length > 0 ? items[0] : null;
-          
+
           const itemsHtml = items.slice(0, 3).map(item => {
-            // Ensure numeric types
+
             const qty = parseInt(item.quantity || 1);
             const price = parseFloat(item.price || item.unit_price || 0);
             const lineTotal = qty * price;
-            
+
             return `
             <div class="order-item">
               <img src="${item.image_url || '/static/images/placeholder.jpg'}" alt="${item.product_name}" class="item-image" onerror="this.src='/static/images/placeholder.jpg'">
@@ -1688,7 +1688,7 @@
 
           const itemsCountExtra = items.length > 3 ? items.length - 3 : 0;
 
-          // Create transaction stage indicator with new status mapping
+
           const stageSteps = [
             { status: 'pending', label: 'To Pay', icon: '💳' },
             { status: 'confirmed', label: 'Seller Confirmed', icon: '✔️' },
@@ -1698,7 +1698,7 @@
             { status: 'completed', label: 'Completed', icon: '✓' }
           ];
 
-          // Find current stage based on order_status
+
           let currentStageIndex = -1;
           const orderStatusMap = {
             'pending': 0,
@@ -1710,7 +1710,7 @@
             'completed': 5
           };
           currentStageIndex = orderStatusMap[order.order_status] !== undefined ? orderStatusMap[order.order_status] : -1;
-          
+
           const stageIndicator = `
             <div style="display:flex;gap:4px;align-items:center;padding:12px 16px;background:#f9fafb;border-top:1px solid #f0f0f0;font-size:12px;color:#999;flex-wrap:wrap;overflow-x:auto">
               ${stageSteps.map((step, idx) => {
@@ -1739,7 +1739,7 @@
                   ${statusLabel}
                 </span>
               </div>
-              
+
               ${firstItem ? `
               <div class="order-primary-product" style="display:flex;gap:12px;padding:16px;background:#f9fafb;border-radius:8px;align-items:center">
                 <img src="${firstItem.image_url || '/static/images/placeholder.jpg'}" alt="${firstItem.product_name}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.src='/static/images/placeholder.jpg'">
@@ -1749,7 +1749,7 @@
                 </div>
               </div>
               ` : ''}
-              
+
               <div class="order-body">
                 <div class="order-items">
                   ${itemsHtml}
@@ -1759,7 +1759,7 @@
                     </div>
                   ` : ''}
                 </div>
-                
+
                 <div class="order-footer">
                   <div class="order-total">
                     <div class="order-total-label">Total</div>
@@ -1770,9 +1770,9 @@
                   </div>
                 </div>
               </div>
-              
+
               ${stageIndicator}
-              
+
               ${order.order_status === 'delivered' ? `
               <div style="display:flex;gap:8px;padding:12px 16px;background:#f0fdf4;border-top:1px solid #dcfce7;flex-wrap:wrap">
                 <button onclick="completeOrder(${orderId})" style="flex:1;min-width:160px;padding:10px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
@@ -1783,7 +1783,7 @@
                 </button>
               </div>
               ` : ''}
-              
+
               ${['delivered', 'completed'].includes(order.order_status) ? `
               <div style="padding:16px;background:#fafafa;border-top:1px solid #f0f0f0">
                 <div style="margin-bottom:12px">
@@ -1793,7 +1793,7 @@
                       <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px">
                         <!-- Product Name -->
                         <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:#000;max-height:30px;overflow:hidden;text-overflow:ellipsis">${item.product_name || 'Product'}</div>
-                        
+
                         <!-- Star Rating -->
                         <div style="margin-bottom:12px">
                           <div style="font-size:11px;color:#999;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Rating</div>
@@ -1803,13 +1803,13 @@
                             `).join('')}
                           </div>
                         </div>
-                        
+
                         <!-- Review Text -->
                         <textarea id="review-text-${orderId}-${idx}" placeholder="Share your thoughts about this product (optional)" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:4px;font-size:12px;font-family:inherit;resize:vertical;min-height:60px;margin-bottom:10px;box-sizing:border-box" maxlength="500"></textarea>
-                        
+
                         <!-- Character Count -->
                         <div style="font-size:11px;color:#999;margin-bottom:10px;text-align:right" id="char-count-${orderId}-${idx}">0/500</div>
-                        
+
                         <!-- Submit Button -->
                         <button onclick="submitProductReview(${orderId}, ${item.product_id}, ${idx})" style="width:100%;padding:8px 10px;background:#10b981;color:#fff;border:none;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
                           Submit Review
@@ -1825,19 +1825,19 @@
         }).join('');
       }
 
-      // Enhanced: View order details in modal
+
       let currentOrderDetailsId = null;
 
       async function viewOrderDetails(orderId) {
         currentOrderDetailsId = orderId;
-        
+
         try {
-          // Fetch detailed order information from the order details page
+
           const response = await fetch(`/api/order-details/${orderId}`);
           const data = await response.json();
-          
+
           if (data.success) {
-            // Ensure all decimal values are converted to floats
+
             if (data.order) {
               ['total_amount', 'subtotal', 'shipping_fee', 'tax_amount', 'discount_amount'].forEach(key => {
                 if (data.order[key] !== null && data.order[key] !== undefined) {
@@ -1845,8 +1845,8 @@
                 }
               });
             }
-            
-            // Ensure all item prices are floats
+
+
             if (data.items && Array.isArray(data.items)) {
               data.items.forEach(item => {
                 if (item.unit_price !== null && item.unit_price !== undefined) {
@@ -1863,7 +1863,7 @@
                 }
               });
             }
-            
+
             displayOrderDetailsModal(data.order, data.items, data.shipment, data.shipping_address, data.billing_address);
             openOrderDetailsModal();
           } else {
@@ -1876,10 +1876,10 @@
       }
 
       function displayOrderDetailsModal(order, items, shipment, shippingAddress, billingAddress) {
-        // Update header info
+
         document.getElementById('orderDetailNumber').textContent = `Order #${order.order_number || order.id}`;
-        
-        // Status colors
+
+
         const statusColors = {
           pending: { color: '#ef4444', label: 'To Pay', bg: '#fef2f2' },
           processing: { color: '#f59e0b', label: 'To Ship', bg: '#fffbf0' },
@@ -1891,7 +1891,7 @@
         const status = order.order_status || 'pending';
         const statusInfo = statusColors[status] || statusColors.pending;
 
-        // Update order header
+
         document.getElementById('orderDetailStatus').textContent = statusInfo.label;
         document.getElementById('orderDetailStatus').style.color = statusInfo.color;
         document.getElementById('orderDetailStatus').style.background = statusInfo.bg;
@@ -1899,12 +1899,12 @@
         document.getElementById('orderDetailTotal').textContent = `₱${parseFloat(order.total_amount || 0).toFixed(2)}`;
         document.getElementById('orderDetailPayment').textContent = order.payment_status ? order.payment_status.toUpperCase() : 'PENDING';
 
-        // Update items
+
         const itemsHtml = items && items.length > 0 ? items.map(item => {
           const qty = parseInt(item.quantity || 1);
           const unitPrice = parseFloat(item.unit_price || 0);
           const lineTotal = qty * unitPrice;
-          
+
           return `
           <div style="display:flex;gap:12px;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
             <img src="${item.image_url || 'https://via.placeholder.com/80'}" alt="${item.product_name}" style="width:80px;height:80px;border-radius:6px;object-fit:cover;background:#fff">
@@ -1926,11 +1926,11 @@
 
         document.getElementById('orderDetailItems').innerHTML = itemsHtml;
 
-        // Update tracking
+
         const trackingHtml = buildTrackingTimeline(order, shipment);
         document.getElementById('orderDetailTracking').innerHTML = trackingHtml;
 
-        // Update addresses
+
         if (shippingAddress) {
           document.getElementById('orderDetailShipping').innerHTML = `
             <strong>${shippingAddress.full_name || 'N/A'}</strong><br>
@@ -1953,7 +1953,7 @@
           document.getElementById('orderDetailBilling').textContent = 'Same as shipping address';
         }
 
-        // Update summary
+
         document.getElementById('orderDetailSubtotal').textContent = `₱${parseFloat(order.subtotal || 0).toFixed(2)}`;
         document.getElementById('orderDetailShippingFee').textContent = `₱${parseFloat(order.shipping_fee || 0).toFixed(2)}`;
         document.getElementById('orderDetailTotalAmount').textContent = `₱${parseFloat(order.total_amount || 0).toFixed(2)}`;
@@ -2033,17 +2033,17 @@
         }
       }
 
-      // Complete order function
+
       async function completeOrder(orderId) {
         if (!confirm('✅ Confirm that you have received this order in good condition?')) return;
-        
+
         try {
           const response = await fetch(`/api/order/complete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ order_id: orderId, action: 'completed' })
           });
-          
+
           const data = await response.json();
           if (data.success) {
             alert('✅ Order confirmed as received! Thank you for shopping with us.');
@@ -2057,24 +2057,24 @@
         }
       }
 
-      // Show return/damaged dialog
+
       function showReturnDialog(orderId) {
         const message = `Please select the issue:
-        
+
 1 = Product Damaged
 2 = Wrong Item Received
 3 = Not as Described
 4 = Other Issue
 
 Enter number (1-4) or describe the problem:`;
-        
+
         const reason = prompt(message);
         if (reason && reason.trim()) {
           returnOrDamagedOrder(orderId, reason);
         }
       }
 
-      // Return or mark as damaged
+
       async function returnOrDamagedOrder(orderId, reason) {
         try {
           const response = await fetch(`/api/order/return`, {
@@ -2082,7 +2082,7 @@ Enter number (1-4) or describe the problem:`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ order_id: orderId, reason: reason })
           });
-          
+
           const data = await response.json();
           if (data.success) {
             alert('📋 Return/Issue request submitted!\n\nOur support team will contact you within 24 hours.');
@@ -2096,15 +2096,15 @@ Enter number (1-4) or describe the problem:`;
         }
       }
 
-      // Track product ratings and reviews
+
       let productRatings = {};
       let productReviews = {};
 
-      // Set product rating when stars are clicked
+
       function setProductRating(orderId, productId, rating, idx) {
         productRatings[`${orderId}-${productId}`] = rating;
-        
-        // Update star display
+
+
         const starsContainer = document.getElementById(`rating-stars-${orderId}-${idx}`);
         if (starsContainer) {
           const stars = starsContainer.querySelectorAll('.rating-star');
@@ -2120,7 +2120,7 @@ Enter number (1-4) or describe the problem:`;
         }
       }
 
-      // Update character count for review
+
       function updateCharCount(orderId, idx) {
         const textarea = document.getElementById(`review-text-${orderId}-${idx}`);
         const countDisplay = document.getElementById(`char-count-${orderId}-${idx}`);
@@ -2129,7 +2129,7 @@ Enter number (1-4) or describe the problem:`;
         }
       }
 
-      // Add event listeners for character count
+
       document.addEventListener('input', function(e) {
         if (e.target.id && e.target.id.startsWith('review-text-')) {
           const idParts = e.target.id.replace('review-text-', '').split('-');
@@ -2139,11 +2139,11 @@ Enter number (1-4) or describe the problem:`;
         }
       });
 
-      // Submit product review with rating
+
       async function submitProductReview(orderId, productId, itemIdx) {
         const ratingKey = `${orderId}-${productId}`;
         const rating = productRatings[ratingKey];
-        
+
         const reviewText = document.getElementById(`review-text-${orderId}-${itemIdx}`);
         const reviewContent = reviewText ? reviewText.value.trim() : '';
 
@@ -2152,7 +2152,7 @@ Enter number (1-4) or describe the problem:`;
           return;
         }
 
-        // Comment is optional, but at least rating is required
+
         try {
           const response = await fetch('/api/submit-review', {
             method: 'POST',
@@ -2181,40 +2181,40 @@ Enter number (1-4) or describe the problem:`;
         }
       }
 
-      // Legacy function - kept for compatibility
+
       async function submitProductRating(orderId, productId, idx) {
         await submitProductReview(orderId, productId, idx);
       }
 
       function performOrderAction(orderId) {
-        // Function no longer needed - all information displayed in modal
+
         closeOrderDetailsModal();
       }
 
-      // Close modal on escape key
+
       document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
           closeOrderDetailsModal();
         }
       });
 
-      // Cart functions (placeholders for cart functionality)
+
       function confirmClearCart() {
         openModal('clearModal');
       }
 
       function clearCart() {
-        // Implement cart clearing logic
+
         closeModal('clearModal');
         closeModal('cartModal');
       }
 
       function proceedToCheckout() {
-        // Implement checkout logic
+
         window.location.href = '/checkout';
       }
 
-      // Update floating cart badge on page load
+
       document.addEventListener('DOMContentLoaded', async () => {
         if (window.VaronCart) {
           await VaronCart.updateBadge();

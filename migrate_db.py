@@ -6,7 +6,7 @@ server. Reads credentials from a `.env` file (HOST, USER, PASSWORD, DB_NAME) or 
 environment variables.
 
 Usage (PowerShell):
-  # create .env with DB_HOST, DB_USER, DB_PASSWORD, DB_NAME (see README below)
+
   pip install -r requirements.txt
   python migrate_db.py
 
@@ -31,7 +31,7 @@ except Exception as e:
     print("Missing dependency: mysql-connector-python. Install with: pip install mysql-connector-python")
     raise
 
-# load .env if present
+
 env_path = Path(__file__).parent / '.env'
 if env_path.exists():
     load_dotenv(env_path)
@@ -48,7 +48,7 @@ if not MIGRATIONS_DIR.exists() or not MIGRATIONS_DIR.is_dir():
     print(f"Migrations folder not found: {MIGRATIONS_DIR}")
     sys.exit(1)
 
-# connect to server (no database selected yet)
+
 try:
     cnx = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD)
     cnx.autocommit = True
@@ -58,10 +58,10 @@ except mysql.connector.Error as err:
     sys.exit(1)
 
 try:
-    # create database if not exists
+
     cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
     print(f"Database `{DB_NAME}` ensured.")
-    # switch to the database
+
     cnx.database = DB_NAME
 except mysql.connector.Error as err:
     print(f"[ERROR] Failed creating or switching to database {DB_NAME}: {err}")
@@ -69,7 +69,7 @@ except mysql.connector.Error as err:
     cnx.close()
     sys.exit(1)
 
-# get list of .sql files
+
 sql_files = sorted([p for p in MIGRATIONS_DIR.iterdir() if p.suffix.lower() == '.sql'])
 if not sql_files:
     print("No .sql files found in migrations/ folder. Nothing to do.")
@@ -83,9 +83,9 @@ for sql_file in sql_files:
     print(f"\n--- Running: {sql_file.name} ---")
     sql_text = sql_file.read_text(encoding='utf-8')
     try:
-        # execute multi-statement
+
         for result in cursor.execute(sql_text, multi=True):
-            # result is a MySQLCursor when multi=True
+
             try:
                 affected = result.rowcount
                 if affected is None:
@@ -96,7 +96,7 @@ for sql_file in sql_files:
         print(f"{sql_file.name}: OK")
     except mysql.connector.Error as err:
         print(f"{sql_file.name}: ERROR -> {err}")
-        # stop on error to avoid partial migrations
+
         cursor.close()
         cnx.close()
         sys.exit(1)

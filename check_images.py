@@ -1,11 +1,11 @@
 import mysql.connector
 from config import DB_CONFIG
 
-# Connect to database
+
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor(dictionary=True)
 
-# Check products and their images
+
 cursor.execute("""
     SELECT p.id, p.name, pi.image_url, pi.is_primary
     FROM products p

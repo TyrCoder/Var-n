@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """Test the corrected seller_orders API logic"""
 
 import sys
@@ -13,22 +13,22 @@ print("\n" + "="*70)
 print("TEST: Seller Login and Order Retrieval")
 print("="*70)
 
-# Simulate seller with user_id=2 (MNL)
+
 print("\n1️⃣  Seller logs in with user_id=2 (MNL)")
 user_id = 2
 
-# Step 1: Get seller_id from sellers table
+
 cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
 seller_result = cursor.fetchone()
 
 if seller_result:
     seller_id = seller_result['id']
     print(f"   ✅ Found seller: seller_id = {seller_id}")
-    
-    # Step 2: Query orders for this seller
+
+
     print(f"\n2️⃣  Query orders where o.seller_id = {seller_id}")
     query = """
-        SELECT 
+        SELECT
             o.id,
             o.order_number,
             o.seller_id,
@@ -44,7 +44,7 @@ if seller_result:
     """
     cursor.execute(query, (seller_id,))
     results = cursor.fetchall()
-    
+
     if results:
         print(f"   ✅ Found {len(results)} orders:")
         for row in results:

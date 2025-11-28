@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """Check products in database"""
 
 import sys
@@ -28,7 +28,7 @@ print("\n" + "="*60)
 print("ORDER ITEMS (shows which products in orders)")
 print("="*60)
 cursor.execute('''
-    SELECT oi.order_id, oi.product_id, oi.product_name, p.seller_id 
+    SELECT oi.order_id, oi.product_id, oi.product_name, p.seller_id
     FROM order_items oi
     LEFT JOIN products p ON oi.product_id = p.id
     LIMIT 10

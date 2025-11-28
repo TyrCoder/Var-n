@@ -1,7 +1,7 @@
 import mysql.connector
 from pathlib import Path
 
-# Database config
+
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
@@ -9,15 +9,15 @@ DB_CONFIG = {
     'database': 'varon'
 }
 
-# Get filesystem images
+
 static_dir = Path(r"c:\Users\windows\OneDrive\Documents\GitHub\Var-n\static\images\products")
 fs_files = set(f.name for f in static_dir.glob("*") if f.is_file())
 
-# Connect to database
+
 conn = mysql.connector.connect(**DB_CONFIG)
 cursor = conn.cursor(dictionary=True)
 
-# Get all product images
+
 cursor.execute("""
     SELECT pi.id, pi.product_id, pi.image_url, pi.is_primary, p.name
     FROM product_images pi
@@ -36,13 +36,13 @@ placeholder_url = "/static/images/placeholder.svg"
 for img in all_images:
     filename = img['image_url'].split('/')[-1]
     file_exists = filename in fs_files
-    
+
     if not file_exists:
         print(f"\n❌ Missing: {filename}")
         print(f"   Product: {img['name']} (ID: {img['product_id']})")
         print(f"   Setting to placeholder...")
-        
-        # Update to placeholder
+
+
         cursor.execute(
             "UPDATE product_images SET image_url = %s WHERE id = %s",
             (placeholder_url, img['id'])

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Script to merge duplicate Shoes categories
 """
@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database configuration
+
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
@@ -20,30 +20,30 @@ def merge_categories():
     try:
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
-        
-        # Find the IDs of both categories
+
+
         cursor.execute("SELECT id, name FROM categories WHERE name IN ('Shoes', 'Shoes & Accessories')")
         results = cursor.fetchall()
-        
+
         shoes_id = None
         shoes_accessories_id = None
-        
+
         for row in results:
             if row['name'] == 'Shoes':
                 shoes_id = row['id']
             elif row['name'] == 'Shoes & Accessories':
                 shoes_accessories_id = row['id']
-        
+
         if not shoes_id or not shoes_accessories_id:
             print("✗ Could not find both categories")
             cursor.close()
             conn.close()
             return False
-        
+
         print(f"Found 'Shoes' (ID: {shoes_id})")
         print(f"Found 'Shoes & Accessories' (ID: {shoes_accessories_id})")
-        
-        # Update all products with "Shoes" category to use "Shoes & Accessories"
+
+
         cursor.execute(
             "UPDATE products SET category_id = %s WHERE category_id = %s",
             (shoes_accessories_id, shoes_id)
@@ -51,18 +51,18 @@ def merge_categories():
         affected_rows = cursor.rowcount
         conn.commit()
         print(f"\n✓ Updated {affected_rows} products to use 'Shoes & Accessories'")
-        
-        # Delete the "Shoes" category
+
+
         cursor.execute("DELETE FROM categories WHERE id = %s", (shoes_id,))
         conn.commit()
         print(f"✓ Deleted duplicate 'Shoes' category")
-        
+
         cursor.close()
         conn.close()
-        
+
         print("\n✓ Categories merged successfully!")
         return True
-        
+
     except Exception as e:
         print(f"✗ Error: {str(e)}")
         return False

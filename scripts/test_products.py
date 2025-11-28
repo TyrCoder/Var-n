@@ -9,12 +9,12 @@ conn = mysql.connector.connect(
 
 cursor = conn.cursor(dictionary=True)
 
-# Check if products exist
+
 cursor.execute('SELECT COUNT(*) as count FROM products WHERE is_active = 1 AND archive_status = "active"')
 result = cursor.fetchone()
 print(f'Active products: {result["count"]}')
 
-# Get a sample of products
+
 cursor.execute('''
     SELECT p.id, p.name, p.price, pi.image_url
     FROM products p

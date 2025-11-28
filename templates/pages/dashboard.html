@@ -195,7 +195,7 @@
     </div>
 
     <script>
-      // Page templates
+
       const pageTemplates = {
         'pending-products': `
           <div class="card">
@@ -365,7 +365,7 @@
                 </div>
                 <div>
                   <label style="display:block;margin-bottom:8px;font-weight:500">Journal Image</label>
-                  <div style="border:2px dashed var(--line);border-radius:6px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;" 
+                  <div style="border:2px dashed var(--line);border-radius:6px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;"
                        onmouseover="this.style.borderColor='#8b5cf6';this.style.background='#faf5ff';"
                        onmouseout="this.style.borderColor='var(--line)';this.style.background='transparent';"
                        onclick="document.getElementById('journal-image-input').click()">
@@ -531,24 +531,24 @@
 
       function loadPage(page) {
         console.log('Loading page:', page);
-        
-        // Remove active class from all links
+
+
         document.querySelectorAll('.side-link').forEach(l => l.classList.remove('active'));
-        // Add active class to clicked link
+
         document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
-        
+
         const content = document.getElementById('dashboardContent');
-        
-        // Handle overview page - reload the page
+
+
         if (page === 'overview') {
           window.location.reload();
           return;
         }
-        
+
         if (pageTemplates[page]) {
           content.innerHTML = pageTemplates[page];
-          
-          // Load dynamic data for specific pages
+
+
           if (page === 'pending-products') {
             loadPendingProducts();
           } else if (page === 'pending-promotions') {
@@ -586,8 +586,8 @@
             </div>
           `;
         }
-        
-        // Update page title
+
+
         const pageNames = {
           'overview': 'Dashboard',
           'pending-products': 'Pending Products',
@@ -630,7 +630,7 @@
                   </thead>
                   <tbody>
               `;
-              
+
               data.products.forEach(product => {
                 const date = new Date(product.created_at).toLocaleDateString();
                 html += `
@@ -649,7 +649,7 @@
                   </tr>
                 `;
               });
-              
+
               html += '</tbody></table>';
               document.getElementById('pending-products-list').innerHTML = html;
             } else {
@@ -663,7 +663,7 @@
 
       function approveProduct(productId) {
         if (!confirm('Approve this product?')) return;
-        
+
         fetch(`/admin/approve-product/${productId}`, {
           method: 'POST'
         })
@@ -671,9 +671,9 @@
         .then(data => {
           if (data.success) {
             alert('Product approved successfully!');
-            // Remove the row
+
             document.getElementById(`product-${productId}`)?.remove();
-            // Update counter
+
             const badge = document.querySelector('[data-page="pending-products"] .tag');
             if (badge) {
               const count = parseInt(badge.textContent) - 1;
@@ -690,7 +690,7 @@
 
       function rejectProduct(productId) {
         if (!confirm('Reject and delete this product? This cannot be undone.')) return;
-        
+
         fetch(`/admin/reject-product/${productId}`, {
           method: 'POST'
         })
@@ -698,9 +698,9 @@
         .then(data => {
           if (data.success) {
             alert('Product rejected and removed');
-            // Remove the row
+
             document.getElementById(`product-${productId}`)?.remove();
-            // Update counter
+
             const badge = document.querySelector('[data-page="pending-products"] .tag');
             if (badge) {
               const count = parseInt(badge.textContent) - 1;
@@ -740,13 +740,13 @@
                   </thead>
                   <tbody>
               `;
-              
+
               data.promotions.forEach(promo => {
                 const date = new Date(promo.created_at).toLocaleDateString();
                 const startDate = new Date(promo.start_date).toLocaleDateString();
                 const endDate = new Date(promo.end_date).toLocaleDateString();
                 const discountLabel = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
-                
+
                 html += `
                   <tr id="promotion-${promo.id}">
                     <td><strong>${promo.code}</strong></td>
@@ -770,11 +770,11 @@
                   </tr>
                 `;
               });
-              
+
               html += '</tbody></table>';
               document.getElementById('pending-promotions-list').innerHTML = html;
-              
-              // Update badge count
+
+
               const badge = document.querySelector('[data-page="pending-promotions"] .tag');
               if (badge) {
                 badge.textContent = data.promotions.length;
@@ -796,11 +796,11 @@
       function viewPromotionDetails(promotionId) {
         const modal = document.getElementById('promotion-details-modal');
         const modalBody = document.getElementById('promotion-details-body');
-        
+
         modal.style.display = 'flex';
         modalBody.innerHTML = '<p style="text-align:center;padding:40px;">Loading promotion details...</p>';
-        
-        // Get the promotion data from the table row
+
+
         fetch('/admin/pending-promotions')
           .then(response => response.json())
           .then(data => {
@@ -809,7 +809,7 @@
               const startDate = new Date(promo.start_date).toLocaleDateString();
               const endDate = new Date(promo.end_date).toLocaleDateString();
               const discountLabel = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
-              
+
               let html = `
                 <div style="display: grid; gap: 16px;">
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -822,22 +822,22 @@
                       <div style="font-size: 18px; font-weight: 700; color: #10b981;">${discountLabel}</div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Product</label>
                     <div>${promo.product_name} (₱${parseFloat(promo.product_price).toFixed(2)})</div>
                   </div>
-                  
+
                   <div>
                     <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Brand</label>
                     <div>${promo.brand || 'N/A'}</div>
                   </div>
-                  
+
                   <div>
                     <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Description</label>
                     <div>${promo.description || 'No description provided'}</div>
                   </div>
-                  
+
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div>
                       <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Start Date</label>
@@ -848,7 +848,7 @@
                       <div>${endDate}</div>
                     </div>
                   </div>
-                  
+
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div>
                       <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Min. Purchase</label>
@@ -859,7 +859,7 @@
                       <div>${promo.usage_limit || 'Unlimited'}</div>
                     </div>
                   </div>
-                  
+
                   <div style="display: flex; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);">
                     <button onclick="approvePromotion(${promo.id})" class="tag" style="background: #10b981; color: white; cursor: pointer; border: none; padding: 10px 16px; flex: 1;">✓ Approve</button>
                     <button onclick="rejectPromotion(${promo.id})" class="tag" style="background: #ef4444; color: white; cursor: pointer; border: none; padding: 10px 16px; flex: 1;">✕ Reject</button>
@@ -880,7 +880,7 @@
 
       function approvePromotion(promotionId) {
         if (!confirm('Approve this promotion? An email will be sent to the seller.')) return;
-        
+
         fetch(`/admin/promotion/${promotionId}/approve`, {
           method: 'POST',
           headers: {
@@ -894,15 +894,15 @@
             alert('Promotion approved successfully! Email sent to seller.');
             closePromotionDetailsModal();
             document.getElementById(`promotion-${promotionId}`)?.remove();
-            
-            // Update counter
+
+
             const badge = document.querySelector('[data-page="pending-promotions"] .tag');
             if (badge) {
               const count = parseInt(badge.textContent) - 1;
               badge.textContent = count > 0 ? count : '0';
             }
-            
-            // If no more promotions, reload the list
+
+
             const listContainer = document.getElementById('pending-promotions-list');
             if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
               loadPendingPromotions();
@@ -919,8 +919,8 @@
 
       function rejectPromotion(promotionId) {
         const reason = prompt('Enter rejection reason (will be sent to the seller):');
-        if (reason === null) return; // User cancelled
-        
+        if (reason === null) return;
+
         fetch(`/admin/promotion/${promotionId}/reject`, {
           method: 'POST',
           headers: {
@@ -934,15 +934,15 @@
             alert('Promotion rejected! Email sent to seller with rejection reason.');
             closePromotionDetailsModal();
             document.getElementById(`promotion-${promotionId}`)?.remove();
-            
-            // Update counter
+
+
             const badge = document.querySelector('[data-page="pending-promotions"] .tag');
             if (badge) {
               const count = parseInt(badge.textContent) - 1;
               badge.textContent = count > 0 ? count : '0';
             }
-            
-            // If no more promotions, reload the list
+
+
             const listContainer = document.getElementById('pending-promotions-list');
             if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
               loadPendingPromotions();
@@ -981,7 +981,7 @@
                   </thead>
                   <tbody>
               `;
-              
+
               data.sellers.forEach(seller => {
                 const date = new Date(seller.created_at).toLocaleDateString();
                 html += `
@@ -1000,7 +1000,7 @@
                   </tr>
                 `;
               });
-              
+
               html += '</tbody></table>';
               document.getElementById('pending-sellers-list').innerHTML = html;
             } else {
@@ -1015,7 +1015,7 @@
 
       function approveSeller(sellerId) {
         if (!confirm('Approve this seller?')) return;
-        
+
         fetch(`/admin/approve-seller/${sellerId}`, {
           method: 'POST'
         })
@@ -1035,7 +1035,7 @@
 
       function rejectSeller(sellerId) {
         if (!confirm('Reject this seller application? This will remove their seller account.')) return;
-        
+
         fetch(`/admin/reject-seller/${sellerId}`, {
           method: 'POST'
         })
@@ -1078,7 +1078,7 @@
                   </thead>
                   <tbody>
               `;
-              
+
               data.riders.forEach(rider => {
                 const date = new Date(rider.created_at).toLocaleDateString();
                 html += `
@@ -1098,7 +1098,7 @@
                   </tr>
                 `;
               });
-              
+
               html += '</tbody></table>';
               document.getElementById('pending-riders-list').innerHTML = html;
             } else {
@@ -1113,7 +1113,7 @@
 
       function approveRider(riderId) {
         if (!confirm('Approve this rider?')) return;
-        
+
         fetch(`/admin/approve-rider/${riderId}`, {
           method: 'POST'
         })
@@ -1133,7 +1133,7 @@
 
       function rejectRider(riderId) {
         if (!confirm('Reject this rider application?')) return;
-        
+
         fetch(`/admin/reject-rider/${riderId}`, {
           method: 'POST'
         })
@@ -1151,17 +1151,17 @@
         });
       }
 
-      // Product Edits Functions
+
       function loadProductEdits() {
         fetch('/admin/pending-edits')
           .then(response => response.json())
           .then(data => {
             const container = document.getElementById('product-edits-list');
             const editsCount = document.getElementById('edits-count');
-            
+
             if (data.pending_edits && data.pending_edits.length > 0) {
               if (editsCount) editsCount.textContent = data.pending_edits.length;
-              
+
               let html = `
                 <table>
                   <thead>
@@ -1175,7 +1175,7 @@
                   </thead>
                   <tbody>
               `;
-              
+
               data.pending_edits.forEach(item => {
                 const date = new Date(item.first_request).toLocaleString();
                 html += `
@@ -1190,7 +1190,7 @@
                   </tr>
                 `;
               });
-              
+
               html += '</tbody></table>';
               container.innerHTML = html;
             } else {
@@ -1202,12 +1202,12 @@
             document.getElementById('product-edits-list').innerHTML = '<p style="color:#ef4444">Error loading edits</p>';
           });
       }
-      
+
       function viewEditDetails(productId) {
         const modal = document.getElementById('edit-modal');
         modal.style.display = 'flex';
         document.getElementById('edit-modal-body').innerHTML = 'Loading...';
-        
+
         fetch('/admin/product-edit-details/' + productId)
           .then(response => response.json())
           .then(data => {
@@ -1217,10 +1217,10 @@
                   <h3 style="margin:0 0 8px">${data.product.name}</h3>
                   <p style="margin:0;color:var(--muted);font-size:14px">Store: ${data.product.store_name}</p>
                 </div>
-                
+
                 <h3 style="margin:20px 0 12px">Requested Changes:</h3>
               `;
-              
+
               data.edits.forEach(edit => {
                 html += `
                   <div style="background:#f9fafb;padding:12px;border-radius:6px;margin:8px 0;border-left:3px solid #3b82f6" id="edit-item-${edit.id}">
@@ -1243,14 +1243,14 @@
                   </div>
                 `;
               });
-              
+
               html += `
                 <div style="display:flex;gap:12px;margin-top:24px;padding-top:20px;border-top:2px solid var(--line)">
                   <button class="tag" onclick="approveAllProductEdits(${productId})" style="background:#10b981;cursor:pointer;border:none;padding:10px 16px">✓ Approve All Changes</button>
                   <button class="tag" onclick="closeEditModal()" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px">Close</button>
                 </div>
               `;
-              
+
               document.getElementById('edit-modal-body').innerHTML = html;
             }
           })
@@ -1258,18 +1258,18 @@
             document.getElementById('edit-modal-body').innerHTML = '<p style="color:#ef4444">Error loading details</p>';
           });
       }
-      
+
       function approveSingleEdit(editId) {
         if (!confirm('Approve this change?')) return;
-        
+
         fetch('/admin/approve-edit/' + editId, { method: 'POST' })
           .then(response => response.json())
           .then(data => {
             if (data.success) {
               alert('✓ Edit approved successfully!');
               document.getElementById('edit-item-' + editId)?.remove();
-              
-              // Check if any edits remain
+
+
               if (!document.querySelectorAll('[id^="edit-item-"]').length) {
                 closeEditModal();
                 loadProductEdits();
@@ -1280,15 +1280,15 @@
           })
           .catch(error => alert('Error approving edit'));
       }
-      
+
       function rejectSingleEdit(editId) {
         const notes = prompt('Rejection reason (optional):');
         if (notes === null) return;
-        
+
         const formData = new FormData();
         formData.append('notes', notes);
-        
-        fetch('/admin/reject-edit/' + editId, { 
+
+        fetch('/admin/reject-edit/' + editId, {
           method: 'POST',
           body: formData
         })
@@ -1297,8 +1297,8 @@
             if (data.success) {
               alert('Edit rejected');
               document.getElementById('edit-item-' + editId)?.remove();
-              
-              // Check if any edits remain
+
+
               if (!document.querySelectorAll('[id^="edit-item-"]').length) {
                 closeEditModal();
                 loadProductEdits();
@@ -1309,18 +1309,18 @@
           })
           .catch(error => alert('Error rejecting edit'));
       }
-      
+
       function approveAllProductEdits(productId) {
         if (!confirm('Approve ALL changes for this product?')) return;
-        
+
         const editItems = document.querySelectorAll('[id^="edit-item-"]');
         const promises = [];
-        
+
         editItems.forEach(item => {
           const editId = item.id.replace('edit-item-', '');
           promises.push(fetch('/admin/approve-edit/' + editId, { method: 'POST' }));
         });
-        
+
         Promise.all(promises)
           .then(() => {
             alert('✓ All changes approved successfully!');
@@ -1329,22 +1329,22 @@
           })
           .catch(error => alert('Error approving all edits'));
       }
-      
+
       function closeEditModal() {
         document.getElementById('edit-modal').style.display = 'none';
       }
-      
-      // Recovery Requests Functions
+
+
       function loadRecoveryRequests() {
         fetch('/admin/pending-recoveries')
           .then(response => response.json())
           .then(data => {
             const container = document.getElementById('recovery-requests-list');
             const recoveryCount = document.getElementById('recovery-count');
-            
+
             if (data.pending_recoveries && data.pending_recoveries.length > 0) {
               if (recoveryCount) recoveryCount.textContent = data.pending_recoveries.length;
-              
+
               let html = `
                 <table>
                   <thead>
@@ -1359,7 +1359,7 @@
                   </thead>
                   <tbody>
               `;
-              
+
               data.pending_recoveries.forEach(item => {
                 const date = new Date(item.requested_at).toLocaleString();
                 html += `
@@ -1376,7 +1376,7 @@
                   </tr>
                 `;
               });
-              
+
               html += '</tbody></table>';
               container.innerHTML = html;
             } else {
@@ -1388,25 +1388,25 @@
             document.getElementById('recovery-requests-list').innerHTML = '<p style="color:#ef4444">Error loading recovery requests</p>';
           });
       }
-      
+
       function approveRecovery(requestId) {
         if (!confirm('Approve this recovery request? The product will be restored to active status.')) return;
-        
+
         fetch('/admin/approve-recovery/' + requestId, { method: 'POST' })
           .then(response => response.json())
           .then(data => {
             if (data.success) {
               alert('✓ Recovery approved! Product restored.');
               document.getElementById('recovery-row-' + requestId)?.remove();
-              
-              // Update count
+
+
               const recoveryCount = document.getElementById('recovery-count');
               if (recoveryCount) {
                 const count = parseInt(recoveryCount.textContent) - 1;
                 recoveryCount.textContent = count > 0 ? count : '0';
               }
-              
-              // Reload if no items left
+
+
               if (!document.querySelectorAll('[id^="recovery-row-"]').length) {
                 loadRecoveryRequests();
               }
@@ -1416,15 +1416,15 @@
           })
           .catch(error => alert('Error approving recovery'));
       }
-      
+
       function rejectRecovery(requestId) {
         const notes = prompt('Rejection reason (optional):');
         if (notes === null) return;
-        
+
         const formData = new FormData();
         formData.append('notes', notes);
-        
-        fetch('/admin/reject-recovery/' + requestId, { 
+
+        fetch('/admin/reject-recovery/' + requestId, {
           method: 'POST',
           body: formData
         })
@@ -1433,15 +1433,15 @@
             if (data.success) {
               alert('Recovery request rejected');
               document.getElementById('recovery-row-' + requestId)?.remove();
-              
-              // Update count
+
+
               const recoveryCount = document.getElementById('recovery-count');
               if (recoveryCount) {
                 const count = parseInt(recoveryCount.textContent) - 1;
                 recoveryCount.textContent = count > 0 ? count : '0';
               }
-              
-              // Reload if no items left
+
+
               if (!document.querySelectorAll('[id^="recovery-row-"]').length) {
                 loadRecoveryRequests();
               }
@@ -1451,8 +1451,8 @@
           })
           .catch(error => alert('Error rejecting recovery'));
       }
-      
-      // Load edit count on page load
+
+
       fetch('/admin/pending-edits')
         .then(response => response.json())
         .then(data => {
@@ -1462,8 +1462,8 @@
           }
         })
         .catch(error => console.error('Error loading edit count:', error));
-      
-      // Load recovery count on page load
+
+
       fetch('/admin/pending-recoveries')
         .then(response => response.json())
         .then(data => {
@@ -1474,7 +1474,7 @@
         })
         .catch(error => console.error('Error loading recovery count:', error));
 
-      // Load pending promotions count on page load
+
       fetch('/admin/pending-promotions')
         .then(response => response.json())
         .then(data => {
@@ -1485,7 +1485,7 @@
         })
         .catch(error => console.error('Error loading promotions count:', error));
 
-      // Add click handlers for sidebar navigation
+
       document.querySelectorAll('.side-link').forEach(link => {
         link.addEventListener('click', (e) => {
           const page = e.currentTarget.getAttribute('data-page');
@@ -1496,7 +1496,7 @@
         });
       });
 
-      // Load recent orders on page load
+
       function loadRecentOrders() {
         fetch('/admin/recent-orders')
           .then(response => response.json())
@@ -1526,7 +1526,7 @@
           });
       }
 
-      // Load best selling product
+
       function loadBestProduct() {
         fetch('/admin/best-product')
           .then(response => response.json())
@@ -1552,11 +1552,11 @@
           });
       }
 
-      // Load data on page load
+
       window.addEventListener('DOMContentLoaded', () => {
         loadRecentOrders();
         loadBestProduct();
-        // Apply bar chart heights from data attributes
+
         document.querySelectorAll('.bar[data-height]').forEach(bar => {
           bar.style.height = bar.getAttribute('data-height') + '%';
         });
@@ -1574,14 +1574,14 @@
         window.location.href = '/logout';
       }
 
-      // Product Details Modal Functions
+
       function viewProductDetails(productId) {
         const modal = document.getElementById('product-details-modal');
         const modalBody = document.getElementById('product-details-body');
-        
+
         modal.style.display = 'flex';
         modalBody.innerHTML = '<p style="text-align:center;padding:40px;">Loading product details...</p>';
-        
+
         fetch(`/admin/product-details/${productId}`)
           .then(response => response.json())
           .then(data => {
@@ -1590,7 +1590,7 @@
             console.log('Product stock:', data.product?.stock);
             if (data.success && data.product) {
               const p = data.product;
-              // Format category name
+
               const categoryNames = {
                 'shirts': 'Shirts & T-Shirts',
                 'pants': 'Pants & Jeans',
@@ -1605,7 +1605,7 @@
                 'grooming': 'Grooming Products'
               };
               const categoryDisplay = categoryNames[p.category] || p.category || 'N/A';
-              
+
               let html = `
                 <div style="display:grid;gap:20px;">
                   <!-- Product Images -->
@@ -1614,7 +1614,7 @@
                       <img src="${p.image_url}" alt="${p.name}" style="max-width:100%;max-height:300px;object-fit:contain;border-radius:8px;">
                     </div>
                   ` : ''}
-                  
+
                   <!-- Basic Info -->
                   <div style="background:#f9fafb;padding:16px;border-radius:8px;">
                     <h3 style="margin:0 0 12px;color:#0a0a0a;">📋 Basic Information</h3>
@@ -1627,7 +1627,7 @@
                       <div><strong>Description:</strong><br>${p.description || 'No description'}</div>
                     </div>
                   </div>
-                  
+
                   <!-- Seller Info -->
                   <div style="background:#f0f9ff;padding:16px;border-radius:8px;">
                     <h3 style="margin:0 0 12px;color:#0a0a0a;">🏪 Seller Information</h3>
@@ -1637,7 +1637,7 @@
                       <div><strong>Submitted:</strong> ${new Date(p.created_at).toLocaleString()}</div>
                     </div>
                   </div>
-                  
+
                   <!-- Stock Info -->
                   ${data.variants && data.variants.length > 0 ? `
                     <div style="background:#fef3c7;padding:16px;border-radius:8px;">
@@ -1673,7 +1673,7 @@
                       ${!data.variants || data.variants.length === 0 ? '<p style="color:#666;font-size:14px;margin-top:8px;">No variant information available</p>' : ''}
                     </div>
                   `}
-                  
+
                   <!-- Action Buttons -->
                   <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:16px;border-top:2px solid var(--line);">
                     <button onclick="closeProductDetailsModal()" class="tag" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px;">Close</button>
@@ -1691,22 +1691,22 @@
             modalBody.innerHTML = '<p style="color:#ef4444;text-align:center;padding:40px;">Error: ' + error.message + '</p>';
           });
       }
-      
+
       function closeProductDetailsModal() {
         document.getElementById('product-details-modal').style.display = 'none';
       }
-      
+
       function approveProductFromModal(productId) {
         closeProductDetailsModal();
         approveProduct(productId);
       }
-      
+
       function rejectProductFromModal(productId) {
         closeProductDetailsModal();
         rejectProduct(productId);
       }
 
-      // Journal Management Functions
+
       function loadJournalEntries() {
         fetch('/admin/journal-entries')
           .then(response => response.json())
@@ -1726,7 +1726,7 @@
                   </thead>
                   <tbody>
               `;
-              
+
               data.entries.forEach(entry => {
                 const date = new Date(entry.created_at).toLocaleDateString();
                 html += `
@@ -1744,7 +1744,7 @@
                   </tr>
                 `;
               });
-              
+
               html += '</tbody></table>';
               container.innerHTML = html;
             } else {
@@ -1783,7 +1783,7 @@
 
       function deleteJournalEntry(entryId) {
         if (!confirm('Delete this journal entry? This cannot be undone.')) return;
-        
+
         fetch(`/admin/journal-entry/${entryId}`, { method: 'DELETE' })
           .then(response => response.json())
           .then(data => {
@@ -1802,7 +1802,7 @@
         document.getElementById('journal-form').reset();
       }
 
-      // Load All Products
+
       function loadAllProducts() {
         fetch('/admin/all-products')
           .then(response => response.json())
@@ -1824,7 +1824,7 @@
           });
       }
 
-      // Load Customers
+
       function loadCustomers() {
         fetch('/admin/all-customers')
           .then(response => response.json())
@@ -1847,7 +1847,7 @@
           });
       }
 
-      // Load Transactions
+
       function loadTransactions() {
         fetch('/admin/all-transactions')
           .then(response => response.json())
@@ -1870,7 +1870,7 @@
           });
       }
 
-      // Load Statistics
+
       function loadStatistics() {
         fetch('/admin/statistics')
           .then(response => response.json())
@@ -1914,7 +1914,7 @@
             document.getElementById('statistics-content').innerHTML = '<p style="color:#ef4444">Error loading statistics</p>';
           });
 
-        // Load customer growth by region
+
         fetch('/admin/customer-growth-by-region')
           .then(response => response.json())
           .then(data => {
@@ -1922,7 +1922,7 @@
             if (data.success && data.regions && data.regions.length > 0) {
               let html = '<div style="display:flex;flex-direction:column;gap:16px">';
               const total = data.regions.reduce((sum, r) => sum + r.count, 0);
-              
+
               data.regions.forEach(region => {
                 const percentage = total > 0 ? Math.round((region.count / total) * 100) : 0;
                 html += `
@@ -1937,18 +1937,18 @@
                   </div>
                 `;
               });
-              
+
               html += '</div>';
               container.innerHTML = html;
-              
-              // Also populate detailed stats
+
+
               let detailedHtml = '<table style="width:100%;border-collapse:separate;border-spacing:0"><thead><tr><th style="text-align:left;padding:10px;border-bottom:1px solid var(--line);font-weight:600">Region</th><th style="text-align:center;padding:10px;border-bottom:1px solid var(--line);font-weight:600">Customers</th><th style="text-align:center;padding:10px;border-bottom:1px solid var(--line);font-weight:600">Percentage</th></tr></thead><tbody>';
-              
+
               data.regions.forEach(region => {
                 const percentage = total > 0 ? Math.round((region.count / total) * 100) : 0;
                 detailedHtml += `<tr><td style="padding:12px;border-bottom:1px solid var(--line)">${region.region}</td><td style="padding:12px;border-bottom:1px solid var(--line);text-align:center;font-weight:600">${region.count}</td><td style="padding:12px;border-bottom:1px solid var(--line);text-align:center">${percentage}%</td></tr>`;
               });
-              
+
               detailedHtml += '</tbody></table>';
               document.getElementById('detailed-stats-body').innerHTML = detailedHtml;
             } else {
@@ -1960,7 +1960,7 @@
           });
       }
 
-      // Load Active Sellers
+
       function loadActiveSellers() {
         fetch('/admin/active-sellers')
           .then(response => response.json())
@@ -2005,7 +2005,7 @@
           });
       }
 
-      // Load Active Riders
+
       function loadActiveRiders() {
         fetch('/admin/active-riders')
           .then(response => response.json())
@@ -2052,7 +2052,7 @@
           });
       }
 
-      // Load Overview Customer Growth Data
+
       function loadOverviewCustomerGrowth() {
         fetch('/admin/customer-growth-by-region')
           .then(response => response.json())
@@ -2061,7 +2061,7 @@
             if (data.success && data.regions && data.regions.length > 0) {
               let html = '';
               const total = data.regions.reduce((sum, r) => sum + r.count, 0);
-              
+
               data.regions.slice(0, 5).forEach(region => {
                 const percentage = total > 0 ? Math.round((region.count / total) * 100) : 0;
                 html += `
@@ -2074,7 +2074,7 @@
                   </div>
                 `;
               });
-              
+
               container.innerHTML = html;
             } else {
               container.innerHTML = '<p style="text-align:center;color:#999;padding:20px">No regional data available</p>';
@@ -2085,12 +2085,12 @@
           });
       }
 
-      // Handle journal form submission
+
       document.addEventListener('DOMContentLoaded', function() {
-        // Load overview customer growth data
+
         loadOverviewCustomerGrowth();
-        
-        // Image preview functions for journal
+
+
       function previewJournalImage(event) {
         const file = event.target.files[0];
         if (file) {
@@ -2128,8 +2128,8 @@
             formData.append('title', document.getElementById('journal-title').value);
             formData.append('description', document.getElementById('journal-description').value);
             formData.append('is_active', document.getElementById('journal-is-active').checked ? '1' : '0');
-            
-            // Get the file from input if it exists
+
+
             const imageInput = document.getElementById('journal-image-input');
             if (imageInput && imageInput.files && imageInput.files[0]) {
               formData.append('image', imageInput.files[0]);
@@ -2154,7 +2154,7 @@
         }
       });
 
-      // Load System Settings
+
       function loadSettings() {
         fetch('/admin/settings')
           .then(response => response.json())
@@ -2172,7 +2172,7 @@
           .catch(error => console.log('Using default settings'));
       }
 
-      // Save System Settings
+
       function saveSystemSettings() {
         const formData = new FormData();
         formData.append('system_name', document.getElementById('system-name').value);
@@ -2196,9 +2196,9 @@
           .catch(error => alert('Error saving settings: ' + error.message));
       }
 
-      // Load Help Content
+
       function loadHelp() {
-        // Fetch support contact information from settings
+
         fetch('/admin/settings')
           .then(response => response.json())
           .then(data => {
@@ -2210,11 +2210,11 @@
           .catch(error => console.log('Using default contact info'));
       }
 
-      // Toggle FAQ Items
+
       function toggleFAQ(element) {
         const answerDiv = element.querySelector('div:last-child');
         const toggleIcon = element.querySelector('span:last-child');
-        
+
         if (answerDiv.style.display === 'none') {
           answerDiv.style.display = 'block';
           toggleIcon.textContent = '−';

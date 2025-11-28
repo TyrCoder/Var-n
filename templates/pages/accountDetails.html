@@ -948,7 +948,7 @@
     </div>
 
     <script>
-      // Define showAlert function first (used everywhere)
+
       function showAlert(message, type) {
         const alertEl = document.getElementById('alertMessage');
         if (alertEl) {
@@ -959,12 +959,12 @@
           }, 5000);
         } else {
           console.error('Alert element not found');
-          alert(message); // Fallback to browser alert
+          alert(message);
         }
       }
       window.showAlert = showAlert;
 
-      // Define global functions immediately so onclick handlers can access them
+
       window.handleEmailButtonClick = function(e) {
         if (e) {
           e.preventDefault();
@@ -976,14 +976,14 @@
           console.error('Email button not found');
           return;
         }
-        
+
         const buttonText = emailButton.textContent.trim();
         const modal = document.getElementById('emailChangeModal');
         if (!modal) {
           console.error('Email change modal not found');
           return;
         }
-        
+
         if (buttonText === 'Change') {
           modal.style.display = 'flex';
           if (window.resetEmailChangeModal) window.resetEmailChangeModal();
@@ -1005,14 +1005,14 @@
           console.error('Phone button not found');
           return;
         }
-        
+
         const buttonText = phoneButton.textContent.trim();
         const modal = document.getElementById('phoneChangeModal');
         if (!modal) {
           console.error('Phone change modal not found');
           return;
         }
-        
+
         if (buttonText === 'Change') {
           modal.style.display = 'flex';
           if (window.resetPhoneChangeModal) window.resetPhoneChangeModal();
@@ -1023,33 +1023,33 @@
         }
       };
 
-      // Wait for DOM to be ready
+
       document.addEventListener('DOMContentLoaded', function() {
-        // User dropdown toggle
+
         function toggleUserDropdown() {
           const dropdown = document.getElementById('userDropdown');
           if (!dropdown) return;
           const container = dropdown.closest('.user-dropdown');
           if (!container) return;
           const isOpen = container.classList.contains('show');
-          
-          // Close all dropdowns
+
+
           document.querySelectorAll('.user-dropdown').forEach(d => d.classList.remove('show'));
-          
+
           if (!isOpen) {
             container.classList.add('show');
           }
         }
         window.toggleUserDropdown = toggleUserDropdown;
 
-        // Close dropdown when clicking outside
+
         document.addEventListener('click', (e) => {
           if (!e.target.closest('.user-dropdown')) {
             document.querySelectorAll('.user-dropdown').forEach(d => d.classList.remove('show'));
           }
         });
 
-        // Profile picture upload
+
         let originalEmail = '{{ user.email }}';
         let originalPhone = '{{ user.phone or '' }}';
         let emailChanged = false;
@@ -1059,7 +1059,7 @@
         let emailEditing = false;
         let phoneEditing = false;
 
-        // Profile picture upload handler
+
         const profileImageInput = document.getElementById('profileImageInput');
         if (profileImageInput) {
           profileImageInput.addEventListener('change', async (e) => {
@@ -1071,7 +1071,7 @@
             return;
           }
 
-          // Show loading state
+
           const profilePicture = document.getElementById('profilePicture');
           const originalSrc = profilePicture ? profilePicture.src : '';
 
@@ -1092,8 +1092,8 @@
               }
               showAlert('Profile picture saved successfully!', 'success');
               console.log('Profile picture saved to database:', data.image_url);
-              
-              // Refresh navbar profile picture
+
+
               refreshNavbarProfile();
             } else {
               showAlert(data.message || 'Error uploading profile picture', 'error');
@@ -1107,8 +1107,8 @@
       } else {
         console.error('Profile image input not found');
       }
-      
-      // Function to refresh navbar profile picture
+
+
       function refreshNavbarProfile() {
         fetch('/api/user-profile-navbar')
           .then(response => response.json())
@@ -1118,7 +1118,7 @@
               const profileImg = document.getElementById('profileImg');
               const initialText = document.getElementById('initialText');
               const buyerInitial = document.getElementById('buyerInitial');
-              
+
               if (profileImg) {
                 profileImg.src = data.profile_image + '?t=' + Date.now();
                 profileImg.style.display = 'block';
@@ -1130,20 +1130,20 @@
           .catch(error => console.error('Error refreshing navbar profile:', error));
       }
 
-        // Email button handler (already defined globally above)
-        // Also attach event listener as backup
+
+
         const emailButton = document.getElementById('verifyEmailButton');
         if (emailButton) {
           emailButton.addEventListener('click', window.handleEmailButtonClick);
         }
 
         function resetEmailChangeModal() {
-          // Clear timer
+
           if (window.emailOtpTimerInterval) {
             clearInterval(window.emailOtpTimerInterval);
             window.emailOtpTimerInterval = null;
           }
-          // Reset resend button
+
           const resendBtn = document.getElementById('emailResendOtpBtn');
           if (resendBtn) {
             resendBtn.disabled = false;
@@ -1151,7 +1151,7 @@
             resendBtn.style.opacity = '1';
             resendBtn.textContent = 'Resend';
           }
-          
+
           const step1 = document.getElementById('emailStep1');
           const step2 = document.getElementById('emailStep2');
           const step3 = document.getElementById('emailStep3');
@@ -1185,7 +1185,7 @@
         }
         window.closeEmailChangeModal = closeEmailChangeModal;
 
-        // Email password confirmation
+
         const emailPasswordConfirmBtn = document.getElementById('emailPasswordConfirmBtn');
         if (emailPasswordConfirmBtn) {
           emailPasswordConfirmBtn.addEventListener('click', async () => {
@@ -1222,7 +1222,7 @@
           });
         }
 
-        // Email send OTP
+
         const emailSendOtpBtn = document.getElementById('emailSendOtpBtn');
         if (emailSendOtpBtn) {
           emailSendOtpBtn.addEventListener('click', async () => {
@@ -1262,7 +1262,7 @@
           });
         }
 
-        // Email OTP input setup
+
         function setupEmailOTPInputs() {
           const inputs = document.querySelectorAll('.email-otp-input');
           inputs.forEach((input, index) => {
@@ -1279,7 +1279,7 @@
           });
         }
 
-        // Phone OTP input setup
+
         function setupPhoneOTPInputs() {
           const inputs = document.querySelectorAll('.phone-otp-input');
           inputs.forEach((input, index) => {
@@ -1296,12 +1296,12 @@
           });
         }
 
-        // Email verify OTP
+
         const emailVerifyOtpBtn = document.getElementById('emailVerifyOtpBtn');
         if (emailVerifyOtpBtn) {
           emailVerifyOtpBtn.addEventListener('click', async () => {
             const otpInputs = document.querySelectorAll('.email-otp-input');
-            // Get OTP and remove any whitespace, ensure it's exactly 6 digits
+
             const otp = Array.from(otpInputs).map(input => input.value.trim()).join('').replace(/\s/g, '');
 
             if (otp.length !== 6) {
@@ -1309,7 +1309,7 @@
               return;
             }
 
-            // Validate it's only digits
+
             if (!/^\d{6}$/.test(otp)) {
               showAlert('OTP code must contain only numbers', 'error');
               return;
@@ -1334,13 +1334,13 @@
 
           if (data.success) {
             showAlert('Email verified successfully!', 'success');
-            // Update email in main form
+
             document.getElementById('email').value = newEmail;
             originalEmail = newEmail;
             emailVerified = true;
             document.getElementById('verifyEmailButton').textContent = 'Change';
             closeEmailChangeModal();
-            // Reload page to reflect changes
+
             setTimeout(() => window.location.reload(), 1500);
           } else {
             showAlert(data.message || 'Invalid verification code', 'error');
@@ -1354,15 +1354,15 @@
         });
         }
 
-        // Email resend OTP
+
         const emailResendOtpBtn = document.getElementById('emailResendOtpBtn');
         if (emailResendOtpBtn) {
           emailResendOtpBtn.addEventListener('click', async () => {
-            // Don't allow resend if button is disabled (timer running)
+
             if (emailResendOtpBtn.disabled) {
               return;
             }
-            
+
             const newEmail = document.getElementById('newEmailInput').value.trim();
             if (!newEmail) {
               showAlert('Please enter a valid email address', 'error');
@@ -1387,7 +1387,7 @@
                 showAlert('New verification code sent!', 'success');
                 document.querySelectorAll('.email-otp-input').forEach(input => input.value = '');
                 document.querySelector('.email-otp-input').focus();
-                startEmailOtpTimer(); // Restart timer for new code
+                startEmailOtpTimer();
               } else {
                 showAlert(data.message || 'Error resending code', 'error');
                 btn.disabled = false;
@@ -1400,20 +1400,20 @@
             }
           });
         }
-        
-        // Also attach event listener as backup
+
+
         const phoneButton = document.getElementById('verifyPhoneButton');
         if (phoneButton) {
           phoneButton.addEventListener('click', window.handlePhoneButtonClick);
         }
 
         function resetPhoneChangeModal() {
-          // Clear timer
+
           if (window.phoneOtpTimerInterval) {
             clearInterval(window.phoneOtpTimerInterval);
             window.phoneOtpTimerInterval = null;
           }
-          // Reset resend button
+
           const resendBtn = document.getElementById('phoneResendOtpBtn');
           if (resendBtn) {
             resendBtn.disabled = false;
@@ -1421,7 +1421,7 @@
             resendBtn.style.opacity = '1';
             resendBtn.textContent = 'Resend';
           }
-          
+
           const step1 = document.getElementById('phoneStep1');
           const step2 = document.getElementById('phoneStep2');
           const step3 = document.getElementById('phoneStep3');
@@ -1457,7 +1457,7 @@
         }
         window.closePhoneChangeModal = closePhoneChangeModal;
 
-        // Phone password confirmation
+
         const phonePasswordConfirmBtn = document.getElementById('phonePasswordConfirmBtn');
         if (phonePasswordConfirmBtn) {
           phonePasswordConfirmBtn.addEventListener('click', async () => {
@@ -1494,10 +1494,10 @@
           });
         }
 
-        // Phone input +63 prefix handler
+
         const newPhoneInput = document.getElementById('newPhoneInput');
         if (newPhoneInput) {
-          // Ensure +63 prefix is always present
+
           newPhoneInput.addEventListener('input', function(e) {
             let value = e.target.value;
             if (!value.startsWith('+63')) {
@@ -1511,24 +1511,24 @@
               e.target.value = value;
             }
           });
-          
+
           newPhoneInput.addEventListener('keydown', function(e) {
             const cursorPos = e.target.selectionStart;
-            // Prevent deletion of +63 prefix
+
             if (cursorPos <= 3 && (e.key === 'Backspace' || e.key === 'Delete')) {
               e.preventDefault();
             }
           });
-          
+
           newPhoneInput.addEventListener('focus', function(e) {
-            // Move cursor after +63 if user clicks at the beginning
+
             if (e.target.selectionStart < 3) {
               e.target.setSelectionRange(3, 3);
             }
           });
         }
 
-        // Phone send OTP
+
         const phoneSendOtpBtn = document.getElementById('phoneSendOtpBtn');
         if (phoneSendOtpBtn) {
           phoneSendOtpBtn.addEventListener('click', async () => {
@@ -1537,8 +1537,8 @@
               showAlert('Please enter a new phone number', 'error');
               return;
             }
-            
-            // Ensure +63 prefix
+
+
             if (!newPhone.startsWith('+63')) {
               if (newPhone.startsWith('63')) {
                 newPhone = '+63' + newPhone.substring(2);
@@ -1580,7 +1580,7 @@
           });
         }
 
-        // Password visibility toggle
+
         function togglePasswordVisibility(inputId, button) {
         const input = document.getElementById(inputId);
         if (input.type === 'password') {
@@ -1592,12 +1592,12 @@
         }
       }
 
-        // Phone verify OTP
+
         const phoneVerifyOtpBtn = document.getElementById('phoneVerifyOtpBtn');
         if (phoneVerifyOtpBtn) {
           phoneVerifyOtpBtn.addEventListener('click', async () => {
             const otpInputs = document.querySelectorAll('.phone-otp-input');
-            // Get OTP and remove any whitespace, ensure it's exactly 6 digits
+
             const otp = Array.from(otpInputs).map(input => input.value.trim()).join('').replace(/\s/g, '');
 
             if (otp.length !== 6) {
@@ -1605,7 +1605,7 @@
               return;
             }
 
-            // Validate it's only digits
+
             if (!/^\d{6}$/.test(otp)) {
               showAlert('OTP code must contain only numbers', 'error');
               return;
@@ -1630,13 +1630,13 @@
 
           if (data.success) {
             showAlert('Phone number verified successfully!', 'success');
-            // Update phone in main form
+
             document.getElementById('phone').value = newPhone;
             originalPhone = newPhone;
             phoneVerified = true;
             document.getElementById('verifyPhoneButton').textContent = 'Change';
             closePhoneChangeModal();
-            // Reload page to reflect changes
+
             setTimeout(() => window.location.reload(), 1500);
           } else {
             showAlert(data.message || 'Invalid verification code', 'error');
@@ -1650,22 +1650,22 @@
         });
         }
 
-        // Phone resend OTP
+
         const phoneResendOtpBtn = document.getElementById('phoneResendOtpBtn');
         if (phoneResendOtpBtn) {
           phoneResendOtpBtn.addEventListener('click', async () => {
-            // Don't allow resend if button is disabled (timer running)
+
             if (phoneResendOtpBtn.disabled) {
               return;
             }
-            
+
             let newPhone = document.getElementById('newPhoneInput').value.trim();
             if (!newPhone || newPhone === '+63') {
               showAlert('Please enter a valid phone number', 'error');
               return;
             }
-            
-            // Ensure +63 prefix
+
+
             if (!newPhone.startsWith('+63')) {
               if (newPhone.startsWith('63')) {
                 newPhone = '+63' + newPhone.substring(2);
@@ -1695,7 +1695,7 @@
                 showAlert('New verification code sent!', 'success');
                 document.querySelectorAll('.phone-otp-input').forEach(input => input.value = '');
                 document.querySelector('.phone-otp-input').focus();
-                startPhoneOtpTimer(); // Restart timer for new code
+                startPhoneOtpTimer();
               } else {
                 showAlert(data.message || 'Error resending code', 'error');
                 btn.disabled = false;
@@ -1709,21 +1709,21 @@
           });
         }
 
-        // Form submission
+
         const accountForm = document.getElementById('accountForm');
         if (accountForm) {
           accountForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // If inputs are disabled, don't submit changes
+
         const emailInput = document.getElementById('email');
         const phoneInput = document.getElementById('phone');
-        
+
         if (emailInput.disabled && phoneInput.disabled) {
           showAlert('No changes to save', 'success');
           return;
         }
-        
+
         const formData = {
           first_name: document.getElementById('firstName').value.trim(),
           last_name: document.getElementById('lastName').value.trim(),
@@ -1762,12 +1762,12 @@
         });
         }
 
-        // OTP Timer functions
+
         window.emailOtpTimerInterval = null;
         window.phoneOtpTimerInterval = null;
 
         function startEmailOtpTimer() {
-          // Clear any existing timer
+
           if (window.emailOtpTimerInterval) {
             clearInterval(window.emailOtpTimerInterval);
           }
@@ -1775,29 +1775,29 @@
           const resendBtn = document.getElementById('emailResendOtpBtn');
           if (!resendBtn) return;
 
-          let timeLeft = 600; // 10 minutes in seconds
+          let timeLeft = 600;
 
           const updateTimer = () => {
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
-            
+
             if (timeLeft > 0) {
-              // Disable resend button and show timer
+
               resendBtn.disabled = true;
               resendBtn.style.cursor = 'not-allowed';
               resendBtn.style.opacity = '0.6';
-              
+
               if (timeLeft >= 600) {
-                // Show "10 Minutes" for the first minute
+
                 resendBtn.textContent = 'Resend (10 Minutes)';
               } else {
-                // Show countdown after first minute
+
                 const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                 resendBtn.textContent = `Resend (${timeString})`;
               }
               timeLeft--;
             } else {
-              // Enable resend button when timer expires
+
               resendBtn.disabled = false;
               resendBtn.style.cursor = 'pointer';
               resendBtn.style.opacity = '1';
@@ -1807,12 +1807,12 @@
             }
           };
 
-          updateTimer(); // Initial update
+          updateTimer();
           window.emailOtpTimerInterval = setInterval(updateTimer, 1000);
         }
 
         function startPhoneOtpTimer() {
-          // Clear any existing timer
+
           if (window.phoneOtpTimerInterval) {
             clearInterval(window.phoneOtpTimerInterval);
           }
@@ -1820,29 +1820,29 @@
           const resendBtn = document.getElementById('phoneResendOtpBtn');
           if (!resendBtn) return;
 
-          let timeLeft = 600; // 10 minutes in seconds
+          let timeLeft = 600;
 
           const updateTimer = () => {
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
-            
+
             if (timeLeft > 0) {
-              // Disable resend button and show timer
+
               resendBtn.disabled = true;
               resendBtn.style.cursor = 'not-allowed';
               resendBtn.style.opacity = '0.6';
-              
+
               if (timeLeft >= 600) {
-                // Show "10 Minutes" for the first minute
+
                 resendBtn.textContent = 'Resend (10 Minutes)';
               } else {
-                // Show countdown after first minute
+
                 const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
                 resendBtn.textContent = `Resend (${timeString})`;
               }
               timeLeft--;
             } else {
-              // Enable resend button when timer expires
+
               resendBtn.disabled = false;
               resendBtn.style.cursor = 'pointer';
               resendBtn.style.opacity = '1';
@@ -1852,11 +1852,11 @@
             }
           };
 
-          updateTimer(); // Initial update
+          updateTimer();
           window.phoneOtpTimerInterval = setInterval(updateTimer, 1000);
         }
 
-        // Logout confirmation
+
         function confirmLogout() {
           if (confirm('Are you sure you want to logout?')) {
             window.location.href = '/logout';
@@ -1865,7 +1865,7 @@
         window.confirmLogout = confirmLogout;
         window.togglePasswordVisibility = togglePasswordVisibility;
 
-        // ===== PASSWORD CHANGE FUNCTIONALITY =====
+
         let selectedOtpMethod = null;
         let passwordChangeOtpId = null;
         let passwordChangeOtpTimerInterval = null;
@@ -1931,7 +1931,7 @@
         }
         window.selectOtpMethod = selectOtpMethod;
 
-        // Step 1: Verify current password
+
         const passwordStep1ConfirmBtn = document.getElementById('passwordStep1ConfirmBtn');
         if (passwordStep1ConfirmBtn) {
           passwordStep1ConfirmBtn.addEventListener('click', async () => {
@@ -1968,7 +1968,7 @@
           });
         }
 
-        // Step 2: Send OTP via selected method
+
         const passwordStep2ConfirmBtn = document.getElementById('passwordStep2ConfirmBtn');
         if (passwordStep2ConfirmBtn) {
           passwordStep2ConfirmBtn.addEventListener('click', async () => {
@@ -2006,7 +2006,7 @@
           });
         }
 
-        // Step 3: Confirm new password
+
         const passwordStep3ConfirmBtn = document.getElementById('passwordStep3ConfirmBtn');
         if (passwordStep3ConfirmBtn) {
           passwordStep3ConfirmBtn.addEventListener('click', async () => {
@@ -2039,7 +2039,7 @@
           });
         }
 
-        // Setup OTP inputs
+
         function setupPasswordOTPInputs() {
           const inputs = document.querySelectorAll('.password-otp-input');
           inputs.forEach((input, index) => {
@@ -2056,7 +2056,7 @@
           });
         }
 
-        // Step 4: Verify OTP and change password
+
         const passwordVerifyOtpBtn = document.getElementById('passwordVerifyOtpBtn');
         if (passwordVerifyOtpBtn) {
           passwordVerifyOtpBtn.addEventListener('click', async () => {
@@ -2083,8 +2083,8 @@
               const response = await fetch('/confirm-password-change', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  otp: otp, 
+                body: JSON.stringify({
+                  otp: otp,
                   otp_id: passwordChangeOtpId,
                   new_password: newPassword
                 })
@@ -2107,7 +2107,7 @@
           });
         }
 
-        // Resend OTP
+
         const passwordResendOtpBtn = document.getElementById('passwordResendOtpBtn');
         if (passwordResendOtpBtn) {
           passwordResendOtpBtn.addEventListener('click', async () => {
@@ -2158,12 +2158,12 @@
           const updateTimer = () => {
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
-            
+
             if (timeLeft > 0) {
               resendBtn.disabled = true;
               resendBtn.style.cursor = 'not-allowed';
               resendBtn.style.opacity = '0.6';
-              
+
               if (timeLeft >= 600) {
                 resendBtn.textContent = 'Resend (10 Minutes)';
               } else {
@@ -2185,7 +2185,7 @@
           passwordChangeOtpTimerInterval = setInterval(updateTimer, 1000);
         }
 
-        // ===== SHIPPING ADDRESS FUNCTIONALITY =====
+
         function handleAddNewAddress(e) {
           if (e) {
             e.preventDefault();
@@ -2212,7 +2212,7 @@
         }
         window.closeAddressFormModal = closeAddressFormModal;
 
-        // Load shipping addresses on page load
+
         async function loadShippingAddresses() {
           try {
             const response = await fetch('/get-shipping-addresses');
@@ -2323,7 +2323,7 @@
         }
         window.setDefaultAddress = setDefaultAddress;
 
-        // Address form submission
+
         const addressForm = document.getElementById('addressForm');
         if (addressForm) {
           addressForm.addEventListener('submit', async (e) => {
@@ -2342,7 +2342,7 @@
               is_default: document.getElementById('addressDefault').checked
             };
 
-            const endpoint = addressId 
+            const endpoint = addressId
               ? `/update-shipping-address/${addressId}`
               : '/save-shipping-address';
             const method = addressId ? 'PUT' : 'POST';
@@ -2369,7 +2369,7 @@
           });
         }
 
-        // Load addresses on page load
+
         loadShippingAddresses();
       });
     </script>
@@ -2379,7 +2379,7 @@
       <div class="change-verification-modal-content">
         <button class="modal-close-btn" onclick="closeEmailChangeModal()">&times;</button>
         <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 10px; color: #0a0a0a;">Change Email Address</h2>
-        
+
         <!-- Step 1: Password Confirmation -->
         <div id="emailStep1" class="modal-step active">
           <p style="color: #777; margin-bottom: 24px; font-size: 14px;">Please confirm your password to proceed</p>
@@ -2435,7 +2435,7 @@
       <div class="change-verification-modal-content">
         <button class="modal-close-btn" onclick="closePhoneChangeModal()">&times;</button>
         <h2 style="font-family: 'Playfair Display', serif; font-size: 28px; margin-bottom: 10px; color: #0a0a0a;">Change Phone Number</h2>
-        
+
         <!-- Step 1: Password Confirmation -->
         <div id="phoneStep1" class="modal-step active">
           <p style="color: #777; margin-bottom: 24px; font-size: 14px;">Please confirm your password to proceed</p>
@@ -2491,7 +2491,7 @@
       <div class="password-change-modal-content">
         <button class="modal-close-btn" onclick="closePasswordChangeModal()">&times;</button>
         <h2>Change Password</h2>
-        
+
         <!-- Step 1: Current Password -->
         <div id="passwordStep1" class="password-modal-step active">
           <p style="color: #777; margin-bottom: 24px; font-size: 14px;">Enter your current password to proceed</p>
@@ -2580,10 +2580,10 @@
       <div class="address-form-modal-content">
         <button class="modal-close-btn" onclick="closeAddressFormModal()">&times;</button>
         <h2 id="addressFormTitle">Add New Address</h2>
-        
+
         <form id="addressForm" style="margin-top: 24px;">
           <input type="hidden" id="addressId">
-          
+
           <div class="form-group">
             <label class="form-label" for="addressFullName">Full Name</label>
             <input type="text" id="addressFullName" class="form-input" placeholder="Enter full name" required>

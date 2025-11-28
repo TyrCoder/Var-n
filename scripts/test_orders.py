@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """Test script to verify order retrieval"""
 
 import sys
@@ -6,7 +6,7 @@ sys.path.insert(0, '/Users/windows/OneDrive/Documents/GitHub/Var-n')
 
 from app import get_db
 
-# Test the query
+
 conn = get_db()
 if not conn:
     print("❌ Failed to connect to database")
@@ -40,7 +40,7 @@ print("\n" + "="*60)
 print("TEST QUERY: Orders for seller_id=1")
 print("="*60)
 query = """
-    SELECT 
+    SELECT
         o.id,
         o.order_number,
         o.seller_id,

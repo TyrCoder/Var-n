@@ -1,5 +1,24 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:conda",
     "python-envs.defaultPackageManager": "ms-python.python:conda",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "html.validate.styles": false,
+    "html.validate.scripts": false,
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": false
+    },
+    "html.lint.attributeUniqueness": "off",
+    "html.hover.documentation": false,
+    "[templatehtml]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": false,
+        "editor.wordWrap": "on"
+    },
+    "editor.experimental.excludeIgnoredFilesFromSearch": false,
+    "files.exclude": {
+        "**/.git": true,
+        "**/__pycache__": true
+    },
+    "html.format.unformatted": "html,head,body,form,div,span,script"
 }

@@ -20,8 +20,8 @@ for product in data.get('products', [])[:2]:
     print(f"Price: {product.get('price')}")
     print(f"Image URL: {product.get('image_url')}")
     print(f"Colors: {product.get('colors', [])}")
-    
-    # Test if image is accessible
+
+
     if product.get('image_url'):
         img_url = f"http://localhost:5000{product.get('image_url')}"
         img_response = requests.get(img_url)

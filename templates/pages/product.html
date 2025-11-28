@@ -1015,15 +1015,38 @@
       {% if session.get('logged_in') %}
       <div class="user-dropdown">
         <button class="user-button" onclick="toggleUserDropdown()">
-          <div class="user-button-icon" id="buyerInitial">{{ session.get('first_name', 'U')[0]|upper }}</div>
+          <div class="user-button-icon" id="buyerInitial">{{ session.get('username', 'U')[0]|upper }}</div>
           <div class="user-button-text">
             <span class="user-button-label">Account</span>
-            <span id="buyerFirstName" style="font-weight: 600;">{{ session.get('first_name', 'User') }}</span>
+            <span id="buyerUsername" style="font-weight: 600;">{{ session.get('username', 'User') }}</span>
           </div>
           <span class="user-button-arrow">▼</span>
         </button>
         <div id="userDropdown" class="dropdown-content">
-          <a href="{{ url_for('logout') }}">
+          <a href="{{ url_for('buyer_dashboard') }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            My Account
+          </a>
+          <a href="{{ url_for('buyer_dashboard') }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            My Orders
+          </a>
+          <a href="{{ url_for('buyer_dashboard') }}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="1"></circle>
+              <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m0 5.08l-4.24 4.24M20.78 4.22l-4.24 4.24m0 5.08l4.24 4.24"></path>
+            </svg>
+            Settings
+          </a>
+          <hr style="margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;">
+          <a href="{{ url_for('logout') }}" style="color: #ef4444;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
               <polyline points="16 17 21 12 16 7"></polyline>
@@ -1048,7 +1071,7 @@
             </div>
             <div class="thumbnails">
               {% for image in images %}
-                <div class="thumbnail {% if loop.first %}active{% endif %}" 
+                <div class="thumbnail {% if loop.first %}active{% endif %}"
                      data-image="{{ image.image_url }}"
                      onclick="changeMainImage('{{ image.image_url }}', this)">
                   <img src="{{ image.image_url }}" alt="{{ product.name }}" style="width:100%;height:100%;object-fit:cover" onerror="this.src='/static/images/placeholder.jpg'">
@@ -1070,7 +1093,7 @@
         <!-- Product Info -->
         <div class="product-info">
           <h1>{{ product.name }}</h1>
-          
+
           <div class="product-price">PHP {{ "{:,.2f}".format(product.price) }}</div>
           <div class="tax-info">Tax included</div>
 
@@ -1080,10 +1103,13 @@
             <div class="selection-label">
               <strong>Color: <span id="selectedColorName">Select a color</span></strong>
             </div>
-            <div class="color-swatches" id="colorSwatches">
+            <div class="color-swatches" id="colorSwatches" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 16px;">
               {% for color in colors %}
-                <button class="color-swatch" data-color="{{ color }}" title="{{ color }}" onclick="selectColor('{{ color }}')">
-                </button>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;" onclick="selectColor('{{ color }}')">
+                  <button class="color-swatch" data-color="{{ color }}" title="{{ color }}" style="width: 60px; height: 60px; border-radius: 8px; border: 2px solid #ddd; cursor: pointer; transition: all 0.2s;">
+                  </button>
+                  <span style="font-size: 12px; color: #666; text-align: center; max-width: 70px; word-wrap: break-word;">{{ color }}</span>
+                </div>
               {% endfor %}
             </div>
           </div>
@@ -1119,11 +1145,22 @@
           </div>
 
           <!-- Stock Status -->
-          <div class="stock-status">
+          <div class="stock-status" id="mainStockStatus">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
             </svg>
-            In stock
+            <span id="stockStatusText">In stock</span>
+          </div>
+
+          <!-- Stock Information Box -->
+          <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 14px; margin: 16px 0; display: flex; align-items: flex-start; gap: 12px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#f59e0b" style="margin-top: 2px; flex-shrink: 0;">
+              <path fill-rule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+            </svg>
+            <div id="stockInfoBox" style="font-size: 14px;">
+              <p style="margin: 0; color: #78350f; font-weight: 600;">📦 Stock Information</p>
+              <p id="stockInfoText" style="margin: 4px 0 0 0; color: #92400e; font-size: 13px;">👉 Select size{% if colors and colors|length > 0 %} and color{% endif %} to see availability</p>
+            </div>
           </div>
 
           <!-- Add to Cart -->
@@ -1138,6 +1175,18 @@
             Add to Cart
             {% endif %}
           </button>
+
+          <!-- Available Colors Summary -->
+          {% if colors and colors|length > 0 %}
+          <div style="margin: 20px 0; padding: 14px; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+            <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: 600; color: #1e40af;">Available Colors:</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              {% for color in colors %}
+              <span style="display: inline-block; padding: 6px 12px; background: white; border: 1px solid #dbeafe; border-radius: 20px; font-size: 12px; color: #1e3a8a; font-weight: 500;">{{ color }}</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
 
           <!-- Product Details -->
           <div class="product-details">
@@ -1273,9 +1322,9 @@
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
-      // Update floating cart badge and fetch buyer name on page load
+
       document.addEventListener('DOMContentLoaded', async () => {
-        // Fetch buyer name
+
         {% if session.get('logged_in') %}
         fetch('/get_buyer_name')
           .then(response => response.json())
@@ -1289,7 +1338,7 @@
           .catch(error => console.error('Error fetching buyer name:', error));
         {% endif %}
 
-        // Update cart badge
+
         if (window.VaronCart) {
           const items = await VaronCart.get();
           const count = items.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
@@ -1298,23 +1347,24 @@
         }
       });
 
-      // Determine product type based on category
+
       const categoryName = '{{ product.category_name }}';
       const isGroomingProduct = categoryName && categoryName.toLowerCase().includes('grooming');
-      
+
       let selectedColor = {% if not colors %}'Standard'{% else %}null{% endif %};
       let selectedSize = {% if not sizes %}'One Size'{% else %}null{% endif %};
-      
-      // Stock map from backend
+
+      // Store all available sizes
+      const allSizes = {{ sizes|tojson|safe }};
       const stockMap = {{ stock_map|tojson|safe }};
-      
-      // Auto-select for grooming products that only have sizes
+
+
       if (isGroomingProduct && !{{ colors|length }} && {{ sizes|length }}) {
         selectedColor = 'Standard';
         document.getElementById('selectedColorName').textContent = 'Standard';
       }
 
-      // Color hex mapping - expanded list
+
       const colorHex = {
         'Black': '#000000', 'White': '#FFFFFF', 'Gray': '#808080', 'Grey': '#808080',
         'Navy': '#000080', 'Blue': '#0000FF', 'Red': '#FF0000', 'Pink': '#FFC0CB',
@@ -1327,50 +1377,54 @@
         'Lavender': '#E6E6FA', 'Mint': '#98FF98', 'Sky Blue': '#87CEEB', 'Dark Blue': '#00008B'
       };
 
-      // Apply color swatches with better fallback and multi-color support
+      // Function to generate hex color from string if not in map
+      function getHexColor(colorName) {
+        if (colorHex[colorName]) return colorHex[colorName];
+        
+        // Try case-insensitive match
+        for (const [key, value] of Object.entries(colorHex)) {
+          if (key.toLowerCase() === colorName.toLowerCase()) {
+            return value;
+          }
+        }
+        
+        // Try partial match
+        const colorLower = colorName.toLowerCase();
+        for (const [key, value] of Object.entries(colorHex)) {
+          if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
+            return value;
+          }
+        }
+        
+        // Generate random hash-based color for unknown colors
+        let hash = 0;
+        for (let i = 0; i < colorName.length; i++) {
+          const char = colorName.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        const hue = (Math.abs(hash) % 360);
+        return `hsl(${hue}, 70%, 50%)`;
+      }
+
       document.querySelectorAll('.color-swatch').forEach(swatch => {
         const color = swatch.getAttribute('data-color');
-        
-        // Check if color contains a slash (multi-color)
+        if (!color) return;
+
+        // Handle multi-color combinations (e.g., "Black/Yellow")
         if (color.includes('/')) {
-          const colors = color.split('/').map(c => c.trim());
-          
-          // Create gradient for multi-color swatch
-          const gradientColors = colors.map(c => {
-            let hex = colorHex[c];
-            
-            // Try partial match
-            if (!hex) {
-              const colorLower = c.toLowerCase();
-              for (const [key, value] of Object.entries(colorHex)) {
-                if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
-                  hex = value;
-                  break;
-                }
-              }
-            }
-            
-            // Fallback - generate color from name
-            if (!hex) {
-              hex = '#' + c.split('').reduce((acc, char) => {
-                return ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0');
-              }, 0).substr(0, 6);
-            }
-            
-            return hex;
-          });
-          
-          // Apply gradient
-          if (colors.length === 2) {
-            swatch.style.background = `linear-gradient(135deg, ${gradientColors[0]} 50%, ${gradientColors[1]} 50%)`;
-          } else if (colors.length === 3) {
-            swatch.style.background = `linear-gradient(135deg, ${gradientColors[0]} 33%, ${gradientColors[1]} 33%, ${gradientColors[1]} 66%, ${gradientColors[2]} 66%)`;
+          const colorParts = color.split('/').map(c => c.trim());
+          const hexColors = colorParts.map(c => getHexColor(c));
+
+          if (colorParts.length === 2) {
+            swatch.style.background = `linear-gradient(135deg, ${hexColors[0]} 50%, ${hexColors[1]} 50%)`;
+          } else if (colorParts.length === 3) {
+            swatch.style.background = `linear-gradient(135deg, ${hexColors[0]} 33%, ${hexColors[1]} 33%, ${hexColors[1]} 66%, ${hexColors[2]} 66%)`;
           } else {
-            // More than 3 colors - create equal segments
-            const segments = colors.length;
+            const segments = colorParts.length;
             const percentPerColor = 100 / segments;
             let gradient = 'linear-gradient(135deg';
-            gradientColors.forEach((hex, i) => {
+            hexColors.forEach((hex, i) => {
               const start = i * percentPerColor;
               const end = (i + 1) * percentPerColor;
               gradient += `, ${hex} ${start}%, ${hex} ${end}%`;
@@ -1380,49 +1434,29 @@
           }
         } else {
           // Single color
-          let hex = colorHex[color];
-          
-          // If no exact match, try to find a partial match
-          if (!hex) {
-            const colorLower = color.toLowerCase();
-            for (const [key, value] of Object.entries(colorHex)) {
-              if (key.toLowerCase().includes(colorLower) || colorLower.includes(key.toLowerCase())) {
-                hex = value;
-                break;
-              }
-            }
-          }
-          
-          // Final fallback - generate a color from the name
-          if (!hex) {
-            hex = '#' + color.split('').reduce((acc, char) => {
-              return ((acc << 5) - acc + char.charCodeAt(0)).toString(16).substr(0, 6).padEnd(6, '0');
-            }, 0).substr(0, 6);
-          }
-          
-          swatch.style.backgroundColor = hex;
+          const hex = getHexColor(color);
+          swatch.style.background = hex;
         }
-        
-        // Add border for light colors
-        if (color.toLowerCase().includes('white') || color.toLowerCase().includes('ivory') || 
-            color.toLowerCase().includes('cream') || color.toLowerCase().includes('beige')) {
-          swatch.style.border = '2px solid #e0e0e0';
-        }
+
+        // Add color name as tooltip
+        swatch.setAttribute('title', color);
+        swatch.style.border = '2px solid #ddd';
+        swatch.style.transition = 'transform 0.2s, box-shadow 0.2s';
       });
 
-      // Change main image when thumbnail is clicked
-      function changeMainImage(imageUrl, thumbnail) {
+
+      // Handle white/light color borders      function changeMainImage(imageUrl, thumbnail) {
         const mainImg = document.querySelector('#mainImage img');
         if (mainImg) {
           mainImg.src = imageUrl;
         }
-        
-        // Update active state
+
+
         document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
         thumbnail.classList.add('active');
       }
 
-      // Image zoom effect on hover with mouse tracking
+
       const mainImage = document.getElementById('mainImage');
       if (mainImage) {
         const mainImg = mainImage.querySelector('img');
@@ -1431,11 +1465,11 @@
             const rect = this.getBoundingClientRect();
             const x = ((e.clientX - rect.left) / rect.width) * 100;
             const y = ((e.clientY - rect.top) / rect.height) * 100;
-            
+
             mainImg.style.transform = `scale(1.8)`;
             mainImg.style.transformOrigin = `${x}% ${y}%`;
           });
-          
+
           mainImage.addEventListener('mouseleave', function() {
             mainImg.style.transform = 'scale(1)';
             mainImg.style.transformOrigin = 'center';
@@ -1446,42 +1480,89 @@
       function selectColor(color) {
         selectedColor = color;
         document.getElementById('selectedColorName').textContent = color;
-        
+
+        // Remove selected class from all color swatches
         document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-        event.target.classList.add('selected');
         
+        // Add selected class to the clicked color swatch
+        const clickedSwatch = document.querySelector(`.color-swatch[data-color="${color}"]`);
+        if (clickedSwatch) {
+          clickedSwatch.classList.add('selected');
+        }
+
+        // Filter sizes for this color only
+        updateSizesForColor(color);
+        
+        // Reset size selection when color changes
+        selectedSize = null;
+        document.getElementById('selectedSizeName').textContent = 'Select {% if "grooming" in product.category_name|lower %}volume{% else %}size{% endif %}';
+
         updateStockDisplay();
         checkSelection();
+      }
+
+      function updateSizesForColor(color) {
+        const sizeGrid = document.getElementById('sizeGrid');
+        if (!sizeGrid) return;
+
+        // Get all sizes that have stock for this color
+        const availableSizes = Object.keys(stockMap)
+          .filter(key => key.endsWith('_' + color))
+          .map(key => key.split('_')[0])
+          .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+
+        if (availableSizes.length === 0) {
+          // If no specific sizes found, show all sizes
+          sizeGrid.innerHTML = allSizes.map(size => 
+            `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
+          ).join('');
+        } else {
+          // Show only sizes available for this color
+          sizeGrid.innerHTML = availableSizes.map(size => 
+            `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
+          ).join('');
+        }
       }
 
       function selectSize(size) {
         selectedSize = size;
         document.getElementById('selectedSizeName').textContent = size;
-        
+
+        // Remove selected class from all size buttons
         document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
-        event.target.classList.add('selected');
         
+        // Add selected class to all buttons with this size text
+        document.querySelectorAll('.size-btn').forEach(btn => {
+          if (btn.textContent.trim() === size) {
+            btn.classList.add('selected');
+          }
+        });
+
         updateStockDisplay();
         checkSelection();
       }
-      
+
       function updateStockDisplay() {
         const stockStatus = document.querySelector('.stock-status');
+        const stockInfoText = document.getElementById('stockInfoText');
         if (!stockStatus) return;
-        
-        // If both size and color are selected, show specific stock
+
+
         if (selectedSize && selectedColor) {
           const key = `${selectedSize}_${selectedColor}`;
           const stock = stockMap[key] || 0;
-          
+
           if (stock > 0) {
             stockStatus.innerHTML = `
               <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
               </svg>
-              In stock (${stock} available)
+              In stock (${stock} pcs available)
             `;
             stockStatus.style.color = '#10b981';
+            if (stockInfoText) {
+              stockInfoText.innerHTML = `✅ <strong>${stock} pcs in stock</strong><br><span style="font-size: 12px; display: block; margin-top: 4px;">Size: <strong>${selectedSize}</strong> | Color: <strong>${selectedColor}</strong></span>`;
+            }
           } else {
             stockStatus.innerHTML = `
               <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -1490,9 +1571,12 @@
               Out of stock
             `;
             stockStatus.style.color = '#ef4444';
+            if (stockInfoText) {
+              stockInfoText.innerHTML = `❌ <strong>Out of stock</strong><br><span style="font-size: 12px; display: block; margin-top: 4px;">Size: <strong>${selectedSize}</strong> | Color: <strong>${selectedColor}</strong></span>`;
+            }
           }
         } else {
-          // Default message
+
           stockStatus.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -1500,6 +1584,9 @@
             In stock
           `;
           stockStatus.style.color = '#10b981';
+          if (stockInfoText) {
+            stockInfoText.innerHTML = `👉 Select size{% if colors and colors|length > 0 %} and color{% endif %} to see availability`;
+          }
         }
       }
 
@@ -1508,14 +1595,14 @@
         const hasColors = {% if colors and colors|length > 0 %}true{% else %}false{% endif %};
         const hasSizes = {% if sizes and sizes|length > 0 %}true{% else %}false{% endif %};
         const isGrooming = isGroomingProduct;
-        
-        // For grooming products without colors, only check size
+
+
         const needsColor = hasColors;
         const needsSize = hasSizes;
-        
+
         const colorOk = !needsColor || selectedColor;
         const sizeOk = !needsSize || selectedSize;
-        
+
         if (colorOk && sizeOk) {
           btn.disabled = false;
           btn.textContent = 'Add to Cart';
@@ -1544,22 +1631,22 @@
         }
       }
 
-      // Check if user is logged in (server-side check)
+
       const isUserLoggedIn = {{ 'true' if session.get('logged_in') else 'false' }};
-      
-      // Get variant ID based on color and size
+
+
       async function getVariantId(productId, color, size) {
         try {
           console.log(`Getting variant ID for product ${productId}, color: ${color}, size: ${size}`);
           const response = await fetch(`/api/product/${productId}/variants`);
           const data = await response.json();
-          
+
           console.log('Available variants:', data);
-          
+
           if (data.success && data.variants) {
             console.log('Searching for variant with color:', color, 'and size:', size);
             const variant = data.variants.find(v => v.color === color && v.size === size);
-            
+
             if (variant) {
               console.log('Found variant:', variant);
               return variant.id;
@@ -1575,19 +1662,19 @@
           return null;
         }
       }
-      
+
       async function addToCartFromPage() {
-        // Check if user is logged in
+
         if (!isUserLoggedIn) {
           alert('You need to log in to add items to cart');
           window.location.href = '/login';
           return;
         }
-        
+
         const hasColors = {% if colors and colors|length > 0 %}true{% else %}false{% endif %};
         const hasSizes = {% if sizes and sizes|length > 0 %}true{% else %}false{% endif %};
-        
-        // Validate selection - for grooming products, only check size if colors don't exist
+
+
         if (hasColors && !selectedColor) {
           const snackbar = document.getElementById('snackbar');
           if(snackbar) {
@@ -1597,7 +1684,7 @@
           }
           return;
         }
-        
+
         if (hasSizes && !selectedSize) {
           const snackbar = document.getElementById('snackbar');
           if(snackbar) {
@@ -1607,70 +1694,70 @@
           }
           return;
         }
-        
+
         const quantity = parseInt(document.getElementById('quantity').value);
         const productId = {{ product.id }};
         const productName = '{{ product.name }}';
         const addButton = document.querySelector('.add-to-cart-btn');
-        
-        // Disable button and show loading state
+
+
         if(addButton) {
           addButton.disabled = true;
           addButton.textContent = 'Adding to cart...';
         }
-        
-        // Use VaronCart (database cart)
+
+
         if (window.VaronCart) {
-          // Get variant ID - for grooming products, find by size only
+
           let variantId = null;
-          
+
           if (hasSizes || hasColors) {
-            console.log('Getting variant for:', { 
-              productId, 
-              color: selectedColor || 'Standard', 
+            console.log('Getting variant for:', {
+              productId,
+              color: selectedColor || 'Standard',
               size: selectedSize || 'One Size',
-              isGrooming: isGroomingProduct 
+              isGrooming: isGroomingProduct
             });
-            
+
             variantId = await getVariantId(
-              productId, 
-              selectedColor || 'Standard', 
+              productId,
+              selectedColor || 'Standard',
               selectedSize || 'One Size'
             );
-            
+
             console.log('Retrieved variant ID:', variantId);
           }
-          
-          console.log('Adding to cart with:', { 
-            productId, 
-            quantity, 
-            variantId, 
-            selectedColor: selectedColor || 'Standard', 
-            selectedSize: selectedSize || 'One Size' 
+
+          console.log('Adding to cart with:', {
+            productId,
+            quantity,
+            variantId,
+            selectedColor: selectedColor || 'Standard',
+            selectedSize: selectedSize || 'One Size'
           });
-          
+
           const success = await VaronCart.add(
-            productId, 
-            quantity, 
-            variantId, 
-            selectedColor || 'Standard', 
+            productId,
+            quantity,
+            variantId,
+            selectedColor || 'Standard',
             selectedSize || 'One Size'
           );
-          
-          // Re-enable button
+
+
           if(addButton) {
             addButton.disabled = false;
             addButton.textContent = 'Add to Cart';
           }
         } else {
-          // Show error if cart system not loaded
+
           const snackbar = document.getElementById('snackbar');
           if(snackbar) {
             snackbar.textContent = 'Cart system not loaded. Please refresh the page.';
             snackbar.classList.add('show', 'error');
             setTimeout(() => snackbar.classList.remove('show', 'error'), 3000);
           }
-          
+
           if(addButton) {
             addButton.disabled = false;
             addButton.textContent = 'Add to Cart';
@@ -1678,10 +1765,10 @@
         }
       }
 
-      // Check initial selection state
+
       checkSelection();
 
-      // Logout confirmation function
+
       function confirmLogout(event) {
         if (event) {
           event.preventDefault();
@@ -1704,13 +1791,13 @@
         window.location.href = '/logout';
       }
 
-      // User dropdown toggle
+
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         if (dropdown) dropdown.classList.toggle('show');
       }
 
-      // Close dropdown when clicking outside
+
       window.addEventListener('click', function(e) {
         if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
           const dropdown = document.getElementById('userDropdown');
@@ -1720,7 +1807,7 @@
         }
       });
 
-      // Modal functionality
+
       function openCartModal() {
           const modal = document.getElementById('cartModal');
           if (modal) {
@@ -1737,7 +1824,7 @@
           }
       }
 
-      // Render cart items in modal
+
       async function renderCartItems() {
           if (!window.VaronCart) {
               console.error('VaronCart not loaded');
@@ -1746,9 +1833,9 @@
 
           const cartList = document.getElementById('cartList');
           const items = await VaronCart.get();
-          
+
           if (!items || items.length === 0) {
-              // Show empty cart state
+
               cartList.innerHTML = `
                   <div class="empty-cart-state" style="text-align:center;padding:60px 20px">
                       <div style="font-size:80px;color:#ddd;margin-bottom:16px">
@@ -1766,7 +1853,7 @@
               return;
           }
 
-          // Render cart items
+
           let html = '';
           items.forEach(item => {
               const imageUrl = item.image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop';
@@ -1799,22 +1886,22 @@
           });
 
           cartList.innerHTML = html;
-          
-          // Update totals
+
+
           const total = items.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.quantity)), 0);
           updateCartTotals(total);
       }
 
-      // Update cart totals display
+
       function updateCartTotals(total) {
           const subtotalEl = document.getElementById('cartSubtotal');
           const totalEl = document.getElementById('cartTotal');
-          
+
           if (subtotalEl) subtotalEl.textContent = `₱${total.toFixed(2)}`;
           if (totalEl) totalEl.textContent = `₱${total.toFixed(2)}`;
       }
 
-      // Update cart item quantity
+
       async function updateCartQuantity(cartId, newQuantity) {
           if (newQuantity < 1) {
               await removeCartItem(cartId);
@@ -1829,7 +1916,7 @@
           }
       }
 
-      // Remove item from cart
+
       async function removeCartItem(cartId) {
           if (window.VaronCart) {
               const success = await VaronCart.remove(cartId);
@@ -1840,7 +1927,7 @@
           }
       }
 
-      // Clear entire cart with confirmation
+
       async function clearEntireCart() {
           if (!window.VaronCart) return;
 
@@ -1859,13 +1946,13 @@
           }
       }
 
-      // Checkout function
+
       function proceedToCheckout() {
           window.location.href = '/checkout';
       }
 
-      // Cart functionality - Use VaronCart if available (database), fallback to localStorage
-      // Cart functionality
+
+
       let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
       function updateCartDisplay() {
@@ -1873,12 +1960,12 @@
           const cartList = document.getElementById('cartList');
           const cartTotal = document.getElementById('cartTotal');
           const cartSubtotal = document.getElementById('cartSubtotal');
-          
-          // Update cart count badge
+
+
           const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
           if (cartCount) cartCount.textContent = itemCount;
-          
-          // Update cart items display
+
+
           if (cartList) {
               if (cart.length === 0) {
                   cartList.innerHTML = `
@@ -1915,27 +2002,27 @@
                   }).join('');
               }
           }
-          
-          // Update total
+
+
           const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
           if (cartTotal) cartTotal.textContent = `₱${total.toFixed(2)}`;
           if (cartSubtotal) cartSubtotal.textContent = `₱${total.toFixed(2)}`;
       }
 
       function addToCart(name, price, id, image_url) {
-          // Check if item already exists in cart
+
           const existingItemIndex = cart.findIndex(item => item.id === id && item.name === name);
-          
+
           if (existingItemIndex > -1) {
-              // Item exists, increase quantity
+
               cart[existingItemIndex].quantity += 1;
               showSnackbar('Item quantity updated');
           } else {
-              // New item, add to cart
+
               cart.push({ name, price, id, quantity: 1, image_url: image_url || 'https://images.unsplash.com/photo-1495121605193-b116b5b09f06?q=80&w=200&auto=format&fit=crop' });
               showSnackbar('Added to cart');
           }
-          
+
           localStorage.setItem('cart', JSON.stringify(cart));
           updateCartDisplay();
       }
@@ -1972,7 +2059,7 @@
               showSnackbar('Cart is already empty');
               return;
           }
-          
+
           if (confirm('Are you sure you want to clear your cart?')) {
               cart = [];
               localStorage.setItem('cart', JSON.stringify(cart));
@@ -1992,10 +2079,10 @@
           }
       }
 
-      // Initialize cart display on page load
+
       updateCartDisplay();
 
-      // Checkout functionality
+
       const checkoutBtn = document.getElementById('checkoutBtn');
       if (checkoutBtn) {
           checkoutBtn.addEventListener('click', function() {
@@ -2003,17 +2090,17 @@
                   showSnackbar('Your cart is empty');
                   return;
               }
-              
-              // Navigate to checkout page
+
+
               window.location.href = '/checkout';
           });
       }
 
-      // ============ PRODUCT REVIEWS FUNCTIONALITY ============
+
 
       const productId = {{ product.id }};
 
-      // Load reviews on page load
+
       document.addEventListener('DOMContentLoaded', async () => {
         await loadProductReviews();
         {% if session.get('logged_in') and session.get('role') == 'buyer' %}
@@ -2028,16 +2115,16 @@
 
           if (data.success && data.reviews.length > 0) {
             const reviews = data.reviews;
-            
-            // Calculate average rating
+
+
             const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
             document.getElementById('avgRating').textContent = avgRating;
             document.getElementById('reviewCount').textContent = `${reviews.length} review${reviews.length !== 1 ? 's' : ''}`;
 
-            // Draw rating stars
+
             drawStars('ratingStars', avgRating);
 
-            // Display reviews
+
             const reviewsList = document.getElementById('reviewsList');
             reviewsList.innerHTML = reviews.map(review => `
               <div class="review-item">
@@ -2151,7 +2238,7 @@
         const title = document.getElementById('reviewTitle').value.trim();
         const comment = document.getElementById('reviewComment').value.trim();
 
-        // Validation
+
         if (!rating) {
           document.getElementById('ratingError').textContent = 'Please select a rating';
           return;
@@ -2212,7 +2299,7 @@
         }
       }
 
-      // ============ END REVIEWS FUNCTIONALITY ============
+
     </script>
 
     <!-- Cart Modal -->

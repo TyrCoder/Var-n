@@ -7,10 +7,10 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
+
 load_dotenv()
 
-# Database configuration
+
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
@@ -23,19 +23,19 @@ def run_migration():
     print("=" * 60)
     print("DATABASE MIGRATION SCRIPT")
     print("=" * 60)
-    
+
     try:
-        # Connect to database
+
         print(f"\n[1/5] Connecting to database '{DB_CONFIG['database']}'...")
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor()
         print("✓ Connected successfully")
-        
-        # Check if otp_verifications table exists
+
+
         print("\n[2/5] Checking otp_verifications table...")
         cursor.execute("SHOW TABLES LIKE 'otp_verifications'")
         table_exists = cursor.fetchone()
-        
+
         if not table_exists:
             print("✗ Table does not exist. Creating table...")
             cursor.execute('''CREATE TABLE otp_verifications (
@@ -60,63 +60,63 @@ def run_migration():
             print("✓ Table created successfully")
         else:
             print("✓ Table exists")
-        
-        # Check and add missing columns
+
+
         print("\n[3/5] Checking for missing columns...")
         cursor.execute("SHOW COLUMNS FROM otp_verifications")
         columns = [col[0] for col in cursor.fetchall()]
-        
+
         migrations_applied = []
-        
-        # Check for phone column
+
+
         if 'phone' not in columns:
             print("  → Adding 'phone' column...")
             cursor.execute("ALTER TABLE otp_verifications ADD COLUMN phone VARCHAR(20) AFTER email")
             migrations_applied.append("Added 'phone' column")
         else:
             print("  ✓ 'phone' column exists")
-        
-        # Check for used_at column
+
+
         if 'used_at' not in columns:
             print("  → Adding 'used_at' column...")
             cursor.execute("ALTER TABLE otp_verifications ADD COLUMN used_at TIMESTAMP NULL AFTER expires_at")
             migrations_applied.append("Added 'used_at' column")
         else:
             print("  ✓ 'used_at' column exists")
-        
-        # Check for attempts column
+
+
         if 'attempts' not in columns:
             print("  → Adding 'attempts' column...")
             cursor.execute("ALTER TABLE otp_verifications ADD COLUMN attempts INT DEFAULT 0 AFTER used_at")
             migrations_applied.append("Added 'attempts' column")
         else:
             print("  ✓ 'attempts' column exists")
-        
-        # Check for ip_address column
+
+
         if 'ip_address' not in columns:
             print("  → Adding 'ip_address' column...")
             cursor.execute("ALTER TABLE otp_verifications ADD COLUMN ip_address VARCHAR(45) AFTER attempts")
             migrations_applied.append("Added 'ip_address' column")
         else:
             print("  ✓ 'ip_address' column exists")
-        
-        # Check and add missing indexes
+
+
         print("\n[4/5] Checking for missing indexes...")
         cursor.execute("SHOW INDEX FROM otp_verifications")
         indexes = [idx[2] for idx in cursor.fetchall()]
-        
+
         if 'idx_phone' not in indexes:
             print("  → Adding 'idx_phone' index...")
             try:
                 cursor.execute("CREATE INDEX idx_phone ON otp_verifications(phone)")
                 migrations_applied.append("Added 'idx_phone' index")
             except mysql.connector.Error as e:
-                if e.errno != 1061:  # Duplicate key name
+                if e.errno != 1061:
                     raise
                 print("  ✓ 'idx_phone' index already exists")
         else:
             print("  ✓ 'idx_phone' index exists")
-        
+
         if 'idx_email' not in indexes:
             print("  → Adding 'idx_email' index...")
             try:
@@ -128,12 +128,12 @@ def run_migration():
                 print("  ✓ 'idx_email' index already exists")
         else:
             print("  ✓ 'idx_email' index exists")
-        
-        # Create journal_entries table if not exists
+
+
         print("\n[5/5] Checking journal_entries table...")
         cursor.execute("SHOW TABLES LIKE 'journal_entries'")
         journal_exists = cursor.fetchone()
-        
+
         if not journal_exists:
             print("  → Creating journal_entries table...")
             cursor.execute('''CREATE TABLE journal_entries (
@@ -153,11 +153,11 @@ def run_migration():
             migrations_applied.append("Created 'journal_entries' table")
         else:
             print("  ✓ journal_entries table exists")
-        
-        # Commit all changes
+
+
         conn.commit()
-        
-        # Display final table structure
+
+
         print("\n" + "=" * 60)
         print("FINAL TABLE STRUCTURE")
         print("=" * 60)
@@ -166,8 +166,8 @@ def run_migration():
         print("\notp_verifications columns:")
         for col in columns:
             print(f"  - {col[0]}: {col[1]}")
-        
-        # Summary
+
+
         print("\n" + "=" * 60)
         print("MIGRATION SUMMARY")
         print("=" * 60)
@@ -177,15 +177,15 @@ def run_migration():
                 print(f"  • {migration}")
         else:
             print("\n✓ No migrations needed - database is up to date")
-        
+
         print("\n✓ Migration completed successfully!")
         print("=" * 60)
-        
+
         cursor.close()
         conn.close()
-        
+
         return True
-        
+
     except mysql.connector.Error as err:
         print(f"\n✗ Database error: {err}")
         print(f"Error code: {err.errno}")
@@ -200,9 +200,9 @@ def run_migration():
 if __name__ == '__main__':
     print("\nStarting database migration...")
     print("This script will fix the otp_verifications table structure.\n")
-    
+
     success = run_migration()
-    
+
     if success:
         print("\n🎉 You can now restart your Flask application!")
         print("The seller signup should work correctly now.\n")

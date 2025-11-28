@@ -389,13 +389,13 @@
     </div>
 
     <script>
-      // User dropdown toggle
+
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('show');
       }
 
-      // Close dropdown when clicking outside
+
       window.addEventListener('click', function(e) {
         if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
           const dropdown = document.getElementById('userDropdown');
@@ -405,7 +405,7 @@
         }
       });
 
-      // Logout confirmation function
+
       function confirmLogout() {
         openModal('logoutModal');
       }
@@ -414,25 +414,25 @@
         window.location.href = '/logout';
       }
 
-      // Section navigation
+
       function showSection(sectionName) {
-        // Hide all sections
+
         document.querySelectorAll('.content-section').forEach(section => {
           section.style.display = 'none';
         });
 
-        // Show selected section
+
         const targetSection = document.getElementById(sectionName);
         if (targetSection) {
           targetSection.style.display = 'block';
-          
-          // Load My Orders and start auto-refresh if showing My Orders
+
+
           if (sectionName === 'myOrders') {
             loadMyOrders();
           }
         }
 
-        // Update active nav link
+
         document.querySelectorAll('.sidebar-nav .nav-links a').forEach(link => {
           link.classList.remove('active');
         });
@@ -442,7 +442,7 @@
         }
       }
 
-      // Modal functions
+
       function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) {
@@ -459,7 +459,7 @@
         }
       }
 
-      // Fetch the buyer's first name on page load
+
       window.addEventListener('DOMContentLoaded', (event) => {
         fetch('/get_buyer_name')
           .then(response => response.json())
@@ -468,19 +468,19 @@
           })
           .catch(error => console.error('Error fetching buyer name:', error));
 
-        // Load cart count from database
+
         if (window.VaronCart) {
           VaronCart.updateBadge();
         }
 
-        // Show home section by default
+
         showSection('home');
 
-        // Load featured products on home
+
         loadFeaturedProducts();
       });
 
-      // Load featured products from API (for home section)
+
       function loadFeaturedProducts() {
         fetch('/api/products?limit=4')
           .then(response => response.json())
@@ -506,7 +506,7 @@
           .catch(error => console.error('Error loading featured products:', error));
       }
 
-      // Load browse products from API
+
       function loadBrowseProducts() {
         fetch('/api/products')
           .then(response => response.json())
@@ -534,7 +534,7 @@
           });
       }
 
-      // Handle order tracking form submission
+
       document.getElementById('trackingForm').addEventListener('submit', function(event) {
         event.preventDefault();
         const orderNumber = document.getElementById('trackOrderNumber').value;
@@ -594,16 +594,16 @@
         });
       });
 
-      // Load user's orders for My Orders section with real-time updates
+
       let myOrdersRefreshInterval = null;
-      
+
       function loadMyOrders() {
         fetch('/api/my-orders')
           .then(response => response.json())
           .then(data => {
             const ordersList = document.getElementById('myOrdersList');
             if (data.success && data.orders && data.orders.length > 0) {
-              // Map new order statuses to stages
+
               const orderStatusToStage = {
                 'pending': 'waiting_for_seller',
                 'confirmed': 'confirmed',
@@ -626,16 +626,16 @@
                 const displayStatus = order.display_status || 'Processing...';
                 const statusIcon = order.status_icon || '📋';
                 const stageKey = orderStatusToStage[orderStatus] || 'pending';
-                
-                // Find current stage
+
+
                 const currentStageIndex = stageDefinitions.findIndex(s => s.key === stageKey);
-                
+
                 const stageFlow = stageDefinitions.map((step, idx) => {
                   const isActive = idx === currentStageIndex;
                   const isCompleted = idx < currentStageIndex;
                   const statusColor = isCompleted ? '#10b981' : isActive ? step.color : '#d1d5db';
                   const textColor = isCompleted || isActive ? statusColor : '#999';
-                  
+
                   return `
                     <div style="display:flex;align-items:center;gap:4px;color:${textColor};font-weight:${isActive ? '600' : isCompleted ? '600' : '500'};font-size:12px;transition:all 0.3s">
                       <span>${step.icon}</span>
@@ -646,7 +646,7 @@
                 }).join('');
 
                 const stageColor = stageDefinitions[currentStageIndex]?.color || '#666';
-                
+
                 return `
                   <div style="background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 4px rgba(0,0,0,0.1);border-left:4px solid ${stageColor};transition:all 0.3s" data-order-id="${order.id}">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
@@ -683,8 +683,8 @@
                   </div>
                 `;
               }).join('');
-              
-              // Start auto-refresh for orders in progress
+
+
               startOrderAutoRefresh();
             } else {
               ordersList.innerHTML = '<div style="text-align:center;padding:60px 20px"><h3 style="margin:0 0 12px;color:#666">No Orders Yet</h3><p style="color:#999;margin:0">Your order history will appear here.</p></div>';
@@ -697,20 +697,20 @@
           });
       }
 
-      // Auto-refresh orders every 5 seconds
+
       function startOrderAutoRefresh() {
         if (myOrdersRefreshInterval) clearInterval(myOrdersRefreshInterval);
-        
+
         myOrdersRefreshInterval = setInterval(() => {
           const myOrdersSection = document.getElementById('myOrders');
-          // Only refresh if My Orders section is visible
+
           if (myOrdersSection && myOrdersSection.style.display !== 'none') {
             loadMyOrders();
           }
-        }, 5000); // Refresh every 5 seconds
+        }, 5000);
       }
 
-      // Refresh specific order status
+
       function refreshOrderStatus(orderId) {
         fetch(`/api/my-orders`)
           .then(response => response.json())
@@ -726,10 +726,10 @@
           .catch(error => console.error('Error refreshing status:', error));
       }
 
-      // Confirm order received
+
       function confirmReceived(orderId) {
         if (!confirm('✅ Confirm that you have received this order in good condition?')) return;
-        
+
         fetch(`/api/order/complete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -750,46 +750,46 @@
         });
       }
 
-      // View order details
+
       function viewOrderDetails(orderId) {
         window.location.href = `/order/${orderId}`;
       }
 
-      // Cart functions (placeholders for cart functionality)
+
       function confirmClearCart() {
         openModal('clearModal');
       }
 
       function clearCart() {
-        // Implement cart clearing logic
+
         closeModal('clearModal');
         closeModal('cartModal');
       }
 
       function proceedToCheckout() {
-        // Implement checkout logic
+
         window.location.href = '/checkout';
       }
 
-      // Complete order function
-      // Show return/damaged dialog
+
+
       function showReturnDialog(orderId) {
         const message = `Please select the issue:
-        
+
 1 = Product Damaged
 2 = Wrong Item Received
 3 = Not as Described
 4 = Other Issue
 
 Enter number (1-4) or describe the problem:`;
-        
+
         const reason = prompt(message);
         if (reason && reason.trim()) {
           returnOrDamagedOrder(orderId, reason);
         }
       }
 
-      // Return or mark as damaged
+
       async function returnOrDamagedOrder(orderId, reason) {
         try {
           const response = await fetch(`/api/order/return`, {
@@ -797,7 +797,7 @@ Enter number (1-4) or describe the problem:`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ order_id: orderId, reason: reason })
           });
-          
+
           const data = await response.json();
           if (data.success) {
             alert('📋 Return/Issue request submitted!\n\nOur support team will contact you within 24 hours.');

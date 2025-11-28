@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+
 """Apply migration: Fix riders table to support multiple vehicle types"""
 
 import mysql.connector
 import sys
 import os
 
-# Get database credentials from environment or defaults
+
 db_config = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
@@ -14,30 +14,30 @@ db_config = {
 }
 
 try:
-    # Connect to database
+
     conn = mysql.connector.connect(**db_config)
     cursor = conn.cursor()
-    
+
     print("Applying migration: Fix riders table to support multiple vehicle types...")
-    
-    # Check current column definition
+
+
     cursor.execute("DESCRIBE riders vehicle_type")
     result = cursor.fetchone()
     print(f"Current column definition: {result}")
-    
-    # Modify column from ENUM to TEXT
+
+
     cursor.execute("""
-        ALTER TABLE riders 
+        ALTER TABLE riders
         MODIFY COLUMN vehicle_type TEXT NOT NULL
     """)
-    
+
     conn.commit()
     print("✓ Successfully modified riders.vehicle_type column to TEXT")
     print("✓ Riders can now have multiple vehicle types stored as comma-separated values")
-    
+
     cursor.close()
     conn.close()
-    
+
 except mysql.connector.Error as err:
     if err.errno == 2003:
         print(f"ERROR: Cannot connect to database. Check that MySQL is running.")
