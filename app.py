@@ -848,11 +848,18 @@ def index():
                     p.slug,
                     c.name as category_name,
                     c.slug as category_slug,
-                    pi.image_url
+                    pi.image_url,
+                    COALESCE(AVG(r.rating), 0) as avg_rating,
+                    COUNT(DISTINCT r.id) as review_count,
+                    COALESCE(SUM(oi.quantity), 0) as sold_count
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+                LEFT JOIN order_items oi ON p.id = oi.product_id
+                LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
                 WHERE p.is_active = 1
+                GROUP BY p.id, p.name, p.price, p.slug, c.name, c.slug, pi.image_url
                 ORDER BY p.created_at DESC
                 LIMIT 20
             ''')
@@ -919,13 +926,21 @@ def product_page(product_id):
                     c.name as category_name,
                     pi.image_url,
                     s.store_name,
-                    u.first_name as seller_name
+                    u.first_name as seller_name,
+                    COALESCE(AVG(r.rating), 0) as avg_rating,
+                    COUNT(DISTINCT r.id) as review_count,
+                    COALESCE(SUM(oi.quantity), 0) as sold_count
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
                 LEFT JOIN sellers s ON p.seller_id = s.id
                 LEFT JOIN users u ON s.user_id = u.id
+                LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+                LEFT JOIN order_items oi ON p.id = oi.product_id
+                LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
                 WHERE p.id = %s AND p.is_active = 1
+                GROUP BY p.id, p.name, p.description, p.price, p.brand, p.sku, p.seller_id, 
+                         c.name, pi.image_url, s.store_name, u.first_name
             ''', (product_id,))
 
             product = cursor.fetchone()
@@ -2053,6 +2068,12 @@ def signup():
         first_name = request.form.get('firstName')
         last_name = request.form.get('lastName')
         phone = request.form.get('phone')
+        street_address = request.form.get('street_address')
+        barangay = request.form.get('barangay')
+        city = request.form.get('city')
+        province = request.form.get('province')
+        postal_code = request.form.get('postal_code')
+        country = request.form.get('country') or 'Philippines'
         role = request.form.get('role', 'buyer')
         terms = request.form.get('terms')
 
@@ -2092,7 +2113,13 @@ def signup():
                 'first_name': first_name,
                 'last_name': last_name,
                 'phone': phone,
-                'role': role
+                'role': role,
+                'street_address': street_address,
+                'barangay': barangay,
+                'city': city,
+                'province': province,
+                'postal_code': postal_code,
+                'country': country
             }
 
 
@@ -4031,22 +4058,21 @@ def seller_inventory():
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
 
-
+        # Get seller ID
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
         seller = cursor.fetchone()
         if not seller:
             return jsonify({'success': False, 'error': 'Seller not found'}), 404
 
-
+        # Get inventory from product_variants table
         cursor.execute('''
             SELECT
-                i.id,
-                i.product_id,
-                i.variant_id,
-                i.stock_quantity,
-                i.reserved_quantity,
-                i.available_quantity,
-                i.low_stock_threshold,
+                pv.id,
+                pv.product_id,
+                pv.stock_quantity,
+                0 as reserved_quantity,
+                pv.stock_quantity as available_quantity,
+                10 as low_stock_threshold,
                 p.name as product_name,
                 p.sku,
                 p.price,
@@ -4054,14 +4080,12 @@ def seller_inventory():
                 pv.size,
                 pv.color,
                 pi.image_url
-            FROM inventory i
-            JOIN products p ON i.product_id = p.id
-            LEFT JOIN product_variants pv ON i.variant_id = pv.id
+            FROM product_variants pv
+            JOIN products p ON pv.product_id = p.id
             LEFT JOIN (
-                SELECT product_id, image_url FROM product_images
-                WHERE is_primary = TRUE OR (is_primary IS NULL)
+                SELECT product_id, MIN(image_url) as image_url 
+                FROM product_images
                 GROUP BY product_id
-                LIMIT 1
             ) pi ON p.id = pi.product_id
             WHERE p.seller_id = %s
             ORDER BY p.name, pv.size, pv.color
@@ -4073,6 +4097,7 @@ def seller_inventory():
 
         return jsonify({'success': True, 'inventory': inventory or []}), 200
     except Exception as err:
+        print(f"Error loading inventory: {err}")
         return jsonify({'success': False, 'error': str(err)}), 500
 
 
@@ -4162,7 +4187,7 @@ def reject_review(review_id):
 
 @app.route('/seller/restock', methods=['POST'])
 def seller_restock():
-    """Update inventory for a product or variant"""
+    """Update inventory for a product variant"""
     if not session.get('logged_in') or session.get('role') != 'seller':
         return jsonify({'success': False, 'error': 'Access denied'}), 403
 
@@ -4171,55 +4196,76 @@ def seller_restock():
         variant_id = request.form.get('variant_id')
         quantity = int(request.form.get('quantity', 0))
 
+        print(f"[Restock] product_id={product_id}, variant_id={variant_id}, quantity={quantity}")
+
         if quantity <= 0:
             return jsonify({'success': False, 'error': 'Quantity must be greater than 0'}), 400
 
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
 
-
+        # Verify product belongs to seller
         cursor.execute('''
-            SELECT id FROM products p
+            SELECT p.id FROM products p
             JOIN sellers s ON p.seller_id = s.id
             WHERE p.id = %s AND s.user_id = %s
         ''', (product_id, session.get('user_id')))
 
         product = cursor.fetchone()
         if not product:
-            return jsonify({'success': False, 'error': 'Product not found'}), 404
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Product not found or access denied'}), 404
 
-
-        cursor.execute('''
-            SELECT id, stock_quantity FROM inventory
-            WHERE product_id = %s AND (variant_id = %s OR (variant_id IS NULL AND %s IS NULL))
-        ''', (product_id, variant_id, variant_id))
-
-        inventory = cursor.fetchone()
-
-        if inventory:
-
-            new_stock = inventory['stock_quantity'] + quantity
+        # Update stock in product_variants table
+        if variant_id:
+            # Update specific variant
             cursor.execute('''
-                UPDATE inventory
-                SET stock_quantity = stock_quantity + %s,
-                    available_quantity = available_quantity + %s,
-                    last_restocked_at = NOW()
+                SELECT stock_quantity FROM product_variants
+                WHERE id = %s AND product_id = %s
+            ''', (variant_id, product_id))
+            
+            variant = cursor.fetchone()
+            if not variant:
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'Variant not found'}), 404
+            
+            new_stock = variant['stock_quantity'] + quantity
+            cursor.execute('''
+                UPDATE product_variants
+                SET stock_quantity = stock_quantity + %s
                 WHERE id = %s
-            ''', (quantity, quantity, inventory['id']))
+            ''', (quantity, variant_id))
         else:
-
+            # Update all variants of product (no specific variant)
             cursor.execute('''
-                INSERT INTO inventory (product_id, variant_id, stock_quantity, available_quantity, low_stock_threshold, last_restocked_at)
-                VALUES (%s, %s, %s, %s, 10, NOW())
-            ''', (product_id, variant_id, quantity, quantity))
-            new_stock = quantity
+                SELECT stock_quantity FROM product_variants
+                WHERE product_id = %s
+                LIMIT 1
+            ''', (product_id,))
+            
+            variant = cursor.fetchone()
+            if not variant:
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'error': 'No variants found for product'}), 404
+            
+            new_stock = variant['stock_quantity'] + quantity
+            cursor.execute('''
+                UPDATE product_variants
+                SET stock_quantity = stock_quantity + %s
+                WHERE product_id = %s
+            ''', (quantity, product_id))
 
         conn.commit()
         cursor.close()
         conn.close()
 
+        print(f"[Restock] Success! New stock: {new_stock}")
         return jsonify({'success': True, 'message': f'Restocked with {quantity} units', 'new_stock': new_stock}), 200
     except Exception as err:
+        print(f"[Restock Error] {err}")
         return jsonify({'success': False, 'error': str(err)}), 500
 
 @app.route('/seller/variant/<int:variant_id>', methods=['GET'])
@@ -5931,10 +5977,16 @@ def api_products():
                 p.description,
                 p.category_id,
                 pi.image_url,
-                c.name as category_name
+                c.name as category_name,
+                COALESCE(AVG(r.rating), 0) as avg_rating,
+                COUNT(DISTINCT r.id) as review_count,
+                COALESCE(SUM(oi.quantity), 0) as sold_count
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
             LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+            LEFT JOIN order_items oi ON p.id = oi.product_id
+            LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
             WHERE p.is_active = 1
         """
 
@@ -5951,6 +6003,7 @@ def api_products():
             query += " AND p.category_id = %s"
             params.append(category_id)
 
+        query += " GROUP BY p.id, p.name, p.price, p.description, p.category_id, pi.image_url, c.name"
         query += " ORDER BY p.created_at DESC LIMIT %s"
         params.append(limit)
 
@@ -8276,9 +8329,41 @@ def verify_otp():
                 if conn:
                     try:
                         cursor = conn.cursor(dictionary=True)
-                        cursor.execute('INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
-                                       (pending_signup['email'], pending_signup['password'], pending_signup['first_name'],
-                                        pending_signup['last_name'], pending_signup['phone'], pending_signup['role']))
+                        cursor.execute(
+                            'INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
+                            (
+                                pending_signup['email'],
+                                pending_signup['password'],
+                                pending_signup['first_name'],
+                                pending_signup['last_name'],
+                                pending_signup['phone'],
+                                pending_signup['role']
+                            )
+                        )
+                        user_id = cursor.lastrowid
+
+                        # If user entered address info during signup, create a default shipping address
+                        if pending_signup.get('street_address') and pending_signup.get('city') and pending_signup.get('province'):
+                            cursor.execute(
+                                '''INSERT INTO addresses (
+                                       user_id, address_type, full_name, phone, street_address,
+                                       barangay, city, province, postal_code, country, is_default
+                                   ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                                (
+                                    user_id,
+                                    'shipping',
+                                    f"{pending_signup['first_name']} {pending_signup['last_name']}",
+                                    pending_signup['phone'],
+                                    pending_signup.get('street_address'),
+                                    pending_signup.get('barangay'),
+                                    pending_signup.get('city'),
+                                    pending_signup.get('province'),
+                                    pending_signup.get('postal_code'),
+                                    pending_signup.get('country') or 'Philippines',
+                                    True
+                                )
+                            )
+
                         conn.commit()
                         cursor.close()
                         conn.close()

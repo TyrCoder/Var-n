@@ -525,6 +525,71 @@ h1, h2, h3, h4, h5, h6, .brand {
                 </div>
               </div>
 
+              <!-- Address Section -->
+              <div style="margin: 32px 0 8px; padding-top: 24px; border-top: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.06em;">
+                Shipping Address (used for checkout)
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7m0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5"/>
+                  </svg>
+                  Street Address
+                </label>
+                <input id="signupStreet" type="text" placeholder="House / Building, Street" autocomplete="address-line1" />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Z"/>
+                  </svg>
+                  Barangay (optional)
+                </label>
+                <input id="signupBarangay" type="text" placeholder="Barangay" autocomplete="address-line2" />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M3 11h18v2H3z"/>
+                  </svg>
+                  City / Municipality
+                </label>
+                <input id="signupCity" type="text" placeholder="City / Municipality" autocomplete="address-level2" />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M3 5h18v2H3v14H1V3h22v2z"/>
+                  </svg>
+                  Province / Region
+                </label>
+                <input id="signupProvince" type="text" placeholder="Province / Region" autocomplete="address-level1" />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M3 11h18v2H3z"/>
+                  </svg>
+                  Postal Code (optional)
+                </label>
+                <input id="signupPostal" type="text" placeholder="Postal Code" autocomplete="postal-code" />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 2A10 10 0 1 0 22 12 10 10 0 0 0 12 2m0 3a3 3 0 1 1-3 3 3 3 0 0 1 3-3m0 14.2A7.2 7.2 0 0 1 6 14h12a7.2 7.2 0 0 1-6 5.2Z"/>
+                  </svg>
+                  Country
+                </label>
+                <input id="signupCountry" type="text" value="Philippines" autocomplete="country" />
+              </div>
+
               <div class="form-group" style="margin-bottom: 16px;">
                 <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 8px 0;">
                   <input type="checkbox" required name="terms" style="margin: 0; width: 16px; height: 16px;">
@@ -558,15 +623,61 @@ h1, h2, h3, h4, h5, h6, .brand {
 
 
       document.getElementById('loginForm').addEventListener('submit', function(e) {
-
-
-
-
-        this.action = '/login';
-        this.method = 'POST';
-
-
-
+        e.preventDefault();
+        
+        const form = this;
+        const formData = new FormData(form);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Logging in...';
+        
+        fetch('/login', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => {
+          // Check if response is JSON or redirect
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            return response.json();
+          } else {
+            // Handle redirect or HTML response
+            if (response.redirected) {
+              window.location.href = response.url;
+              return null;
+            }
+            // If it's successful but not JSON, assume success
+            if (response.ok) {
+              showNotification('✅ Login successful! Redirecting...', 'success');
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 1000);
+              return null;
+            }
+            throw new Error('Unexpected response format');
+          }
+        })
+        .then(data => {
+          if (data) {
+            if (data.success) {
+              showNotification('✅ Login successful! Redirecting...', 'success');
+              setTimeout(() => {
+                window.location.href = data.redirect;
+              }, 1000);
+            } else {
+              showNotification(data.message || 'Login failed', 'error');
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Login error:', error);
+          showNotification('An error occurred. Please try again.', 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        });
       });
 
 
@@ -580,6 +691,12 @@ h1, h2, h3, h4, h5, h6, .brand {
         const firstName = document.getElementById('signupFirstName').value;
         const lastName = document.getElementById('signupLastName').value;
         const phone = document.getElementById('signupPhone').value;
+        const street = document.getElementById('signupStreet').value;
+        const barangay = document.getElementById('signupBarangay').value;
+        const city = document.getElementById('signupCity').value;
+        const province = document.getElementById('signupProvince').value;
+        const postal = document.getElementById('signupPostal').value;
+        const country = document.getElementById('signupCountry').value || 'Philippines';
         const terms = document.querySelector('input[name="terms"]').checked;
 
 
@@ -595,6 +712,12 @@ h1, h2, h3, h4, h5, h6, .brand {
         formData.append('firstName', firstName);
         formData.append('lastName', lastName);
         formData.append('phone', phone);
+        formData.append('street_address', street);
+        formData.append('barangay', barangay);
+        formData.append('city', city);
+        formData.append('province', province);
+        formData.append('postal_code', postal);
+        formData.append('country', country);
         formData.append('terms', terms);
 
 
@@ -611,10 +734,18 @@ h1, h2, h3, h4, h5, h6, .brand {
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-
-            window.location.href = data.redirect;
+            showNotification('✅ Account created! Redirecting to verification...', 'success');
+            setTimeout(() => {
+              window.location.href = data.redirect;
+            }, 1500);
           } else {
-            showError(data.message);
+            // Check if it's a duplicate email/phone error
+            if (data.message && (data.message.includes('email') || data.message.includes('Email') || 
+                data.message.includes('phone') || data.message.includes('Phone number'))) {
+              showNotification(data.message, 'error');
+            } else {
+              showError(data.message);
+            }
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
           }
@@ -640,6 +771,46 @@ h1, h2, h3, h4, h5, h6, .brand {
         errorMessage.textContent = message;
         document.getElementById('signupForm').insertBefore(errorMessage, document.querySelector('#signupForm button[type="submit"]'));
       }
+
+      function showNotification(message, type = 'error') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 16px 24px;
+          background: ${type === 'error' ? '#ef4444' : '#10b981'};
+          color: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          font-size: 14px;
+          font-weight: 500;
+          z-index: 10000;
+          animation: slideIn 0.3s ease;
+          max-width: 400px;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.style.animation = 'slideOut 0.3s ease';
+          setTimeout(() => notification.remove(), 300);
+        }, 4000);
+      }
+
+      // Add CSS animations
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(400px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(400px); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
 
 
       function togglePassword(inputId, button) {

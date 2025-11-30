@@ -923,9 +923,23 @@
         'inventory': `
           <div class="card">
             <div class="inner">
-              <div style="margin-bottom: 20px;">
-                <h2 style="margin: 0;">📦 Inventory Management</h2>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
+                <div>
+                  <h2 style="margin: 0 0 4px 0; font-size: 24px; font-weight: 700;">📦 Inventory Management</h2>
+                  <p style="margin: 0; font-size: 13px; color: #6b7280;">Manage stock levels for all your products and variants</p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="text" id="inventory-search" placeholder="Search products..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; width: 220px;">
+                  <button onclick="loadInventory()" style="padding: 8px 16px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                    🔄 Refresh
+                  </button>
+                </div>
               </div>
+              
+              <div id="inventory-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                <!-- Stats will be populated by JS -->
+              </div>
+              
               <div id="inventory-list" style="overflow-x: auto;">Loading inventory...</div>
             </div>
           </div>
@@ -1350,7 +1364,7 @@
       }
 
 
-      function confirmAddProduct() {
+      async function confirmAddProduct() {
         const form = document.getElementById('addProductForm');
         const categorySelect = document.getElementById('categorySelect');
         const nameInput = form.elements['name'];
@@ -1358,17 +1372,17 @@
 
 
         if (!nameInput.value.trim()) {
-          alert('⚠️ Please enter a product name');
+          VaronNotifications.warning('Please enter a product name');
           return;
         }
 
         if (!priceInput.value || parseFloat(priceInput.value) <= 0) {
-          alert('⚠️ Please enter a valid price');
+          VaronNotifications.warning('Please enter a valid price');
           return;
         }
 
         if (!categorySelect.value) {
-          alert('⚠️ Please select a category');
+          VaronNotifications.warning('Please select a category');
           return;
         }
 
@@ -1396,7 +1410,7 @@
           // Allow products with only custom sizes, only custom colors, or both
           // Only reject if BOTH sizes and colors are completely empty
           if (!hasSizes && !hasColors) {
-            alert('⚠️ Please select at least one size and color, or add custom sizes and colors');
+            VaronNotifications.warning('Please select at least one size and color, or add custom sizes and colors');
             return;
           }
 
@@ -1435,13 +1449,18 @@
         const confirmCategorySlug = confirmSelectedOption ? confirmSelectedOption.getAttribute('data-slug') || '' : '';
         const confirmIsGrooming = confirmCategorySlug && (confirmCategorySlug.toLowerCase().includes('grooming') || confirmSelectedOption.textContent.toLowerCase().includes('grooming'));
 
-        let confirmMsg = `Are you sure you want to add this product?\n\nProduct Name: ${productName}\nCategory: ${category}\nPrice: ₱${productPrice.toFixed(2)}`;
+        let confirmMsg = `Are you sure you want to add this product?. Product Name: ${productName}. Category: ${category}. Price: ₱${productPrice.toFixed(2)}`;
         if (!confirmIsGrooming) {
-          confirmMsg += `\nSizes: ${sizeInfo}\nColors: ${colorInfo}`;
+          confirmMsg += `. Sizes: ${sizeInfo}. Colors: ${colorInfo}`;
         }
-        confirmMsg += `\n\nThis product will be submitted for admin approval.`;
+        confirmMsg += `. This product will be submitted for admin approval.`;
 
-        if (confirm(confirmMsg)) {
+        const confirmed = await VaronNotifications.confirm(confirmMsg, {
+          title: 'Confirm Submission',
+          confirmText: 'Submit as Draft',
+          cancelText: 'Cancel'
+        });
+        if (confirmed) {
 
           updateStockInputs();
 
@@ -1462,22 +1481,22 @@
         const productImages = document.getElementById('productImages');
 
         if (!name) {
-          alert('❌ Product name is required');
+          VaronNotifications.error('Product name is required');
           return;
         }
 
         if (!price || parseFloat(price) <= 0) {
-          alert('❌ Valid price is required');
+          VaronNotifications.error('Valid price is required');
           return;
         }
 
         if (!categorySelect.value) {
-          alert('❌ Category is required');
+          VaronNotifications.error('Category is required');
           return;
         }
 
         if (!productImages.files || productImages.files.length === 0) {
-          alert('❌ At least one product image is required');
+          VaronNotifications.error('At least one product image is required');
           return;
         }
 
@@ -1525,7 +1544,7 @@
 
           if (status === 200 && data.success) {
 
-            alert('✅ Product submitted successfully!\n\nYour product has been added to the admin queue for approval.\n\nOnce approved, it will appear in your store.');
+            VaronNotifications.success('Product submitted successfully! Your product has been added to the admin queue for approval.');
 
             form.reset();
 
@@ -1538,19 +1557,19 @@
             loadPage('products');
           } else if (status === 400) {
 
-            alert('❌ Validation Error:\n\n' + data.error);
+            VaronNotifications.error('Validation Error: ' + data.error);
           } else if (data.error) {
 
-            alert('❌ Error adding product:\n\n' + data.error);
+            VaronNotifications.error('Error adding product: ' + data.error);
           } else {
-            alert('❌ Unexpected error occurred. Please try again.');
+            VaronNotifications.error('Unexpected error occurred. Please try again.');
           }
         })
         .catch(error => {
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
           console.error('Request error:', error);
-          alert('❌ Network error: ' + error.message + '\n\nPlease check your connection and try again.');
+          VaronNotifications.error('Network error: ' + error.message + '. Please check your connection and try again.');
         });
       }
 
@@ -1715,7 +1734,7 @@
         }
 
         parsedIngredients = [];
-        const lines = textarea.value.split('\n').filter(line => line.trim());
+        const lines = textarea.value.split('. ').filter(line => line.trim());
         let successCount = 0;
 
         lines.forEach((line, index) => {
@@ -2075,23 +2094,15 @@
         const order = allOrders.find(o => o.id === orderId);
 
         if (!order) {
-          alert('Order not found');
+          VaronNotifications.error('Order not found');
           return;
         }
 
         const shippingLocation = `${order.shipping_city || ''}${order.shipping_city ? ', ' : ''}${order.shipping_province || ''}${order.shipping_province ? ' ' : ''}${order.shipping_postal_code || ''}`.trim();
 
-        const details = `
-Order Number: ${order.order_number}
-Customer: ${order.customer_name || 'N/A'}
-Total: ₱${parseFloat(order.total_amount || 0).toFixed(2)}
-Status: ${order.order_status.replace(/_/g, ' ').toUpperCase()}
-Items: ${order.item_count || 1}
-Shipping To: ${shippingLocation || 'N/A'}
-Date: ${new Date(order.created_at).toLocaleDateString()}
-        `;
+        const details = `Order #${order.order_number}. Customer: ${order.customer_name || 'N/A'}. Total: ₱${parseFloat(order.total_amount || 0).toFixed(2)}. Status: ${order.order_status.replace(/_/g, ' ').toUpperCase()}. Items: ${order.item_count || 1}. Shipping To: ${shippingLocation || 'N/A'}. Date: ${new Date(order.created_at).toLocaleDateString()}`;
 
-        alert(details);
+        VaronNotifications.info(details, 5000);
       }
 
       // Filter orders by status
@@ -2147,7 +2158,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
 
         const order = allOrders.find(o => o.id === orderId);
         if (!order) {
-          alert('Order not found');
+          VaronNotifications.error('Order not found');
           return;
         }
 
@@ -2267,14 +2278,14 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         const newStatus = document.getElementById('new-status-select').value;
 
         if (!newStatus) {
-          alert('Please select a valid status');
+          VaronNotifications.warning('Please select a valid status');
           return;
         }
 
 
         const order = allOrders.find(o => o.id === orderId);
         if (!order) {
-          alert('Order not found');
+          VaronNotifications.error('Order not found');
           return;
         }
 
@@ -2283,7 +2294,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
 
 
         if (!allowedStatuses.includes(newStatus)) {
-          alert(`❌ Invalid status transition:\nCannot go from "${currentStatus.toUpperCase()}" to "${newStatus.toUpperCase()}"\n\nForward-only transitions are allowed.`);
+          alert(`❌ Invalid status transition:. Cannot go from "${currentStatus.toUpperCase()}" to "${newStatus.toUpperCase()}". Forward-only transitions are allowed.`);
           return;
         }
 
@@ -2316,30 +2327,35 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
                 'cancelled': '❌'
               };
 
-              alert(`${statusEmojis[newStatus] || '✅'} Order status updated!\n\n📋 Order #${order.order_number}\n⏱️ New Status: ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
+              alert(`${statusEmojis[newStatus] || '✅'} Order status updated!. 📋 Order #${order.order_number}. ⏱️ New Status: ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
 
 
               document.querySelectorAll('[style*="position:fixed"]').forEach(el => el.remove());
               loadOrders(currentOrderFilter);
               if (typeof fetchOrderCount === 'function') fetchOrderCount();
             } else {
-              alert('❌ Failed to update order status:\n' + (data.message || data.error || 'Unknown error'));
+              alert('❌ Failed to update order status:. ' + (data.message || data.error || 'Unknown error'));
               updateBtn.disabled = false;
               updateBtn.textContent = originalText;
             }
           })
           .catch(error => {
             console.error('❌ Error updating order status:', error);
-            alert('Error updating order status: ' + error.message);
+            VaronNotifications.error('Error updating order status: ' + error.message);
             updateBtn.disabled = false;
             updateBtn.textContent = originalText;
           });
       }
 
-      function approveRider(orderId, shipmentId) {
+      async function approveRider(orderId, shipmentId) {
         console.log('[SUCCESS] Approving rider for order:', orderId, 'shipment:', shipmentId);
 
-        if (!confirm('Approve this rider to pick up the order?')) return;
+        const confirmed = await VaronNotifications.confirm('Approve this rider to pick up the order?', {
+          title: 'Approve Rider',
+          confirmText: 'Approve',
+          cancelText: 'Cancel'
+        });
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
@@ -2354,16 +2370,16 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('✅ Rider approved! You can now release the order to rider.');
+            VaronNotifications.success('Rider approved! You can now release the order to rider.');
             loadOrders(currentOrderFilter);
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
-            alert('❌ Failed to approve rider: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Failed to approve rider: ' + (data.error || data.message || 'Unknown error'));
           }
         })
         .catch(error => {
           console.error('❌ Error approving rider:', error);
-          alert('Error approving rider: ' + error.message);
+          VaronNotifications.error('Error approving rider: ' + error.message);
         });
       }
 
@@ -2427,12 +2443,12 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
             if (data.success && data.notifications) {
               displayNotifications(data.notifications, data.unread_count);
             } else {
-              alert('Failed to load notifications');
+              VaronNotifications.error('Failed to load notifications');
             }
           })
           .catch(error => {
             console.error('❌ Error loading notifications:', error);
-            alert('Error loading notifications: ' + error.message);
+            VaronNotifications.error('Error loading notifications: ' + error.message);
           });
       }
 
@@ -2549,7 +2565,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         })
         .catch(error => {
           console.error('❌ Error releasing order:', error);
-          alert('Error releasing order: ' + error.message);
+          VaronNotifications.error('Error releasing order: ' + error.message);
         });
       }
 
@@ -2581,7 +2597,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         })
         .catch(error => {
           console.error('❌ Error confirming order:', error);
-          alert('Error confirming order: ' + error.message);
+          VaronNotifications.error('Error confirming order: ' + error.message);
         });
       }
 
@@ -2612,7 +2628,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         })
         .catch(error => {
           console.error('Error updating order status:', error);
-          alert('Error updating order: ' + error.message);
+          VaronNotifications.error('Error updating order: ' + error.message);
         });
       }
 
@@ -2621,7 +2637,7 @@ Date: ${new Date(order.created_at).toLocaleDateString()}
         const order = allOrders.find(o => o.id === orderId);
 
         if (!order) {
-          alert('Order not found');
+          VaronNotifications.error('Order not found');
           return;
         }
 
@@ -2660,7 +2676,7 @@ Customer: ${order.customer_name || 'N/A'}
         const order = allOrders.find(o => o.id === orderId);
 
         if (!order) {
-          alert('Order not found');
+          VaronNotifications.error('Order not found');
           return;
         }
 
@@ -2688,7 +2704,7 @@ Customer: ${order.customer_name || 'N/A'}
         })
         .catch(error => {
           console.error('Error confirming delivery:', error);
-          alert('Error confirming delivery: ' + error.message);
+          VaronNotifications.error('Error confirming delivery: ' + error.message);
         });
       }
 
@@ -2702,7 +2718,7 @@ Customer: ${order.customer_name || 'N/A'}
       function showRiderSelectionModal(orderId) {
         const order = allOrders.find(o => o.id === orderId);
         if (!order) {
-          alert('Order not found');
+          VaronNotifications.error('Order not found');
           return;
         }
 
@@ -2831,7 +2847,7 @@ Customer: ${order.customer_name || 'N/A'}
         })
         .catch(error => {
           console.error('❌ Error assigning rider:', error);
-          alert('Error assigning rider: ' + error.message);
+          VaronNotifications.error('Error assigning rider: ' + error.message);
         });
       }
 
@@ -2860,7 +2876,7 @@ Customer: ${order.customer_name || 'N/A'}
         })
         .catch(error => {
           console.error('❌ Error updating order:', error);
-          alert('Error updating order: ' + error.message);
+          VaronNotifications.error('Error updating order: ' + error.message);
         });
       }
 
@@ -2889,7 +2905,7 @@ Customer: ${order.customer_name || 'N/A'}
         })
         .catch(error => {
           console.error('❌ Error updating order:', error);
-          alert('Error updating order: ' + error.message);
+          VaronNotifications.error('Error updating order: ' + error.message);
         });
       }
 
@@ -2924,7 +2940,7 @@ Customer: ${order.customer_name || 'N/A'}
         })
         .catch(error => {
           console.error('❌ Error updating order:', error);
-          alert('Error updating order: ' + error.message);
+          VaronNotifications.error('Error updating order: ' + error.message);
         });
       }
 
@@ -2978,12 +2994,12 @@ Customer: ${order.customer_name || 'N/A'}
               `;
               document.body.appendChild(modal);
             } else {
-              alert('Error loading rider details');
+              VaronNotifications.error('Error loading rider details');
             }
           })
           .catch(error => {
             console.error('Error fetching rider details:', error);
-            alert('Error loading rider details');
+            VaronNotifications.error('Error loading rider details');
           });
       }
 
@@ -3035,11 +3051,17 @@ Customer: ${order.customer_name || 'N/A'}
       function displayInventory(inventory) {
         if (!inventory || inventory.length === 0) {
           document.getElementById('inventory-list').innerHTML = '<p style="color:#999;padding:40px;text-align:center;">No products in inventory</p>';
+          document.getElementById('inventory-stats').innerHTML = '';
           return;
         }
 
-
+        // Group products
         const grouped = {};
+        let totalProducts = 0;
+        let totalStock = 0;
+        let lowStockCount = 0;
+        let totalVariants = 0;
+
         inventory.forEach(item => {
           const key = item.product_id;
           if (!grouped[key]) {
@@ -3050,88 +3072,152 @@ Customer: ${order.customer_name || 'N/A'}
               image_url: item.image_url,
               variants: []
             };
+            totalProducts++;
           }
           grouped[key].variants.push(item);
+          totalStock += item.stock_quantity || 0;
+          totalVariants++;
+          if (item.stock_quantity < 10) lowStockCount++;
         });
 
-        let html = '';
+        // Display stats
+        const statsHtml = `
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; color: white;">
+            <p style="margin: 0 0 4px; font-size: 12px; opacity: 0.9;">Total Products</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 700;">${totalProducts}</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 20px; border-radius: 10px; color: white;">
+            <p style="margin: 0 0 4px; font-size: 12px; opacity: 0.9;">Total Variants</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 700;">${totalVariants}</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 20px; border-radius: 10px; color: white;">
+            <p style="margin: 0 0 4px; font-size: 12px; opacity: 0.9;">Total Stock</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 700;">${totalStock}</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 20px; border-radius: 10px; color: white;">
+            <p style="margin: 0 0 4px; font-size: 12px; opacity: 0.9;">Low Stock Items</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 700;">${lowStockCount}</p>
+          </div>
+        `;
+        document.getElementById('inventory-stats').innerHTML = statsHtml;
+
+        // Start building table
+        let html = `
+          <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px;">
+            <thead>
+              <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 14px 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Product</th>
+                <th style="padding: 14px 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">SKU</th>
+                <th style="padding: 14px 16px; text-align: right; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Price</th>
+                <th style="padding: 14px 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Variants</th>
+                <th style="padding: 14px 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Total Stock</th>
+                <th style="padding: 14px 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
 
         Object.entries(grouped).forEach(([productId, product]) => {
           const hasVariants = product.variants.some(v => v.size || v.color);
-          const imageHtml = product.image_url ? `<img src="${product.image_url}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #e0e0e0;">` : `<div style="width: 120px; height: 120px; background: #f0f0f0; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; color: #999;">No Image</div>`;
+          const totalProductStock = product.variants.reduce((sum, v) => sum + (v.stock_quantity || 0), 0);
+          const stockStatus = totalProductStock < 10 ? 'low' : totalProductStock < 30 ? 'medium' : 'good';
+          const stockColor = stockStatus === 'low' ? '#ef4444' : stockStatus === 'medium' ? '#f59e0b' : '#10b981';
+          const imageHtml = product.image_url 
+            ? `<img src="${product.image_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid #e0e0e0;">` 
+            : `<div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 20px;">📦</div>`;
 
+          // Main product row
           html += `
-            <div style="margin-bottom: 24px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-              <div style="display: flex; gap: 20px; padding: 20px; border-bottom: 1px solid #e0e0e0;">
-                <div>${imageHtml}</div>
-                <div style="flex: 1;">
-                  <h3 style="margin: 0 0 8px; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.product_name}</h3>
-                  <p style="margin: 4px 0; font-size: 13px; color: #666;">SKU: ${product.sku || 'N/A'}</p>
-                  <p style="margin: 4px 0; font-size: 14px; font-weight: 600; color: #0a0a0a;">₱${parseFloat(product.price || 0).toFixed(2)}</p>
-                  <p style="margin: 8px 0 0; font-size: 12px; color: #999;">Total Variants: ${product.variants.length}</p>
+            <tr style="border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+              <td style="padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  ${imageHtml}
+                  <div>
+                    <p style="margin: 0 0 4px; font-weight: 600; color: #111827;">${product.product_name}</p>
+                    <p style="margin: 0; font-size: 12px; color: #6b7280;">${product.variants.length} variant${product.variants.length > 1 ? 's' : ''}</p>
+                  </div>
                 </div>
-              </div>
-
-              ${hasVariants ? `
-                <div style="padding: 20px;">
-                  <h4 style="margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #0a0a0a;">Stock Management by Size & Color</h4>
-                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
-                    ${product.variants.map(variant => `
-                      <div style="background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
-                        <div style="margin-bottom: 12px;">
-                          <p style="margin: 0 0 4px; font-size: 12px; color: #666; font-weight: 600;">📏 Size: <strong>${variant.size || 'One Size'}</strong></p>
-                          <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">🎨 Color: <strong>${variant.color || 'N/A'}</strong></p>
-                        </div>
-
-                        <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
-                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+              </td>
+              <td style="padding: 16px; color: #6b7280;">${product.sku || 'N/A'}</td>
+              <td style="padding: 16px; text-align: right; font-weight: 600; color: #111827;">₱${parseFloat(product.price || 0).toFixed(2)}</td>
+              <td style="padding: 16px; text-align: center;">
+                <span style="background: #f3f4f6; color: #374151; padding: 4px 12px; border-radius: 12px; font-weight: 600; font-size: 12px;">
+                  ${product.variants.length}
+                </span>
+              </td>
+              <td style="padding: 16px; text-align: center;">
+                <span style="background: ${stockColor}15; color: ${stockColor}; padding: 6px 12px; border-radius: 12px; font-weight: 700; font-size: 13px;">
+                  ${totalProductStock}
+                </span>
+              </td>
+              <td style="padding: 16px; text-align: center;">
+                <button onclick="toggleVariants('${productId}')" style="background: #0a0a0a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s;">
+                  📋 View Details
+                </button>
+              </td>
+            </tr>
+            <tr id="variants-${productId}" style="display: none; background: #fafafa;">
+              <td colspan="6" style="padding: 0;">
+                <div style="padding: 24px; border-top: 2px solid #e5e7eb;">
+                  <h4 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; color: #111827; display: flex; align-items: center; gap: 8px;">
+                    <span style="background: #0a0a0a; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">📦</span>
+                    Variant Stock Details
+                  </h4>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+                    ${product.variants.map(variant => {
+                      const variantStock = variant.stock_quantity || 0;
+                      const variantStatus = variantStock < 5 ? 'critical' : variantStock < 15 ? 'low' : 'good';
+                      const variantColor = variantStatus === 'critical' ? '#dc2626' : variantStatus === 'low' ? '#ea580c' : '#059669';
+                      
+                      return `
+                        <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                             <div>
-                              <p style="margin: 0; color: #0c4a6e; font-weight: 600;">Stock</p>
-                              <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #0c4a6e;">${variant.stock_quantity}</p>
+                              <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280; font-weight: 600;">Size</p>
+                              <p style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">${variant.size || 'One Size'}</p>
                             </div>
-                            <div>
-                              <p style="margin: 0; color: #0c4a6e; font-weight: 600;">Available</p>
-                              <p style="margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #0c4a6e;">${variant.available_quantity}</p>
+                            <div style="text-align: right;">
+                              <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280; font-weight: 600;">Color</p>
+                              <p style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">${variant.color || 'Standard'}</p>
                             </div>
                           </div>
+                          
+                          <div style="background: ${variantColor}08; border: 2px solid ${variantColor}; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+                            <p style="margin: 0 0 4px; font-size: 11px; color: ${variantColor}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Current Stock</p>
+                            <p style="margin: 0; font-size: 26px; font-weight: 700; color: ${variantColor};">${variantStock}</p>
+                            ${variantStatus === 'critical' ? '<p style="margin: 4px 0 0; font-size: 11px; color: #dc2626; font-weight: 600;">⚠️ Critical Low!</p>' : ''}
+                            ${variantStatus === 'low' ? '<p style="margin: 4px 0 0; font-size: 11px; color: #ea580c; font-weight: 600;">⚠ Running Low</p>' : ''}
+                          </div>
+                          
+                          <button class="restock-btn" 
+                            data-product-id="${variant.product_id}" 
+                            data-variant-id="${variant.variant_id_full}" 
+                            data-product-name="${product.product_name}" 
+                            data-size="${variant.size || 'One Size'}" 
+                            data-color="${variant.color || 'N/A'}" 
+                            data-stock="${variantStock}" 
+                            style="width: 100%; padding: 10px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s;">
+                            ➕ Restock
+                          </button>
                         </div>
-
-                        <button class="restock-btn" data-product-id="${variant.product_id}" data-variant-id="${variant.variant_id_full}" data-product-name="${variant.product_name}" data-size="${variant.size || 'One Size'}" data-color="${variant.color || 'N/A'}" data-stock="${variant.stock_quantity}" style="width: 100%; padding: 8px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">Restock</button>
-                      </div>
-                    `).join('')}
+                      `;
+                    }).join('')}
                   </div>
                 </div>
-              ` : `
-                <div style="padding: 20px;">
-                  <div style="background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                      <div>
-                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Current Stock</p>
-                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].stock_quantity}</p>
-                      </div>
-                      <div>
-                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Reserved</p>
-                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].reserved_quantity}</p>
-                      </div>
-                      <div>
-                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Available</p>
-                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].available_quantity}</p>
-                      </div>
-                      <div>
-                        <p style="margin: 0; font-size: 12px; color: #666; font-weight: 600;">Alert Level</p>
-                        <p style="margin: 4px 0 0; font-size: 18px; font-weight: 600; color: #0a0a0a;">${product.variants[0].low_stock_threshold}</p>
-                      </div>
-                    </div>
-                    <button class="restock-btn" data-product-id="${product.variants[0].product_id}" data-variant-id="" data-product-name="${product.product_name}" data-size="One Size" data-color="N/A" data-stock="${product.variants[0].stock_quantity}" style="width: 100%; padding: 12px; background: #0a0a0a; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Restock</button>
-                  </div>
-                </div>
-              `}
-            </div>
+              </td>
+            </tr>
           `;
         });
 
+        html += `
+            </tbody>
+          </table>
+        `;
+
         document.getElementById('inventory-list').innerHTML = html;
 
+        // Setup search functionality
+        setupInventorySearch();
 
         console.log('Attaching event listeners to .restock-btn elements');
         setTimeout(() => {
@@ -3154,6 +3240,50 @@ Customer: ${order.customer_name || 'N/A'}
             });
           });
         }, 100);
+      }
+
+      // Toggle variant details visibility
+      function toggleVariants(productId) {
+        const row = document.getElementById(`variants-${productId}`);
+        if (row) {
+          if (row.style.display === 'none') {
+            row.style.display = 'table-row';
+          } else {
+            row.style.display = 'none';
+          }
+        }
+      }
+
+      // Setup inventory search
+      function setupInventorySearch() {
+        const searchInput = document.getElementById('inventory-search');
+        if (searchInput) {
+          searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('tbody tr[onmouseover]');
+            
+            rows.forEach((row, index) => {
+              const productName = row.querySelector('td:first-child p').textContent.toLowerCase();
+              const sku = row.querySelectorAll('td')[1].textContent.toLowerCase();
+              
+              if (productName.includes(searchTerm) || sku.includes(searchTerm)) {
+                row.style.display = '';
+                // Also show the variant details row if it exists
+                const variantRow = row.nextElementSibling;
+                if (variantRow && variantRow.id && variantRow.id.startsWith('variants-')) {
+                  // Keep it in DOM but respect its current state
+                }
+              } else {
+                row.style.display = 'none';
+                // Hide variant details row
+                const variantRow = row.nextElementSibling;
+                if (variantRow && variantRow.id && variantRow.id.startsWith('variants-')) {
+                  variantRow.style.display = 'none';
+                }
+              }
+            });
+          });
+        }
       }
 
       function openVariantRestockModal(productId, variantId, productName, size, color, currentStock) {
@@ -3186,7 +3316,7 @@ Customer: ${order.customer_name || 'N/A'}
 
             
             <div style="display:flex; gap:12px; justify-content:flex-end;">
-              <button onclick="this.closest('[style*=fixed]').remove()" style="padding:12px 24px; border:1px solid #e5e7eb; background:#f6f6f6; color:#0a0a0a; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
+              <button id="restock-cancel-btn" onclick="this.closest('[style*=fixed]').remove()" style="padding:12px 24px; border:1px solid #e5e7eb; background:#f6f6f6; color:#0a0a0a; border-radius:8px; cursor:pointer; font-weight:600;">Cancel</button>
               <button id="restock-submit-btn" style="padding:12px 24px; border:none; background:#0a0a0a; color:#fff; border-radius:8px; cursor:pointer; font-weight:600;">✓ Restock</button>
             </div>
           </div>
@@ -3209,18 +3339,21 @@ Customer: ${order.customer_name || 'N/A'}
         const quantity = parseInt(document.getElementById('restock-quantity').value);
 
         if (!quantity || quantity <= 0) {
-          alert('Please enter a valid quantity');
+          VaronNotifications.warning('Please enter a valid quantity');
           return;
         }
 
         if (!productId) {
-          alert('Error: Product ID missing');
+          VaronNotifications.error('Error: Product ID missing');
           return;
         }
 
         const submitBtn = document.getElementById('restock-submit-btn');
+        const cancelBtn = document.getElementById('restock-cancel-btn');
+        
         submitBtn.disabled = true;
         submitBtn.textContent = '⏳ Processing...';
+        if (cancelBtn) cancelBtn.disabled = true;
 
         const formData = new FormData();
         formData.append('product_id', productId);
@@ -3244,21 +3377,46 @@ Customer: ${order.customer_name || 'N/A'}
           })
           .then(data => {
             console.log('Response data:', data);
+            
             if (data.success) {
-              alert(`✅ Restocked!\nAdded: ${quantity} pcs\nNew Stock: ${data.new_stock} pcs`);
-              document.querySelectorAll('[style*="position:fixed"]').forEach(el => el.remove());
-              loadInventory();
+              // Reset button state first
+              submitBtn.disabled = false;
+              submitBtn.textContent = '✅ Success!';
+              if (cancelBtn) cancelBtn.disabled = false;
+              
+              // Show success notification
+              VaronNotifications.success(`Restocked! Added: ${quantity} pcs. New Stock: ${data.new_stock} pcs`);
+              
+              // Close modal after a delay to show success feedback
+              setTimeout(() => {
+                const modal = document.querySelector('[style*="position:fixed"]');
+                if (modal) modal.remove();
+                // Reload inventory after modal is closed
+                loadInventory();
+              }, 800);
             } else {
-              alert('❌ Failed: ' + (data.error || 'Unknown error'));
+              VaronNotifications.error('Failed: ' + (data.error || 'Unknown error'));
+              // Reset button state on failure
               submitBtn.disabled = false;
               submitBtn.textContent = '✓ Restock';
+              if (cancelBtn) cancelBtn.disabled = false;
             }
           })
           .catch(error => {
             console.error('Fetch error:', error);
-            alert('Error: ' + error.message);
-            submitBtn.disabled = false;
-            submitBtn.textContent = '✓ Restock';
+            VaronNotifications.error('Error: ' + error.message);
+            
+            // Reset button state on error - only if elements still exist
+            const currentSubmitBtn = document.getElementById('restock-submit-btn');
+            const currentCancelBtn = document.getElementById('restock-cancel-btn');
+            
+            if (currentSubmitBtn) {
+              currentSubmitBtn.disabled = false;
+              currentSubmitBtn.textContent = '✓ Restock';
+            }
+            if (currentCancelBtn) {
+              currentCancelBtn.disabled = false;
+            }
           });
       }
 
@@ -3945,7 +4103,7 @@ Customer: ${order.customer_name || 'N/A'}
 
                   <div style="display: flex; gap: 12px; margin-top: 10px;">
                     <button type="button" class="action-btn" onclick="submitProductEdit()" style="padding: 12px 24px;">Submit for Approval</button>
-                    <button type="button" class="action-btn" data-load-page="products" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
+                    <button type="button" class="action-btn" onclick="loadPage('products')" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
                   </div>
                 </form>
               `;
@@ -3993,11 +4151,11 @@ Customer: ${order.customer_name || 'N/A'}
         }
 
 
-        let confirmMsg = 'You are requesting to change:\\n\\n';
+        let confirmMsg = 'You are requesting to change:\. \. ';
         for (let [key, change] of Object.entries(changes)) {
-          confirmMsg += `${change.label}: "${change.old}" → "${change.new}"\\n`;
+          confirmMsg += `${change.label}: "${change.old}" → "${change.new}"\. `;
         }
-        confirmMsg += '\\nThese changes will require admin approval. Continue?';
+        confirmMsg += '\. These changes will require admin approval. Continue?';
 
         if (!confirm(confirmMsg)) {
           return;
@@ -4010,22 +4168,22 @@ Customer: ${order.customer_name || 'N/A'}
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('✓ Product edit submitted for admin approval!\\n\\nYour changes will be reviewed and applied once approved.');
+            alert('✓ Product edit submitted for admin approval!\. \. Your changes will be reviewed and applied once approved.');
             loadPage('products');
           } else {
             alert('Error: ' + data.error);
           }
         })
         .catch(error => {
-          alert('Error submitting edit request');
+          VaronNotifications.error('Error submitting edit request');
         });
       }
 
       function archiveProduct(productId, productName) {
-        const reason = prompt(`Archive "${productName}"?\n\nOptional reason for archiving:`, '');
+        const reason = prompt(`Archive "${productName}"?. Optional reason for archiving:`, '');
         if (reason === null) return;
 
-        if (!confirm(`Are you sure you want to archive "${productName}"?\n\nArchived products will be hidden from your store and require admin approval to recover.`)) {
+        if (!confirm(`Are you sure you want to archive "${productName}"?. Archived products will be hidden from your store and require admin approval to recover.`)) {
           return;
         }
 
@@ -4047,7 +4205,7 @@ Customer: ${order.customer_name || 'N/A'}
           }
         })
         .catch(error => {
-          alert('Error archiving product');
+          VaronNotifications.error('Error archiving product');
         });
       }
 
@@ -4105,7 +4263,7 @@ Customer: ${order.customer_name || 'N/A'}
       }
 
       function requestRecovery(productId, productName) {
-        const reason = prompt(`Request recovery for "${productName}"?\n\nReason for recovery (required):`, '');
+        const reason = prompt(`Request recovery for "${productName}"?. Reason for recovery (required):`, '');
         if (!reason || reason.trim() === '') {
           if (reason !== null) alert('Please provide a reason for recovery');
           return;
@@ -4122,14 +4280,14 @@ Customer: ${order.customer_name || 'N/A'}
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('✓ Recovery request submitted!\n\nAn admin will review your request.');
+            alert('✓ Recovery request submitted!. An admin will review your request.');
             loadArchivedProducts();
           } else {
             alert('Error: ' + data.error);
           }
         })
         .catch(error => {
-          alert('Error submitting recovery request');
+          VaronNotifications.error('Error submitting recovery request');
         });
       }
 
@@ -4152,11 +4310,11 @@ Customer: ${order.customer_name || 'N/A'}
               const activePage = document.querySelector('.side-link.active')?.getAttribute('data-page');
               if (activePage) loadPage(activePage);
             } else {
-              alert('Error updating stock: ' + data.error);
+              VaronNotifications.error('Error updating stock: ' + data.error);
             }
           })
           .catch(error => {
-            alert('Error updating stock');
+            VaronNotifications.error('Error updating stock');
           });
         }
       }
@@ -4534,7 +4692,7 @@ Customer: ${order.customer_name || 'N/A'}
                     const selectedProduct = productSelect.options[productSelect.selectedIndex].text;
                     const discountDisplay = discountType === 'percentage' ? `${discountValue}%` : `₱${discountValue}`;
 
-                    alert(`✅ Promotion Submitted for Admin Approval!\n\nProduct: ${selectedProduct}\nDiscount: ${discountDisplay}\n\nStatus: Pending Review\n\nYou will receive an email once the admin approves or rejects your promotion.`);
+                    alert(`✅ Promotion Submitted for Admin Approval!. Product: ${selectedProduct}. Discount: ${discountDisplay}. Status: Pending Review. You will receive an email once the admin approves or rejects your promotion.`);
                     if (typeof closePromotionModal === 'function') closePromotionModal();
                     if (typeof loadPromotions === 'function') loadPromotions();
                   } else {
@@ -4618,5 +4776,6 @@ Customer: ${order.customer_name || 'N/A'}
         </div>
       </div>
     </div>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
   </body>
 </html>

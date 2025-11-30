@@ -781,6 +781,13 @@
           }
 
 
+          // Sort orders by date - newest first (latest transactions at the top)
+          allOrders.sort((a, b) => {
+            const dateA = new Date(a.created_at || a.order_date || 0);
+            const dateB = new Date(b.created_at || b.order_date || 0);
+            return dateB - dateA; // Descending order (newest first)
+          });
+
           document.getElementById('order-count').textContent = `${allOrders.length} Orders`;
 
           if (allOrders.length > 0) {

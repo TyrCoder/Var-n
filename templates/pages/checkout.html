@@ -160,16 +160,66 @@
 
       .checkout-container {
         display: grid;
-        grid-template-columns: 1fr 400px;
+        grid-template-columns: 520px 400px;
         gap: 48px;
         margin-bottom: 48px;
+        justify-content: center;
       }
 
       .checkout-form {
         background: #ffffff;
         border-radius: 16px;
-        padding: 32px;
+        padding: 40px;
         box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      }
+      
+      .shipping-display {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 32px;
+      }
+      
+      .shipping-display-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      
+      .shipping-display-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #000000;
+      }
+      
+      .change-address-btn {
+        background: transparent;
+        border: 1px solid #000000;
+        color: #000000;
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      .change-address-btn:hover {
+        background: #000000;
+        color: #ffffff;
+      }
+      
+      .shipping-display-content {
+        font-size: 14px;
+        line-height: 1.8;
+        color: #374151;
+      }
+      
+      .shipping-display-content strong {
+        color: #000000;
+        font-weight: 600;
       }
 
       .checkout-section {
@@ -530,7 +580,7 @@
       </div>
 
       <div class="checkout-container">
-        <form class="checkout-form" id="checkoutForm">
+        <div class="checkout-form">
           <a href="javascript:history.back()" class="back-link">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -538,77 +588,30 @@
             Back to Shopping
           </a>
 
-          <!-- Shipping Information -->
-          <div class="checkout-section">
-            <h2>Shipping Information</h2>
+          <!-- Shipping Address Display -->
+          <div class="shipping-display" id="shippingDisplay">
+            <div class="shipping-display-header">
+              <div class="shipping-display-title">📦 Delivery Address</div>
+              <button type="button" class="change-address-btn" onclick="window.location.href='{{ url_for('account_details') }}'">Change Address</button>
+            </div>
+            <div class="shipping-display-content" id="addressContent">
+              <div style="margin-bottom:8px"><strong id="displayName">Loading...</strong></div>
+              <div id="displayAddress">Loading address...</div>
+              <div style="margin-top:8px"><strong>Phone:</strong> <span id="displayPhone">---</span></div>
+            </div>
+          </div>
 
-            <!-- Saved Addresses Selection -->
-            <div class="form-group" id="savedAddressesContainer" style="display:none">
-              <label for="savedAddressSelect">Use Saved Address (Optional) *</label>
-              <select id="savedAddressSelect" name="savedAddressSelect" onchange="loadSavedAddress(this.value)">
-                <option value="">-- Select a saved address or enter new --</option>
-              </select>
-              <small style="color:#999;margin-top:4px;display:block">Or fill in the form below to use a new address</small>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="firstName">First Name *</label>
-                <input type="text" id="firstName" name="firstName" required value="{{ session.get('first_name', '') }}">
-              </div>
-              <div class="form-group">
-                <label for="lastName">Last Name *</label>
-                <input type="text" id="lastName" name="lastName" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="email">Email Address *</label>
-              <input type="email" id="email" name="email" required>
-            </div>
-            <div class="form-group">
-              <label for="phone">Phone Number *</label>
-              <input type="tel" id="phone" name="phone" required placeholder="+63 XXX XXX XXXX" value="+63">
-            </div>
-            <div class="form-group">
-              <label for="address">Street Address *</label>
-              <input type="text" id="address" name="address" required placeholder="House No., Building, Street Name">
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="city">City *</label>
-                <input type="text" id="city" name="city" required>
-              </div>
-              <div class="form-group">
-                <label for="province">Province *</label>
-                <input type="text" id="province" name="province" required>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="postalCode">Postal Code *</label>
-                <input type="text" id="postalCode" name="postalCode" required>
-              </div>
-              <div class="form-group">
-                <label for="country">Country *</label>
-                <select id="country" name="country" required>
-                  <option value="Philippines" selected>Philippines</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="notes">Delivery Notes (Optional)</label>
-              <textarea id="notes" name="notes" placeholder="Add any special instructions for delivery..."></textarea>
-            </div>
-
-            <!-- Save Address Checkbox -->
-            <div class="save-address-checkbox">
-              <input type="checkbox" id="saveAddress" name="saveAddress">
-              <label for="saveAddress">Save this address for future orders</label>
+          <!-- Delivery Notes -->
+          <div class="checkout-section" style="margin-bottom: 0;">
+            <h2>Delivery Instructions</h2>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="notes">Add delivery notes (Optional)</label>
+              <textarea id="notes" name="notes" placeholder="e.g., Call upon arrival, Leave at gate, etc." style="min-height: 80px;"></textarea>
             </div>
           </div>
 
           <!-- Payment Method -->
-          <div class="checkout-section">
+          <div class="checkout-section" style="margin-top: 32px; margin-bottom: 0;">
             <h2>Payment Method</h2>
             <div class="payment-methods">
               <label class="payment-option selected" for="cod">
@@ -645,7 +648,7 @@
               </label>
             </div>
           </div>
-        </form>
+        </div>
 
         <!-- Order Summary -->
         <div class="order-summary">
@@ -780,12 +783,12 @@
       }
 
 
+      // Store default address globally
+      let defaultAddress = null;
+
       document.addEventListener('DOMContentLoaded', async () => {
 
-        setupPhonePrefix();
-
-
-        await loadSavedAddresses();
+        await loadDefaultAddress();
 
 
         fetch('/get_buyer_name')
@@ -866,87 +869,70 @@
       }
 
 
-      async function loadSavedAddresses() {
+      async function loadDefaultAddress() {
         try {
           const response = await fetch('/get-shipping-addresses');
           const data = await response.json();
 
           if (data.success && data.addresses && data.addresses.length > 0) {
-            const container = document.getElementById('savedAddressesContainer');
-            const select = document.getElementById('savedAddressSelect');
-
-
-            container.style.display = 'block';
-
-
-            data.addresses.forEach(addr => {
-              const option = document.createElement('option');
-              option.value = addr.id;
-              option.textContent = `${addr.address_type || 'Address'} - ${addr.street_address}, ${addr.city}${addr.is_default ? ' (Default)' : ''}`;
-              select.appendChild(option);
-            });
-
-
-            const defaultAddr = data.addresses.find(addr => addr.is_default);
+            const defaultAddr = data.addresses.find(addr => addr.is_default) || data.addresses[0];
+            
             if (defaultAddr) {
-              select.value = defaultAddr.id;
-              loadSavedAddress(defaultAddr.id);
+              defaultAddress = defaultAddr;
+              
+              // Display the address
+              document.getElementById('displayName').textContent = defaultAddr.full_name || 'User';
+              
+              const addressParts = [
+                defaultAddr.street_address,
+                defaultAddr.barangay,
+                defaultAddr.city,
+                defaultAddr.province,
+                defaultAddr.postal_code
+              ].filter(Boolean);
+              
+              document.getElementById('displayAddress').textContent = addressParts.join(', ');
+              document.getElementById('displayPhone').textContent = defaultAddr.phone || '---';
+            } else {
+              // No address saved
+              document.getElementById('shippingDisplay').innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                  <p style="color: #ef4444; font-weight: 600; margin-bottom: 12px;">⚠️ No shipping address found</p>
+                  <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">Please add a shipping address to continue</p>
+                  <button onclick="window.location.href='{{ url_for('account_details') }}'" class="change-address-btn" style="display: inline-block;">
+                    Add Address
+                  </button>
+                </div>
+              `;
+              document.getElementById('placeOrderBtn').disabled = true;
             }
+          } else {
+            // No addresses at all
+            document.getElementById('shippingDisplay').innerHTML = `
+              <div style="text-align: center; padding: 20px;">
+                <p style="color: #ef4444; font-weight: 600; margin-bottom: 12px;">⚠️ No shipping address found</p>
+                <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">Please add a shipping address to continue</p>
+                <button onclick="window.location.href='{{ url_for('account_details') }}'" class="change-address-btn" style="display: inline-block;">
+                  Add Address
+                </button>
+              </div>
+            `;
+            document.getElementById('placeOrderBtn').disabled = true;
           }
         } catch (error) {
-          console.error('Error loading saved addresses:', error);
+          console.error('Error loading default address:', error);
+          document.getElementById('addressContent').innerHTML = '<p style="color: #ef4444;">Error loading address</p>';
         }
-      }
-
-
-      function loadSavedAddress(addressId) {
-        if (!addressId) {
-
-          document.getElementById('firstName').value = '';
-          document.getElementById('lastName').value = '';
-          document.getElementById('email').value = '';
-          document.getElementById('phone').value = '';
-          document.getElementById('address').value = '';
-          document.getElementById('city').value = '';
-          document.getElementById('province').value = '';
-          document.getElementById('postalCode').value = '';
-          document.getElementById('country').value = 'Philippines';
-          document.getElementById('notes').value = '';
-          return;
-        }
-
-        fetch(`/get-address/${addressId}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.success && data.address) {
-              const addr = data.address;
-
-              const nameParts = (addr.full_name || '').split(' ');
-              const firstName = nameParts[0] || '';
-              const lastName = nameParts.slice(1).join(' ') || '';
-
-
-              document.getElementById('firstName').value = firstName;
-              document.getElementById('lastName').value = lastName;
-              document.getElementById('phone').value = addr.phone || '+63';
-              document.getElementById('address').value = addr.street_address || '';
-              document.getElementById('city').value = addr.city || '';
-              document.getElementById('province').value = addr.province || '';
-              document.getElementById('postalCode').value = addr.postal_code || '';
-              document.getElementById('country').value = addr.country || 'Philippines';
-            }
-          })
-          .catch(error => console.error('Error loading address:', error));
       }
 
 
       async function confirmAndPlaceOrder() {
-        const form = document.getElementById('checkoutForm');
-        if (!form.checkValidity()) {
-          form.reportValidity();
+        // Check if we have a default address
+        if (!defaultAddress) {
+          alert('⚠️ Please add a shipping address before placing your order.\n\nYou will be redirected to your account page.');
+          window.location.href = '{{ url_for("account_details") }}';
           return;
         }
-
 
         if (!window.VaronCart) {
           alert('Cart system not loaded. Please refresh the page.');
@@ -959,8 +945,7 @@
           return;
         }
 
-        const formData = new FormData(form);
-        const saveAddress = document.getElementById('saveAddress').checked;
+        const notes = document.getElementById('notes').value;
 
 
         let subtotal = 0;
@@ -981,25 +966,28 @@
         const shippingFee = 100.00;
         const total = subtotal + shippingFee;
 
+        // Get payment method
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+
         const orderData = {
           shipping: {
-            firstName: formData.get('firstName'),
-            lastName: formData.get('lastName'),
-            email: formData.get('email'),
-            phone: formData.get('phone'),
-            address: formData.get('address'),
-            city: formData.get('city'),
-            province: formData.get('province'),
-            postalCode: formData.get('postalCode'),
-            country: formData.get('country'),
-            notes: formData.get('notes')
+            firstName: defaultAddress.full_name.split(' ')[0] || '',
+            lastName: defaultAddress.full_name.split(' ').slice(1).join(' ') || '',
+            email: '{{ session.get("email", "") }}',
+            phone: defaultAddress.phone,
+            address: defaultAddress.street_address,
+            city: defaultAddress.city,
+            province: defaultAddress.province,
+            postalCode: defaultAddress.postal_code || '',
+            country: defaultAddress.country || 'Philippines',
+            notes: notes
           },
-          payment_method: formData.get('paymentMethod'),
+          payment_method: paymentMethod,
           items: items,
           subtotal: subtotal,
           shipping_fee: shippingFee,
           total: total,
-          save_address: saveAddress
+          save_address: false
         };
 
 

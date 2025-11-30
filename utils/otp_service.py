@@ -100,9 +100,13 @@ class OTPService:
             bool: True if sent successfully, False otherwise
         """
         try:
+            # Debug output
+            print(f"[OTP Email] Attempting to send to: {email}")
+            print(f"[OTP Email] MAIL_USERNAME: {OTPService.MAIL_USERNAME}")
+            print(f"[OTP Email] MAIL_PASSWORD configured: {bool(OTPService.MAIL_PASSWORD)}")
 
             if not OTPService.MAIL_USERNAME or not OTPService.MAIL_PASSWORD:
-                print("Error: Email credentials (MAIL_USERNAME and MAIL_PASSWORD) are not configured in environment variables")
+                print("✗ Error: Email credentials (MAIL_USERNAME and MAIL_PASSWORD) are not configured in environment variables")
                 return False
 
 
@@ -149,26 +153,33 @@ class OTPService:
 
             msg.attach(MIMEText(body, 'html'))
 
-
-            server = smtplib.SMTP(OTPService.MAIL_SERVER, OTPService.MAIL_PORT)
-            if OTPService.MAIL_USE_TLS:
-                server.starttls()
-            server.login(OTPService.MAIL_USERNAME, OTPService.MAIL_PASSWORD)
-            server.sendmail(OTPService.MAIL_DEFAULT_SENDER, email, msg.as_string())
-            server.quit()
-
-            print(f"OTP email sent successfully to {email}")
-            return True
+            # Send email with proper resource management
+            try:
+                server = smtplib.SMTP(OTPService.MAIL_SERVER, OTPService.MAIL_PORT, timeout=10)
+                try:
+                    if OTPService.MAIL_USE_TLS:
+                        server.starttls()
+                    server.login(OTPService.MAIL_USERNAME, OTPService.MAIL_PASSWORD)
+                    server.sendmail(OTPService.MAIL_DEFAULT_SENDER, email, msg.as_string())
+                    print(f"✓ OTP email sent successfully to {email}")
+                    return True
+                finally:
+                    server.quit()
+            except Exception as e:
+                print(f"Error in email sending process: {e}")
+                raise
 
         except smtplib.SMTPAuthenticationError as e:
-            print(f"SMTP Authentication Error: {e}")
+            print(f"✗ SMTP Authentication Error: {e}")
             print("Please check your MAIL_USERNAME and MAIL_PASSWORD in .env file")
             return False
         except smtplib.SMTPException as e:
-            print(f"SMTP Error: {e}")
+            print(f"✗ SMTP Error: {e}")
             return False
         except Exception as e:
-            print(f"Error sending OTP email: {e}")
+            print(f"✗ Error sending OTP email: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     @staticmethod
