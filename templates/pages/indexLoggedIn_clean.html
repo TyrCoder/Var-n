@@ -397,7 +397,7 @@
 
 
       window.addEventListener('click', function(e) {
-        if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
+        if (!e.target.matches('.user-button') && !e.target.closest('.user-button') && !e.target.closest('.dropdown-content')) {
           const dropdown = document.getElementById('userDropdown');
           if (dropdown && dropdown.classList.contains('show')) {
             dropdown.classList.remove('show');

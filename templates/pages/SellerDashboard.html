@@ -187,6 +187,7 @@
           <a class="side-link" href="#" data-page="inventory">Inventory</a>
           <a class="side-link" href="#" data-page="reviews">Customer Reviews</a>
           <a class="side-link" href="#" data-page="promotions">Promotions</a>
+          <a class="side-link" href="#" data-page="notifications"> Notifications</a>
         </div>
         <div class="side-group">
           <div class="side-title">Analytics</div>
@@ -456,6 +457,7 @@
             'orders': 'Order Management',
             'reviews': 'Customer Reviews',
             'promotions': 'Promotions',
+            'notifications': 'Notifications',
             'sales': 'Sales Analytics',
             'performance': 'Performance',
             'store-settings': 'Brand Settings',
@@ -488,6 +490,8 @@
                 loadReviews();
               } else if (page === 'promotions') {
                 loadPromotions();
+              } else if (page === 'notifications') {
+                loadNotifications();
               } else if (page === 'sales') {
                 loadSalesAnalytics();
               } else if (page === 'performance') {
@@ -875,6 +879,31 @@
                   </div>
                 </div>
 
+                <!-- Stock & Variants Summary -->
+                <div id="stock-variants-summary" style="padding: 16px; background: #fffbeb; border: 1px solid #fbbf24; border-radius: 8px; display: none;">
+                  <h4 style="margin: 0 0 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    📦 Stock & Variants
+                  </h4>
+                  <div style="background: white; border-radius: 6px; overflow: hidden; max-height: 300px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <thead style="position: sticky; top: 0; background: #fef3c7;">
+                        <tr>
+                          <th style="padding: 10px; text-align: left; border: 1px solid #fbbf24; font-weight: 600; font-size: 13px;">Size</th>
+                          <th style="padding: 10px; text-align: left; border: 1px solid #fbbf24; font-weight: 600; font-size: 13px;">Color</th>
+                          <th style="padding: 10px; text-align: right; border: 1px solid #fbbf24; font-weight: 600; font-size: 13px;">Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody id="stock-variants-tbody">
+                        <!-- Dynamically populated -->
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style="margin-top: 12px; padding: 10px; background: #fef3c7; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600; font-size: 14px;">Total Stock:</span>
+                    <span id="total-stock-count" style="font-size: 18px; font-weight: 700; color: #b45309;">0 pcs</span>
+                  </div>
+                </div>
+
                 
                 <div style="display: flex; gap: 12px;">
                   <button type="button" class="action-btn" style="padding: 12px 24px; background: #0a0a0a; color: #fff; font-weight: 600; font-size: 14px; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;" onclick="confirmAddProduct()">✓ Add Product</button>
@@ -893,7 +922,7 @@
             <div class="inner">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <h2 style="margin: 0;">All Products</h2>
-                <button class="action-btn" data-load-page="add-product">+ Add Product</button>
+                <button class="action-btn" onclick="loadPage('add-product')">+ Add Product</button>
               </div>
               <div id="products-list">Loading products...</div>
             </div>
@@ -952,7 +981,7 @@
                 <h2 style="margin: 0;">📦 Order Management</h2>
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <button style="background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;" onclick="loadNotifications()">
-                    🔔 Notifications
+                     Notifications
                     <span id="notification-badge" style="background: #ef4444; color: white; border-radius: 999px; padding: 2px 6px; font-size: 10px; font-weight: 600; margin-left: 6px; display: none;">0</span>
                   </button>
                 </div>
@@ -1053,6 +1082,20 @@
                     </div>
                   </form>
                 </div>
+              </div>
+            </div>
+          </div>
+        `,
+
+        'notifications': `
+          <div class="card">
+            <div class="inner">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;"> Notifications</h2>
+                <button class="action-btn" onclick="markAllNotificationsRead()" style="background: #0a0a0a; padding: 8px 16px;">Mark All as Read</button>
+              </div>
+              <div id="notifications-list" style="display: grid; gap: 12px;">
+                <p style="color: var(--muted); text-align: center; padding: 40px 0;">Loading notifications...</p>
               </div>
             </div>
           </div>
@@ -1844,7 +1887,7 @@
       }
 
       function updateStockInputs() {
-        console.log('[UPDATE] Updating stock inputs for color:', selectedColor);
+        console.log('[UPDATE] Updating stock inputs - generating for ALL colors');
 
         const sizes = [];
 
@@ -1860,7 +1903,7 @@
 
         sizes.push(...customSizes);
 
-        console.log('Sizes for stock table:', sizes);
+        console.log('Sizes for current color tab:', sizes);
 
         const stockInputsDiv = document.getElementById('stock-inputs');
 
@@ -1877,45 +1920,136 @@
 
 
         const existingValues = {};
-        const existingInputs = stockInputsDiv.querySelectorAll('input[type="number"]');
+        const existingInputs = document.querySelectorAll('input[name^="stock_"]');
         existingInputs.forEach(input => {
           if (input.value && input.value !== '0') {
             existingValues[input.name] = input.value;
           }
         });
-        console.log('Preserved stock values:', existingValues);
+        console.log('Preserved stock values from ALL inputs:', existingValues);
 
 
         colorSizesMapping[selectedColor] = sizes;
         console.log('Updated colorSizesMapping:', colorSizesMapping);
 
+        // Get ALL selected colors from checkboxes and custom input
+        const allColors = [];
+        const checkedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
+        allColors.push(...checkedColors);
+        const customColorsInput = document.getElementById('custom-colors');
+        const customColors = customColorsInput && customColorsInput.value.trim()
+          ? customColorsInput.value.split(',').map(c => c.trim()).filter(c => c)
+          : [];
+        allColors.push(...customColors);
+
+        console.log('ALL COLORS detected:', allColors);
+        console.log('colorSizesMapping:', colorSizesMapping);
 
         let html = '<div style="max-height: 400px; overflow-y: auto;">';
         html += '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead><tr style="background: #e5e7eb; position: sticky; top: 0;"><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Size</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Color</th><th style="padding: 8px; text-align: left; border: 1px solid var(--line);">Stock Qty</th><th style="padding: 8px; text-align: center; border: 1px solid var(--line); width: 50px;">Action</th></tr></thead>';
         html += '<tbody>';
 
-        sizes.forEach(size => {
-
-          const safeName = `stock_${size.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedColor.replace(/[^a-zA-Z0-9]/g, '_')}`;
-          const stockValue = existingValues[safeName] || '0';
-          console.log(`Creating stock input for selected color: size="${size}", color="${selectedColor}", name="${safeName}", value="${stockValue}"`);
-          html += `<tr style="transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f3f4f6';" onmouseout="this.style.backgroundColor='';">
-            <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${size}</td>
-            <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${selectedColor}</td>
-            <td style="padding: 8px; border: 1px solid var(--line);">
-              <input type="number" name="${safeName}" min="0" value="${stockValue}" required
-                style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
-            </td>
-            <td style="padding: 8px; border: 1px solid var(--line); text-align: center;">
-              <button type="button" onclick="removeStockRow(this)" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 18px; padding: 4px 8px; transition: transform 0.2s;" title="Remove this size-color combination" onmouseover="this.style.transform='scale(1.2)';" onmouseout="this.style.transform='scale(1)';">✕</button>
-            </td>
-          </tr>`;
+        // Create stock inputs for ALL colors × ALL their sizes
+        allColors.forEach(color => {
+          const colorSizes = colorSizesMapping[color] || [];
+          console.log(`Processing color "${color}" with sizes:`, colorSizes);
+          
+          colorSizes.forEach(size => {
+            const safeName = `stock_${size.replace(/[^a-zA-Z0-9]/g, '_')}_${color.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const stockValue = existingValues[safeName] || '0';
+            console.log(`Creating stock input: size="${size}", color="${color}", name="${safeName}", value="${stockValue}"`);
+            
+            // Highlight current color's rows
+            const isCurrentColor = color === selectedColor;
+            const rowBg = isCurrentColor ? '#eff6ff' : 'transparent';
+            
+            html += `<tr style="transition: background-color 0.2s; background-color: ${rowBg};" onmouseover="this.style.backgroundColor='#f3f4f6';" onmouseout="this.style.backgroundColor='${rowBg}';">
+              <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${size}</td>
+              <td style="padding: 8px; border: 1px solid var(--line); font-weight: 500;">${color}</td>
+              <td style="padding: 8px; border: 1px solid var(--line);">
+                <input type="number" name="${safeName}" min="0" value="${stockValue}" required
+                  style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+              </td>
+              <td style="padding: 8px; border: 1px solid var(--line); text-align: center;">
+                <button type="button" onclick="removeStockRow(this)" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 18px; padding: 4px 8px; transition: transform 0.2s;" title="Remove this size-color combination" onmouseover="this.style.transform='scale(1.2)';" onmouseout="this.style.transform='scale(1)';">✕</button>
+              </td>
+            </tr>`;
+          });
         });
 
         html += '</tbody></table></div>';
         stockInputsDiv.innerHTML = html;
-        console.log(`Stock table generated for color "${selectedColor}" with ${sizes.length} sizes`);
+        console.log(`Stock table generated for ALL ${allColors.length} colors`);
+        
+        // Update stock summary after rendering
+        updateStockSummary();
+        
+        // Attach event listeners to stock inputs to update summary on change
+        stockInputsDiv.querySelectorAll('input[type="number"]').forEach(input => {
+          input.addEventListener('input', updateStockSummary);
+        });
+      }
+
+      function updateStockSummary() {
+        const summaryDiv = document.getElementById('stock-variants-summary');
+        const tbody = document.getElementById('stock-variants-tbody');
+        const totalStockSpan = document.getElementById('total-stock-count');
+        
+        if (!summaryDiv || !tbody || !totalStockSpan) return;
+        
+        // Collect all stock inputs
+        const allStockInputs = document.querySelectorAll('input[name^="stock_"]');
+        const variants = [];
+        let totalStock = 0;
+        
+        allStockInputs.forEach(input => {
+          const stock = parseInt(input.value) || 0;
+          if (stock > 0) {
+            // Parse the input name to extract size and color
+            // Format: stock_<safe_size>_<safe_color>
+            const nameParts = input.name.replace('stock_', '').split('_');
+            if (nameParts.length >= 2) {
+              const colorIndex = nameParts.length - 1;
+              const sizeIndex = nameParts.slice(0, colorIndex).join('_');
+              const size = sizeIndex.replace(/_/g, ' ').trim();
+              const color = nameParts[colorIndex].replace(/_/g, ' ').trim();
+              
+              // Try to get the actual values from the closest table row
+              const row = input.closest('tr');
+              if (row) {
+                const actualSize = row.querySelector('td:first-child')?.textContent?.trim() || size;
+                const actualColor = row.querySelector('td:nth-child(2)')?.textContent?.trim() || color;
+                
+                variants.push({
+                  size: actualSize,
+                  color: actualColor,
+                  stock: stock
+                });
+                totalStock += stock;
+              }
+            }
+          }
+        });
+        
+        // Update summary table
+        if (variants.length > 0) {
+          let html = '';
+          variants.forEach(v => {
+            html += `
+              <tr style="border-bottom: 1px solid #fbbf24;">
+                <td style="padding: 8px; border: 1px solid #fbbf24;">${v.size}</td>
+                <td style="padding: 8px; border: 1px solid #fbbf24;">${v.color}</td>
+                <td style="padding: 8px; border: 1px solid #fbbf24; text-align: right; font-weight: 600;">${v.stock} pcs</td>
+              </tr>
+            `;
+          });
+          tbody.innerHTML = html;
+          totalStockSpan.textContent = `${totalStock} pcs`;
+          summaryDiv.style.display = 'block';
+        } else {
+          summaryDiv.style.display = 'none';
+        }
       }
 
       function removeStockRow(button) {
@@ -1925,6 +2059,7 @@
           setTimeout(() => {
             row.remove();
             console.log('Row removed');
+            updateStockSummary(); // Update summary after removal
           }, 300);
         }
       }
@@ -2431,6 +2566,35 @@
         }
       }
 
+      function updateNotificationBadge() {
+        console.log('[FETCH] Updating notification badge...');
+        
+        fetch('/api/seller/notifications?unread_only=true&limit=1', { credentials: 'include' })
+          .then(response => {
+            if (!response.ok) return;
+            return response.json();
+          })
+          .then(data => {
+            if (data && data.success) {
+              const badge = document.getElementById('notification-badge');
+              if (badge) {
+                const unreadCount = data.unread_count || 0;
+                if (unreadCount > 0) {
+                  badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                  badge.style.display = 'inline-block';
+                  console.log(`📬 ${unreadCount} unread notifications`);
+                } else {
+                  badge.style.display = 'none';
+                  console.log('📭 No unread notifications');
+                }
+              }
+            }
+          })
+          .catch(error => {
+            console.error('⚠️ Error updating notification badge:', error);
+          });
+      }
+
       function loadNotifications() {
         console.log('[FETCH] Loading seller notifications...');
 
@@ -2471,7 +2635,7 @@
           <div class="card">
             <div class="inner">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0;">🔔 Notifications</h2>
+                <h2 style="margin: 0;"> Notifications</h2>
                 <button onclick="loadPage('orders')" style="background: #0a0a0a; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;">← Back to Orders</button>
               </div>
 
@@ -2533,6 +2697,7 @@
           if (data.success) {
             console.log('✅ Notification marked as read');
             loadNotifications();
+            updateNotificationBadge();
           }
         })
         .catch(error => console.error('❌ Error marking notification read:', error));
@@ -3606,6 +3771,89 @@ Customer: ${order.customer_name || 'N/A'}
 
       }
 
+      // Notifications Functions
+      function loadNotifications() {
+        console.log('[NOTIFICATIONS] Loading notifications...');
+        fetch('/api/seller/notifications')
+          .then(response => {
+            console.log('[NOTIFICATIONS] Response status:', response.status);
+            return response.json();
+          })
+          .then(data => {
+            console.log('[NOTIFICATIONS] Data received:', data);
+            if (data.success) {
+              displayNotifications(data.notifications || []);
+            } else {
+              console.error('[NOTIFICATIONS] Failed:', data.error);
+              document.getElementById('notifications-list').innerHTML = `<p style="color:#ef4444;padding:40px;text-align:center;">Failed to load notifications: ${data.error || 'Unknown error'}</p>`;
+            }
+          })
+          .catch(error => {
+            console.error('[NOTIFICATIONS] Error loading notifications:', error);
+            document.getElementById('notifications-list').innerHTML = '<p style="color:#d32f2f;padding:40px;text-align:center;">Error loading notifications. Please check console.</p>';
+          });
+      }
+
+      function displayNotifications(notifications) {
+        const container = document.getElementById('notifications-list');
+        
+        if (!notifications || notifications.length === 0) {
+          container.innerHTML = '<p style="color:#999;padding:40px;text-align:center;">No notifications yet</p>';
+          return;
+        }
+
+        let html = '';
+        notifications.forEach(notif => {
+          const isRead = notif.is_read;
+          const bgColor = isRead ? '#f9f9f9' : '#fff9e6';
+          const borderColor = notif.notification_type === 'product_approved' ? '#10b981' : '#ef4444';
+          const icon = notif.notification_type === 'product_approved' ? '✅' : '❌';
+          const title = notif.notification_type === 'product_approved' ? 'Product Approved' : 'Product Rejected';
+          
+          html += `
+            <div style="background: ${bgColor}; border-left: 4px solid ${borderColor}; border-radius: 8px; padding: 16px; display: flex; gap: 12px;">
+              <div style="font-size: 24px;">${icon}</div>
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                  <strong style="font-size: 14px;">${title}</strong>
+                  <span style="font-size: 11px; color: #999;">${new Date(notif.created_at).toLocaleString()}</span>
+                </div>
+                <p style="margin: 0 0 8px; font-size: 13px; color: #666;">${notif.message}</p>
+                ${!isRead ? `<button class="action-btn" onclick="markNotificationRead(${notif.id})" style="background: #2196f3; padding: 6px 12px; font-size: 12px;">Mark as Read</button>` : ''}
+              </div>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      function markNotificationRead(notifId) {
+        fetch(`/api/seller/notifications/${notifId}/read`, {
+          method: 'POST'
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              loadNotifications();
+            }
+          })
+          .catch(error => console.error('Error marking notification as read:', error));
+      }
+
+      function markAllNotificationsRead() {
+        fetch('/api/seller/notifications/mark-all-read', {
+          method: 'POST'
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              loadNotifications();
+            }
+          })
+          .catch(error => console.error('Error marking all notifications as read:', error));
+      }
+
 
       function loadCategories() {
         const categorySelect = document.getElementById('categorySelect');
@@ -4052,6 +4300,7 @@ Customer: ${order.customer_name || 'N/A'}
 
 
       let originalProductData = {};
+      let editVariantsData = {};
 
       function editProduct(productId) {
         loadPage('edit-product');
@@ -4061,7 +4310,84 @@ Customer: ${order.customer_name || 'N/A'}
           .then(data => {
             if (data.product) {
               const product = data.product;
+              const variants = data.variants || [];
               originalProductData = JSON.parse(JSON.stringify(product));
+              editVariantsData = JSON.parse(JSON.stringify(variants));
+
+              // Extract unique colors and sizes from variants
+              const uniqueColors = [...new Set(variants.map(v => v.color).filter(Boolean))];
+              const uniqueSizes = [...new Set(variants.map(v => v.size).filter(Boolean))];
+
+              // Build variants display HTML
+              let variantsHtml = '';
+              if (variants.length > 0) {
+                variantsHtml = `
+                  <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border: 1px solid var(--line);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                      <label style="font-weight: 600; margin: 0;">Product Variants</label>
+                      <button type="button" onclick="addNewVariant(${product.id})" class="action-btn" style="padding: 6px 12px; font-size: 13px;">+ Add Variant</button>
+                    </div>
+                    <div id="variants-container" style="max-height: 400px; overflow-y: auto;">
+                      <table style="width: 100%; border-collapse: collapse; font-size: 13px; background: #fff;">
+                        <thead>
+                          <tr style="border-bottom: 2px solid var(--line);">
+                            <th style="padding: 8px; text-align: left;">Color</th>
+                            <th style="padding: 8px; text-align: left;">Size</th>
+                            <th style="padding: 8px; text-align: right;">Stock</th>
+                            <th style="padding: 8px; text-align: center;">Active</th>
+                            <th style="padding: 8px; text-align: center;">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody id="variant-rows">
+                          ${variants.map((v, idx) => `
+                            <tr data-variant-id="${v.id}" style="border-bottom: 1px solid var(--line);">
+                              <td style="padding: 8px;">
+                                <input type="text" value="${v.color || ''}" 
+                                  onchange="updateEditVariant(${v.id}, 'color', this.value)"
+                                  style="width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+                              </td>
+                              <td style="padding: 8px;">
+                                <input type="text" value="${v.size || ''}" 
+                                  onchange="updateEditVariant(${v.id}, 'size', this.value)"
+                                  style="width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+                              </td>
+                              <td style="padding: 8px;">
+                                <input type="number" value="${v.stock_quantity}" min="0"
+                                  onchange="updateEditVariant(${v.id}, 'stock_quantity', this.value)"
+                                  style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px; text-align: right;">
+                              </td>
+                              <td style="padding: 8px; text-align: center;">
+                                <input type="checkbox" ${v.is_active ? 'checked' : ''}
+                                  onchange="updateEditVariant(${v.id}, 'is_active', this.checked ? 1 : 0)"
+                                  style="width: 18px; height: 18px; cursor: pointer;">
+                              </td>
+                              <td style="padding: 8px; text-align: center;">
+                                <button type="button" onclick="removeEditVariant(${v.id})" 
+                                  style="background: #ef4444; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                    <input type="hidden" id="variants_data" name="variants_data" value='${JSON.stringify(variants)}'>
+                  </div>
+                `;
+              } else {
+                variantsHtml = `
+                  <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border: 1px solid var(--line);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <label style="font-weight: 600; margin: 0;">Product Variants</label>
+                      <button type="button" onclick="addNewVariant(${product.id})" class="action-btn" style="padding: 6px 12px; font-size: 13px;">+ Add Variant</button>
+                    </div>
+                    <p style="color: #999; margin: 12px 0 0;">No variants available. Click "Add Variant" to create color/size options.</p>
+                    <div id="variants-container" style="display: none;"></div>
+                    <input type="hidden" id="variants_data" name="variants_data" value='[]'>
+                  </div>
+                `;
+              }
 
               const formHtml = `
                 <form id="editProductForm" style="display: flex; flex-direction: column; gap: 16px;">
@@ -4101,6 +4427,8 @@ Customer: ${order.customer_name || 'N/A'}
                     </select>
                   </div>
 
+                  ${variantsHtml}
+
                   <div style="display: flex; gap: 12px; margin-top: 10px;">
                     <button type="button" class="action-btn" onclick="submitProductEdit()" style="padding: 12px 24px;">Submit for Approval</button>
                     <button type="button" class="action-btn" onclick="loadPage('products')" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
@@ -4116,6 +4444,143 @@ Customer: ${order.customer_name || 'N/A'}
           .catch(error => {
             document.getElementById('edit-product-form').innerHTML = '<p style="color: #ef4444;">Error loading product</p>';
           });
+      }
+
+      function updateEditVariant(variantId, field, value) {
+        const variantIndex = editVariantsData.findIndex(v => v.id === variantId);
+        if (variantIndex !== -1) {
+          editVariantsData[variantIndex][field] = value;
+          editVariantsData[variantIndex].modified = true;
+          
+          // Update hidden field
+          const hiddenField = document.getElementById('variants_data');
+          if (hiddenField) {
+            hiddenField.value = JSON.stringify(editVariantsData);
+          }
+          
+          console.log('Updated variant:', variantId, field, value);
+        }
+      }
+
+      function removeEditVariant(variantId) {
+        if (!confirm('Are you sure you want to delete this variant?')) return;
+        
+        const variantIndex = editVariantsData.findIndex(v => v.id === variantId);
+        if (variantIndex !== -1) {
+          editVariantsData[variantIndex].deleted = true;
+          
+          // Hide the row
+          const row = document.querySelector(`tr[data-variant-id="${variantId}"]`);
+          if (row) {
+            row.style.display = 'none';
+          }
+          
+          // Update hidden field
+          const hiddenField = document.getElementById('variants_data');
+          if (hiddenField) {
+            hiddenField.value = JSON.stringify(editVariantsData);
+          }
+          
+          VaronNotifications.success('Variant marked for deletion');
+        }
+      }
+
+      let newVariantCounter = 0;
+      function addNewVariant(productId) {
+        const tbody = document.getElementById('variant-rows');
+        const container = document.getElementById('variants-container');
+        
+        if (!tbody) {
+          // Create table if it doesn't exist
+          const variantsDiv = container.parentElement;
+          container.style.display = 'block';
+          container.innerHTML = `
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; margin-top: 12px;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--line);">
+                  <th style="padding: 8px; text-align: left;">Color</th>
+                  <th style="padding: 8px; text-align: left;">Size</th>
+                  <th style="padding: 8px; text-align: right;">Stock</th>
+                  <th style="padding: 8px; text-align: center;">Active</th>
+                  <th style="padding: 8px; text-align: center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="variant-rows"></tbody>
+            </table>
+          `;
+        }
+        
+        const newId = 'new_' + (++newVariantCounter);
+        const newVariant = {
+          id: newId,
+          product_id: productId,
+          color: '',
+          size: '',
+          stock_quantity: 0,
+          is_active: 1,
+          isNew: true
+        };
+        
+        editVariantsData.push(newVariant);
+        
+        const newRow = `
+          <tr data-variant-id="${newId}" style="border-bottom: 1px solid var(--line); background: #f0fff4;">
+            <td style="padding: 8px;">
+              <input type="text" value="" placeholder="Enter color"
+                onchange="updateEditVariant('${newId}', 'color', this.value)"
+                style="width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+            </td>
+            <td style="padding: 8px;">
+              <input type="text" value="" placeholder="Enter size"
+                onchange="updateEditVariant('${newId}', 'size', this.value)"
+                style="width: 100%; padding: 6px; border: 1px solid var(--line); border-radius: 4px;">
+            </td>
+            <td style="padding: 8px;">
+              <input type="number" value="0" min="0"
+                onchange="updateEditVariant('${newId}', 'stock_quantity', this.value)"
+                style="width: 80px; padding: 6px; border: 1px solid var(--line); border-radius: 4px; text-align: right;">
+            </td>
+            <td style="padding: 8px; text-align: center;">
+              <input type="checkbox" checked
+                onchange="updateEditVariant('${newId}', 'is_active', this.checked ? 1 : 0)"
+                style="width: 18px; height: 18px; cursor: pointer;">
+            </td>
+            <td style="padding: 8px; text-align: center;">
+              <button type="button" onclick="removeNewVariant('${newId}')" 
+                style="background: #ef4444; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                Remove
+              </button>
+            </td>
+          </tr>
+        `;
+        
+        document.getElementById('variant-rows').insertAdjacentHTML('beforeend', newRow);
+        
+        // Update hidden field
+        const hiddenField = document.getElementById('variants_data');
+        if (hiddenField) {
+          hiddenField.value = JSON.stringify(editVariantsData);
+        }
+        
+        VaronNotifications.success('New variant row added');
+      }
+
+      function removeNewVariant(variantId) {
+        const variantIndex = editVariantsData.findIndex(v => v.id === variantId);
+        if (variantIndex !== -1) {
+          editVariantsData.splice(variantIndex, 1);
+          
+          const row = document.querySelector(`tr[data-variant-id="${variantId}"]`);
+          if (row) {
+            row.remove();
+          }
+          
+          // Update hidden field
+          const hiddenField = document.getElementById('variants_data');
+          if (hiddenField) {
+            hiddenField.value = JSON.stringify(editVariantsData);
+          }
+        }
       }
 
       function submitProductEdit() {
@@ -4145,7 +4610,21 @@ Customer: ${order.customer_name || 'N/A'}
           }
         }
 
-        if (Object.keys(changes).length === 0) {
+        // Check for variant changes
+        let variantChanges = [];
+        if (editVariantsData && editVariantsData.length > 0) {
+          editVariantsData.forEach(variant => {
+            if (variant.isNew && !variant.deleted) {
+              variantChanges.push(`Add new variant: ${variant.color || 'N/A'} / ${variant.size || 'N/A'} (Stock: ${variant.stock_quantity})`);
+            } else if (variant.deleted) {
+              variantChanges.push(`Delete variant: ${variant.color || 'N/A'} / ${variant.size || 'N/A'}`);
+            } else if (variant.modified) {
+              variantChanges.push(`Update variant: ${variant.color || 'N/A'} / ${variant.size || 'N/A'}`);
+            }
+          });
+        }
+
+        if (Object.keys(changes).length === 0 && variantChanges.length === 0) {
           alert('No changes detected');
           return;
         }
@@ -4155,11 +4634,22 @@ Customer: ${order.customer_name || 'N/A'}
         for (let [key, change] of Object.entries(changes)) {
           confirmMsg += `${change.label}: "${change.old}" → "${change.new}"\. `;
         }
+        if (variantChanges.length > 0) {
+          confirmMsg += '\. Variant Changes:\. ' + variantChanges.join('\. ');
+        }
         confirmMsg += '\. These changes will require admin approval. Continue?';
 
         if (!confirm(confirmMsg)) {
           return;
         }
+
+        // Append variants data
+        const variantsDataField = document.getElementById('variants_data');
+        if (variantsDataField) {
+          formData.set('variants_data', variantsDataField.value);
+        }
+
+        console.log('Submitting product edit with variants:', editVariantsData);
 
         fetch('/seller/edit-product', {
           method: 'POST',
@@ -4662,6 +5152,9 @@ Customer: ${order.customer_name || 'N/A'}
           
           // Initialize page navigation
           PageNavigator.init();
+          
+          // Load notification badge count on startup
+          updateNotificationBadge();
           
           // Setup color tab delegation if available
           if (typeof setupColorTabDelegation === 'function') {

@@ -1302,9 +1302,6 @@
           <div class="selection-group" id="sizeSection">
             <div class="selection-label">
               <strong>{% if 'grooming' in product.category_name|lower %}Volume:{% else %}Size:{% endif %} <span id="selectedSizeName">Select {% if 'grooming' in product.category_name|lower %}volume{% else %}size{% endif %}</span></strong>
-              {% if 'grooming' not in product.category_name|lower %}
-              <a href="#" style="font-size: 13px; color: #000; text-decoration: underline; font-weight: 500;">Size Guide</a>
-              {% endif %}
             </div>
             <div class="size-grid" id="sizeGrid">
               {% for size in sizes %}
@@ -1647,11 +1644,42 @@
       const allSizes = {{ sizes|tojson|safe }};
       const stockMap = {{ stock_map|tojson|safe }};
 
+      // Function to sort sizes from smallest to largest
+      function sortSizes(sizes) {
+        const sizeOrder = {
+          // Clothing sizes
+          'XXS': 1, 'XS': 2, 'S': 3, 'M': 4, 'L': 5, 'XL': 6, '2XL': 7, '3XL': 8, '4XL': 9, '5XL': 10,
+          // Shoe sizes (numeric)
+          '5': 20, '5.5': 21, '6': 22, '6.5': 23, '7': 24, '7.5': 25, '8': 26, '8.5': 27, 
+          '9': 28, '9.5': 29, '10': 30, '10.5': 31, '11': 32, '11.5': 33, '12': 34, '12.5': 35, '13': 36
+        };
+        
+        return sizes.sort((a, b) => {
+          const orderA = sizeOrder[a] || parseInt(a) || 999;
+          const orderB = sizeOrder[b] || parseInt(b) || 999;
+          return orderA - orderB;
+        });
+      }
+
       // If no variations exist, set defaults
       if (!hasColors && !hasSizes) {
         selectedColor = 'Standard';
         selectedSize = 'One Size';
       }
+      // Initial render of sizes when no color is selected
+      (function initSizesGrid() {
+        const sizeGrid = document.getElementById('sizeGrid');
+        if (!sizeGrid) return;
+        if (hasSizes) {
+          const sortedSizes = sortSizes([...allSizes]);
+          sizeGrid.innerHTML = sortedSizes.map(size => 
+            `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
+          ).join('');
+        } else {
+          // If product has no sizes, ensure grid is cleared
+          sizeGrid.innerHTML = '';
+        }
+      })();
       function changeMainImage(imageUrl, thumbnail) {
         const mainImg = document.querySelector('#mainImage img');
         if (mainImg) {
@@ -1787,13 +1815,15 @@
           .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
 
         if (availableSizes.length === 0) {
-          // If no specific sizes found, show all sizes
-          sizeGrid.innerHTML = allSizes.map(size => 
+          // If no specific sizes found, show all sizes sorted
+          const sortedSizes = sortSizes([...allSizes]);
+          sizeGrid.innerHTML = sortedSizes.map(size => 
             `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
           ).join('');
         } else {
-          // Show only sizes available for this color
-          sizeGrid.innerHTML = availableSizes.map(size => 
+          // Show only sizes available for this color, sorted
+          const sortedAvailableSizes = sortSizes([...availableSizes]);
+          sizeGrid.innerHTML = sortedAvailableSizes.map(size => 
             `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
           ).join('');
         }
@@ -2041,6 +2071,10 @@
             addButton.disabled = false;
             addButton.textContent = 'Add to Cart';
           }
+          // If added successfully, update badge but stay on product page
+          if (success) {
+            try { await VaronCart.updateBadge(); } catch(e) {}
+          }
         } else {
 
           const snackbar = document.getElementById('snackbar');
@@ -2091,7 +2125,7 @@
 
 
       window.addEventListener('click', function(e) {
-        if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
+        if (!e.target.matches('.user-button') && !e.target.closest('.user-button') && !e.target.closest('.dropdown-content')) {
           const dropdown = document.getElementById('userDropdown');
           if (dropdown && dropdown.classList.contains('show')) {
             dropdown.classList.remove('show');

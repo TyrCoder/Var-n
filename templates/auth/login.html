@@ -626,55 +626,75 @@ h1, h2, h3, h4, h5, h6, .brand {
         e.preventDefault();
         
         const form = this;
-        const formData = new FormData(form);
+        const email = form.querySelector('input[name="email"]').value.trim();
+        const password = form.querySelector('input[name="password"]').value;
+        const errorMessageDiv = document.getElementById('error-message');
+        
+        // Clear previous error messages
+        if (errorMessageDiv) {
+          errorMessageDiv.style.display = 'none';
+          errorMessageDiv.textContent = '';
+        }
+        
+        // Validate inputs
+        if (!email || !password) {
+          showLoginError('Email and password are required');
+          return;
+        }
+        
+        if (!email.includes('@') || !email.includes('.')) {
+          showLoginError('Please enter a valid email address');
+          return;
+        }
+        
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.textContent = 'Logging in...';
+        
+        const formData = new FormData(form);
         
         fetch('/login', {
           method: 'POST',
           body: formData
         })
         .then(response => {
-          // Check if response is JSON or redirect
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            return response.json();
-          } else {
-            // Handle redirect or HTML response
-            if (response.redirected) {
+          // Check response status and headers
+          if (response.redirected) {
+            // Handle redirect
+            showLoginNotification('✅ Login successful! Redirecting...', 'success');
+            setTimeout(() => {
               window.location.href = response.url;
-              return null;
-            }
-            // If it's successful but not JSON, assume success
-            if (response.ok) {
-              showNotification('✅ Login successful! Redirecting...', 'success');
-              setTimeout(() => {
-                window.location.href = '/';
-              }, 1000);
-              return null;
-            }
-            throw new Error('Unexpected response format');
-          }
-        })
-        .then(data => {
-          if (data) {
-            if (data.success) {
-              showNotification('✅ Login successful! Redirecting...', 'success');
-              setTimeout(() => {
-                window.location.href = data.redirect;
-              }, 1000);
-            } else {
-              showNotification(data.message || 'Login failed', 'error');
-              submitBtn.disabled = false;
-              submitBtn.textContent = originalText;
-            }
+            }, 500);
+          } else if (response.ok) {
+            // Check for error in response HTML
+            return response.text().then(html => {
+              const errorMatch = html.match(/flash-message error[^>]*>([^<]+)</);
+              if (errorMatch && errorMatch[1]) {
+                const errorMessage = errorMatch[1].trim();
+                showLoginError(errorMessage);
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+              } else {
+                // Fallback - if we got HTML without redirect, it's likely an error
+                if (html.includes('Invalid email or password')) {
+                  showLoginError('Email or password is incorrect');
+                } else {
+                  showLoginError('Login failed. Please try again.');
+                }
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+              }
+            });
+          } else {
+            showLoginError('Login failed. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
           }
         })
         .catch(error => {
           console.error('Login error:', error);
-          showNotification('An error occurred. Please try again.', 'error');
+          showLoginError('An error occurred. Please try again.');
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
         });
@@ -824,6 +844,40 @@ h1, h2, h3, h4, h5, h6, .brand {
         }
       }
 
+      // Login-specific helper functions
+      function showLoginError(message) {
+        const errorMessageDiv = document.getElementById('error-message');
+        if (errorMessageDiv) {
+          errorMessageDiv.textContent = message;
+          errorMessageDiv.style.display = 'block';
+        }
+      }
+
+      function showLoginNotification(message, type = 'error') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 16px 24px;
+          background: ${type === 'error' ? '#ef4444' : '#10b981'};
+          color: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          font-size: 14px;
+          font-weight: 500;
+          z-index: 10000;
+          animation: slideIn 0.3s ease;
+          max-width: 400px;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.style.animation = 'slideOut 0.3s ease';
+          setTimeout(() => notification.remove(), 300);
+        }, 4000);
+      }
 
       let currentForgotPasswordStep = 1;
       let forgotPasswordEmail = '';

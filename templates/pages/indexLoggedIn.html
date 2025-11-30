@@ -943,7 +943,7 @@
 
 
       window.addEventListener('click', function(e) {
-        if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
+        if (!e.target.matches('.user-button') && !e.target.closest('.user-button') && !e.target.closest('.dropdown-content')) {
           const dropdown = document.getElementById('userDropdown');
           if (dropdown && dropdown.classList.contains('show')) {
             dropdown.classList.remove('show');
@@ -1278,8 +1278,39 @@
 
                 categoriesContainer.appendChild(allCard);
 
-                // Iterate through parent categories (hierarchical structure from API)
-                data.categories.forEach(parentCategory => {
+                // Desired display order for top-level categories
+                const desiredOrder = ['Tops', 'Bottoms', 'Footwear', 'Accessories', 'Grooming Products'];
+
+                // Build a map of categories by name for quick lookup
+                const categoryMap = {};
+                data.categories.forEach(cat => {
+                  if (cat && cat.name) {
+                    categoryMap[cat.name.trim().toLowerCase()] = cat;
+                  }
+                });
+
+                // Build ordered list based on desiredOrder, falling back to any remaining categories
+                const orderedCategories = [];
+                const usedNames = new Set();
+
+                desiredOrder.forEach(name => {
+                  const key = name.trim().toLowerCase();
+                  if (categoryMap[key]) {
+                    orderedCategories.push(categoryMap[key]);
+                    usedNames.add(key);
+                  }
+                });
+
+                // Append any categories not explicitly listed in desiredOrder, preserving API order
+                data.categories.forEach(cat => {
+                  const key = (cat.name || '').trim().toLowerCase();
+                  if (!usedNames.has(key)) {
+                    orderedCategories.push(cat);
+                  }
+                });
+
+                // Iterate through parent categories in the computed order
+                orderedCategories.forEach(parentCategory => {
                   const wrapper = document.createElement('div');
                   wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;margin:4px 8px 10px 0;';
 

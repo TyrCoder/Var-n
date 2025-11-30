@@ -191,7 +191,7 @@
       /* Table-style layout */
       .cart-table-header {
         display: grid;
-        grid-template-columns: 80px 2fr 1fr 140px 100px 80px;
+        grid-template-columns: 80px 2fr 180px 1fr 140px 100px 80px;
         gap: 16px;
         padding: 16px 24px;
         background: #fafafa;
@@ -205,7 +205,7 @@
 
       .cart-item {
         display: grid;
-        grid-template-columns: 80px 2fr 1fr 140px 100px 80px;
+        grid-template-columns: 80px 2fr 180px 1fr 140px 100px 80px;
         gap: 16px;
         padding: 20px 24px;
         border-bottom: 1px solid #f5f5f5;
@@ -219,6 +219,36 @@
 
       .cart-item:last-child {
         border-bottom: none;
+      }
+
+      .cart-item-variants {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .variant-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .variant-label {
+        font-weight: 600;
+        color: #666;
+        min-width: 55px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .variant-value {
+        color: #000;
+        font-weight: 500;
+        padding: 4px 10px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
       }
 
       .cart-item-image {
@@ -260,9 +290,55 @@
       }
 
       .cart-item-details {
+        font-size: 12px;
+        color: #555;
+        margin: 6px 0 0 0;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .variant-tag {
+        display: inline-block;
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #333;
+        white-space: nowrap;
+      }
+
+      .variant-tag strong {
+        font-weight: 600;
+        color: #000;
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.03em;
+        margin-right: 4px;
+      }
+
+      .cart-section-divider {
+        height: 2px;
+        background: linear-gradient(to right, #f0f0f0 0%, #ddd 50%, #f0f0f0 100%);
+        margin: 12px 0;
+      }
+
+      .cart-section-header {
+        padding: 12px 24px;
+        background: #f9f9f9;
+        border-bottom: 1px solid #e5e5e5;
         font-size: 13px;
-        color: #999;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #666;
+        letter-spacing: 0.5px;
+      }
+
+      .cart-section-header h3 {
         margin: 0;
+        font-size: 13px;
+        font-weight: 600;
       }
 
       .cart-item-price {
@@ -475,7 +551,7 @@
         }
         .cart-item {
           grid-template-columns: 70px 1fr;
-          grid-template-rows: auto auto auto;
+          grid-template-rows: auto auto auto auto;
           gap: 12px;
           padding: 16px;
         }
@@ -486,19 +562,28 @@
         }
         .cart-item-info {
           grid-column: 2;
+          grid-row: 1;
+        }
+        .cart-item-variants {
+          grid-column: 2;
+          grid-row: 2;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
         }
         .cart-item-price {
           grid-column: 2;
           text-align: left;
           font-size: 14px;
+          grid-row: 3;
         }
         .quantity-control {
           grid-column: 1 / 2;
-          grid-row: 3;
+          grid-row: 4;
         }
         .cart-item-total {
           grid-column: 2;
-          grid-row: 3;
+          grid-row: 4;
           text-align: left;
           display: flex;
           align-items: center;
@@ -600,7 +685,7 @@
 
 
       window.addEventListener('click', function(e) {
-        if (!e.target.matches('.user-button') && !e.target.closest('.user-button')) {
+        if (!e.target.matches('.user-button') && !e.target.closest('.user-button') && !e.target.closest('.dropdown-content')) {
           const dropdown = document.getElementById('userDropdown');
           if (dropdown && dropdown.classList.contains('show')) {
             dropdown.classList.remove('show');
@@ -644,12 +729,22 @@
         const cartContent = document.getElementById('cartContent');
 
         if (!window.VaronCart) {
+          console.error('VaronCart not available');
           cartContent.innerHTML = '<div class="empty-cart"><h2>Cart system not loaded</h2><p>Please refresh the page</p></div>';
           return;
         }
 
         try {
+          console.log('Loading cart items...');
           const items = await VaronCart.get();
+          console.log('Cart items loaded:', items);
+          console.log('Items type:', typeof items, 'Is array:', Array.isArray(items), 'Length:', items?.length);
+          
+          // Debug: log the actual response structure
+          if (items && items.length > 0) {
+            console.log('First item structure:', items[0]);
+            console.log('First item keys:', Object.keys(items[0]));
+          }
 
           if (!items || items.length === 0) {
             cartContent.innerHTML = `
@@ -673,34 +768,56 @@
           let totalItems = 0;
           
           const cartItemsHtml = items.map(item => {
-            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            const price = parseFloat(item.price) || 0;
+            const quantity = parseInt(item.quantity) || 0;
+            const itemTotal = price * quantity;
             total += itemTotal;
-            totalItems += parseInt(item.quantity);
+            totalItems += quantity;
 
-            const sizeColor = [];
-            if (item.size) sizeColor.push(`Size: ${item.size}`);
-            if (item.color) sizeColor.push(`Color: ${item.color}`);
-            const variant = sizeColor.length > 0 ? sizeColor.join(', ') : '';
+            // Build variant display
+            let variantInfoHtml = '';
+            if (item.color || item.size) {
+              let variantParts = [];
+              
+              if (item.color) {
+                variantParts.push(`<div class="variant-info">
+                  <span class="variant-label">Color:</span>
+                  <span class="variant-value">${item.color}</span>
+                </div>`);
+              }
+              if (item.size) {
+                variantParts.push(`<div class="variant-info">
+                  <span class="variant-label">Size:</span>
+                  <span class="variant-value">${item.size}</span>
+                </div>`);
+              }
+              variantInfoHtml = `<div class="cart-item-variants">${variantParts.join('')}</div>`;
+            }
 
-            return `
-              <div class="cart-item">
+            const productId = item.id || item.product_id || 0;
+            const cartId = item.cart_id || 0;
+            const imageUrl = item.image_url || '/static/images/placeholder.svg';
+            const name = item.name || 'Product';
+
+            return `<div class="cart-item">
                 <div class="cart-item-image">
-                  <img src="${item.image_url || '/static/images/placeholder.svg'}" alt="${item.name}" onerror="this.src='/static/images/placeholder.svg'">
+                  <img src="${imageUrl}" alt="${name}" onerror="this.src='/static/images/placeholder.svg'">
                 </div>
                 <div class="cart-item-info">
-                  <a href="/product/${item.product_id}" class="cart-item-name">${item.name}</a>
-                  ${variant ? `<div class="cart-item-details">${variant}</div>` : ''}
+                  <a href="/product/${productId}" class="cart-item-name">${name}</a>
                 </div>
-                <div class="cart-item-price">₱${parseFloat(item.price).toFixed(2)}</div>
+                <div class="cart-item-variants">
+                  ${variantInfoHtml || '<span style="color: #bbb; font-size: 13px;">No variants</span>'}
+                </div>
+                <div class="cart-item-price">₱${price.toFixed(2)}</div>
                 <div class="quantity-control">
-                  <button class="qty-btn" onclick="updateCartQuantity(${item.cart_id}, ${item.quantity - 1})">−</button>
-                  <input type="number" class="qty-input" value="${item.quantity}" readonly>
-                  <button class="qty-btn" onclick="updateCartQuantity(${item.cart_id}, ${item.quantity + 1})">+</button>
+                  <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity - 1})">−</button>
+                  <input type="number" class="qty-input" value="${quantity}" readonly>
+                  <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity + 1})">+</button>
                 </div>
                 <div class="cart-item-total">₱${itemTotal.toFixed(2)}</div>
-                <button class="remove-btn" onclick="removeCartItem(${item.cart_id})" title="Remove item">×</button>
-              </div>
-            `;
+                <button class="remove-btn" onclick="removeCartItem(${cartId})" title="Remove item">×</button>
+              </div>`;
           }).join('');
 
           cartContent.innerHTML = `
@@ -713,6 +830,7 @@
                 <div class="cart-table-header">
                   <div></div>
                   <div>Product</div>
+                  <div>Variants</div>
                   <div style="text-align: right;">Price</div>
                   <div style="text-align: center;">Quantity</div>
                   <div style="text-align: right;">Total</div>
@@ -742,7 +860,8 @@
 
         } catch (error) {
           console.error('Error loading cart:', error);
-          cartContent.innerHTML = '<div class="empty-cart"><h2>Error loading cart</h2><p>Please try again later</p></div>';
+          console.error('Error stack:', error.stack);
+          cartContent.innerHTML = `<div class="empty-cart"><h2>Error loading cart</h2><p>${error.message || 'Please try again later'}</p></div>`;
         }
       }
 

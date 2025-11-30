@@ -380,8 +380,9 @@ def init_db():
         cursor.execute('''CREATE TABLE IF NOT EXISTS seller_notifications (
             id INT AUTO_INCREMENT PRIMARY KEY,
             seller_id INT NOT NULL,
-            order_id INT NOT NULL,
-            notification_type ENUM('new_order', 'order_confirmed', 'order_released', 'order_cancelled', 'rider_assigned', 'delivery_complete') DEFAULT 'new_order',
+            order_id INT NULL,
+            product_id INT NULL,
+            notification_type ENUM('new_order', 'order_confirmed', 'order_released', 'order_cancelled', 'rider_assigned', 'delivery_complete', 'product_approved', 'product_rejected') DEFAULT 'new_order',
             title VARCHAR(200) NOT NULL,
             message TEXT NOT NULL,
             is_read BOOLEAN DEFAULT FALSE,
@@ -392,8 +393,10 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
             INDEX idx_seller (seller_id),
             INDEX idx_order (order_id),
+            INDEX idx_product (product_id),
             INDEX idx_unread (seller_id, is_read),
             INDEX idx_created (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
@@ -939,6 +942,7 @@ def product_page(product_id):
                 LEFT JOIN order_items oi ON p.id = oi.product_id
                 LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
                 WHERE p.id = %s AND p.is_active = 1
+                AND (p.archive_status IS NULL OR p.archive_status = 'active')
                 GROUP BY p.id, p.name, p.description, p.price, p.brand, p.sku, p.seller_id, 
                          c.name, pi.image_url, s.store_name, u.first_name
             ''', (product_id,))
@@ -1033,6 +1037,7 @@ def get_product_detail(product_id):
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
             WHERE p.id = %s AND p.is_active = 1
+            AND (p.archive_status IS NULL OR p.archive_status = 'active')
         ''', (product_id,))
 
         product = cursor.fetchone()
@@ -1070,6 +1075,44 @@ def get_product_detail(product_id):
         return jsonify({'success': False, 'error': str(err)})
 
 
+@app.route('/api/product/<int:product_id>/variants', methods=['GET'])
+def get_product_variants(product_id):
+    """Get all variants for a product with their IDs"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'})
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute('''
+            SELECT id, size, color
+            FROM product_variants
+            WHERE product_id = %s AND is_active = 1
+            ORDER BY size, color
+        ''', (product_id,))
+
+        variants = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        # Convert to list with proper format
+        variants_list = []
+        if variants:
+            for v in variants:
+                variants_list.append({
+                    'id': v.get('id'),
+                    'size': v.get('size'),
+                    'color': v.get('color')
+                })
+
+        return jsonify({'success': True, 'variants': variants_list})
+
+    except Exception as err:
+        print(f"Error fetching product variants: {err}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(err)})
 
 
 
@@ -1534,6 +1577,7 @@ def validate_cart():
                 LEFT JOIN inventory i ON p.id = i.product_id
                 JOIN sellers s ON p.seller_id = s.id
                 WHERE p.id = %s AND p.is_active = 1
+                AND (p.archive_status IS NULL OR p.archive_status = 'active')
             ''', (product_id,))
 
             product = cursor.fetchone()
@@ -2628,8 +2672,32 @@ def admin_approve_product(product_id):
     try:
         cursor = conn.cursor(dictionary=True)
 
+        # Get product and seller info
+        cursor.execute('''
+            SELECT p.id, p.name, p.seller_id, s.store_name
+            FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            WHERE p.id = %s
+        ''', (product_id,))
+        product = cursor.fetchone()
 
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
+
+        # Approve product
         cursor.execute('UPDATE products SET is_active = 1 WHERE id = %s', (product_id,))
+
+        # Create notification for seller
+        cursor.execute('''
+            INSERT INTO seller_notifications (
+                seller_id, product_id, notification_type, title, message, priority
+            ) VALUES (%s, %s, 'product_approved', %s, %s, 'high')
+        ''', (
+            product['seller_id'],
+            product_id,
+            '✅ Product Approved',
+            f'Your product "{product["name"]}" has been approved and is now live on the store!'
+        ))
 
         conn.commit()
         cursor.close()
@@ -2638,6 +2706,9 @@ def admin_approve_product(product_id):
         return jsonify({'success': True, 'message': 'Product approved successfully'}), 200
 
     except Exception as err:
+        print(f"[ERROR] admin_approve_product: {err}")
+        if conn:
+            conn.rollback()
         return jsonify({'error': str(err)}), 500
 
 @app.route('/admin/reject-product/<int:product_id>', methods=['POST'])
@@ -2652,30 +2723,36 @@ def admin_reject_product(product_id):
     try:
         cursor = conn.cursor(dictionary=True)
 
+        # Get product and seller info before deletion
+        cursor.execute('''
+            SELECT p.id, p.name, p.seller_id, s.store_name
+            FROM products p
+            JOIN sellers s ON p.seller_id = s.id
+            WHERE p.id = %s
+        ''', (product_id,))
+        product = cursor.fetchone()
+
+        if not product:
+            return jsonify({'error': 'Product not found'}), 404
 
         rejection_reason = request.form.get('reason', '') or (request.json.get('reason', '') if request.is_json else '')
         if not rejection_reason:
             rejection_reason = 'No reason provided'
 
-
-        try:
-            cursor.execute('ALTER TABLE products ADD COLUMN rejection_reason TEXT DEFAULT NULL')
-            conn.commit()
-        except:
-            pass
-
-        try:
-            cursor.execute('ALTER TABLE products ADD COLUMN rejection_status VARCHAR(50) DEFAULT NULL')
-            conn.commit()
-        except:
-            pass
-
-
+        # Create notification for seller BEFORE deleting product
         cursor.execute('''
-            UPDATE products
-            SET is_active = 0, rejection_status = 'rejected', rejection_reason = %s
-            WHERE id = %s
-        ''', (rejection_reason, product_id))
+            INSERT INTO seller_notifications (
+                seller_id, product_id, notification_type, title, message, priority
+            ) VALUES (%s, %s, 'product_rejected', %s, %s, 'high')
+        ''', (
+            product['seller_id'],
+            product_id,
+            '❌ Product Rejected',
+            f'Your product "{product["name"]}" was rejected. Reason: {rejection_reason}'
+        ))
+
+        # Delete the product entirely (cascade will handle related records)
+        cursor.execute('DELETE FROM products WHERE id = %s', (product_id,))
 
         conn.commit()
         cursor.close()
@@ -2683,7 +2760,7 @@ def admin_reject_product(product_id):
 
         return jsonify({
             'success': True,
-            'message': 'Product rejected',
+            'message': 'Product rejected and removed',
             'rejection_reason': rejection_reason
         }), 200
 
@@ -3536,7 +3613,7 @@ def admin_statistics():
         active_users = result['total'] if result else 0
 
 
-        cursor.execute('SELECT COUNT(*) as total FROM products WHERE is_active = 1')
+        cursor.execute('SELECT COUNT(*) as total FROM products WHERE is_active = 1 AND (archive_status IS NULL OR archive_status = "active")')
         result = cursor.fetchone()
         active_products = result['total'] if result else 0
 
@@ -4023,13 +4100,15 @@ def seller_products():
                    p.is_active, p.seller_id, p.created_at,
                    c.name as category_name,
                    COALESCE(SUM(pv.stock_quantity), 0) as stock,
-                   'active' as archive_status
+                   COALESCE(p.archive_status, 'active') as archive_status
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN product_variants pv ON p.id = pv.product_id
-            WHERE p.seller_id = %s AND p.is_active = TRUE
+            WHERE p.seller_id = %s 
+            AND p.is_active = TRUE
+            AND (p.archive_status IS NULL OR p.archive_status = 'active')
             GROUP BY p.id, p.name, p.description, p.price, p.sku, p.brand,
-                     p.is_active, p.seller_id, p.created_at, c.name
+                     p.is_active, p.seller_id, p.created_at, c.name, p.archive_status
             ORDER BY p.created_at DESC
         ''', (seller_id,))
         products = cursor.fetchall()
@@ -4088,6 +4167,7 @@ def seller_inventory():
                 GROUP BY product_id
             ) pi ON p.id = pi.product_id
             WHERE p.seller_id = %s
+            AND (p.archive_status IS NULL OR p.archive_status = 'active')
             ORDER BY p.name, pv.size, pv.color
         ''', (seller['id'],))
 
@@ -5407,15 +5487,19 @@ def seller_add_product():
                     safe_color = re.sub(r'[^a-zA-Z0-9]', '_', color)
                     stock_key = f'stock_{safe_size}_{safe_color}'
                     variant_stock = int(request.form.get(stock_key, 0))
-                    total_stock += variant_stock
-
+                    
                     print(f"[DEBUG] Processing variant: size='{size}', color='{color}', stock_key='{stock_key}', stock={variant_stock}")
 
-
-                    cursor.execute('''
-                        INSERT INTO product_variants (product_id, size, color, stock_quantity)
-                        VALUES (%s, %s, %s, %s)
-                    ''', (product_id, size, color, variant_stock))
+                    # Only insert variant if stock > 0, and only count non-zero stock in total
+                    if variant_stock > 0:
+                        total_stock += variant_stock
+                        cursor.execute('''
+                            INSERT INTO product_variants (product_id, size, color, stock_quantity)
+                            VALUES (%s, %s, %s, %s)
+                        ''', (product_id, size, color, variant_stock))
+                        print(f"[DEBUG] ✅ Inserted variant with stock {variant_stock}")
+                    else:
+                        print(f"[DEBUG] ⚠️ Skipping variant with 0 stock")
         else:
             # Handle grooming products: store ingredients, volume in description
             grooming_desc = f"\n\n**Volume/Size:** {volume}\n\n**Ingredients:**\n{ingredients}"
@@ -5713,6 +5797,14 @@ def seller_get_product(product_id):
         if not product:
             return jsonify({'error': 'Product not found'}), 404
 
+        # Fetch product variants (colors and sizes)
+        cursor.execute('''
+            SELECT id, sku, size, color, stock_quantity, price_adjustment, is_active
+            FROM product_variants
+            WHERE product_id = %s
+            ORDER BY color, size
+        ''', (product_id,))
+        variants = cursor.fetchall()
 
         cursor.execute('SELECT id, name FROM categories WHERE is_active = TRUE ORDER BY name')
         categories = cursor.fetchall()
@@ -5723,7 +5815,8 @@ def seller_get_product(product_id):
         return jsonify({
             'success': True,
             'product': product,
-            'categories': categories
+            'categories': categories,
+            'variants': variants
         }), 200
 
     except Exception as err:
@@ -5822,6 +5915,82 @@ def seller_edit_product():
                     VALUES (%s, %s, %s, %s, %s, 'pending')
                 ''', (product_id, seller['id'], field, old_value, new_value))
                 changes_made = True
+
+        # Handle variant changes
+        variants_data_str = request.form.get('variants_data')
+        if variants_data_str:
+            try:
+                import json
+                variants_data = json.loads(variants_data_str)
+                
+                for variant in variants_data:
+                    if variant.get('isNew') and not variant.get('deleted'):
+                        # New variant to be added
+                        variant_json = json.dumps({
+                            'color': variant.get('color', ''),
+                            'size': variant.get('size', ''),
+                            'stock_quantity': variant.get('stock_quantity', 0),
+                            'is_active': variant.get('is_active', 1)
+                        })
+                        cursor.execute('''
+                            INSERT INTO product_edits
+                            (product_id, seller_id, field_name, old_value, new_value, status)
+                            VALUES (%s, %s, %s, %s, %s, 'pending')
+                        ''', (product_id, seller['id'], 'variant_add', '', variant_json))
+                        changes_made = True
+                    
+                    elif variant.get('deleted'):
+                        # Variant to be deleted
+                        variant_id = variant.get('id')
+                        if variant_id and not str(variant_id).startswith('new_'):
+                            # Fetch current variant data
+                            cursor.execute('SELECT * FROM product_variants WHERE id = %s', (variant_id,))
+                            old_variant = cursor.fetchone()
+                            if old_variant:
+                                old_variant_json = json.dumps({
+                                    'id': old_variant['id'],
+                                    'color': old_variant.get('color', ''),
+                                    'size': old_variant.get('size', ''),
+                                    'stock_quantity': old_variant.get('stock_quantity', 0)
+                                })
+                                cursor.execute('''
+                                    INSERT INTO product_edits
+                                    (product_id, seller_id, field_name, old_value, new_value, status)
+                                    VALUES (%s, %s, %s, %s, %s, 'pending')
+                                ''', (product_id, seller['id'], 'variant_delete', old_variant_json, ''))
+                                changes_made = True
+                    
+                    elif variant.get('modified'):
+                        # Variant to be updated
+                        variant_id = variant.get('id')
+                        if variant_id and not str(variant_id).startswith('new_'):
+                            # Fetch current variant data
+                            cursor.execute('SELECT * FROM product_variants WHERE id = %s', (variant_id,))
+                            old_variant = cursor.fetchone()
+                            if old_variant:
+                                old_variant_json = json.dumps({
+                                    'id': old_variant['id'],
+                                    'color': old_variant.get('color', ''),
+                                    'size': old_variant.get('size', ''),
+                                    'stock_quantity': old_variant.get('stock_quantity', 0),
+                                    'is_active': old_variant.get('is_active', 1)
+                                })
+                                new_variant_json = json.dumps({
+                                    'id': variant_id,
+                                    'color': variant.get('color', ''),
+                                    'size': variant.get('size', ''),
+                                    'stock_quantity': variant.get('stock_quantity', 0),
+                                    'is_active': variant.get('is_active', 1)
+                                })
+                                cursor.execute('''
+                                    INSERT INTO product_edits
+                                    (product_id, seller_id, field_name, old_value, new_value, status)
+                                    VALUES (%s, %s, %s, %s, %s, 'pending')
+                                ''', (product_id, seller['id'], 'variant_update', old_variant_json, new_variant_json))
+                                changes_made = True
+                
+            except Exception as e:
+                print(f"Error processing variants data: {e}")
 
         if changes_made:
 
@@ -5988,6 +6157,7 @@ def api_products():
             LEFT JOIN order_items oi ON p.id = oi.product_id
             LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
             WHERE p.is_active = 1
+            AND (p.archive_status IS NULL OR p.archive_status = 'active')
         """
 
         params = []
@@ -8387,6 +8557,13 @@ def verify_otp():
                 if conn:
                     try:
                         cursor = conn.cursor(dictionary=True)
+                        
+                        # Double-check email doesn't already exist (in case of concurrent requests)
+                        cursor.execute('SELECT id FROM users WHERE email = %s', (pending_rider_signup['email'],))
+                        if cursor.fetchone():
+                            conn.close()
+                            return jsonify({'success': False, 'message': 'This email is already registered. Please use a different email.'}), 400
+                        
                         cursor.execute('''
                             INSERT INTO users (first_name, last_name, email, password, phone, role)
                             VALUES (%s, %s, %s, %s, %s, 'rider')
@@ -8579,6 +8756,8 @@ def api_add_to_cart():
         quantity = int(data.get('quantity', 1))
         variant_id = data.get('variant_id')
 
+        print(f"[CART ADD] User {user_id}, Product {product_id}, Qty {quantity}, Variant {variant_id}")
+
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute('''
@@ -8591,11 +8770,13 @@ def api_add_to_cart():
         if existing:
             new_quantity = existing['quantity'] + quantity
             cursor.execute('UPDATE cart SET quantity = %s WHERE id = %s', (new_quantity, existing['id']))
+            print(f"[CART ADD] Updated existing cart item {existing['id']} to qty {new_quantity}")
         else:
             cursor.execute('''
                 INSERT INTO cart (user_id, product_id, variant_id, quantity)
                 VALUES (%s, %s, %s, %s)
             ''', (user_id, product_id, variant_id, quantity))
+            print(f"[CART ADD] Inserted new cart item for user {user_id}, product {product_id}")
 
         conn.commit()
         cursor.close()
@@ -8603,7 +8784,9 @@ def api_add_to_cart():
 
         return jsonify({'success': True, 'message': 'Added to cart'})
     except Exception as e:
-        print(f"Error adding to cart: {e}")
+        print(f"[ERROR] Error adding to cart: {e}")
+        import traceback
+        traceback.print_exc()
         if conn:
             conn.close()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -8620,41 +8803,83 @@ def api_get_cart():
 
     try:
         user_id = session.get('user_id')
+        print(f"[CART GET] Fetching cart for user {user_id}")
         cursor = conn.cursor(dictionary=True)
 
+        # First, try to get cart items
         cursor.execute('''
             SELECT
                 c.id as cart_id,
-                c.product_id as id,
+                c.product_id,
                 c.quantity,
                 p.name,
                 p.price,
-                pi.image_url,
                 pv.size,
                 pv.color
             FROM cart c
             JOIN products p ON c.product_id = p.id
-            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
             LEFT JOIN product_variants pv ON c.variant_id = pv.id
-            WHERE c.user_id = %s AND p.is_active = 1
+            WHERE c.user_id = %s
         ''', (user_id,))
 
-        items = cursor.fetchall()
+        cart_items_raw = cursor.fetchall()
+        print(f"[CART GET] Found {len(cart_items_raw) if cart_items_raw else 0} items for user {user_id}")
+        
+        # Now build the items list with images
+        items = []
+        if cart_items_raw:
+            for cart_item in cart_items_raw:
+                product_id = cart_item.get('product_id')
+                
+                # Get the best image for this product
+                image_url = None
+                try:
+                    cursor.execute('''
+                        SELECT image_url FROM product_images
+                        WHERE product_id = %s
+                        ORDER BY is_primary DESC, id ASC
+                        LIMIT 1
+                    ''', (product_id,))
+                    image_result = cursor.fetchone()
+                    if image_result:
+                        image_url = image_result.get('image_url')
+                except Exception as img_err:
+                    print(f"[CART GET] Warning: Could not fetch image for product {product_id}: {img_err}")
+                    image_url = None
+                
+                size_val = cart_item.get('size')
+                color_val = cart_item.get('color')
+                
+                items.append({
+                    'id': product_id,
+                    'cart_id': cart_item.get('cart_id'),
+                    'product_id': product_id,
+                    'quantity': int(cart_item.get('quantity', 0)),
+                    'name': cart_item.get('name'),
+                    'price': float(cart_item.get('price', 0)) if cart_item.get('price') else 0,
+                    'image_url': image_url or '/static/images/placeholder.svg',
+                    'size': size_val if size_val else None,
+                    'color': color_val if color_val else None
+                })
+                print(f"[CART GET]   - {cart_item.get('name')} (qty {cart_item.get('quantity')}, size: {size_val}, color: {color_val}, img: {image_url})")
 
+        items_list = items
 
-        unique_product_count = len(set(item['id'] for item in items)) if items else 0
+        unique_product_count = len(set(item['id'] for item in items_list)) if items_list else 0
 
         cursor.close()
         conn.close()
 
         return jsonify({
             'success': True,
-            'items': items,
+            'items': items_list,
             'unique_count': unique_product_count,
-            'total_quantity': sum(item['quantity'] for item in items) if items else 0
+            'total_quantity': sum(item['quantity'] for item in items_list) if items_list else 0
         })
     except Exception as e:
-        print(f"Error getting cart: {e}")
+        print(f"[ERROR] Error getting cart: {e}")
+        import traceback
+        traceback.print_exc()
         if conn:
             conn.close()
         return jsonify({'success': False, 'error': str(e), 'unique_count': 0}), 500
@@ -11063,8 +11288,8 @@ def get_seller_notifications():
         # Build query
         query = '''
             SELECT 
-                id, order_id, notification_type, title, message, 
-                is_read, read_at, action_url, priority, created_at
+                id, product_id, notification_type, title, message, 
+                is_read, read_at, priority, created_at
             FROM seller_notifications
             WHERE seller_id = %s
         '''
@@ -11153,6 +11378,50 @@ def mark_notification_read(notification_id):
 
     except Exception as e:
         print(f"[ERROR] mark_notification_read: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/seller/notifications/mark-all-read', methods=['POST'])
+def mark_all_notifications_read():
+    """Mark all notifications as read for the current seller"""
+    try:
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+        user_id = session['user_id']
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get seller_id from user_id
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+
+        if not seller:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Seller not found'}), 404
+
+        # Mark all notifications as read
+        cursor.execute('''
+            UPDATE seller_notifications
+            SET is_read = TRUE, read_at = NOW()
+            WHERE seller_id = %s AND is_read = FALSE
+        ''', (seller['id'],))
+
+        updated_count = cursor.rowcount
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        print(f"[✅] Marked {updated_count} notifications as read for seller {seller['id']}")
+
+        return jsonify({
+            'success': True,
+            'message': f'{updated_count} notifications marked as read'
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] mark_all_notifications_read: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
