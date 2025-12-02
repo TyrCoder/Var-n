@@ -7,316 +7,658 @@
 		<title>Seller Sign Up — Varón</title>
 		<style>
 			:root {
-				--bg: #ffffff;
-				--fg: #0a0a0a;
-				--muted: #6b7280;
+				--background: #050505;
+				--background-alt: #0a0a0a;
+				--surface: rgba(12, 12, 12, 0.92);
+				--surface-light: rgba(255, 255, 255, 0.08);
 				--card: #ffffff;
-				--line: #e5e7eb;
-				--accent: #111827;
-				--error: #ef4444;
-				--success: #10b981;
+				--text: #f5f5f5;
+				--muted: #9e9e9e;
+				--accent: #d4d4d4;
+				--accent-strong: #f5f5f5;
+				--accent-dark: #272727;
+				--line: rgba(255, 255, 255, 0.18);
+				--success: #d5d5d5;
+				--error: #4d4d4d;
+				--shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
 			}
 
-			html, body {
-				height: 100%;
-				margin: 0;
-				font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-				color: var(--fg);
-				background: #f9fafb;
-				line-height: 1.5;
-			}
-
-			.layout {
-				display: grid;
-				grid-template-columns: 1fr 480px;
-				min-height: 100vh;
-				align-items: center;
-				background: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);
-			}
-
-			.left {
-				padding: 64px 80px;
-			}
-
-			.brand {
-				display: flex;
-				align-items: center;
-				gap: 14px;
-				font-weight: 700;
-				font-size: 22px;
-				color: var(--accent);
-			}
-
-			.hero-title {
-				font-size: 42px;
-				color: var(--accent);
-				margin: 24px 0 16px;
-				line-height: 1.2;
-			}
-
-			.hero-sub {
-				color: var(--muted);
-				max-width: 520px;
-				font-size: 16px;
-				margin: 0;
-			}
-
-			.illustration {
-				margin-top: 40px;
-				max-width: 480px;
-				border-radius: 16px;
-				box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-			}
-
-			.card-wrap {
-				display: flex;
-				justify-content: center;
-				padding: 48px;
-				background: #ffffff;
-				height: 100%;
-			}
-
-			.card {
-				width: 100%;
-				max-width: 400px;
-				background: var(--card);
-				border-radius: 16px;
-				box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.05);
-				padding: 32px;
-			}
-
-			.card h2 {
-				margin: 0 0 8px;
-				font-size: 24px;
-				color: var(--accent);
-			}
-
-			.sub {
-				color: var(--muted);
-				margin-bottom: 28px;
-				font-size: 15px;
-			}
-
-			.alert {
-				padding: 12px;
-				margin-bottom: 20px;
-				border-radius: 8px;
-			}
-
-			.alert-error {
-				background: #fee2e2;
-				color: #991b1b;
-			}
-
-			.alert-success {
-				background: #dcfce7;
-				color: #15803d;
-			}
-
-			.form-group {
-				margin-bottom: 20px;
-			}
-
-			.form-group label {
-				display: block;
-				font-size: 14px;
-				font-weight: 500;
-				color: var(--accent);
-				margin-bottom: 8px;
-			}
-
-			.form-input {
-				width: 100%;
-				padding: 12px 16px;
-				border: 1px solid var(--line);
-				border-radius: 8px;
-				background: #fff;
-				font-size: 15px;
-				transition: all 0.2s;
+			* {
 				box-sizing: border-box;
 			}
 
-			.form-input:hover {
-				border-color: #d1d5db;
+			html, body {
+				margin: 0;
+				padding: 0;
+				min-height: 100vh;
+				font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial;
+				background: var(--background);
+				color: var(--text);
+				line-height: 1.5;
+			}
+
+			body::before,
+			body::after {
+				content: '';
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.16), transparent 50%),
+					radial-gradient(circle at 80% 0%, rgba(107, 114, 128, 0.18), transparent 40%);
+				pointer-events: none;
+				z-index: 0;
+				mix-blend-mode: screen;
+			}
+
+			body::after {
+				background: radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.14), transparent 45%);
+				mix-blend-mode: lighten;
+			}
+
+			.auth-shell {
+				position: relative;
+				z-index: 1;
+				padding: 32px clamp(24px, 6vw, 80px) 64px;
+			}
+
+			.auth-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 16px;
+				margin-bottom: 32px;
+			}
+
+			.logo {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				text-decoration: none;
+				color: var(--text);
+				font-weight: 700;
+				letter-spacing: 0.02em;
+			}
+
+			.logo-mark {
+				width: 42px;
+				height: 42px;
+				border-radius: 12px;
+				background: linear-gradient(135deg, #0f0f0f, #2f2f2f);
+				display: grid;
+				place-items: center;
+				font-size: 20px;
+				color: #f5f5f5;
+				font-weight: 800;
+			}
+
+			.persona-switch {
+				display: flex;
+				gap: 8px;
+				background: rgba(255, 255, 255, 0.04);
+				padding: 6px;
+				border-radius: 999px;
+				border: 1px solid rgba(255, 255, 255, 0.08);
+			}
+
+			.persona-link {
+				text-decoration: none;
+				color: var(--muted);
+				font-size: 14px;
+				padding: 8px 18px;
+				border-radius: 999px;
+				transition: color 0.2s, background 0.2s;
+				font-weight: 600;
+			}
+
+			.persona-link.active {
+				background: #ffffff;
+				color: #111111;
+			}
+
+			.ghost-link {
+				color: var(--muted);
+				text-decoration: none;
+				font-size: 14px;
+				font-weight: 600;
+			}
+
+			.auth-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+				gap: clamp(32px, 4vw, 56px);
+				align-items: stretch;
+			}
+
+			.info-panel {
+				background: var(--surface);
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				border-radius: 32px;
+				padding: clamp(32px, 4vw, 48px);
+				box-shadow: var(--shadow);
+				position: relative;
+				overflow: hidden;
+			}
+
+			.info-panel::after {
+				content: '';
+				position: absolute;
+				inset: 0;
+				background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.08), transparent 45%);
+				pointer-events: none;
+			}
+
+			.eyebrow {
+				font-size: 13px;
+				letter-spacing: 0.3em;
+				text-transform: uppercase;
+				color: var(--muted);
+				margin: 0 0 16px;
+			}
+
+			.info-title {
+				font-size: clamp(32px, 4vw, 48px);
+				margin: 0 0 18px;
+				line-height: 1.15;
+			}
+
+			.info-panel p {
+				margin: 0 0 28px;
+				color: rgba(245, 245, 245, 0.85);
+			}
+
+			.feature-list {
+				margin: 0;
+				padding: 0;
+				list-style: none;
+				display: flex;
+				flex-direction: column;
+				gap: 16px;
+			}
+
+			.feature-item {
+				display: flex;
+				gap: 14px;
+				align-items: flex-start;
+			}
+
+			.feature-icon {
+				width: 44px;
+				height: 44px;
+				border-radius: 14px;
+				background: rgba(255, 255, 255, 0.06);
+				display: grid;
+				place-items: center;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+
+			.feature-content strong {
+				display: block;
+				color: #ffffff;
+				font-size: 15px;
+				margin-bottom: 2px;
+			}
+
+			.feature-content span {
+				color: rgba(245, 245, 245, 0.7);
+				font-size: 14px;
+			}
+
+			.stat-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+				gap: 16px;
+				margin-top: 32px;
+			}
+
+			.stat-card {
+				background: rgba(17, 17, 17, 0.65);
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				border-radius: 18px;
+				padding: 16px 18px;
+				backdrop-filter: blur(12px);
+			}
+
+			.stat-value {
+				font-size: 28px;
+				font-weight: 700;
+				color: #ffffff;
+				margin-bottom: 4px;
+			}
+
+			.stat-label {
+				color: rgba(245, 245, 245, 0.7);
+				font-size: 13px;
+			}
+
+			.form-panel {
+				position: relative;
+			}
+
+			.form-card {
+				background: #ffffff;
+				color: #111111;
+				border-radius: 32px;
+				padding: clamp(28px, 4vw, 36px);
+				box-shadow: 0 25px 50px rgba(0, 0, 0, 0.18);
+			}
+
+			.progress-tracker {
+				display: flex;
+				gap: 24px;
+				margin-bottom: 28px;
+			}
+
+			.progress-step {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				font-size: 14px;
+				font-weight: 600;
+				color: #5a5a5a;
+			}
+
+			.progress-step.active {
+				color: #111111;
+			}
+
+			.progress-step svg {
+				width: 28px;
+				height: 28px;
+				padding: 6px;
+				border-radius: 999px;
+				background: rgba(255, 255, 255, 0.14);
+				stroke: #1f1f1f;
+			}
+
+			.form-title {
+				margin: 0 0 10px;
+				font-size: 28px;
+			}
+
+			.form-subtext {
+				margin: 0 0 24px;
+				color: #6b6b6b;
+				font-size: 15px;
+			}
+
+			.field-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+				gap: 18px 20px;
+				margin-bottom: 18px;
+			}
+
+			.form-group {
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+			}
+
+			.form-group label {
+				font-size: 14px;
+				font-weight: 600;
+				color: #111111;
+			}
+
+			.input-shell {
+				position: relative;
+			}
+
+			.form-input,
+			textarea.form-input {
+				width: 100%;
+				border: 1px solid #e5e5e5;
+				border-radius: 14px;
+				padding: 12px 16px 12px 48px;
+				font-size: 15px;
+				font-weight: 500;
+				color: #111111;
+				background: #f5f5f5;
+				transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+			}
+
+			textarea.form-input {
+				min-height: 90px;
+				padding-top: 16px;
+				resize: vertical;
 			}
 
 			.form-input:focus {
 				outline: none;
-				border-color: var(--accent);
-				box-shadow: 0 0 0 2px rgba(17,24,39,0.1);
+				border-color: #111111;
+				background: #ffffff;
+				box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.15);
+			}
+
+			.input-icon {
+				position: absolute;
+				top: 50%;
+				left: 16px;
+				transform: translateY(-50%);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 20px;
+				height: 20px;
+				color: #a1a1a1;
+			}
+
+			.helper-text {
+				font-size: 13px;
+				color: #9e9e9e;
+			}
+
+			.password-shell .form-input {
+				padding-right: 48px;
+			}
+
+			.password-toggle {
+				position: absolute;
+				top: 50%;
+				right: 12px;
+				transform: translateY(-50%);
+				background: none;
+				border: none;
+				cursor: pointer;
+				display: flex;
+				padding: 6px;
+				color: #9e9e9e;
+			}
+
+			.alert {
+				padding: 12px 14px;
+				border-radius: 12px;
+				margin-bottom: 18px;
+				font-size: 14px;
+				font-weight: 600;
+			}
+
+			.alert-error {
+				background: rgba(255, 255, 255, 0.08);
+				border: 1px solid rgba(255, 255, 255, 0.15);
+				color: #1f1f1f;
 			}
 
 			.tnc-row {
 				display: flex;
-				align-items: center;
 				gap: 12px;
-				margin: 24px 0;
+				align-items: flex-start;
+				margin: 18px 0 4px;
 			}
 
 			.tnc-row input[type="checkbox"] {
+				margin-top: 4px;
 				width: 18px;
 				height: 18px;
-				accent-color: var(--accent);
 				border-radius: 4px;
-				cursor: pointer;
+				border: 1px solid #d4d4d4;
+				accent-color: #111111;
 			}
 
 			.tnc-row label {
 				font-size: 14px;
-				color: var(--muted);
-				cursor: pointer;
+				color: #4b4b4b;
 			}
 
-			.tnc-row a {
-				color: var(--accent);
-				text-decoration: none;
-				font-weight: 500;
-			}
-
-			.tnc-row a:hover {
-				text-decoration: underline;
-			}
-
-			.btn {
-				display: inline-block;
+			.primary-btn {
 				width: 100%;
+				border: none;
+				border-radius: 16px;
 				padding: 14px;
-				border-radius: 8px;
-				border: 0;
-				background: var(--accent);
-				color: #fff;
-				font-weight: 600;
-				font-size: 15px;
+				font-size: 16px;
+				font-weight: 700;
+				color: #f5f5f5;
+				background: linear-gradient(135deg, #0f0f0f, #3f3f3f);
 				cursor: pointer;
-				transition: all 0.2s;
+				box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+				transition: transform 0.15s ease, box-shadow 0.15s ease;
 			}
 
-			.btn:hover {
-				background: #000000;
-				transform: translateY(-1px);
+			.primary-btn:disabled {
+				opacity: 0.7;
+				cursor: not-allowed;
 			}
 
-			.btn:active {
-				transform: translateY(0);
+			.primary-btn:not(:disabled):hover {
+				transform: translateY(-2px);
+				box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3);
 			}
 
-			.small-note {
-				font-size: 14px;
-				color: var(--muted);
-				margin-top: 20px;
+			.meta-row {
+				margin-top: 16px;
 				text-align: center;
+				color: #6b6b6b;
+				font-size: 14px;
 			}
 
-			.small-note a {
-				color: var(--accent);
+			.meta-row a {
+				color: #111111;
+				font-weight: 600;
 				text-decoration: none;
-				font-weight: 500;
 			}
 
-			.small-note a:hover {
+			.meta-row a:hover {
 				text-decoration: underline;
 			}
 
-			@media (max-width: 1024px) {
-				.layout {
-					grid-template-columns: 1fr;
+			.trust-indicator {
+				margin-top: 24px;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				font-size: 13px;
+				color: #9e9e9e;
+			}
+
+			.trust-indicator span {
+				display: inline-flex;
+				gap: 6px;
+				align-items: center;
+			}
+
+			@media (max-width: 900px) {
+				.auth-header {
+					flex-direction: column;
+					align-items: flex-start;
 				}
 
-				.left {
-					padding: 40px;
-					text-align: center;
+				.form-card {
+					padding: 24px;
+				}
+			}
+
+			@media (max-width: 600px) {
+				.auth-shell {
+					padding: 16px;
 				}
 
-				.hero-sub {
-					margin: 0 auto;
-				}
-
-				.illustration {
-					margin: 32px auto;
-				}
-
-				.card-wrap {
-					padding: 32px 24px;
+				.progress-tracker {
+					flex-direction: column;
+					gap: 12px;
 				}
 			}
 		</style>
 	</head>
 	<body>
-		<div class="layout">
-			<div class="left">
-				<div class="brand"><img src="" alt="" style="width:34px;height:34px;border-radius:6px;background:#efefef"> Varón Seller</div>
-				<h1 class="hero-title">Be a Power Seller</h1>
-				<p class="hero-sub">Manage your shop efficiently on Varón. Create a seller account to list products, manage orders and grow your business.</p>
-				<img class="illustration" alt="shop illustration" src="https://images.unsplash.com/photo-1542831371-d531d36971e6?q=80&w=800&auto=format&fit=crop" style="width:100%;border-radius:12px;object-fit:cover">
-			</div>
-
-			<div class="card-wrap">
-				<div class="card" role="region" aria-label="Seller signup form">
-					<h2>Sign up to sell</h2>
-					<div class="sub">Create your seller account — fast and simple.</div>
-
-					<form id="sellerSignup" action="/signupSeller" method="POST" novalidate>
-						<div id="errorDisplay" class="alert alert-error" style="display: none"></div>
-					<div class="form-group">
-						<label for="shopName">Brand name</label>
-						<input id="shopName" name="shop_name" class="form-input" type="text" placeholder="My Brand" required />
-					</div>
-
-					<div class="form-group">
-						<label for="shopDescription">Brand description</label>
-						<textarea id="shopDescription" name="shop_description" class="form-input" placeholder="Tell customers about your brand (e.g., products you sell, specialties, mission)" style="min-height: 80px; resize: vertical;"></textarea>
-						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">This helps customers learn more about your brand</small>
-					</div>
-
-					<div class="form-group">
-						<label for="sellerEmail">Email address</label>
-						<input id="sellerEmail" name="email" class="form-input" type="email" placeholder="you@business.com" required />
-						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">Enter a unique email address for your seller account</small>
-					</div>
-
-					<div class="form-group">
-						<label for="sellerPhone">Contact number</label>
-						<input id="sellerPhone" name="phone" class="form-input" type="tel" value="+63 " placeholder="+63 9xx xxx xxxx" pattern="[0-9\+\-\s]{7,20}" required />
-					</div>
-
-					<div class="form-group">
-						<label for="sellerPassword">Create password</label>
-						<div style="position: relative;">
-							<input id="sellerPassword" name="password" class="form-input" type="password" placeholder="At least 6 characters with letters and numbers" minlength="6" required style="padding-right: 45px;" />
-							<button type="button" onclick="togglePasswordVisibility('sellerPassword', 'toggleSellerPassword')" id="toggleSellerPassword" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-								<svg id="toggleSellerPasswordIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7280;">
-									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-									<circle cx="12" cy="12" r="3"></circle>
-								</svg>
-							</button>
-						</div>
-						<small style="color:#666;font-size:12px;margin-top:4px;display:block;">Must be at least 6 characters with both letters and numbers</small>
-					</div>
-
-					<div class="form-group">
-						<label for="sellerConfirmPassword">Confirm password</label>
-						<div style="position: relative;">
-							<input id="sellerConfirmPassword" name="confirm_password" class="form-input" type="password" placeholder="Re-enter your password" minlength="6" required style="padding-right: 45px;" />
-							<button type="button" onclick="togglePasswordVisibility('sellerConfirmPassword', 'toggleSellerConfirmPassword')" id="toggleSellerConfirmPassword" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
-								<svg id="toggleSellerConfirmPasswordIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6b7280;">
-									<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-									<circle cx="12" cy="12" r="3"></circle>
-								</svg>
-							</button>
-						</div>
-					</div>
-
-					<div class="tnc-row">
-						<input id="sellerTnc" name="tnc" type="checkbox" required />
-						<label for="sellerTnc">I agree to the <a href="/terms" target="_blank">Terms &amp; Conditions</a></label>
-					</div>
-
-						<button type="submit" class="btn">Create seller account</button>
-
-						<div class="small-note muted">Already have an account? <a href="/login">Log in</a></div>
-					</form>
+		<div class="auth-shell">
+			<header class="auth-header">
+				<a class="logo" href="/">
+					<span class="logo-mark">V</span>
+					<span>Varón Commerce</span>
+				</a>
+				<div class="persona-switch" aria-label="Switch signup persona">
+					<a class="persona-link active" href="/signupSeller">Seller</a>
+					<a class="persona-link" href="/signup/rider">Rider</a>
 				</div>
-			</div>
+				<a class="ghost-link" href="/login">Back to login</a>
+			</header>
+
+			<main class="auth-grid">
+				<section class="info-panel">
+					<p class="eyebrow">Vendor network</p>
+					<h1 class="info-title">Launch your Varón store in minutes.</h1>
+					<p>Connect your catalog, publish listings, and accept orders with live fulfillment tracking. We built the Seller HQ so you can focus on brand, not busywork.</p>
+
+					<ul class="feature-list">
+						<li class="feature-item">
+							<span class="feature-icon">
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5f5f5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"></path><path d="M9 22V12h6v10"></path></svg>
+							</span>
+							<div class="feature-content">
+								<strong>Unified workspace</strong>
+								<span>Inventory, pricing, and promotions in one dashboard.</span>
+							</div>
+						</li>
+						<li class="feature-item">
+							<span class="feature-icon">
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5f5f5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"></path><path d="M12 3v18"></path></svg>
+							</span>
+							<div class="feature-content">
+								<strong>Realtime insights</strong>
+								<span>Order velocity and payout forecasts update instantly.</span>
+							</div>
+						</li>
+						<li class="feature-item">
+							<span class="feature-icon">
+								<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5f5f5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>
+							</span>
+							<div class="feature-content">
+								<strong>Trusted payouts</strong>
+								<span>Automated transfers with fraud and compliance checks.</span>
+							</div>
+						</li>
+					</ul>
+
+					<div class="stat-grid" aria-label="Seller highlights">
+						<div class="stat-card">
+							<div class="stat-value">48h</div>
+							<div class="stat-label">Average onboarding time</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">4.9/5</div>
+							<div class="stat-label">Seller satisfaction</div>
+						</div>
+						<div class="stat-card">
+							<div class="stat-value">+38%</div>
+							<div class="stat-label">Avg. monthly growth</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="form-panel" role="region" aria-label="Seller signup form">
+					<div class="form-card">
+						<div class="progress-tracker" aria-hidden="true">
+							<div class="progress-step active">
+								<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+								<span>Account details</span>
+							</div>
+							<div class="progress-step">
+								<svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5"/></svg>
+								<span>OTP verification</span>
+							</div>
+						</div>
+
+						<h2 class="form-title">Tell us about your brand</h2>
+						<p class="form-subtext">We use these details to personalize your seller dashboard and send the right verification steps.</p>
+
+						<form id="sellerSignup" action="/signupSeller" method="POST" novalidate>
+							<div id="errorDisplay" class="alert alert-error" style="display:none" role="alert"></div>
+
+							<div class="field-grid">
+								<div class="form-group">
+									<label for="shopName">Brand name</label>
+									<div class="input-shell">
+										<span class="input-icon">
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"></path><path d="M9 22V12h6v10"></path></svg>
+										</span>
+										<input id="shopName" name="shop_name" class="form-input" type="text" placeholder="Varón Studio" required />
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="sellerPhone">Contact number</label>
+									<div class="input-shell">
+										<span class="input-icon">
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92V21a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2 5.18 2 2 0 0 1 4 3h4.09a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L9.91 11a16 16 0 0 0 6 6l1.34-1.34a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2.01Z"></path></svg>
+										</span>
+										<input id="sellerPhone" name="phone" class="form-input" type="tel" value="+63 " placeholder="+63 9xx xxx xxxx" pattern="[0-9\+\-\s]{7,20}" required />
+									</div>
+								</div>
+							</div>
+
+							<div class="form-group">
+								<label for="shopDescription">Brand description</label>
+								<div class="input-shell">
+									<span class="input-icon" style="top:18px;">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><path d="M4 9h16"></path></svg>
+									</span>
+									<textarea id="shopDescription" name="shop_description" class="form-input" placeholder="Tell customers what makes your products different"></textarea>
+								</div>
+								<span class="helper-text">This helps shoppers and our team understand your assortment.</span>
+							</div>
+
+							<div class="field-grid">
+								<div class="form-group">
+									<label for="sellerEmail">Email address</label>
+									<div class="input-shell">
+										<span class="input-icon">
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><path d="m4 4 8 8 8-8"></path></svg>
+										</span>
+										<input id="sellerEmail" name="email" class="form-input" type="email" placeholder="you@business.com" required />
+									</div>
+									<span class="helper-text">Use a business email you can verify quickly.</span>
+								</div>
+								<div class="form-group">
+									<label for="sellerPassword">Create password</label>
+									<div class="input-shell password-shell">
+										<span class="input-icon">
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Z"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
+										</span>
+										<input id="sellerPassword" name="password" class="form-input" type="password" placeholder="At least 6 characters" minlength="6" required />
+										<button type="button" class="password-toggle" onclick="togglePasswordVisibility('sellerPassword', 'toggleSellerPassword')" id="toggleSellerPassword">
+											<svg id="toggleSellerPasswordIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+										</button>
+									</div>
+									<span class="helper-text">Must include letters and numbers.</span>
+								</div>
+							</div>
+
+							<div class="field-grid">
+								<div class="form-group">
+									<label for="sellerConfirmPassword">Confirm password</label>
+									<div class="input-shell password-shell">
+										<span class="input-icon">
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Z"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
+										</span>
+										<input id="sellerConfirmPassword" name="confirm_password" class="form-input" type="password" placeholder="Re-enter your password" minlength="6" required />
+										<button type="button" class="password-toggle" onclick="togglePasswordVisibility('sellerConfirmPassword', 'toggleSellerConfirmPassword')" id="toggleSellerConfirmPassword">
+											<svg id="toggleSellerConfirmPasswordIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+										</button>
+									</div>
+								</div>
+								<div class="form-group">
+									<label>&nbsp;</label>
+									<p class="helper-text">Entering your details helps us generate the OTP instantly.</p>
+								</div>
+							</div>
+
+							<div class="tnc-row">
+								<input id="sellerTnc" name="tnc" type="checkbox" required />
+								<label for="sellerTnc">I agree to the <a href="/terms" target="_blank">Terms &amp; Conditions</a> and confirm my business information is accurate.</label>
+							</div>
+
+							<button type="submit" class="primary-btn">Create seller account</button>
+						</form>
+
+						<div class="meta-row">Already selling with Varón? <a href="/login">Log in here</a></div>
+						<div class="trust-indicator">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+							<span>Secure OTP verification • SOC2 aligned infrastructure</span>
+						</div>
+					</div>
+				</section>
+			</main>
 		</div>
 
 		<script>
@@ -328,7 +670,7 @@
 					top: 20px;
 					right: 20px;
 					padding: 16px 24px;
-					background: ${type === 'error' ? '#ef4444' : '#10b981'};
+					background: ${type === 'error' ? '#1f1f1f' : '#4d4d4d'};
 					color: white;
 					border-radius: 8px;
 					box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -416,7 +758,7 @@
 					errorDiv = document.createElement('div');
 					errorDiv.id = 'errorDisplay';
 					errorDiv.className = 'alert alert-error';
-					errorDiv.style.cssText = 'padding: 12px; margin-bottom: 20px; border-radius: 8px; background: #fee2e2; color: #991b1b;';
+					errorDiv.style.cssText = 'padding: 12px; margin-bottom: 20px; border-radius: 8px; background: #f0f0f0; color: #1f1f1f;';
 					form.insertBefore(errorDiv, form.firstChild);
 				}
 				errorDiv.style.display = 'none';

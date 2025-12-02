@@ -7309,7 +7309,11 @@ def upload_profile_picture():
         cursor.close()
         conn.close()
 
-        if updated_user and updated_user[0] == image_url:
+        saved_image = None
+        if updated_user:
+            saved_image = updated_user.get('profile_image') if isinstance(updated_user, dict) else updated_user[0]
+
+        if saved_image == image_url:
             print(f"Profile picture saved to database for user {user_id}: {image_url}")
             return jsonify({
                 'success': True,
