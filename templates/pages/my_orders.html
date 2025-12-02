@@ -710,8 +710,33 @@
     </div>
   </div>
 
+  <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
   <script>
     let allOrders = [];
+
+    const NotificationBridge = {
+      success(message) {
+        if (window.VaronNotifications && typeof window.VaronNotifications.success === 'function') {
+          window.VaronNotifications.success(message);
+        } else {
+          console.log('SUCCESS:', message);
+        }
+      },
+      error(message) {
+        if (window.VaronNotifications && typeof window.VaronNotifications.error === 'function') {
+          window.VaronNotifications.error(message);
+        } else {
+          console.error('ERROR:', message);
+        }
+      },
+      info(message) {
+        if (window.VaronNotifications && typeof window.VaronNotifications.info === 'function') {
+          window.VaronNotifications.info(message);
+        } else {
+          console.info('INFO:', message);
+        }
+      }
+    };
 
     // Load orders on page load
     document.addEventListener('DOMContentLoaded', () => {
@@ -1065,7 +1090,7 @@
 
     async function submitRating() {
       if (currentRating === 0 || !currentRatingType || !currentOrderId || !currentTargetId) {
-        alert('Please select a rating');
+        NotificationBridge.info('Please select a rating before submitting.');
         return;
       }
 
@@ -1108,17 +1133,22 @@
         const result = await response.json();
 
         if (result.success) {
-          alert(`${currentRatingType === 'product' ? 'Product review' : 'Rider rating'} submitted successfully!`);
+          const successMessage = currentRatingType === 'product'
+            ? 'Product review submitted successfully!'
+            : 'Rider rating submitted successfully!';
+
+          NotificationBridge.success(successMessage);
           closeRatingModal();
           loadOrders(); // Reload orders to update UI
         } else {
-          alert(result.error || 'Failed to submit rating');
+          const errorMessage = result.error || 'Failed to submit rating';
+          NotificationBridge.error(errorMessage);
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit';
         }
       } catch (error) {
         console.error('Error submitting rating:', error);
-        alert('Error submitting rating. Please try again.');
+        NotificationBridge.error('Error submitting rating. Please try again.');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit';
       }

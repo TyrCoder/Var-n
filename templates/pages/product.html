@@ -1627,9 +1627,34 @@
       </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
+
+      const NotificationBridge = {
+        info(message) {
+          if (window.VaronNotifications && typeof window.VaronNotifications.info === 'function') {
+            window.VaronNotifications.info(message);
+          } else {
+            alert(message);
+          }
+        },
+        warning(message) {
+          if (window.VaronNotifications && typeof window.VaronNotifications.warning === 'function') {
+            window.VaronNotifications.warning(message);
+          } else {
+            alert(message);
+          }
+        },
+        error(message) {
+          if (window.VaronNotifications && typeof window.VaronNotifications.error === 'function') {
+            window.VaronNotifications.error(message);
+          } else {
+            alert(message);
+          }
+        }
+      };
 
       document.addEventListener('DOMContentLoaded', async () => {
 
@@ -2671,8 +2696,13 @@
           const data = await response.json();
 
           if (data.success && data.reviews.length > 0) {
-            // Sort reviews by date (latest first)
-            allReviews = data.reviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            // Normalize comment text and sort reviews by date (latest first)
+            allReviews = data.reviews
+              .map(review => ({
+                ...review,
+                comment: review.comment ?? review.review_comment ?? review.comment_text ?? ''
+              }))
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             // Calculate average rating
             const avgRating = (allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length).toFixed(1);
@@ -2737,7 +2767,7 @@
                 </div>
               </div>
               ${review.title ? `<h4 class="review-title" style="margin-top: 12px;">${escapeHtml(review.title)}</h4>` : ''}
-              <p class="review-comment">${escapeHtml(review.comment)}</p>
+              <p class="review-comment">${formatReviewComment(review)}</p>
             </div>
           `;
         }
@@ -2792,6 +2822,9 @@
       }
 
       function escapeHtml(text) {
+        if (text === null || text === undefined) {
+          return '';
+        }
         const map = {
           '&': '&amp;',
           '<': '&lt;',
@@ -2799,7 +2832,19 @@
           '"': '&quot;',
           "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+      }
+
+      function formatReviewComment(review) {
+        if (!review) {
+          return '<span style="color:#9ca3af;">No comment provided.</span>';
+        }
+        const rawComment = review.comment ?? review.review_comment ?? review.comment_text ?? '';
+        const normalized = String(rawComment);
+        if (!normalized || normalized.trim().length === 0) {
+          return '<span style="color:#9ca3af;">No comment provided.</span>';
+        }
+        return escapeHtml(normalized).replace(/\n/g, '<br>');
       }
 
       async function checkIfCanReview() {
@@ -2829,7 +2874,7 @@
 
       function openReviewForm() {
         if (!window.orderIdForReview) {
-          alert('You need to complete an order for this product to leave a review.');
+          NotificationBridge.info('Please complete an order for this product before leaving a review.');
           return;
         }
         document.getElementById('reviewModal').classList.add('show');

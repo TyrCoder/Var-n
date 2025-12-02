@@ -676,6 +676,7 @@
       </div>
     </main>
 
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
@@ -927,21 +928,31 @@
 
 
       async function confirmAndPlaceOrder() {
-        // Check if we have a default address
         if (!defaultAddress) {
-          alert('⚠️ Please add a shipping address before placing your order.\n\nYou will be redirected to your account page.');
-          window.location.href = '{{ url_for("account_details") }}';
+          const goToAccount = await VaronNotifications.confirm(
+            'Please add a shipping address before placing your order.',
+            {
+              title: 'Shipping Address Needed',
+              confirmText: 'Go to My Account',
+              cancelText: 'Stay Here',
+              confirmClass: 'confirm'
+            }
+          );
+
+          if (goToAccount) {
+            window.location.href = "{{ url_for('account_details') }}";
+          }
           return;
         }
 
         if (!window.VaronCart) {
-          alert('Cart system not loaded. Please refresh the page.');
+          VaronNotifications.error('Cart system not loaded. Please refresh the page.');
           return;
         }
 
         const cartItems = await VaronCart.get();
         if (!cartItems || cartItems.length === 0) {
-          alert('Your cart is empty.');
+          VaronNotifications.warning('Your cart is empty.');
           return;
         }
 
@@ -1008,21 +1019,23 @@
           const result = await response.json();
 
           if (result.success) {
-
             await VaronCart.clear();
 
-
             const orderNumber = result.order_number || 'your order';
-            alert(`✅ Order Confirmed!\n\nOrder Number: ${orderNumber}\n\nYour order is now confirmed. Waiting for a rider to accept and deliver it.\n\nYou will be redirected to your order confirmation page.`);
+            VaronNotifications.success(
+              `✅ Order Confirmed!<br><br><strong>Order Number:</strong> ${orderNumber}<br>Your order is now confirmed. Waiting for a rider to accept and deliver it.<br><br>Redirecting you to your order confirmation page...`,
+              0
+            );
 
-
-            window.location.href = `/order-confirmation/${result.order_number}`;
+            setTimeout(() => {
+              window.location.href = `/order-confirmation/${result.order_number}`;
+            }, 1800);
           } else {
-            alert('❌ Error confirming order: ' + (result.message || 'Unknown error'));
+            VaronNotifications.error('Error confirming order: ' + (result.message || 'Unknown error'));
           }
         } catch (error) {
           console.error('Error confirming order:', error);
-          alert('Error confirming order. Please try again.');
+          VaronNotifications.error('Error confirming order. Please try again.');
         } finally {
 
           placeOrderBtn.disabled = false;

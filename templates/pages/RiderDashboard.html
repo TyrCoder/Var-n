@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <style>
       :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef;--success:#10b981;--warning:#f59e0b;--error:#ef4444}
       *{box-sizing:border-box}
@@ -756,23 +757,33 @@
         ])
         .then(([availableData, activeData]) => {
           const tbody = document.querySelector('#orders-deliveries-tbody');
-          const allOrders = [];
+          const orderMap = new Map();
+
+          const addOrder = (order, type) => {
+            if (!order) return;
+            const key = order.order_number || order.shipment_id || order.id;
+            if (!key) return;
+
+            const normalized = { ...order, type };
+            const existing = orderMap.get(key);
+
+            // Prefer active entries (they contain richer shipment data)
+            if (!existing || (existing.type !== 'active' && type === 'active')) {
+              orderMap.set(key, normalized);
+            }
+          };
 
 
           if (availableData.success && availableData.orders && availableData.orders.length > 0) {
             const availableOrders = availableData.orders.filter(order =>
               order.order_status === 'waiting_for_pickup' && !order.assigned_rider_id
             );
-            availableOrders.forEach(order => {
-              allOrders.push({...order, type: 'available'});
-            });
+            availableOrders.forEach(order => addOrder(order, 'available'));
           }
 
 
           if (activeData.deliveries && activeData.deliveries.length > 0) {
-            activeData.deliveries.forEach(order => {
-              allOrders.push({...order, type: 'active'});
-            });
+            activeData.deliveries.forEach(order => addOrder(order, 'active'));
           }
 
 
@@ -782,7 +793,7 @@
 
 
           // Sort orders by date - newest first (latest transactions at the top)
-          allOrders.sort((a, b) => {
+          const allOrders = Array.from(orderMap.values()).sort((a, b) => {
             const dateA = new Date(a.created_at || a.order_date || 0);
             const dateB = new Date(b.created_at || b.order_date || 0);
             return dateB - dateA; // Descending order (newest first)
@@ -877,7 +888,7 @@
                 } else if (order.shipment_status === 'picked_up') {
                   actionButton = `
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'in_transit')"
+                      <button onclick="updateDeliveryStatus(event, ${order.shipment_id}, 'in_transit')"
                               style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
                               onmouseover="this.style.background='#2563eb'"
                               onmouseout="this.style.background='#3b82f6'">
@@ -894,7 +905,7 @@
                 } else if (order.shipment_status === 'in_transit') {
                   actionButton = `
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'out_for_delivery')"
+                      <button onclick="updateDeliveryStatus(event, ${order.shipment_id}, 'out_for_delivery')"
                               style="background:#8b5cf6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
                               onmouseover="this.style.background='#7c3aed'"
                               onmouseout="this.style.background='#8b5cf6'">
@@ -911,7 +922,7 @@
                 } else if (order.shipment_status === 'out_for_delivery') {
                   actionButton = `
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'delivered')"
+                      <button onclick="updateDeliveryStatus(event, ${order.shipment_id}, 'delivered')"
                               style="background:#059669;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
                               onmouseover="this.style.background='#047857'"
                               onmouseout="this.style.background='#059669'">
@@ -1003,75 +1014,84 @@
       }
 
 
-      function acceptOrder(shipmentId) {
-        if (!confirm('Accept this delivery order?')) return;
+      async function acceptOrder(shipmentId) {
+        const confirmed = await VaronNotifications.confirm('Accept this delivery order?', {
+          confirmText: 'Accept Order',
+          cancelText: 'Not Now',
+          confirmClass: 'confirm'
+        });
 
-        fetch('/api/rider/accept-order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ shipment_id: shipmentId })
-        })
-        .then(response => response.json())
-        .then(data => {
+        if (!confirmed) return;
+
+        try {
+          const response = await fetch('/api/rider/accept-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ shipment_id: shipmentId })
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('Order accepted! You can now start the delivery.');
+            VaronNotifications.success('Order accepted! You can now start the delivery.');
             loadAvailableOrders();
             loadMyActiveDeliveries();
           } else {
-            alert('Failed to accept order: ' + (data.error || 'Unknown error'));
+            VaronNotifications.error('Failed to accept order: ' + (data.error || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Error accepting order:', error);
-          alert('Error accepting order. Please try again.');
-        });
+          VaronNotifications.error('Error accepting order. Please try again.');
+        }
       }
 
 
-      function updateDeliveryStatus(shipmentId, newStatus) {
+      async function updateDeliveryStatus(evt, shipmentId, newStatus) {
         if (!newStatus) return;
 
-        const statusText = newStatus.replace('_', ' ').toUpperCase();
-        if (!confirm(`Update status to ${statusText}?`)) {
+        const statusText = newStatus.replace(/_/g, ' ').toUpperCase();
+        const confirmed = await VaronNotifications.confirm(`Update status to ${statusText}?`, {
+          confirmText: 'Update Status',
+          cancelText: 'Not Yet',
+          confirmClass: 'confirm'
+        });
 
-          event.target.value = '';
+        if (!confirmed) {
           return;
         }
 
-        fetch('/api/rider/update-delivery-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            shipment_id: shipmentId,
-            status: newStatus
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('Status updated successfully!');
-            if (newStatus === 'delivered') {
-              alert('🎉 Delivery completed! Your earnings have been updated.');
+        try {
+          const response = await fetch('/api/rider/update-delivery-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              shipment_id: shipmentId,
+              status: newStatus
+            })
+          });
 
+          const data = await response.json();
+
+          if (data.success) {
+            VaronNotifications.success('Status updated successfully!');
+            if (newStatus === 'delivered') {
+              VaronNotifications.success('🎉 Delivery completed! Your earnings have been updated.');
               loadMyActiveDeliveries();
               loadDeliveryHistory();
             } else {
               loadMyActiveDeliveries();
             }
           } else {
-            alert('Failed to update status: ' + (data.error || 'Unknown error'));
-            event.target.value = '';
+            VaronNotifications.error('Failed to update status: ' + (data.error || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Error updating status:', error);
-          alert('Error updating status. Please try again.');
-          event.target.value = '';
-        });
+          VaronNotifications.error('Error updating status. Please try again.');
+        }
       }
 
 
@@ -1247,7 +1267,42 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
 
               document.getElementById('weekly-earnings').textContent = '₱' + parseFloat(data.weekly_earnings).toFixed(2);
               document.getElementById('monthly-earnings').textContent = '₱' + parseFloat(data.monthly_earnings).toFixed(2);
+      function sanitizeReviewText(text) {
+        if (text === null || text === undefined) {
+          return '';
+        }
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, (m) => map[m]);
+      }
 
+      function convertToDisplayDate(dateString) {
+        if (!dateString) {
+          return '—';
+        }
+        const parsed = new Date(dateString);
+        if (Number.isNaN(parsed.getTime())) {
+          return dateString;
+        }
+        return parsed.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+
+      function formatRiderReviewComment(comment) {
+        const safeText = sanitizeReviewText(comment);
+        if (!safeText || safeText.trim().length === 0) {
+          return '<span style="color:#9ca3af;">No comment provided.</span>';
+        }
+        return safeText.replace(/\n/g, '<br>');
+      }
+
+
+        const reviewsTableBody = document.querySelector('#reviews-table tbody');
+        if (reviewsTableBody) {
+          reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999">Loading reviews...</td></tr>';
+        }
 
               const tbody = document.querySelector('#earnings-breakdown-table tbody');
               tbody.innerHTML = `
@@ -1347,6 +1402,50 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
             if (reviewsTableBody) {
               reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Error loading reviews</td></tr>';
             }
+          });
+        loadRiderReviews();
+      }
+
+      function loadRiderReviews() {
+        const reviewsTableBody = document.querySelector('#reviews-table tbody');
+        if (!reviewsTableBody) {
+          return;
+        }
+
+        fetch('/api/rider/ratings')
+          .then(response => response.json())
+          .then(data => {
+            if (!data.success) {
+              reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Unable to load reviews</td></tr>';
+              return;
+            }
+
+            if (!data.reviews || data.reviews.length === 0) {
+              reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999">No reviews yet</td></tr>';
+              return;
+            }
+
+            reviewsTableBody.innerHTML = data.reviews.map(review => {
+              const ratingValue = review.rating ? Number(review.rating) : 0;
+              const stars = ratingValue ? '⭐'.repeat(Math.max(1, Math.round(ratingValue))) : '—';
+              const ratingLabel = ratingValue ? `${stars} <span style="color:#6b7280;font-size:12px;margin-left:4px;">${ratingValue.toFixed(1).replace(/\.0$/, '')}</span>` : '—';
+              const name = sanitizeReviewText(review.customer_name || 'Buyer');
+              const comment = formatRiderReviewComment(review.comment);
+              const reviewDate = convertToDisplayDate(review.created_at);
+
+              return `
+                <tr>
+                  <td>${reviewDate}</td>
+                  <td>${name}</td>
+                  <td>${ratingLabel}</td>
+                  <td>${comment}</td>
+                </tr>
+              `;
+            }).join('');
+          })
+          .catch(error => {
+            console.error('Error loading rider reviews:', error);
+            reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Error loading reviews</td></tr>';
           });
       }
 

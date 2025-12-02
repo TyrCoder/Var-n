@@ -509,14 +509,20 @@
       </div>
     </footer>
 
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script>
       async function confirmOrderStatus() {
         const btn = document.getElementById('confirmOrderBtn');
 
         if (!btn) return;
 
-        if (!confirm('Confirm this order? This will change the status to CONFIRMED.')) return;
+        const confirmed = await VaronNotifications.confirm('Confirm this order? This will change the status to CONFIRMED.', {
+          confirmText: 'Confirm Order',
+          cancelText: 'Keep Pending',
+          confirmClass: 'confirm'
+        });
 
+        if (!confirmed) return;
 
         btn.disabled = true;
         btn.textContent = 'Confirming...';
@@ -530,16 +536,16 @@
           const data = await response.json();
 
           if (data.success) {
-            alert('✅ Order confirmed successfully!');
+            VaronNotifications.success('Order confirmed successfully!');
             location.reload();
           } else {
-            alert(data.error || 'Failed to confirm order');
+            VaronNotifications.error(data.error || 'Failed to confirm order');
             btn.disabled = false;
             btn.textContent = '✓ Confirm Order';
           }
         } catch (error) {
           console.error('Error confirming order:', error);
-          alert('An error occurred. Please try again.');
+          VaronNotifications.error('An error occurred. Please try again.');
           btn.disabled = false;
           btn.textContent = '✓ Confirm Order';
         }
@@ -550,6 +556,13 @@
 
         if (!btn) return;
 
+        const confirmed = await VaronNotifications.confirm('Confirm that you have received this order in good condition?', {
+          confirmText: 'Yes, Received',
+          cancelText: 'Not Yet',
+          confirmClass: 'confirm'
+        });
+
+        if (!confirmed) return;
 
         btn.disabled = true;
         btn.textContent = 'Confirming...';
@@ -563,44 +576,51 @@
           const data = await response.json();
 
           if (data.success) {
-            alert('✅ ' + data.message);
+            VaronNotifications.success(data.message || 'Order receipt confirmed');
             location.reload();
           } else {
-            alert(data.error || 'Failed to confirm order receipt');
+            VaronNotifications.error(data.error || 'Failed to confirm order receipt');
             btn.disabled = false;
             btn.textContent = '✓ Order Received';
           }
         } catch (error) {
           console.error('Error confirming order:', error);
-          alert('An error occurred. Please try again.');
+          VaronNotifications.error('An error occurred. Please try again.');
           btn.disabled = false;
           btn.textContent = '✓ Order Received';
         }
       }
 
-      function cancelOrder(orderNumber) {
-        if (!confirm('Are you sure you want to cancel this order?')) return;
+      async function cancelOrder(orderNumber) {
+        const confirmed = await VaronNotifications.confirm('Are you sure you want to cancel this order?', {
+          confirmText: 'Cancel Order',
+          cancelText: 'Keep Order',
+          confirmClass: 'danger'
+        });
 
-        fetch('/api/cancel-order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ order_number: orderNumber })
-        })
-        .then(response => response.json())
-        .then(data => {
+        if (!confirmed) return;
+
+        try {
+          const response = await fetch('/api/cancel-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ order_number: orderNumber })
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('Order cancelled successfully');
+            VaronNotifications.success('Order cancelled successfully');
             location.reload();
           } else {
-            alert('Failed to cancel order: ' + (data.error || 'Unknown error'));
+            VaronNotifications.error('Failed to cancel order: ' + (data.error || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Error:', error);
-          alert('Error cancelling order');
-        });
+          VaronNotifications.error('Error cancelling order: ' + error.message);
+        }
       }
 
 

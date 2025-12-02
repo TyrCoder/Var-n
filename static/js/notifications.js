@@ -528,3 +528,31 @@ document.head.appendChild(style);
 
 // Export for global use
 window.VaronNotifications = VaronNotifications;
+
+// Gracefully replace native alerts with styled notifications.
+if (!window.__varonAlertsPatched) {
+  window.__varonAlertsPatched = true;
+
+  const detectTypeFromMessage = (message) => {
+    if (!message) return 'info';
+    const trimmed = message.trim().toLowerCase();
+    if (trimmed.startsWith('✅') || trimmed.includes('success')) return 'success';
+    if (trimmed.startsWith('❌') || trimmed.includes('error') || trimmed.includes('failed')) return 'error';
+    if (trimmed.startsWith('⚠') || trimmed.includes('warning')) return 'warning';
+    return 'info';
+  };
+
+  const formatMessage = (value) => {
+    const raw = typeof value === 'string' ? value : JSON.stringify(value);
+    return {
+      raw,
+      html: raw.replace(/\n/g, '<br>')
+    };
+  };
+
+  window.alert = (value) => {
+    const { raw, html } = formatMessage(value);
+    const type = detectTypeFromMessage(raw);
+    VaronNotifications[type](html);
+  };
+}

@@ -1186,6 +1186,7 @@ def get_product_reviews(product_id):
         for review in reviews:
             if review.get('created_at'):
                 review['created_at'] = review['created_at'].isoformat()
+            review['comment'] = review.get('comment') or ''
 
         cursor.close()
         conn.close()
@@ -9788,32 +9789,35 @@ def api_rider_ratings():
 
         rider_id = rider['id']
 
-
-
         cursor.execute('''
-            SELECT AVG(CAST(rating AS DECIMAL(3,1))) as avg_rating, COUNT(*) as total_count
-            FROM shipments s
-            JOIN orders o ON s.order_id = o.id
-            WHERE s.rider_id = %s AND s.rider_rating IS NOT NULL
+            SELECT 
+                AVG(rr.rating) as avg_rating,
+                COUNT(*) as total_count
+            FROM rider_ratings rr
+            WHERE rr.rider_id = %s
         ''', (rider_id,))
 
         rating_data = cursor.fetchone()
-        overall_rating = float(rating_data['avg_rating']) if rating_data and rating_data['avg_rating'] else 4.8
+        overall_rating = float(rating_data['avg_rating']) if rating_data and rating_data['avg_rating'] else 0
         total_ratings = int(rating_data['total_count']) if rating_data else 0
 
-
         cursor.execute('''
-            SELECT o.created_at, CONCAT(u.first_name, ' ', u.last_name) as customer_name,
-                   s.rider_rating as rating, s.rider_comment as comment
-            FROM shipments s
-            JOIN orders o ON s.order_id = o.id
-            JOIN users u ON o.user_id = u.id
-            WHERE s.rider_id = %s AND s.rider_rating IS NOT NULL
-            ORDER BY o.created_at DESC
-            LIMIT 20
+            SELECT rr.created_at, rr.rating, rr.comment,
+                   CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+                   o.order_number
+            FROM rider_ratings rr
+            JOIN users u ON rr.user_id = u.id
+            LEFT JOIN orders o ON rr.order_id = o.id
+            WHERE rr.rider_id = %s
+            ORDER BY rr.created_at DESC
+            LIMIT 50
         ''', (rider_id,))
 
         reviews = cursor.fetchall()
+        for review in reviews:
+            if review.get('created_at'):
+                review['created_at'] = review['created_at'].isoformat()
+            review['comment'] = review.get('comment') or ''
 
         cursor.close()
         conn.close()

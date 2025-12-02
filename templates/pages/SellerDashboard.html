@@ -2713,98 +2713,120 @@
         .catch(error => console.error('❌ Error marking notification read:', error));
       }
 
-      function releaseOrderToRider(orderId) {
+      async function releaseOrderToRider(orderId) {
         console.log('[INFO] Releasing order to rider:', orderId);
 
-        if (!confirm('Release this order for rider pickup? Available riders in the area will be notified.')) {
-          return;
-        }
+        const confirmed = await VaronNotifications.confirm(
+          'Release this order for rider pickup? Available riders in the area will be notified.',
+          {
+            confirmText: 'Release Order',
+            cancelText: 'Not Now',
+            confirmClass: 'confirm'
+          }
+        );
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
 
-        fetch(`/api/seller/order/${orderId}/release`, {
-          method: 'POST',
-          body: formData,
-          credentials: 'include'
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch(`/api/seller/order/${orderId}/release`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('✅ ' + data.message);
+            VaronNotifications.success(data.message || 'Order released for rider pickup');
             loadOrders('confirmed');
             loadNotifications();
           } else {
-            alert('❌ Failed to release order: ' + (data.error || 'Unknown error'));
+            VaronNotifications.error('Failed to release order: ' + (data.error || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('❌ Error releasing order:', error);
           VaronNotifications.error('Error releasing order: ' + error.message);
-        });
+        }
       }
 
-      function confirmOrder(orderId) {
+      async function confirmOrder(orderId) {
         console.log('[INFO] Confirming order:', orderId);
 
-        if (!confirm('Confirm this order?')) return;
+        const confirmed = await VaronNotifications.confirm('Confirm this order?', {
+          confirmText: 'Confirm Order',
+          cancelText: 'Not Yet',
+          confirmClass: 'confirm'
+        });
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
 
-        fetch('/seller/confirm-order', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/seller/confirm-order', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
           if (data.success) {
             const message = data.rider_assigned ?
               '✅ Order confirmed and assigned to a rider!' :
               '✅ Order confirmed! A rider in your area will accept it soon.';
-            alert(message);
+            VaronNotifications.success(message);
             loadOrders(currentOrderFilter);
             updateStatusCounts();
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
-            alert('❌ Failed to confirm order: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Failed to confirm order: ' + (data.error || data.message || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('❌ Error confirming order:', error);
           VaronNotifications.error('Error confirming order: ' + error.message);
-        });
+        }
       }
 
-      function setToWaitingPickup(orderId) {
+      async function setToWaitingPickup(orderId) {
         console.log('[INFO] Setting order to waiting for pickup:', orderId);
 
-        if (!confirm('Mark this order as Waiting for Pick Up? Riders will be able to accept this order.')) {
-          return;
-        }
+        const confirmed = await VaronNotifications.confirm(
+          'Mark this order as Waiting for Pick Up? Riders will be able to accept this order.',
+          {
+            confirmText: 'Enable Pickup',
+            cancelText: 'Keep Pending',
+            confirmClass: 'confirm'
+          }
+        );
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('new_status', 'waiting_for_pickup');
 
-        fetch('/seller/update-order-status', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          console.log('Response:', data);
+        try {
+          const response = await fetch('/seller/update-order-status', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('Order marked as Waiting for Pick Up!');
+            VaronNotifications.success('Order marked as Waiting for Pick Up!');
             loadOrders('confirmed');
           } else {
-            alert('Error: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Error: ' + (data.error || data.message || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Error updating order status:', error);
           VaronNotifications.error('Error updating order: ' + error.message);
-        });
+        }
       }
 
       function viewDeliveryStatus(orderId) {
@@ -2831,22 +2853,22 @@
         const currentStatus = statusMap[order.shipment_status] || order.shipment_status;
 
         const details = `
-📦 DELIVERY TRACKING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Order #${order.order_number}
-Customer: ${order.customer_name || 'N/A'}
+      📦 DELIVERY TRACKING
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      Order #${order.order_number}
+      Customer: ${order.customer_name || 'N/A'}
 
-🚚 Rider: ${riderName}
-📍 Current Status: ${currentStatus}
-📍 Delivery to: ${order.shipping_city || ''}, ${order.shipping_province || ''}
+      🚚 Rider: ${riderName}
+      📍 Current Status: ${currentStatus}
+      📍 Delivery to: ${order.shipping_city || ''}, ${order.shipping_province || ''}
 
-⏰ Order Time: ${new Date(order.created_at).toLocaleString()}
+      ⏰ Order Time: ${new Date(order.created_at).toLocaleString()}
         `;
 
-        alert(details);
+        VaronNotifications.info(details.replace(/\n/g, '<br>'));
       }
 
-      function confirmDelivery(orderId) {
+      async function confirmDelivery(orderId) {
         console.log('[SUCCESS] Confirming delivery for order:', orderId);
         const order = allOrders.find(o => o.id === orderId);
 
@@ -2855,32 +2877,40 @@ Customer: ${order.customer_name || 'N/A'}
           return;
         }
 
-        if (!confirm(`Confirm that Order #${order.order_number} has been delivered to ${order.customer_name}?`)) {
-          return;
-        }
+        const confirmed = await VaronNotifications.confirm(
+          `Confirm that Order #${order.order_number} has been delivered to ${order.customer_name}?`,
+          {
+            confirmText: 'Mark Delivered',
+            cancelText: 'Not Yet',
+            confirmClass: 'confirm'
+          }
+        );
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('new_status', 'delivered');
 
-        fetch('/seller/update-order-status', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/seller/update-order-status', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('✅ Order marked as delivered!');
+            VaronNotifications.success('Order marked as delivered!');
             loadOrders('all');
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
-            alert('Error: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Error: ' + (data.error || data.message || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('Error confirming delivery:', error);
           VaronNotifications.error('Error confirming delivery: ' + error.message);
-        });
+        }
       }
 
       function releaseToRider(orderId) {
@@ -2986,105 +3016,125 @@ Customer: ${order.customer_name || 'N/A'}
           });
       }
 
-      function assignRiderToOrder(orderId, riderId, riderName) {
+      async function assignRiderToOrder(orderId, riderId, riderName) {
         console.log('[SUCCESS] Assigning rider ' + riderId + ' (' + riderName + ') to order ' + orderId);
 
-        if (!confirm(`Assign ${riderName} as the rider for this delivery?`)) {
-          return;
-        }
+        const confirmed = await VaronNotifications.confirm(
+          `Assign ${riderName} as the rider for this delivery?`,
+          {
+            confirmText: 'Assign Rider',
+            cancelText: 'Cancel',
+            confirmClass: 'confirm'
+          }
+        );
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('rider_id', riderId);
         formData.append('new_status', 'released_to_rider');
 
-        fetch('/seller/release-to-rider', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/seller/release-to-rider', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
           console.log('Release to rider response:', data);
 
           if (data.success) {
-
             document.querySelectorAll('[style*="fixed"]').forEach(el => {
               if (el.style.background && el.style.background.includes('rgba(0,0,0,0.6)')) {
                 el.remove();
               }
             });
-            alert(`✅ Order released to ${riderName}! Rider can now start delivery.`);
+            VaronNotifications.success(`Order released to ${riderName}! Rider can now start delivery.`);
             loadOrders(currentOrderFilter);
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
-            alert('❌ Failed to assign rider: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Failed to assign rider: ' + (data.error || data.message || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('❌ Error assigning rider:', error);
           VaronNotifications.error('Error assigning rider: ' + error.message);
-        });
+        }
       }
 
-      function releaseToRiderDelivered(orderId) {
+      async function releaseToRiderDelivered(orderId) {
         console.log('🚚 Releasing to rider (delivered status):', orderId);
 
-        if (!confirm('Release to Rider?')) return;
+        const confirmed = await VaronNotifications.confirm('Release to Rider?', {
+          confirmText: 'Release',
+          cancelText: 'Keep Pending',
+          confirmClass: 'confirm'
+        });
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('new_status', 'delivered');
 
-        fetch('/seller/update-order-status', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/seller/update-order-status', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('✅ Approved! The rider will ship it to the customer.');
+            VaronNotifications.success('Approved! The rider will ship it to the customer.');
             loadOrders(currentOrderFilter);
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
-            alert('❌ Failed to update order: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Failed to update order: ' + (data.error || data.message || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('❌ Error updating order:', error);
           VaronNotifications.error('Error updating order: ' + error.message);
-        });
+        }
       }
 
-      function markShipped(orderId) {
+      async function markShipped(orderId) {
         console.log('[ACTION] Marking order as shipped:', orderId);
 
-        if (!confirm('Mark as Shipped?')) return;
+        const confirmed = await VaronNotifications.confirm('Mark as Shipped?', {
+          confirmText: 'Mark Shipped',
+          cancelText: 'Cancel',
+          confirmClass: 'confirm'
+        });
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('new_status', 'shipped');
 
-        fetch('/seller/update-order-status', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/seller/update-order-status', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('✅ Order marked as shipped!');
+            VaronNotifications.success('Order marked as shipped!');
             loadOrders(currentOrderFilter);
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
-            alert('❌ Failed to update order: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Failed to update order: ' + (data.error || data.message || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('❌ Error updating order:', error);
           VaronNotifications.error('Error updating order: ' + error.message);
-        });
+        }
       }
 
-      function updateSellerOrderStatus(orderId, newStatus) {
+      async function updateSellerOrderStatus(orderId, newStatus) {
         console.log('📊 Updating seller order status:', orderId, 'to:', newStatus);
 
         const statusLabels = {
@@ -3093,30 +3143,40 @@ Customer: ${order.customer_name || 'N/A'}
           'released_to_rider': '🚚 Release to Rider'
         };
 
-        if (!confirm(`Update order status to ${statusLabels[newStatus] || newStatus}?`)) return;
+        const confirmed = await VaronNotifications.confirm(
+          `Update order status to ${statusLabels[newStatus] || newStatus}?`,
+          {
+            confirmText: 'Update Status',
+            cancelText: 'Cancel',
+            confirmClass: 'confirm'
+          }
+        );
+
+        if (!confirmed) return;
 
         const formData = new FormData();
         formData.append('order_id', orderId);
         formData.append('new_status', newStatus);
 
-        fetch('/seller/update-order-status', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/seller/update-order-status', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert(`✅ Order status updated to ${statusLabels[newStatus]}`);
+            VaronNotifications.success(`Order status updated to ${statusLabels[newStatus] || newStatus}`);
             loadOrders(currentOrderFilter);
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
-            alert('❌ Failed to update order: ' + (data.error || data.message || 'Unknown error'));
+            VaronNotifications.error('Failed to update order: ' + (data.error || data.message || 'Unknown error'));
           }
-        })
-        .catch(error => {
+        } catch (error) {
           console.error('❌ Error updating order:', error);
           VaronNotifications.error('Error updating order: ' + error.message);
-        });
+        }
       }
 
       function approveRiderForDelivery(orderId, riderId) {
@@ -4183,18 +4243,27 @@ Customer: ${order.customer_name || 'N/A'}
         });
       }
 
-      function deletePromotion(promoId) {
-        if (confirm('Are you sure you want to delete this promotion?')) {
-          fetch(`/seller/promotion/${promoId}/delete`, { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-              if (data.success) {
-                alert('Promotion deleted');
-                loadPromotions();
-              } else {
-                alert('Error: ' + (data.error || 'Unknown error'));
-              }
-            });
+      async function deletePromotion(promoId) {
+        const confirmed = await VaronNotifications.confirm('Are you sure you want to delete this promotion?', {
+          confirmText: 'Delete Promotion',
+          cancelText: 'Keep',
+          confirmClass: 'danger'
+        });
+
+        if (!confirmed) return;
+
+        try {
+          const response = await fetch(`/seller/promotion/${promoId}/delete`, { method: 'POST' });
+          const data = await response.json();
+
+          if (data.success) {
+            VaronNotifications.success('Promotion deleted');
+            loadPromotions();
+          } else {
+            VaronNotifications.error('Error: ' + (data.error || 'Unknown error'));
+          }
+        } catch (error) {
+          VaronNotifications.error('Error deleting promotion: ' + error.message);
         }
       }
 
@@ -4494,9 +4563,15 @@ Customer: ${order.customer_name || 'N/A'}
         }
       }
 
-      function removeEditVariant(variantId) {
-        if (!confirm('Are you sure you want to delete this variant?')) return;
-        
+      async function removeEditVariant(variantId) {
+        const confirmed = await VaronNotifications.confirm('Are you sure you want to delete this variant?', {
+          confirmText: 'Delete Variant',
+          cancelText: 'Keep Variant',
+          confirmClass: 'danger'
+        });
+
+        if (!confirmed) return;
+
         const variantIndex = editVariantsData.findIndex(v => v.id === variantId);
         if (variantIndex !== -1) {
           editVariantsData[variantIndex].deleted = true;
@@ -4615,7 +4690,7 @@ Customer: ${order.customer_name || 'N/A'}
         }
       }
 
-      function submitProductEdit() {
+      async function submitProductEdit() {
         const form = document.getElementById('editProductForm');
         const formData = new FormData(form);
 
@@ -4671,7 +4746,13 @@ Customer: ${order.customer_name || 'N/A'}
         }
         confirmMsg += '\. These changes will require admin approval. Continue?';
 
-        if (!confirm(confirmMsg)) {
+        const confirmed = await VaronNotifications.confirm(confirmMsg, {
+          confirmText: 'Submit for Review',
+          cancelText: 'Go Back',
+          confirmClass: 'confirm'
+        });
+
+        if (!confirmed) {
           return;
         }
 
@@ -4701,34 +4782,50 @@ Customer: ${order.customer_name || 'N/A'}
         });
       }
 
-      function archiveProduct(productId, productName) {
-        const reason = prompt(`Archive "${productName}"?. Optional reason for archiving:`, '');
+      async function archiveProduct(productId, productName) {
+        const reason = await VaronNotifications.prompt(`Archive "${productName}"? Optional reason for archiving:`, {
+          title: 'Archive Product',
+          placeholder: 'Optional reason (e.g., seasonal pause)',
+          confirmText: 'Continue',
+          cancelText: 'Cancel'
+        });
+
         if (reason === null) return;
 
-        if (!confirm(`Are you sure you want to archive "${productName}"?. Archived products will be hidden from your store and require admin approval to recover.`)) {
+        const confirmed = await VaronNotifications.confirm(
+          `Are you sure you want to archive "${productName}"? Archived products will be hidden from your store and require admin approval to recover.`,
+          {
+            confirmText: 'Archive Product',
+            cancelText: 'Keep Active',
+            confirmClass: 'danger'
+          }
+        );
+
+        if (!confirmed) {
           return;
         }
 
         const formData = new FormData();
         formData.append('product_id', productId);
-        formData.append('reason', reason);
+        formData.append('reason', reason || '');
 
-        fetch('/seller/archive-product', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
+        try {
+          const response = await fetch('/seller/archive-product', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await response.json();
+
           if (data.success) {
-            alert('✓ Product archived successfully!');
+            VaronNotifications.success('Product archived successfully!');
             loadPage('products');
           } else {
-            alert('Error: ' + data.error);
+            VaronNotifications.error('Error: ' + data.error);
           }
-        })
-        .catch(error => {
-          VaronNotifications.error('Error archiving product');
-        });
+        } catch (error) {
+          VaronNotifications.error('Error archiving product: ' + error.message);
+        }
       }
 
       function loadArchivedProducts() {
@@ -4963,7 +5060,7 @@ Customer: ${order.customer_name || 'N/A'}
       }
 
       // Logout Modal Functions
-      function confirmLogout(event) {
+      async function confirmLogout(event) {
         if (event) event.preventDefault();
         console.log('[LOGOUT] Opening logout confirmation modal');
         const modal = document.getElementById('logoutModal');
@@ -4971,7 +5068,12 @@ Customer: ${order.customer_name || 'N/A'}
           modal.style.display = 'flex';
         } else {
           console.error('[LOGOUT] Logout modal not found!');
-          if (confirm('Are you sure you want to logout?')) {
+          const confirmed = await VaronNotifications.confirm('Are you sure you want to logout?', {
+            confirmText: 'Logout',
+            cancelText: 'Stay Logged In',
+            confirmClass: 'danger'
+          });
+          if (confirmed) {
             window.location.href = '/logout';
           }
         }

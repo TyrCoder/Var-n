@@ -3,22 +3,51 @@
 const VaronCart = {
   // Show notification message
   showMessage(message, type = 'success') {
-    // Create toast element if it doesn't exist
+    const normalizedType = ['success', 'error', 'info', 'warning'].includes(type) ? type : 'success';
+
+    if (window.VaronNotifications && typeof window.VaronNotifications[normalizedType] === 'function') {
+      window.VaronNotifications[normalizedType](message);
+      return;
+    }
+
+    // Fallback toast if the notification utility is unavailable
     let toast = document.getElementById('cart-toast');
     if (!toast) {
       toast = document.createElement('div');
       toast.id = 'cart-toast';
-      toast.className = 'cart-toast';
+      toast.style.position = 'fixed';
+      toast.style.top = '90px';
+      toast.style.right = '20px';
+      toast.style.zIndex = '9999';
+      toast.style.borderRadius = '10px';
+      toast.style.padding = '14px 18px';
+      toast.style.fontFamily = "'Commissioner', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+      toast.style.fontWeight = '500';
+      toast.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.12)';
+      toast.style.transform = 'translateX(400px)';
+      toast.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      toast.style.color = '#0a0a0a';
       document.body.appendChild(toast);
     }
-    
-    // Set message and type
+
+    const accentColors = {
+      success: '#10b981',
+      error: '#ef4444',
+      warning: '#f59e0b',
+      info: '#3b82f6'
+    };
+
     toast.textContent = message;
-    toast.className = `cart-toast cart-toast-${type} cart-toast-show`;
-    
-    // Auto hide after 3 seconds
+    toast.style.borderLeft = `4px solid ${accentColors[normalizedType] || accentColors.success}`;
+    toast.style.background = '#ffffff';
+    requestAnimationFrame(() => {
+      toast.style.transform = 'translateX(0)';
+      toast.style.opacity = '1';
+    });
+
     setTimeout(() => {
-      toast.classList.remove('cart-toast-show');
+      toast.style.transform = 'translateX(400px)';
+      toast.style.opacity = '0';
     }, 3000);
   },
   
