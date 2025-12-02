@@ -2778,6 +2778,9 @@ def admin_pending_products():
         cursor.close()
         conn.close()
 
+        # Convert Decimal values to float for JSON serialization
+        pending_products = convert_decimals_to_float(pending_products)
+
         return jsonify({'products': pending_products}), 200
 
     except Exception as err:
@@ -2839,6 +2842,10 @@ def admin_product_details(product_id):
 
         cursor.close()
         conn.close()
+
+        # Convert Decimal values to float for JSON serialization
+        product = convert_decimals_to_float(product)
+        variants = convert_decimals_to_float(variants)
 
         return jsonify({
             'success': True,
@@ -5608,8 +5615,6 @@ def seller_add_product():
             ingredients = request.form.get('ingredients', '').strip()
             volume = request.form.get('volume', '').strip()
             grooming_stock = int(request.form.get('grooming_stock', 0))
-            if not ingredients:
-                return jsonify({'error': 'Ingredients are required for grooming products'}), 400
             if grooming_stock <= 0:
                 return jsonify({'error': 'Stock quantity is required for grooming products'}), 400
 
@@ -5699,12 +5704,19 @@ def seller_add_product():
                         print(f"[DEBUG] ⚠️ Skipping variant with 0 stock")
         else:
             # Handle grooming products: store ingredients, volume in description
-            grooming_desc = f"\n\n**Volume/Size:** {volume}\n\n**Ingredients:**\n{ingredients}"
-            cursor.execute('''
-                UPDATE products
-                SET description = CONCAT(description, %s)
-                WHERE id = %s
-            ''', (grooming_desc, product_id))
+            grooming_desc_parts = []
+            if volume:
+                grooming_desc_parts.append(f"\n\n**Volume/Size:** {volume}")
+            if ingredients:
+                grooming_desc_parts.append(f"\n\n**Ingredients:**\n{ingredients}")
+
+            if grooming_desc_parts:
+                grooming_desc = ''.join(grooming_desc_parts)
+                cursor.execute('''
+                    UPDATE products
+                    SET description = CONCAT(description, %s)
+                    WHERE id = %s
+                ''', (grooming_desc, product_id))
             total_stock = grooming_stock
 
 

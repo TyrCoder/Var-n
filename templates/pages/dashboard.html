@@ -60,6 +60,31 @@
         .grid.stats{grid-template-columns:repeat(2,1fr)}
         .grid.two{grid-template-columns:1fr}
       }
+
+      .toast-notification{
+        position:fixed;
+        top:24px;
+        right:24px;
+        background:#0a0a0a;
+        color:#fff;
+        padding:14px 18px;
+        border-radius:10px;
+        box-shadow:0 10px 30px rgba(0,0,0,0.15);
+        opacity:0;
+        pointer-events:none;
+        transform:translateY(-10px);
+        transition:opacity .25s ease, transform .25s ease;
+        z-index:1200;
+        font-size:14px;
+        max-width:320px;
+      }
+      .toast-notification.show{
+        opacity:1;
+        pointer-events:auto;
+        transform:translateY(0);
+      }
+      .toast-notification.error{background:#b91c1c;}
+      .toast-notification.success{background:#10b981;}
     </style>
   </head>
   <body>
@@ -181,6 +206,8 @@
       </section>
     </div>
 
+    <div id="toastNotification" class="toast-notification" role="status" aria-live="polite"></div>
+
     <!-- Logout Confirmation Modal -->
     <div id="logoutModal" style="position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1000">
       <div style="background:#fff;border-radius:10px;padding:24px;max-width:400px;box-shadow:0 4px 20px rgba(0,0,0,0.2)">
@@ -194,7 +221,113 @@
       </div>
     </div>
 
+    <!-- Approve Confirmation Modal -->
+    <div id="approveConfirmModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000">
+      <div style="background:#fff;border-radius:12px;padding:28px;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
+        <h2 style="margin:0 0 16px;font-size:18px;font-weight:600">Approve this product?</h2>
+        <p style="margin:0 0 24px;color:#666;font-size:14px">Are you sure you want to approve this product? It will be published immediately.</p>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button onclick="closeApproveModal()" style="padding:10px 20px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:6px;cursor:pointer;font-weight:500">Cancel</button>
+          <button onclick="confirmApprove()" style="padding:10px 20px;border:none;background:#10b981;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">Yes, Approve</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reject Confirmation Modal -->
+    <div id="rejectConfirmModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000">
+      <div style="background:#fff;border-radius:12px;padding:28px;max-width:400px;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
+        <h2 style="margin:0 0 16px;font-size:18px;font-weight:600">Reject this product?</h2>
+        <p style="margin:0 0 16px;color:#666;font-size:14px">Enter rejection reason (will be sent to the seller):</p>
+        <textarea id="rejectReason" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:inherit;font-size:14px;resize:vertical;min-height:80px" placeholder="Please provide a reason for rejection..."></textarea>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button onclick="closeRejectModal()" style="padding:10px 20px;border:1px solid #ddd;background:#f6f6f6;color:#0a0a0a;border-radius:6px;cursor:pointer;font-weight:500">Cancel</button>
+          <button onclick="confirmReject()" style="padding:10px 20px;border:none;background:#ef4444;color:#fff;border-radius:6px;cursor:pointer;font-weight:500">Yes, Reject</button>
+        </div>
+      </div>
+    </div>
+
     <script>
+      // Variables to store product ID during confirmation flow
+      let pendingApprovalProductId = null;
+      let pendingRejectionProductId = null;
+      let toastTimeout = null;
+
+      function showToast(message, type = 'success') {
+        const toast = document.getElementById('toastNotification');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.remove('success', 'error', 'show');
+        toast.classList.add(type === 'error' ? 'error' : 'success');
+        // Allow reflow so removing show works before re-adding
+        void toast.offsetWidth;
+        toast.classList.add('show');
+        if (toastTimeout) {
+          clearTimeout(toastTimeout);
+        }
+        toastTimeout = setTimeout(() => {
+          toast.classList.remove('show');
+        }, 3500);
+      }
+
+      // Approve Modal Functions
+      function openApproveModal(productId) {
+        console.log('openApproveModal called with:', productId);
+        console.log('Product ID type:', typeof productId);
+        pendingApprovalProductId = productId;
+        console.log('pendingApprovalProductId set to:', pendingApprovalProductId);
+        document.getElementById('approveConfirmModal').style.display = 'flex';
+      }
+
+      function closeApproveModal() {
+        document.getElementById('approveConfirmModal').style.display = 'none';
+        pendingApprovalProductId = null;
+      }
+
+      function confirmApprove() {
+        console.log('confirmApprove called');
+        console.log('pendingApprovalProductId:', pendingApprovalProductId);
+        if (!pendingApprovalProductId) {
+          showToast('No product selected', 'error');
+          return;
+        }
+        const productId = pendingApprovalProductId;
+        closeApproveModal();
+        approveProduct(productId);
+      }
+
+      // Reject Modal Functions
+      function openRejectModal(productId) {
+        pendingRejectionProductId = productId;
+        const reasonField = document.getElementById('rejectReason');
+        if (reasonField) {
+          reasonField.value = '';
+        }
+        document.getElementById('rejectConfirmModal').style.display = 'flex';
+      }
+
+      function closeRejectModal() {
+        document.getElementById('rejectConfirmModal').style.display = 'none';
+        const reasonField = document.getElementById('rejectReason');
+        if (reasonField) {
+          reasonField.value = '';
+        }
+        pendingRejectionProductId = null;
+      }
+
+      function confirmReject() {
+        if (!pendingRejectionProductId) {
+          return;
+        }
+        const reasonField = document.getElementById('rejectReason');
+        const reason = reasonField ? reasonField.value.trim() : '';
+        if (!reason) {
+          showToast('Please enter a rejection reason', 'error');
+          return;
+        }
+        const productId = pendingRejectionProductId;
+        closeRejectModal();
+        rejectProductWithReason(productId, reason);
+      }
 
       const pageTemplates = {
         'pending-products': `
@@ -639,8 +772,9 @@
                   product.inventory_stock ??
                   0;
                 const date = new Date(product.created_at).toLocaleDateString();
+                const productId = product.id;
                 html += `
-                  <tr id="product-${product.id}">
+                  <tr id="product-${productId}">
                     <td>
                       <strong>${product.name}</strong><br>
                       <small style="color: var(--muted)">${product.description ? product.description.substring(0, 50) + '...' : 'No description'}</small>
@@ -650,7 +784,7 @@
                     <td>${stockCount} pcs</td>
                     <td>${date}</td>
                     <td>
-                      <button class="tag" onclick="viewProductDetails(${product.id})" style="background: #3b82f6; cursor: pointer; border: none;">View Details</button>
+                      <button class="tag" onclick="viewProductDetails(${productId})" style="background: #3b82f6; cursor: pointer; border: none;">View Details</button>
                     </td>
                   </tr>
                 `;
@@ -668,37 +802,59 @@
       }
 
       function approveProduct(productId) {
-        if (!confirm('Approve this product?')) return;
-
-        fetch(`/admin/approve-product/${productId}`, {
-          method: 'POST'
+        console.log('Approving product:', productId);
+        console.log('Product ID type:', typeof productId);
+        
+        // Ensure productId is a number
+        const numericId = parseInt(productId, 10);
+        if (isNaN(numericId)) {
+          showToast('Invalid product ID: ' + productId, 'error');
+          return;
+        }
+        
+        const url = `/admin/approve-product/${numericId}`;
+        console.log('Fetching URL:', url);
+        
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
         })
-        .then(response => response.json())
+        .then(response => {
+          console.log('Approve response status:', response.status);
+          console.log('Approve response URL:', response.url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
         .then(data => {
+          console.log('Approve response data:', data);
           if (data.success) {
-            alert('Product approved successfully!');
-
-            document.getElementById(`product-${productId}`)?.remove();
-
-            const badge = document.querySelector('[data-page="pending-products"] .tag');
-            if (badge) {
-              const count = parseInt(badge.textContent) - 1;
-              badge.textContent = count > 0 ? count : '0';
+            showToast('Product approved successfully!', 'success');
+            const detailsModal = document.getElementById('product-details-modal');
+            if (detailsModal && detailsModal.style.display !== 'none') {
+              closeProductDetailsModal();
+            }
+            // Remove the approved product from the DOM
+            const productRow = document.getElementById(`product-${numericId}`);
+            if (productRow) {
+              productRow.remove();
             }
           } else {
-            alert('Error approving product: ' + data.error);
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
           }
         })
         .catch(error => {
-          alert('Error approving product');
+          console.error('Approve error:', error);
+          showToast('Error approving product: ' + error.message, 'error');
         });
       }
 
       function rejectProduct(productId) {
         const reason = prompt('Enter rejection reason (will be sent to the seller):');
         if (reason === null) return;
-        
-        if (!confirm('Reject and delete this product? This cannot be undone. The seller will be notified.')) return;
 
         fetch(`/admin/reject-product/${productId}`, {
           method: 'POST',
@@ -708,8 +864,6 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('✅ Product rejected and removed. Seller has been notified.');
-
             // Remove from pending products list
             const productRow = document.getElementById(`product-${productId}`);
             if (productRow) {
@@ -728,12 +882,58 @@
             if (pendingList && pendingList.querySelector('table tbody')?.children.length === 0) {
               pendingList.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending products to review</p>';
             }
+
+            showToast('Product rejected successfully!', 'success');
           } else {
-            alert('Error rejecting product: ' + data.error);
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
           }
         })
         .catch(error => {
-          alert('Error rejecting product: ' + error.message);
+          showToast('Error rejecting product: ' + error.message, 'error');
+        });
+      }
+
+      function rejectProductWithReason(productId, reason) {
+        console.log('Rejecting product:', productId, 'Reason:', reason);
+        fetch(`/admin/reject-product/${productId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reason || 'No reason provided' })
+        })
+        .then(response => {
+          console.log('Reject response status:', response.status);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Reject response data:', data);
+          if (data.success) {
+            showToast('Product rejected successfully!', 'success');
+            // Remove from pending products list
+            const productRow = document.getElementById(`product-${productId}`);
+            if (productRow) {
+              productRow.remove();
+            }
+
+            const badge = document.querySelector('[data-page="pending-products"] .tag');
+            if (badge) {
+              const count = parseInt(badge.textContent) - 1;
+              badge.textContent = count > 0 ? count : '0';
+            }
+
+            const pendingList = document.getElementById('pending-products-list');
+            if (pendingList && pendingList.querySelector('table tbody')?.children.length === 0) {
+              pendingList.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending products to review</p>';
+            }
+          } else {
+            showToast('Error: ' + (data.error || 'Unknown error'), 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Reject error:', error);
+          showToast('Error rejecting product: ' + error.message, 'error');
         });
       }
 
@@ -901,8 +1101,6 @@
       }
 
       function approvePromotion(promotionId) {
-        if (!confirm('Approve this promotion? An email will be sent to the seller.')) return;
-
         fetch(`/admin/promotion/${promotionId}/approve`, {
           method: 'POST',
           headers: {
@@ -913,7 +1111,7 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('Promotion approved successfully! Email sent to seller.');
+
             closePromotionDetailsModal();
             document.getElementById(`promotion-${promotionId}`)?.remove();
 
@@ -929,12 +1127,10 @@
             if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
               loadPendingPromotions();
             }
-          } else {
-            alert('Error approving promotion: ' + (data.error || 'Unknown error'));
           }
         })
         .catch(error => {
-          alert('Error approving promotion: ' + error.message);
+
           console.error('Error:', error);
         });
       }
@@ -953,7 +1149,7 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('Promotion rejected! Email sent to seller with rejection reason.');
+
             closePromotionDetailsModal();
             document.getElementById(`promotion-${promotionId}`)?.remove();
 
@@ -969,12 +1165,10 @@
             if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
               loadPendingPromotions();
             }
-          } else {
-            alert('Error rejecting promotion: ' + (data.error || 'Unknown error'));
           }
         })
         .catch(error => {
-          alert('Error rejecting promotion: ' + error.message);
+
           console.error('Error:', error);
         });
       }
@@ -1036,42 +1230,38 @@
       }
 
       function approveSeller(sellerId) {
-        if (!confirm('Approve this seller?')) return;
-
         fetch(`/admin/approve-seller/${sellerId}`, {
           method: 'POST'
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('Seller approved successfully!');
+
             document.getElementById(`seller-${sellerId}`)?.remove();
           } else {
-            alert('Error approving seller: ' + data.error);
+
           }
         })
         .catch(error => {
-          alert('Error approving seller');
+
         });
       }
 
       function rejectSeller(sellerId) {
-        if (!confirm('Reject this seller application? This will remove their seller account.')) return;
-
         fetch(`/admin/reject-seller/${sellerId}`, {
           method: 'POST'
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('Seller application rejected');
+
             document.getElementById(`seller-${sellerId}`)?.remove();
           } else {
-            alert('Error rejecting seller: ' + data.error);
+
           }
         })
         .catch(error => {
-          alert('Error rejecting seller');
+
         });
       }
 
@@ -1134,42 +1324,38 @@
       }
 
       function approveRider(riderId) {
-        if (!confirm('Approve this rider?')) return;
-
         fetch(`/admin/approve-rider/${riderId}`, {
           method: 'POST'
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('Rider approved successfully!');
+
             document.getElementById(`rider-${riderId}`)?.remove();
           } else {
-            alert('Error approving rider: ' + data.error);
+
           }
         })
         .catch(error => {
-          alert('Error approving rider');
+
         });
       }
 
       function rejectRider(riderId) {
-        if (!confirm('Reject this rider application?')) return;
-
         fetch(`/admin/reject-rider/${riderId}`, {
           method: 'POST'
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            alert('Rider application rejected');
+
             document.getElementById(`rider-${riderId}`)?.remove();
           } else {
-            alert('Error rejecting rider: ' + data.error);
+
           }
         })
         .catch(error => {
-          alert('Error rejecting rider');
+
         });
       }
 
@@ -1759,8 +1945,8 @@
                   <!-- Action Buttons -->
                   <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:16px;border-top:2px solid var(--line);">
                     <button onclick="closeProductDetailsModal()" class="tag" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px;">Close</button>
-                    <button onclick="approveProductFromModal(${productId})" class="tag" style="background:#10b981;cursor:pointer;border:none;padding:10px 16px;color:#fff;">✓ Approve</button>
-                    <button onclick="rejectProductFromModal(${productId})" class="tag" style="background:#ef4444;cursor:pointer;border:none;padding:10px 16px;color:#fff;">✗ Reject</button>
+                    <button onclick="openApproveModal(${p.id})" class="tag" style="background:#10b981;cursor:pointer;border:none;padding:10px 16px;color:#fff;">✓ Approve</button>
+                    <button onclick="openRejectModal(${p.id})" class="tag" style="background:#ef4444;cursor:pointer;border:none;padding:10px 16px;color:#fff;">✗ Reject</button>
                   </div>
                 </div>
               `;

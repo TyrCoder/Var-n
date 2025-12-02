@@ -254,6 +254,115 @@
 
 
 
+      /* Shop by Category chips */
+      #categoriesContainer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+      }
+
+      .category-chip-wrapper {
+        position: relative;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .category-chip {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #111827;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        box-shadow: 0 1px 4px rgba(15,23,42,0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      }
+
+      .category-chip:hover {
+        transform: translateY(-2px);
+        background: #e5e7eb;
+        box-shadow: 0 4px 12px rgba(15,23,42,0.15);
+      }
+
+      .subcategory-popover {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        min-width: 260px;
+        max-width: 320px;
+        background: #ffffff;
+        border-radius: 14px;
+        border: 1px solid rgba(15,23,42,0.08);
+        box-shadow: 0 18px 40px rgba(15,23,42,0.25);
+        padding: 16px;
+        display: none;
+        z-index: 20;
+      }
+
+      .subcategory-popover.show {
+        display: block;
+        animation: popoverFade 0.2s ease;
+      }
+
+      .subcategory-heading {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 8px;
+      }
+
+      .subcategory-helper {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 12px;
+      }
+
+      .subcategory-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+      }
+
+      .subcategory-item {
+        border: 1px solid transparent;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #111827;
+        text-align: left;
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+      }
+
+      .subcategory-item:hover {
+        background: #eef2ff;
+        border-color: #c7d2fe;
+        transform: translateY(-1px);
+      }
+
+      @keyframes popoverFade {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+
+
       /* Floating Cart Button */
       .floating-cart {
         position: fixed;
@@ -1312,74 +1421,69 @@
                 // Iterate through parent categories in the computed order
                 orderedCategories.forEach(parentCategory => {
                   const wrapper = document.createElement('div');
-                  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:flex-start;margin:4px 8px 10px 0;';
+                  wrapper.className = 'category-chip-wrapper';
 
                   const card = document.createElement('div');
-                  // Compact text-only pill layout for category
-                  card.style.cssText = 'cursor:pointer;transition:transform 0.15s,box-shadow 0.15s,background 0.15s,color 0.15s;display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:999px;background:#f3f4f6;color:#111827;font-size:11px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;box-shadow:0 1px 4px rgba(15,23,42,0.08);';
+                  card.className = 'category-chip';
+                  card.textContent = parentCategory.name;
 
-                  const label = document.createElement('span');
-                  label.textContent = parentCategory.name;
-                  card.appendChild(label);
+                  const hasSubcategories = parentCategory.children && parentCategory.children.length > 0;
+                  let popover = null;
 
-                  // Inline details block under the pill (pushes content down)
-                  const details = document.createElement('div');
-                  details.classList.add('category-details');
-                  details.style.cssText = 'display:none;margin-top:8px;font-size:12px;color:#4b5563;background:#f9fafb;border-radius:10px;padding:8px 10px;text-align:left;width:100%;max-width:220px;box-shadow:0 4px 12px rgba(15,23,42,0.12);';
-                  details.textContent = 'Select a subcategory to view products.';
+                  if (hasSubcategories) {
+                    popover = document.createElement('div');
+                    popover.className = 'subcategory-popover';
 
-                  // Build clickable list of subcategories inside details
-                  if (parentCategory.children && parentCategory.children.length > 0) {
-                    details.textContent = '';
+                    const heading = document.createElement('div');
+                    heading.className = 'subcategory-heading';
+                    heading.textContent = `Shop ${parentCategory.name}`;
+                    popover.appendChild(heading);
+
+                    const helper = document.createElement('div');
+                    helper.className = 'subcategory-helper';
+                    helper.textContent = 'Choose a subcategory to refine your view';
+                    popover.appendChild(helper);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'subcategory-grid';
+
                     parentCategory.children.forEach(child => {
-                      const row = document.createElement('div');
-                      row.style.cssText = 'padding:4px 0;cursor:pointer;display:flex;align-items:center;gap:6px;color:#4b5563;';
-                      const bullet = document.createElement('span');
-                      bullet.textContent = '•';
-                      bullet.style.cssText = 'font-size:10px;color:#9ca3af;';
-                      const nameSpan = document.createElement('span');
-                      nameSpan.textContent = child.name;
-                      row.appendChild(bullet);
-                      row.appendChild(nameSpan);
-
-                      row.onclick = (e) => {
+                      const item = document.createElement('button');
+                      item.type = 'button';
+                      item.className = 'subcategory-item';
+                      item.textContent = child.name;
+                      item.onclick = (e) => {
                         e.stopPropagation();
+                        popover.classList.remove('show');
                         loadBrowseProducts([child.id]);
                       };
-
-                      row.onmouseover = () => {
-                        row.style.color = '#111827';
-                      };
-                      row.onmouseout = () => {
-                        row.style.color = '#4b5563';
-                      };
-
-                      details.appendChild(row);
+                      grid.appendChild(item);
                     });
+
+                    popover.appendChild(grid);
                   }
 
-                  // Click on pill toggles its own detail area and hides others
-                  card.onclick = (e) => {
-                    e.stopPropagation();
-                    document.querySelectorAll('#categoriesContainer .category-details').forEach(el => {
-                      if (el !== details) el.style.display = 'none';
-                    });
-                    details.style.display = details.style.display === 'none' ? 'block' : 'none';
-                  };
-
-                  card.onmouseover = () => {
-                    card.style.transform = 'translateY(-2px)';
-                    card.style.background = '#e5e7eb';
-                    card.style.boxShadow = '0 3px 10px rgba(15,23,42,0.18)';
-                  };
-                  card.onmouseout = () => {
-                    card.style.transform = 'translateY(0)';
-                    card.style.background = '#f3f4f6';
-                    card.style.boxShadow = '0 1px 4px rgba(15,23,42,0.08)';
-                  };
+                  if (hasSubcategories) {
+                    card.onclick = (e) => {
+                      e.stopPropagation();
+                      document.querySelectorAll('#categoriesContainer .subcategory-popover.show').forEach(el => {
+                        if (el !== popover) {
+                          el.classList.remove('show');
+                        }
+                      });
+                      popover.classList.toggle('show');
+                    };
+                  } else {
+                    card.onclick = (e) => {
+                      e.stopPropagation();
+                      loadBrowseProducts([parentCategory.id]);
+                    };
+                  }
 
                   wrapper.appendChild(card);
-                  wrapper.appendChild(details);
+                  if (popover) {
+                    wrapper.appendChild(popover);
+                  }
 
                   categoriesContainer.appendChild(wrapper);
                 });
@@ -1388,8 +1492,8 @@
                 document.addEventListener('click', (evt) => {
                   const within = categoriesContainer.contains(evt.target);
                   if (!within) {
-                    document.querySelectorAll('#categoriesContainer .category-details').forEach(el => {
-                      el.style.display = 'none';
+                    document.querySelectorAll('#categoriesContainer .subcategory-popover.show').forEach(el => {
+                      el.classList.remove('show');
                     });
                   }
                 });

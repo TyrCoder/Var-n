@@ -2044,26 +2044,14 @@
         console.log('[DEBUG updateStock] Final currentStock:', currentStock);
 
         // Display stock information
-        if (currentStock > 0) {
+        if (currentStock > 0 && currentStock <= 5) {
           stockStatusEl.style.display = 'flex';
           stockQuantityEl.style.display = 'block';
-          
-          if (currentStock <= 5) {
-            stockQuantityText.textContent = `Only ${currentStock} left in stock`;
-            stockStatusEl.style.background = '#fee2e2';
-            stockStatusEl.style.borderColor = '#fecaca';
-            stockStatusEl.style.color = '#dc2626';
-            stockStatusEl.innerHTML = '<span style="color:#dc2626;">⚠️ Low Stock</span>';
-          } else if (currentStock <= 10) {
-            stockQuantityText.textContent = `${currentStock} units available`;
-            stockStatusEl.style.background = '#fef3c7';
-            stockStatusEl.style.borderColor = '#fcd34d';
-            stockStatusEl.style.color = '#92400e';
-            stockStatusEl.innerHTML = '<span style="color:#92400e;">⚡ Limited Stock</span>';
-          } else {
-            stockQuantityText.textContent = `${currentStock} units available`;
-            stockStatusEl.innerHTML = '<span>✓ In Stock</span>';
-          }
+          stockQuantityText.textContent = `Only ${currentStock} left in stock`;
+          stockStatusEl.style.background = '#fee2e2';
+          stockStatusEl.style.borderColor = '#fecaca';
+          stockStatusEl.style.color = '#dc2626';
+          stockStatusEl.innerHTML = '<span style="color:#dc2626;">⚠️ Low Stock</span>';
         } else {
           stockStatusEl.style.display = 'none';
           stockQuantityEl.style.display = 'none';
