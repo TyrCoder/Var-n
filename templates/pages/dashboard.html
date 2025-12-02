@@ -632,6 +632,12 @@
               `;
 
               data.products.forEach(product => {
+                const stockCount =
+                  product.stock ??
+                  product.total_stock ??
+                  product.variant_stock ??
+                  product.inventory_stock ??
+                  0;
                 const date = new Date(product.created_at).toLocaleDateString();
                 html += `
                   <tr id="product-${product.id}">
@@ -641,7 +647,7 @@
                     </td>
                     <td>${product.store_name}</td>
                     <td>₱${parseFloat(product.price).toFixed(2)}</td>
-                    <td>${product.stock} pcs</td>
+                    <td>${stockCount} pcs</td>
                     <td>${date}</td>
                     <td>
                       <button class="tag" onclick="viewProductDetails(${product.id})" style="background: #3b82f6; cursor: pointer; border: none;">View Details</button>
@@ -1622,6 +1628,63 @@
               };
               const categoryDisplay = categoryNames[p.category] || p.category || 'N/A';
 
+              const formatMarkdown = (text) => {
+                if (!text) return '';
+                return text
+                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/\r?\n/g, '<br>')
+                  .trim();
+              };
+
+              const parseDescriptionSections = (rawText) => {
+                if (!rawText) {
+                  return {
+                    summary: 'No description available.',
+                    volume: '',
+                    ingredients: ''
+                  };
+                }
+
+                const volumeMarker = '**Volume/Size:**';
+                const ingredientsMarker = '**Ingredients:**';
+
+                let summary = rawText.trim();
+                let volume = '';
+                let ingredients = '';
+
+                if (rawText.includes(volumeMarker)) {
+                  const [beforeVolume, afterVolumeMarker] = rawText.split(volumeMarker);
+                  summary = beforeVolume.trim();
+                  if (afterVolumeMarker) {
+                    if (afterVolumeMarker.includes(ingredientsMarker)) {
+                      const [volumePart, afterIngredientsMarker] = afterVolumeMarker.split(ingredientsMarker);
+                      volume = (volumePart || '').replace(/\*\*/g, '').trim();
+                      ingredients = (afterIngredientsMarker || '').replace(/\*\*/g, '').trim();
+                    } else {
+                      volume = afterVolumeMarker.replace(/\*\*/g, '').trim();
+                    }
+                  }
+                } else if (rawText.includes(ingredientsMarker)) {
+                  const [beforeIngredients, afterIngredientsMarker] = rawText.split(ingredientsMarker);
+                  summary = beforeIngredients.trim();
+                  ingredients = (afterIngredientsMarker || '').replace(/\*\*/g, '').trim();
+                }
+
+                return {
+                  summary: formatMarkdown(summary || 'No description available.'),
+                  volume: volume ? formatMarkdown(volume) : '',
+                  ingredients: ingredients ? formatMarkdown(ingredients) : ''
+                };
+              };
+
+              const descriptionSections = parseDescriptionSections(p.description || '');
+              const variantTotalStock = Array.isArray(data.variants)
+                ? data.variants.reduce((sum, v) => sum + (parseInt(v.stock_quantity) || 0), 0)
+                : 0;
+              const fallbackStock = variantTotalStock > 0
+                ? variantTotalStock
+                : (Number(p.stock ?? p.inventory_stock ?? 0) || 0);
+
               let html = `
                 <div style="display:grid;gap:20px;">
                   <!-- Product Images -->
@@ -1640,7 +1703,9 @@
                       <div><strong>Brand:</strong> ${p.brand || 'N/A'}</div>
                       <div><strong>SKU:</strong> ${p.sku || 'N/A'}</div>
                       <div><strong>Price:</strong> ₱${parseFloat(p.price).toFixed(2)}</div>
-                      <div><strong>Description:</strong><br>${p.description || 'No description'}</div>
+                      <div><strong>Description:</strong><br>${descriptionSections.summary}</div>
+                      ${descriptionSections.volume ? `<div><strong>Volume/Size:</strong> ${descriptionSections.volume}</div>` : ''}
+                      ${descriptionSections.ingredients ? `<div><strong>Ingredients:</strong><br>${descriptionSections.ingredients}</div>` : ''}
                     </div>
                   </div>
 
@@ -1680,13 +1745,13 @@
                       </div>
                       <div style="margin-top:12px;padding:12px;background:#fef3c7;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
                         <span style="font-weight:600;">Total Stock:</span>
-                        <span style="font-size:18px;font-weight:700;color:#b45309;">${data.variants.reduce((sum, v) => sum + (parseInt(v.stock_quantity) || 0), 0)} pcs</span>
+                        <span style="font-size:18px;font-weight:700;color:#b45309;">${variantTotalStock} pcs</span>
                       </div>
                     </div>
                   ` : `
                     <div style="background:#fef3c7;padding:16px;border-radius:8px;">
                       <h3 style="margin:0 0 12px;color:#0a0a0a;">📦 Stock Information</h3>
-                      <div><strong>Total Stock:</strong> ${parseInt(p.stock) || 0} pcs</div>
+                      <div><strong>Total Stock:</strong> ${fallbackStock} pcs</div>
                       ${!data.variants || data.variants.length === 0 ? '<p style="color:#666;font-size:14px;margin-top:8px;">No variant information available</p>' : ''}
                     </div>
                   `}

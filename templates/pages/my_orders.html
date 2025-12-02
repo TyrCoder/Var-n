@@ -466,6 +466,25 @@
       border-color: #000000;
     }
 
+    .rider-profile-link {
+      display: inline-block;
+      background: #f5f5f5;
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #000000;
+      font-weight: 500;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+
+    .rider-profile-link:hover {
+      background: #efefef;
+      border-color: #000000;
+      transform: translateY(-1px);
+    }
+
     /* Rating Modal */
     .rating-modal {
       display: none;
@@ -750,53 +769,6 @@
                 ? productNames.substring(0, 50) + '...' 
                 : productNames;
               
-              // Add rating buttons for delivered orders
-              let actionButtons = `
-                <button class="track-btn" onclick="showTimeline(${order.id})">
-                  📍 Track Order
-                </button>
-              `;
-              
-              if (order.order_status === 'delivered') {
-                // Get first product for rating
-                const firstProduct = order.items && order.items.length > 0 ? order.items[0] : null;
-                if (firstProduct) {
-                  if (order.has_product_review) {
-                    actionButtons += `
-                      <button class="rating-btn secondary" disabled style="opacity: 0.5; cursor: not-allowed;">
-                        ✓ Reviewed
-                      </button>
-                    `;
-                  } else {
-                    actionButtons += `
-                      <button class="rating-btn secondary" onclick="openProductRatingModal(${order.id}, ${firstProduct.product_id})">
-                        ⭐ Rate Product
-                      </button>
-                    `;
-                  }
-                }
-                
-                // Add rider rating button if rider exists
-                if (order.rider_id && order.rider_id !== null && order.rider_id !== 0) {
-                  if (order.has_rider_rating) {
-                    actionButtons += `
-                      <button class="rating-btn secondary" disabled style="opacity: 0.5; cursor: not-allowed;">
-                        ✓ Rider Rated
-                      </button>
-                    `;
-                  } else {
-                    actionButtons += `
-                      <button class="rating-btn secondary" onclick="openRiderRatingModal(${order.id}, ${order.rider_id})">
-                        🚚 Rate Rider
-                      </button>
-                    `;
-                  }
-                } else {
-                  // Debug: Show if no rider assigned
-                  console.log('Order #' + order.id + ' - No rider assigned. rider_id:', order.rider_id);
-                }
-              }
-              
               return `
                 <tr>
                   <td class="order-number">${displayName}</td>
@@ -808,9 +780,9 @@
                     </span>
                   </td>
                   <td>
-                    <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-                      ${actionButtons}
-                    </div>
+                    <button class="track-btn" onclick="showTimeline(${order.id})">
+                      📍 Track Order
+                    </button>
                   </td>
                 </tr>
               `;
@@ -896,18 +868,73 @@
       const statusOrder = ['pending', 'confirmed', 'waiting_for_pickup', 'released_to_rider', 'delivered'];
       const currentIndex = statusOrder.indexOf(currentStatus);
 
+      // Build rating buttons HTML for delivered orders
+      let ratingButtonsHTML = '';
+      if (order.order_status === 'delivered') {
+        ratingButtonsHTML = '<div class="rating-buttons-section" style="margin-top: 32px; padding-top: 32px; border-top: 1px solid #e5e7eb;">';
+        ratingButtonsHTML += '<h4 style="font-family: \'Playfair Display\', serif; font-size: 18px; font-weight: 600; color: #000000; margin-bottom: 16px; letter-spacing: -0.01em;">Share Your Feedback</h4>';
+        
+        // Product rating button
+        const firstProduct = order.items && order.items.length > 0 ? order.items[0] : null;
+        if (firstProduct) {
+          if (order.has_product_review) {
+            ratingButtonsHTML += `
+              <div style="margin-bottom: 12px;">
+                <button class="rating-btn" disabled style="opacity: 0.6; cursor: not-allowed;">
+                  ✓ Product Reviewed
+                </button>
+                <span style="margin-left: 12px; color: #6b7280; font-size: 13px;">Thank you for your review!</span>
+              </div>
+            `;
+          } else {
+            ratingButtonsHTML += `
+              <div style="margin-bottom: 12px;">
+                <button class="rating-btn" onclick="openProductRatingModal(${order.id}, ${firstProduct.product_id})">
+                  ⭐ Rate Product
+                </button>
+              </div>
+            `;
+          }
+        }
+        
+        // Rider rating button
+        if (order.rider_id && order.rider_id !== null && order.rider_id !== 0) {
+          if (order.has_rider_rating) {
+            ratingButtonsHTML += `
+              <div>
+                <button class="rating-btn" disabled style="opacity: 0.6; cursor: not-allowed;">
+                  ✓ Rider Rated
+                </button>
+                <span style="margin-left: 12px; color: #6b7280; font-size: 13px;">Thank you for rating the rider!</span>
+              </div>
+            `;
+          } else {
+            ratingButtonsHTML += `
+              <div>
+                <button class="rating-btn" onclick="openRiderRatingModal(${order.id}, ${order.rider_id})">
+                  🚚 Rate Rider & Delivery
+                </button>
+              </div>
+            `;
+          }
+        }
+        
+        ratingButtonsHTML += '</div>';
+      }
+
       const timelineHTML = `
         <div class="timeline">
           ${stages.map((stage, index) => {
             const isCompleted = index < currentIndex;
-            const isActive = index === currentIndex;
-            const statusClass = isCompleted ? 'completed' : (isActive ? 'active' : '');
+            const isActive = index === currentIndex && currentStatus !== 'delivered';
+            const isDelivered = stage.status === 'delivered' && currentStatus === 'delivered';
+            const statusClass = isDelivered ? 'completed' : (isCompleted ? 'completed' : (isActive ? 'active' : ''));
             
             return `
               <div class="timeline-item ${statusClass}">
                 <div class="timeline-label">${stage.icon} ${stage.label}</div>
                 <div class="timeline-description">${stage.description}</div>
-                ${isCompleted || isActive ? `<div class="timeline-time">${formatDate(order.created_at)}</div>` : ''}
+                ${isCompleted || isActive || isDelivered ? `<div class="timeline-time">${formatDate(order.created_at)}</div>` : ''}
               </div>
             `;
           }).join('')}
@@ -936,6 +963,8 @@
             <span class="detail-value">${order.display_status || order.order_status}</span>
           </div>
         </div>
+
+        ${ratingButtonsHTML}
       `;
 
       container.innerHTML = timelineHTML;

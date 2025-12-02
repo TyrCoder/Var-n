@@ -199,7 +199,6 @@ def init_db():
             price DECIMAL(10,2) NOT NULL,
             sale_price DECIMAL(10,2),
             cost_price DECIMAL(10,2),
-            sku VARCHAR(100),
             weight DECIMAL(8,2),
             dimensions VARCHAR(100),
             material VARCHAR(200),
@@ -235,7 +234,6 @@ def init_db():
         cursor.execute('''CREATE TABLE IF NOT EXISTS product_variants (
             id INT AUTO_INCREMENT PRIMARY KEY,
             product_id INT NOT NULL,
-            sku VARCHAR(100),
             size VARCHAR(20),
             color VARCHAR(50),
             stock_quantity INT DEFAULT 0,
@@ -322,7 +320,6 @@ def init_db():
             product_id INT NOT NULL,
             variant_id INT,
             product_name VARCHAR(200) NOT NULL,
-            sku VARCHAR(100),
             size VARCHAR(20),
             color VARCHAR(50),
             quantity INT NOT NULL,
@@ -483,6 +480,23 @@ def init_db():
             INDEX idx_product (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
+        cursor.execute('''CREATE TABLE IF NOT EXISTS rider_ratings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            rider_id INT NOT NULL,
+            user_id INT NOT NULL,
+            order_id INT,
+            shipment_id INT,
+            rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+            comment TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
+            FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE SET NULL,
+            INDEX idx_rider (rider_id),
+            INDEX idx_user (user_id),
+            INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS transactions (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -684,6 +698,15 @@ def init_db():
 
 
         try:
+            cursor.execute("SHOW COLUMNS FROM products LIKE 'approval_status'")
+            if not cursor.fetchone():
+                cursor.execute('ALTER TABLE products ADD COLUMN approval_status ENUM("approved", "pending", "rejected") DEFAULT "pending" AFTER is_active')
+                print("[DB MIGRATION] Added approval_status column to products table")
+        except Exception as e:
+            if 'Duplicate' not in str(e) and 'already exists' not in str(e):
+                print(f"[DB MIGRATION] Could not add approval_status column: {e}")
+
+        try:
             cursor.execute("SHOW COLUMNS FROM promotions LIKE 'is_approved'")
             if not cursor.fetchone():
                 cursor.execute('ALTER TABLE promotions ADD COLUMN is_approved BOOLEAN DEFAULT FALSE AFTER is_active')
@@ -728,6 +751,12 @@ def ensure_db_initialized():
             cursor.close()
             conn.close()
             print(f"[DB] Database '{DB_CONFIG['database']}' verified")
+
+            try:
+                init_db()
+            except Exception as init_err:
+                print(f"[DB INIT WARNING] init_db execution failed: {init_err}")
+
             _db_initialized = True
         except Exception as e:
             print(f"[DB INIT WARNING] Database initialization failed: {e}")
@@ -798,6 +827,25 @@ def admin_create_tables():
         except Exception as e:
             messages.append(f"Index check: {str(e)}")
 
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS rider_ratings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            rider_id INT NOT NULL,
+            user_id INT NOT NULL,
+            order_id INT,
+            shipment_id INT,
+            rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+            comment TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
+            FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE SET NULL,
+            INDEX idx_rider (rider_id),
+            INDEX idx_user (user_id),
+            INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        messages.append("Rider ratings table created/verified")
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS journal_entries (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -924,7 +972,6 @@ def product_page(product_id):
                     p.description,
                     p.price,
                     p.brand,
-                    p.sku,
                     p.seller_id,
                     c.name as category_name,
                     pi.image_url,
@@ -943,7 +990,7 @@ def product_page(product_id):
                 LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
                 WHERE p.id = %s AND p.is_active = 1
                 AND (p.archive_status IS NULL OR p.archive_status = 'active')
-                GROUP BY p.id, p.name, p.description, p.price, p.brand, p.sku, p.seller_id, 
+                GROUP BY p.id, p.name, p.description, p.price, p.brand, p.seller_id, 
                          c.name, pi.image_url, s.store_name, u.first_name
             ''', (product_id,))
 
@@ -987,7 +1034,7 @@ def product_page(product_id):
                     print(f"[DEBUG] No variants found for product {product_id}. Product has no size/color variations.")
                     colors = []
                     sizes = []
-                    stock_map = {'Standard_One Size': 100}  # Default stock for products without variations
+                    stock_map = {'One Size_Standard': 100}  # Default stock for products without variations
 
             cursor.close()
             conn.close()
@@ -1030,7 +1077,6 @@ def get_product_detail(product_id):
                 p.description,
                 p.price,
                 p.brand,
-                p.sku,
                 c.name as category_name,
                 pi.image_url
             FROM products p
@@ -1222,8 +1268,8 @@ def submit_review():
 
 
         cursor.execute('''
-            INSERT INTO reviews (product_id, user_id, order_id, rating, title, comment, is_verified_purchase)
-            VALUES (%s, %s, %s, %s, %s, %s, 1)
+            INSERT INTO reviews (product_id, user_id, order_id, rating, title, comment, is_verified_purchase, is_approved)
+            VALUES (%s, %s, %s, %s, %s, %s, 1, 1)
         ''', (product_id, user_id, order_id, rating, title, comment))
 
         review_id = cursor.lastrowid
@@ -1338,7 +1384,7 @@ def submit_rider_rating():
 
         # Verify order belongs to buyer and is delivered
         cursor.execute('''
-            SELECT o.id, o.rider_id, s.id as shipment_id
+            SELECT o.id, COALESCE(s.rider_id, o.rider_id) as rider_id, s.id as shipment_id
             FROM orders o
             LEFT JOIN shipments s ON o.id = s.order_id
             WHERE o.id = %s AND o.user_id = %s AND o.order_status = 'delivered'
@@ -1518,6 +1564,71 @@ def rider_rating_stats():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/rider/<int:rider_id>/reviews', methods=['GET'])
+def get_rider_reviews(rider_id):
+    """Get all reviews for a specific rider - public endpoint for viewing rider profile"""
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        # Get rider info
+        cursor.execute('''
+            SELECT r.id, CONCAT(u.first_name, ' ', u.last_name) as full_name, r.rating
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.id = %s
+        ''', (rider_id,))
+
+        rider = cursor.fetchone()
+        if not rider:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Rider not found'}), 404
+
+        # Get average rating and count
+        cursor.execute('''
+            SELECT AVG(CAST(rating AS DECIMAL(3,1))) as avg_rating, COUNT(*) as total_count
+            FROM rider_ratings
+            WHERE rider_id = %s
+        ''', (rider_id,))
+
+        rating_data = cursor.fetchone()
+        overall_rating = float(rating_data['avg_rating']) if rating_data and rating_data['avg_rating'] else 0
+        total_ratings = int(rating_data['total_count']) if rating_data else 0
+
+        # Get reviews sorted by latest first
+        cursor.execute('''
+            SELECT rr.id, rr.rating, rr.comment, rr.created_at, CONCAT(u.first_name, ' ', u.last_name) as customer_name
+            FROM rider_ratings rr
+            JOIN users u ON rr.user_id = u.id
+            WHERE rr.rider_id = %s
+            ORDER BY rr.created_at DESC
+        ''', (rider_id,))
+
+        reviews = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'rider': {
+                'id': rider['id'],
+                'name': rider['full_name'],
+                'overall_rating': round(overall_rating, 1),
+                'total_ratings': total_ratings
+            },
+            'reviews': reviews if reviews else []
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] get_rider_reviews: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 
 @app.route('/shop')
 def shop():
@@ -1658,29 +1769,29 @@ def place_order():
             return jsonify({'success': False, 'message': 'No items in order'}), 400
 
 
-        cursor.execute('''
-            INSERT INTO addresses (
-                user_id, full_name, phone, street_address,
-                barangay, city, province, postal_code, country,
-                address_type, is_default
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'shipping', 0)
-        ''', (
-            user_id,
-            f"{shipping.get('firstName', '')} {shipping.get('lastName', '')}".strip(),
-            shipping.get('phone', ''),
-            shipping.get('address', ''),
-            shipping.get('barangay', ''),
-            shipping.get('city', ''),
-            shipping.get('province', ''),
-            shipping.get('postalCode', ''),
-            shipping.get('country', 'Philippines')
-        ))
-
-        shipping_address_id = cursor.lastrowid
-        billing_address_id = shipping_address_id
-
-
+        # Only insert/save address if user explicitly wants to save it
         if save_address:
+            cursor.execute('''
+                INSERT INTO addresses (
+                    user_id, full_name, phone, street_address,
+                    barangay, city, province, postal_code, country,
+                    address_type, is_default
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'shipping', 0)
+            ''', (
+                user_id,
+                f"{shipping.get('firstName', '')} {shipping.get('lastName', '')}".strip(),
+                shipping.get('phone', ''),
+                shipping.get('address', ''),
+                shipping.get('barangay', ''),
+                shipping.get('city', ''),
+                shipping.get('province', ''),
+                shipping.get('postalCode', ''),
+                shipping.get('country', 'Philippines')
+            ))
+
+            shipping_address_id = cursor.lastrowid
+            billing_address_id = shipping_address_id
+
             cursor.execute('SELECT COUNT(*) as count FROM addresses WHERE user_id = %s AND is_default = TRUE', (user_id,))
             result = cursor.fetchone()
             has_default = result and result['count'] > 0
@@ -1690,6 +1801,41 @@ def place_order():
                 cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
 
             cursor.execute('UPDATE addresses SET is_default = %s WHERE id = %s', (is_default, shipping_address_id))
+        else:
+            # If not saving address, use the default address on file
+            cursor.execute('''
+                SELECT id FROM addresses 
+                WHERE user_id = %s AND is_default = TRUE 
+                LIMIT 1
+            ''', (user_id,))
+            default_addr = cursor.fetchone()
+            
+            if default_addr:
+                shipping_address_id = default_addr['id']
+                billing_address_id = default_addr['id']
+            else:
+                # If no default address exists, we still need to create a temporary one for this order
+                # but mark it as non-default
+                cursor.execute('''
+                    INSERT INTO addresses (
+                        user_id, full_name, phone, street_address,
+                        barangay, city, province, postal_code, country,
+                        address_type, is_default
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'shipping', 0)
+                ''', (
+                    user_id,
+                    f"{shipping.get('firstName', '')} {shipping.get('lastName', '')}".strip(),
+                    shipping.get('phone', ''),
+                    shipping.get('address', ''),
+                    shipping.get('barangay', ''),
+                    shipping.get('city', ''),
+                    shipping.get('province', ''),
+                    shipping.get('postalCode', ''),
+                    shipping.get('country', 'Philippines')
+                ))
+                shipping_address_id = cursor.lastrowid
+                billing_address_id = shipping_address_id
+
 
 
         seller_id = 1
@@ -1738,17 +1884,12 @@ def place_order():
             color = item.get('color', '')
 
 
-            cursor.execute('SELECT sku FROM products WHERE id = %s', (product_id,))
-            sku_result = cursor.fetchone()
-            sku = sku_result.get('sku', '') if sku_result else ''
-
-
             cursor.execute('''
                 INSERT INTO order_items (
-                    order_id, product_id, product_name, sku,
+                    order_id, product_id, product_name,
                     size, color, quantity, unit_price, subtotal
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (order_id, product_id, product_name, sku, size, color, quantity, unit_price, item_subtotal))
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (order_id, product_id, product_name, size, color, quantity, unit_price, item_subtotal))
 
 
             cursor.execute('UPDATE products SET sales_count = sales_count + %s WHERE id = %s', (quantity, product_id))
@@ -1876,6 +2017,22 @@ def order_details(order_id):
 
     try:
         cursor = conn.cursor(dictionary=True)
+
+        # Ensure approval_status column exists (for databases that missed the migration)
+        try:
+            cursor.execute("SHOW COLUMNS FROM products LIKE 'approval_status'")
+            if not cursor.fetchone():
+                cursor.execute('''
+                    ALTER TABLE products
+                    ADD COLUMN approval_status ENUM('approved', 'pending', 'rejected')
+                    DEFAULT 'pending'
+                    AFTER is_active
+                ''')
+                conn.commit()
+                print('[DB MIGRATION] Added approval_status column to products table (seller_products)')
+        except Exception as migration_err:
+            print(f"[DB MIGRATION] approval_status check failed: {migration_err}")
+
         user_id = session.get('user_id')
 
 
@@ -2374,6 +2531,7 @@ def signup_seller():
         password = request.form.get('password')
         phone = request.form.get('phone')
         shop_name = request.form.get('shop_name')
+        shop_description = request.form.get('shop_description', '')
         tnc = request.form.get('tnc')
 
 
@@ -2428,6 +2586,7 @@ def signup_seller():
                 'password': password,
                 'phone': phone,
                 'shop_name': shop_name,
+                'shop_description': shop_description,
                 'is_existing_user': False,
                 'existing_user_id': None
             }
@@ -2502,7 +2661,7 @@ def dashboard():
         cursor = conn.cursor(dictionary=True)
 
 
-        cursor.execute('SELECT COUNT(*) as count FROM products WHERE is_active = 0')
+        cursor.execute("SELECT COUNT(*) as count FROM products WHERE approval_status = 'pending'")
         result = cursor.fetchone()
         pending_products = result['count'] if result else 0
 
@@ -2584,16 +2743,34 @@ def admin_pending_products():
         cursor.execute('''
             SELECT p.*, s.store_name, u.email as seller_email,
                    u.first_name, u.last_name,
-                   COALESCE(SUM(pv.stock_quantity), 0) as total_stock,
-                   COALESCE(COUNT(DISTINCT pv.id), 0) as variant_count,
-                   COALESCE(COUNT(DISTINCT pi.id), 0) as image_count
+                   COALESCE(variant_data.variant_stock, 0) as variant_stock,
+                   COALESCE(variant_data.variant_count, 0) as variant_count,
+                   COALESCE(image_data.image_count, 0) as image_count,
+                   COALESCE(inventory_data.inventory_stock, 0) as inventory_stock,
+                   COALESCE(variant_data.variant_stock, inventory_data.inventory_stock, 0) as stock
             FROM products p
             JOIN sellers s ON p.seller_id = s.id
             JOIN users u ON s.user_id = u.id
-            LEFT JOIN product_variants pv ON p.id = pv.product_id
-            LEFT JOIN product_images pi ON p.id = pi.product_id
-            WHERE p.is_active = 0
-            GROUP BY p.id
+            LEFT JOIN (
+                SELECT product_id,
+                       SUM(stock_quantity) as variant_stock,
+                       COUNT(*) as variant_count
+                FROM product_variants
+                GROUP BY product_id
+            ) as variant_data ON p.id = variant_data.product_id
+            LEFT JOIN (
+                SELECT product_id,
+                       COUNT(*) as image_count
+                FROM product_images
+                GROUP BY product_id
+            ) as image_data ON p.id = image_data.product_id
+            LEFT JOIN (
+                SELECT product_id,
+                       SUM(stock_quantity) as inventory_stock
+                FROM inventory
+                GROUP BY product_id
+            ) as inventory_data ON p.id = inventory_data.product_id
+            WHERE p.approval_status = 'pending'
             ORDER BY p.created_at DESC
         ''')
         pending_products = cursor.fetchall()
@@ -2621,16 +2798,28 @@ def admin_product_details(product_id):
 
 
         cursor.execute('''
-            SELECT p.*, s.store_name, u.email as seller_email,
-                   c.name as category,
-                   COALESCE(SUM(pv.stock_quantity), 0) as stock
+             SELECT p.*, s.store_name, u.email as seller_email,
+                 c.name as category,
+                 COALESCE(variant_data.variant_stock, 0) as variant_stock,
+                 COALESCE(inventory_data.inventory_stock, 0) as inventory_stock,
+                 COALESCE(variant_data.variant_stock, inventory_data.inventory_stock, 0) as stock
             FROM products p
             JOIN sellers s ON p.seller_id = s.id
             JOIN users u ON s.user_id = u.id
             LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN product_variants pv ON p.id = pv.product_id
+            LEFT JOIN (
+                SELECT product_id,
+                       SUM(stock_quantity) as variant_stock
+                FROM product_variants
+                GROUP BY product_id
+            ) as variant_data ON p.id = variant_data.product_id
+            LEFT JOIN (
+                SELECT product_id,
+                       SUM(stock_quantity) as inventory_stock
+                FROM inventory
+                GROUP BY product_id
+            ) as inventory_data ON p.id = inventory_data.product_id
             WHERE p.id = %s
-            GROUP BY p.id
         ''', (product_id,))
         product = cursor.fetchone()
 
@@ -2685,7 +2874,7 @@ def admin_approve_product(product_id):
             return jsonify({'error': 'Product not found'}), 404
 
         # Approve product
-        cursor.execute('UPDATE products SET is_active = 1 WHERE id = %s', (product_id,))
+        cursor.execute('UPDATE products SET is_active = 1, approval_status = %s WHERE id = %s', ('approved', product_id,))
 
         # Create notification for seller
         cursor.execute('''
@@ -2739,7 +2928,7 @@ def admin_reject_product(product_id):
         if not rejection_reason:
             rejection_reason = 'No reason provided'
 
-        # Create notification for seller BEFORE deleting product
+        # Create notification for seller BEFORE updating product
         cursor.execute('''
             INSERT INTO seller_notifications (
                 seller_id, product_id, notification_type, title, message, priority
@@ -2751,8 +2940,8 @@ def admin_reject_product(product_id):
             f'Your product "{product["name"]}" was rejected. Reason: {rejection_reason}'
         ))
 
-        # Delete the product entirely (cascade will handle related records)
-        cursor.execute('DELETE FROM products WHERE id = %s', (product_id,))
+        # Reject the product instead of deleting it
+        cursor.execute('UPDATE products SET approval_status = %s WHERE id = %s', ('rejected', product_id))
 
         conn.commit()
         cursor.close()
@@ -3166,7 +3355,6 @@ def admin_pending_recoveries():
                 par.id as request_id,
                 par.product_id,
                 p.name as product_name,
-                p.sku,
                 p.price,
                 s.store_name,
                 par.reason,
@@ -4090,36 +4278,52 @@ def seller_products():
         seller_id = seller['id']
 
 
-        cursor.execute('SELECT COUNT(*) as total FROM products WHERE seller_id = %s', (seller_id,))
-        count_result = cursor.fetchone()
-        total_count = count_result['total'] if count_result else 0
-
-
         cursor.execute('''
-            SELECT p.id, p.name, p.description, p.price, p.sku, p.brand,
+            SELECT p.id, p.name, p.description, p.price, p.brand,
                    p.is_active, p.seller_id, p.created_at,
+                   COALESCE(p.approval_status, 'approved') as approval_status,
                    c.name as category_name,
-                   COALESCE(SUM(pv.stock_quantity), 0) as stock,
+                   COALESCE(variant_data.variant_stock, inventory_data.inventory_stock, 0) as stock,
                    COALESCE(p.archive_status, 'active') as archive_status
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN product_variants pv ON p.id = pv.product_id
+            LEFT JOIN (
+                SELECT product_id, SUM(stock_quantity) as variant_stock
+                FROM product_variants
+                GROUP BY product_id
+            ) as variant_data ON p.id = variant_data.product_id
+            LEFT JOIN (
+                SELECT product_id, SUM(stock_quantity) as inventory_stock
+                FROM inventory
+                GROUP BY product_id
+            ) as inventory_data ON p.id = inventory_data.product_id
             WHERE p.seller_id = %s 
-            AND p.is_active = TRUE
             AND (p.archive_status IS NULL OR p.archive_status = 'active')
-            GROUP BY p.id, p.name, p.description, p.price, p.sku, p.brand,
-                     p.is_active, p.seller_id, p.created_at, c.name, p.archive_status
             ORDER BY p.created_at DESC
         ''', (seller_id,))
-        products = cursor.fetchall()
+        all_products = cursor.fetchall()
+
+        # Count products by approval status
+        approved_count = sum(1 for p in all_products if p.get('approval_status') == 'approved')
+        pending_count = sum(1 for p in all_products if p.get('approval_status') == 'pending')
+        rejected_count = sum(1 for p in all_products if p.get('approval_status') == 'rejected')
+        total_count = len(all_products)
 
         cursor.close()
         conn.close()
 
+        print(f"DEBUG: User {user_id}, Seller {seller_id}, Total: {total_count}, Approved: {approved_count}, Pending: {pending_count}, Rejected: {rejected_count}")
 
-        print(f"DEBUG: User {user_id}, Seller {seller_id}, Total products in DB: {total_count}, Returned: {len(products) if products else 0}")
-
-        return jsonify({'products': products if products else [], 'debug': {'seller_id': seller_id, 'total_count': total_count}}), 200
+        return jsonify({
+            'products': all_products if all_products else [],
+            'stats': {
+                'total': total_count,
+                'approved': approved_count,
+                'pending': pending_count,
+                'rejected': rejected_count
+            },
+            'debug': {'seller_id': seller_id}
+        }), 200
 
     except Exception as err:
         print(f"ERROR in seller_products: {str(err)}")
@@ -4153,7 +4357,6 @@ def seller_inventory():
                 pv.stock_quantity as available_quantity,
                 10 as low_stock_threshold,
                 p.name as product_name,
-                p.sku,
                 p.price,
                 pv.id as variant_id_full,
                 pv.size,
@@ -5341,12 +5544,6 @@ def seller_add_product():
         price = request.form.get('price', '0')
         category_id = request.form.get('category_id', '').strip()
         brand = seller['store_name']
-        sku = request.form.get('sku', '').strip()
-
-
-        if not sku:
-            import time
-            sku = f"SKU-{seller['id']}-{int(time.time() * 1000)}"
 
 
         if not name:
@@ -5458,9 +5655,9 @@ def seller_add_product():
 
         cursor.execute('''
             INSERT INTO products (seller_id, category_id, name, slug, description, brand,
-                                price, sku, is_active)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0)
-        ''', (seller['id'], category_id, name, slug, description, brand, price, sku))
+                                price, is_active, approval_status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 0, 'pending')
+        ''', (seller['id'], category_id, name, slug, description, brand, price))
 
         product_id = cursor.lastrowid
 
@@ -5799,7 +5996,7 @@ def seller_get_product(product_id):
 
         # Fetch product variants (colors and sizes)
         cursor.execute('''
-            SELECT id, sku, size, color, stock_quantity, price_adjustment, is_active
+            SELECT id, size, color, stock_quantity, price_adjustment, is_active
             FROM product_variants
             WHERE product_id = %s
             ORDER BY color, size
@@ -6450,7 +6647,7 @@ def api_my_orders():
 
         cursor.execute('''
             SELECT o.id, o.order_number, o.total_amount, o.order_status, o.created_at,
-                   o.rider_id,
+                   COALESCE(s.rider_id, o.rider_id) as rider_id,
                    u.first_name, u.email,
                    s.id as shipment_id, s.status as shipment_status, s.delivered_at
             FROM orders o
@@ -8639,8 +8836,8 @@ def verify_otp():
                             store_slug = pending_seller_signup['shop_name'].lower().replace(' ', '-').replace("'", '')
 
 
-                            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, status) VALUES (%s, %s, %s, %s)',
-                                         (user_id, pending_seller_signup['shop_name'], store_slug, 'approved'))
+                            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, description, status) VALUES (%s, %s, %s, %s, %s)',
+                                         (user_id, pending_seller_signup['shop_name'], store_slug, pending_seller_signup.get('shop_description', ''), 'approved'))
                             print(f"[VERIFY OTP] Created seller profile with AUTO-APPROVED status for user {user_id}")
 
                         conn.commit()

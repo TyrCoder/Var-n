@@ -362,6 +362,27 @@
         border-radius: 8px;
         border: 1px solid #d1fae5;
       }
+      .low-stock-indicator {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        color: #ea580c;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 16px 0;
+        padding: 12px 16px;
+        background: #fff7ed;
+        border-radius: 8px;
+        border: 1px solid #fed7aa;
+        animation: pulse-warning 1.5s infinite;
+      }
+      .low-stock-indicator.show {
+        display: flex;
+      }
+      @keyframes pulse-warning {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
       .add-to-cart-btn {
         width: 100%;
         padding: 18px 24px;
@@ -574,6 +595,104 @@
         font-size: 14px;
         color: #999;
         margin: 0;
+      }
+
+      /* Reviews Pagination */
+      .reviews-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .review-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .review-card:hover {
+        border-color: #d4d4d4;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+
+      .review-rating-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: #ffffff;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        margin: 8px 0 12px 0;
+      }
+
+      .reviews-pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 32px;
+        gap: 12px;
+      }
+
+      .see-more-btn {
+        padding: 14px 32px;
+        background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        letter-spacing: 0.02em;
+      }
+
+      .see-more-btn:hover {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      }
+
+      .see-more-btn:active {
+        transform: translateY(0);
+      }
+
+      .see-more-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .reviews-count-info {
+        text-align: center;
+        font-size: 13px;
+        color: #666;
+        margin-top: 16px;
+        font-weight: 500;
+      }
+
+      .hidden-review {
+        display: none;
+      }
+
+      .hidden-review.show {
+        display: block;
       }
       .details-section {
         margin-bottom: 28px;
@@ -1266,6 +1385,12 @@
           <div class="product-price">PHP {{ "{:,.2f}".format(product.price) }}</div>
           <div class="tax-info">Tax included</div>
 
+          <!-- Low Stock Indicator -->
+          <div id="lowStockIndicator" class="low-stock-indicator">
+            <span style="font-size: 18px;">⚠️</span>
+            <span>Only <strong id="lowStockCount">10</strong> items left in stock</span>
+          </div>
+
           <!-- Rating & Sold Count -->
           <div style="display:flex;align-items:center;gap:16px;margin:16px 0;padding:12px 0;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0">
             <div style="display:flex;align-items:center;gap:6px">
@@ -1312,6 +1437,14 @@
           {% endif %}
 
           <!-- Quantity -->
+          <!-- Stock Status Display -->
+          <div id="stockStatus" class="stock-status" style="display:none;">
+            <span>✓ In Stock</span>
+          </div>
+          <div id="stockQuantity" style="display:none;padding:12px 16px;background:#f3f4f6;border-radius:8px;border:1px solid #e5e7eb;margin:16px 0;font-size:14px;font-weight:600;color:#374151;">
+            <span id="stockQuantityText"></span>
+          </div>
+
           <div class="selection-group">
             <div class="selection-label">
               <strong>Quantity</strong>
@@ -1363,7 +1496,6 @@
 
             <div class="product-meta">
               <div class="meta-item"><strong>Brand:</strong> {{ product.brand or 'Varón' }}</div>
-              <div class="meta-item"><strong>SKU:</strong> {{ product.sku or '-' }}</div>
               <div class="meta-item"><strong>Category:</strong> {{ product.category_name or 'Apparel' }}</div>
             </div>
           </div>
@@ -1661,6 +1793,38 @@
         });
       }
 
+      // Check and display low stock indicator
+      function checkLowStock() {
+        const lowStockIndicator = document.getElementById('lowStockIndicator');
+        if (!lowStockIndicator) return;
+        
+        let minStock = Infinity;
+        
+        // Get minimum stock from all variants
+        Object.values(stockMap).forEach(stock => {
+          if (stock < minStock) {
+            minStock = stock;
+          }
+        });
+        
+        // Show indicator if stock is 10 or below
+        if (minStock <= 10 && minStock > 0) {
+          document.getElementById('lowStockCount').textContent = minStock;
+          lowStockIndicator.classList.add('show');
+        } else if (minStock <= 0) {
+          // Show out of stock
+          document.getElementById('lowStockCount').textContent = '0';
+          lowStockIndicator.innerHTML = '<span style="font-size: 18px;">🚫</span><span>This item is currently <strong>out of stock</strong></span>';
+          lowStockIndicator.classList.add('show');
+          lowStockIndicator.style.color = '#dc2626';
+          lowStockIndicator.style.borderColor = '#fecaca';
+          lowStockIndicator.style.background = '#fee2e2';
+        } else {
+          lowStockIndicator.classList.remove('show');
+        }
+      }
+      checkLowStock();
+
       // If no variations exist, set defaults
       if (!hasColors && !hasSizes) {
         selectedColor = 'Standard';
@@ -1848,8 +2012,62 @@
       }
 
       function updateStockDisplay() {
-        // Stock display removed from buyer view
-        // Stock validation happens only when adding to cart
+        const stockStatusEl = document.getElementById('stockStatus');
+        const stockQuantityEl = document.getElementById('stockQuantity');
+        const stockQuantityText = document.getElementById('stockQuantityText');
+
+        // Get current stock based on selected variant
+        let currentStock = 0;
+        
+        // Build key to match the stock_map format from backend: size_color
+        const key = `${selectedSize}_${selectedColor}`;
+        let stock = stockMap[key];
+        
+        console.log('[DEBUG updateStock] key:', key, 'stock:', stock);
+        console.log('[DEBUG updateStock] stockMap:', stockMap);
+        
+        // Fallback: try to find stock by any key if not found
+        if (stock === undefined) {
+          // Try alternate format
+          const altKey = `${selectedSize || 'One Size'}_${selectedColor || 'Standard'}`;
+          stock = stockMap[altKey];
+          console.log('[DEBUG updateStock] Trying altKey:', altKey, 'stock:', stock);
+        }
+        
+        // If still not found, try to get any available stock from map
+        if (stock === undefined) {
+          stock = Object.values(stockMap)[0];
+          console.log('[DEBUG updateStock] Using first value from stockMap:', stock);
+        }
+        
+        currentStock = parseInt(stock) || 0;
+        console.log('[DEBUG updateStock] Final currentStock:', currentStock);
+
+        // Display stock information
+        if (currentStock > 0) {
+          stockStatusEl.style.display = 'flex';
+          stockQuantityEl.style.display = 'block';
+          
+          if (currentStock <= 5) {
+            stockQuantityText.textContent = `Only ${currentStock} left in stock`;
+            stockStatusEl.style.background = '#fee2e2';
+            stockStatusEl.style.borderColor = '#fecaca';
+            stockStatusEl.style.color = '#dc2626';
+            stockStatusEl.innerHTML = '<span style="color:#dc2626;">⚠️ Low Stock</span>';
+          } else if (currentStock <= 10) {
+            stockQuantityText.textContent = `${currentStock} units available`;
+            stockStatusEl.style.background = '#fef3c7';
+            stockStatusEl.style.borderColor = '#fcd34d';
+            stockStatusEl.style.color = '#92400e';
+            stockStatusEl.innerHTML = '<span style="color:#92400e;">⚡ Limited Stock</span>';
+          } else {
+            stockQuantityText.textContent = `${currentStock} units available`;
+            stockStatusEl.innerHTML = '<span>✓ In Stock</span>';
+          }
+        } else {
+          stockStatusEl.style.display = 'none';
+          stockQuantityEl.style.display = 'none';
+        }
       }
 
       function checkSelection() {
@@ -1999,8 +2217,30 @@
         const addButton = document.querySelector('.add-to-cart-btn');
 
         // Check stock availability
+        // Build key to match the stock_map format from backend: size_color
         const key = `${selectedSize}_${selectedColor}`;
-        const stock = stockMap[key] || 0;
+        let stock = stockMap[key];
+        
+        console.log('[DEBUG addToCart] stockMap:', stockMap);
+        console.log('[DEBUG addToCart] selectedSize:', selectedSize, 'selectedColor:', selectedColor);
+        console.log('[DEBUG addToCart] key:', key, 'stock:', stock);
+        
+        // Fallback: try alternate key format if not found
+        if (stock === undefined) {
+          // Try the format used for products without variants
+          const altKey = `${selectedSize || 'One Size'}_${selectedColor || 'Standard'}`;
+          stock = stockMap[altKey] || 0;
+          console.log('[DEBUG addToCart] Trying altKey:', altKey, 'stock:', stock);
+        }
+        
+        // If still not found, try to get any available stock from map
+        if (stock === undefined || stock === null) {
+          stock = Object.values(stockMap)[0] || 0;
+          console.log('[DEBUG addToCart] Using first value from stockMap:', stock);
+        }
+        
+        stock = parseInt(stock) || 0;
+        console.log('[DEBUG addToCart] Final stock:', stock);
         
         if (stock === 0) {
           const snackbar = document.getElementById('snackbar');
@@ -2434,38 +2674,28 @@
         {% endif %}
       });
 
+      let allReviews = [];
+      let reviewsDisplayed = 5;
+
       async function loadProductReviews() {
         try {
           const response = await fetch(`/api/product-reviews/${productId}`);
           const data = await response.json();
 
           if (data.success && data.reviews.length > 0) {
-            const reviews = data.reviews;
+            // Sort reviews by date (latest first)
+            allReviews = data.reviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-
-            const avgRating = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+            // Calculate average rating
+            const avgRating = (allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length).toFixed(1);
             document.getElementById('avgRating').textContent = avgRating;
-            document.getElementById('reviewCount').textContent = `${reviews.length} review${reviews.length !== 1 ? 's' : ''}`;
+            document.getElementById('reviewCount').textContent = `${allReviews.length} review${allReviews.length !== 1 ? 's' : ''}`;
 
-
+            // Draw stars
             drawStars('ratingStars', avgRating);
 
-
-            const reviewsList = document.getElementById('reviewsList');
-            reviewsList.innerHTML = reviews.map(review => `
-              <div class="review-card">
-                <div class="review-header">
-                  <div class="review-author">
-                    <div class="author-name">${review.first_name} ${review.last_name}</div>
-                    <div class="review-stars">${'⭐'.repeat(review.rating)}</div>
-                    <div class="review-date">${new Date(review.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
-                  </div>
-                  ${review.is_verified_purchase ? '<div class="verified-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Verified Purchase</div>' : ''}
-                </div>
-                ${review.title ? `<h4 class="review-title">${escapeHtml(review.title)}</h4>` : ''}
-                <p class="review-comment">${escapeHtml(review.comment)}</p>
-              </div>
-            `).join('');
+            // Display reviews
+            renderReviews();
           } else {
             document.getElementById('reviewsList').innerHTML = `
               <div class="no-reviews">
@@ -2483,6 +2713,74 @@
           console.error('Error loading reviews:', error);
           document.getElementById('reviewsList').innerHTML = '<div class="no-reviews">Error loading reviews. Please try again later.</div>';
         }
+      }
+
+      function renderReviews() {
+        const reviewsList = document.getElementById('reviewsList');
+        
+        if (allReviews.length === 0) {
+          return;
+        }
+
+        let html = '<div class="reviews-container">';
+
+        // Display first batch of reviews
+        for (let i = 0; i < allReviews.length; i++) {
+          const review = allReviews[i];
+          const isHidden = i >= reviewsDisplayed;
+          const hiddenClass = isHidden ? 'hidden-review' : '';
+          const reviewDate = new Date(review.created_at).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+
+          html += `
+            <div class="review-card ${hiddenClass}" data-review-index="${i}">
+              <div class="review-header">
+                <div class="review-author">
+                  <div class="author-name">${review.first_name} ${review.last_name}</div>
+                  <div class="review-rating-badge">
+                    ${'⭐'.repeat(review.rating)}
+                    <span>${review.rating}.0</span>
+                  </div>
+                  <div class="review-date">📅 ${reviewDate}</div>
+                  ${review.is_verified_purchase ? '<div class="verified-badge" style="margin-top: 8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Verified Purchase</div>' : ''}
+                </div>
+              </div>
+              ${review.title ? `<h4 class="review-title" style="margin-top: 12px;">${escapeHtml(review.title)}</h4>` : ''}
+              <p class="review-comment">${escapeHtml(review.comment)}</p>
+            </div>
+          `;
+        }
+
+        html += '</div>';
+
+        // Add "See More" button if there are more reviews
+        if (allReviews.length > reviewsDisplayed) {
+          html += `
+            <div class="reviews-pagination">
+              <button class="see-more-btn" onclick="loadMoreReviews()">See More Reviews (${allReviews.length - reviewsDisplayed} more)</button>
+            </div>
+            <div class="reviews-count-info">
+              Showing ${Math.min(reviewsDisplayed, allReviews.length)} of ${allReviews.length} reviews
+            </div>
+          `;
+        } else if (allReviews.length > 0) {
+          html += `
+            <div class="reviews-count-info">
+              Showing all ${allReviews.length} review${allReviews.length !== 1 ? 's' : ''}
+            </div>
+          `;
+        }
+
+        reviewsList.innerHTML = html;
+      }
+
+      function loadMoreReviews() {
+        // Load 5 more reviews
+        reviewsDisplayed += 5;
+        renderReviews();
       }
 
       function drawStars(elementId, rating) {

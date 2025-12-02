@@ -25,6 +25,8 @@
       .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea;cursor:pointer}
       .side-link.active,.side-link:hover{background:#141414;color:#fff}
       .order-count-badge{background:#ef4444;color:#fff;border-radius:999px;padding:2px 6px;font-size:10px;font-weight:600;min-width:18px;text-align:center;margin-left:auto}
+      .section-focus-highlight{animation:sectionPulse 2s ease;border-radius:8px}
+      @keyframes sectionPulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6);}70%{box-shadow:0 0 0 8px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}}
 
       .content{display:flex;flex-direction:column}
       .topbar{display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;position:sticky;top:0;z-index:5}
@@ -176,7 +178,7 @@
         </div>
         <div class="side-group">
           <div class="side-title">Store Management</div>
-          <a class="side-link active" href="#" data-page="overview">Overview</a>
+          <a class="side-link" href="#" data-page="overview">Overview</a>
           <a class="side-link" href="#" data-page="products">Products</a>
           <a class="side-link" href="#" data-page="add-product" style="padding-left: 24px; font-size: 14px;">+ Add Product</a>
           <a class="side-link" href="#" data-page="archived-products">Archived Products</a>
@@ -187,7 +189,7 @@
           <a class="side-link" href="#" data-page="inventory">Inventory</a>
           <a class="side-link" href="#" data-page="reviews">Customer Reviews</a>
           <a class="side-link" href="#" data-page="promotions">Promotions</a>
-          <a class="side-link" href="#" data-page="notifications"> Notifications</a>
+          <a class="side-link" href="#" data-page="notifications">Notifications</a>
         </div>
         <div class="side-group">
           <div class="side-title">Analytics</div>
@@ -196,8 +198,8 @@
         </div>
         <div class="side-group">
           <div class="side-title">Settings</div>
-          <a class="side-link" href="#" data-page="store-settings">Brand Settings</a>
-          <a class="side-link" href="#" data-page="account">Account</a>
+          <a class="side-link" href="#" data-page="brand-settings" data-section="brand">Brand Settings</a>
+          <a class="side-link" href="#" data-page="account-settings" data-section="account">Account</a>
         </div>
       </aside>
 
@@ -390,6 +392,7 @@
 
       // Declare global variables early so they're available when needed
       let pageTemplates = {};
+      let pendingAccountSettingsSection = null;
       let allOrders = []; // Global orders array for filtering
       let currentOrderFilter = 'confirmed'; // Track current filter state
 
@@ -460,8 +463,8 @@
             'notifications': 'Notifications',
             'sales': 'Sales Analytics',
             'performance': 'Performance',
-            'store-settings': 'Brand Settings',
-            'account': 'Account'
+            'brand-settings': 'Brand Settings',
+            'account-settings': 'Account Settings'
           };
           const titleEl = document.querySelector('.page-title');
           if (titleEl) titleEl.textContent = pageNames[page] || 'Seller Dashboard';
@@ -478,6 +481,8 @@
 
           if (pageTemplates[page]) {
             content.innerHTML = pageTemplates[page];
+            const accountSectionToFocus = pendingAccountSettingsSection || (page === 'brand-settings' ? 'brand' : null);
+            pendingAccountSettingsSection = null;
 
             requestAnimationFrame(() => {
               if (page === 'products') {
@@ -496,10 +501,16 @@
                 loadSalesAnalytics();
               } else if (page === 'performance') {
                 loadPerformance();
-              } else if (page === 'store-settings') {
-                loadBrandSettings();
-              } else if (page === 'account') {
+              } else if (page === 'brand-settings') {
                 loadAccountSettings();
+                if (accountSectionToFocus) {
+                  setTimeout(() => focusAccountSettingsSection(accountSectionToFocus), 200);
+                }
+              } else if (page === 'account-settings') {
+                loadAccountSettings();
+                if (accountSectionToFocus) {
+                  setTimeout(() => focusAccountSettingsSection(accountSectionToFocus), 200);
+                }
               } else if (page === 'orders') {
                 loadOrders('confirmed');
               } else if (page === 'add-product') {
@@ -511,6 +522,7 @@
               content.innerHTML = '<div class="card"><div class="inner" style="text-align:center;padding:40px;"><div style="color:#ef4444;font-size:18px;font-weight:600;margin-bottom:8px;">Page Template Not Found</div><small style="color:#999;">The page template for ' + page + ' is not defined. This is a system error.</small></div></div>';
             }
             console.warn('WARNING: No template found for page: ' + page);
+            pendingAccountSettingsSection = null;
           }
         } catch (error) {
           console.error('❌ ERROR in loadPage:', error);
@@ -577,17 +589,11 @@
                 <div style="padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
                   <h3 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; color: #0a0a0a;"><span style="background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">3</span> Pricing & Inventory</h3>
 
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                  <div style="display: grid; grid-template-columns: 1fr; gap: 14px;">
                     <div>
                       <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">Price (₱) *</label>
                       <input type="number" name="price" step="0.01" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; transition: border-color 0.2s;" placeholder="0.00">
                       <small style="color: var(--muted); font-size: 11px; margin-top: 4px; display: block;">Selling price of your product</small>
-                    </div>
-
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">SKU</label>
-                      <input type="text" name="sku" style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; transition: border-color 0.2s;" placeholder="Auto-generated if empty">
-                      <small style="color: var(--muted); font-size: 11px; margin-top: 4px; display: block;">Stock Keeping Unit (optional)</small>
                     </div>
                   </div>
                 </div>
@@ -1157,103 +1163,107 @@
           </div>
         `,
 
-        'store-settings': `
+        'account-settings': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 16px;">Brand Settings</h2>
-              <form id="brand-settings-form" style="max-width: 600px;">
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Name *</label>
-                  <input type="text" id="store-name" placeholder="Enter brand name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Description *</label>
-                  <textarea id="store-description" placeholder="Tell customers about your brand" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required></textarea>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Email</label>
-                  <input type="email" id="contact-email" placeholder="Enter contact email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Phone</label>
-                  <input type="text" id="contact-phone" placeholder="Enter contact phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Store Address</label>
-                  <input type="text" id="store-address" placeholder="Enter store address" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">🗺️ Service Island Location</label>
-                  <select id="island-group" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px;">
-                    <option value="">Select your service island...</option>
-                    <option value="Luzon">🏝️ Luzon</option>
-                    <option value="Visayas">🏝️ Visayas</option>
-                    <option value="Mindanao">🏝️ Mindanao</option>
-                  </select>
-                  <p style="margin: 8px 0 0; font-size: 12px; color: #666;">Your store will be matched with riders serving this island group</p>
-                </div>
-
-                <div style="display: flex; gap: 12px;">
-                  <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Settings</button>
-                  <button type="button" onclick="reloadBrandSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        `,
-
-        'account': `
-          <div class="card">
-            <div class="inner">
-              <h2 style="margin: 0 0 16px;">Account Settings</h2>
-              <form id="account-settings-form" style="max-width: 600px;">
-                <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-                  <p style="margin: 0; color: #666; font-size: 13px;"><strong id="account-username">Loading...</strong></p>
-                  <p style="margin: 8px 0 0; color: #999; font-size: 12px;">Account Email: <strong id="account-email">Loading...</strong></p>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Full Name</label>
-                  <input type="text" id="full-name" placeholder="Enter full name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone Number</label>
-                  <input type="text" id="phone-number" placeholder="Enter phone number" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address *</label>
-                  <div style="display: flex; gap: 8px;">
-                    <input type="email" id="email-address" placeholder="Enter email address" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                    <button type="button" id="verify-email-btn" onclick="sendEmailOTP()" class="action-btn" style="background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Verify Email</button>
+              <h2 style="margin: 0 0 24px;">Account Settings</h2>
+              
+              <!-- Brand Settings Section -->
+              <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
+                <h3 style="margin: 0 0 16px; color: #0a0a0a; font-size: 16px;">Brand Information</h3>
+                <form id="brand-settings-form">
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Name *</label>
+                    <input type="text" id="store-name" placeholder="Enter brand name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required>
                   </div>
-                  <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Click "Verify Email" to send OTP verification code</small>
-                  <div id="otp-verification-section" style="display: none; margin-top: 12px; padding: 12px; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 6px;">
-                    <input type="text" id="otp-code" placeholder="Enter 6-digit OTP code" style="width: 100%; padding: 10px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 8px; box-sizing: border-box;">
-                    <button type="button" id="verify-otp-btn" onclick="verifyEmailOTP()" class="action-btn" style="width: 100%; background: #10b981; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Verify OTP</button>
-                  </div>
-                  <div id="email-verified-message" style="display: none; margin-top: 12px; padding: 12px; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; color: #15803d; font-weight: 500;">
-                    ✓ Email verified successfully
-                  </div>
-                </div>
 
-                <div style="display: flex; gap: 12px;">
-                  <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Changes</button>
-                  <button type="button" onclick="reloadAccountSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
-                </div>
-              </form>
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Description *</label>
+                    <textarea id="store-description" placeholder="Tell customers about your brand" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required></textarea>
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Email</label>
+                    <input type="email" id="contact-email" placeholder="Enter contact email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Phone</label>
+                    <input type="text" id="contact-phone" placeholder="Enter contact phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Store Address</label>
+                    <input type="text" id="store-address" placeholder="Enter store address" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">🗺️ Service Island Location</label>
+                    <select id="island-group" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px;">
+                      <option value="">Select your service island...</option>
+                      <option value="Luzon">🏝️ Luzon</option>
+                      <option value="Visayas">🏝️ Visayas</option>
+                      <option value="Mindanao">🏝️ Mindanao</option>
+                    </select>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #666;">Your store will be matched with riders serving this island group</p>
+                  </div>
+
+                  <div style="display: flex; gap: 12px;">
+                    <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Brand Settings</button>
+                    <button type="button" onclick="reloadBrandSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
+                  </div>
+                </form>
+              </div>
+              
+              <!-- Account Settings Section -->
+              <div>
+                <h3 style="margin: 0 0 16px; color: #0a0a0a; font-size: 16px;">Personal Account</h3>
+                <form id="account-settings-form">
+                  <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="margin: 0; color: #666; font-size: 13px;"><strong id="account-username">Loading...</strong></p>
+                    <p style="margin: 8px 0 0; color: #999; font-size: 12px;">Account Email: <strong id="account-email">Loading...</strong></p>
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Full Name</label>
+                    <input type="text" id="full-name" placeholder="Enter full name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone Number</label>
+                    <input type="text" id="phone-number" placeholder="Enter phone number" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                  </div>
+
+                  <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address *</label>
+                    <div style="display: flex; gap: 8px;">
+                      <input type="email" id="email-address" placeholder="Enter email address" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                      <button type="button" id="verify-email-btn" onclick="sendEmailOTP()" class="action-btn" style="background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Verify Email</button>
+                    </div>
+                    <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Click "Verify Email" to send OTP verification code</small>
+                    <div id="otp-verification-section" style="display: none; margin-top: 12px; padding: 12px; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 6px;">
+                      <input type="text" id="otp-code" placeholder="Enter 6-digit OTP code" style="width: 100%; padding: 10px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 8px; box-sizing: border-box;">
+                      <button type="button" id="verify-otp-btn" onclick="verifyEmailOTP()" class="action-btn" style="width: 100%; background: #10b981; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Verify OTP</button>
+                    </div>
+                    <div id="email-verified-message" style="display: none; margin-top: 12px; padding: 12px; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; color: #15803d; font-weight: 500;">
+                      ✓ Email verified successfully
+                    </div>
+                  </div>
+
+                  <div style="display: flex; gap: 12px;">
+                    <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Account Settings</button>
+                    <button type="button" onclick="reloadAccountSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         `,
 
         'overview': null
       };
+
+      pageTemplates_content['brand-settings'] = pageTemplates_content['account-settings'];
 
       // Populate pageTemplates with the content
       pageTemplates = pageTemplates_content;
@@ -3232,7 +3242,6 @@ Customer: ${order.customer_name || 'N/A'}
           if (!grouped[key]) {
             grouped[key] = {
               product_name: item.product_name,
-              sku: item.sku,
               price: item.price,
               image_url: item.image_url,
               variants: []
@@ -3272,7 +3281,6 @@ Customer: ${order.customer_name || 'N/A'}
             <thead>
               <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
                 <th style="padding: 14px 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Product</th>
-                <th style="padding: 14px 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">SKU</th>
                 <th style="padding: 14px 16px; text-align: right; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Price</th>
                 <th style="padding: 14px 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Variants</th>
                 <th style="padding: 14px 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Total Stock</th>
@@ -3303,7 +3311,6 @@ Customer: ${order.customer_name || 'N/A'}
                   </div>
                 </div>
               </td>
-              <td style="padding: 16px; color: #6b7280;">${product.sku || 'N/A'}</td>
               <td style="padding: 16px; text-align: right; font-weight: 600; color: #111827;">₱${parseFloat(product.price || 0).toFixed(2)}</td>
               <td style="padding: 16px; text-align: center;">
                 <span style="background: #f3f4f6; color: #374151; padding: 4px 12px; border-radius: 12px; font-weight: 600; font-size: 12px;">
@@ -3322,7 +3329,7 @@ Customer: ${order.customer_name || 'N/A'}
               </td>
             </tr>
             <tr id="variants-${productId}" style="display: none; background: #fafafa;">
-              <td colspan="6" style="padding: 0;">
+              <td colspan="5" style="padding: 0;">
                 <div style="padding: 24px; border-top: 2px solid #e5e7eb;">
                   <h4 style="margin: 0 0 16px; font-size: 15px; font-weight: 600; color: #111827; display: flex; align-items: center; gap: 8px;">
                     <span style="background: #0a0a0a; color: white; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px;">📦</span>
@@ -3427,11 +3434,11 @@ Customer: ${order.customer_name || 'N/A'}
             const searchTerm = e.target.value.toLowerCase();
             const rows = document.querySelectorAll('tbody tr[onmouseover]');
             
-            rows.forEach((row, index) => {
-              const productName = row.querySelector('td:first-child p').textContent.toLowerCase();
-              const sku = row.querySelectorAll('td')[1].textContent.toLowerCase();
+            rows.forEach((row) => {
+              const productNameElement = row.querySelector('td:first-child p');
+              const productName = productNameElement ? productNameElement.textContent.toLowerCase() : '';
               
-              if (productName.includes(searchTerm) || sku.includes(searchTerm)) {
+              if (productName.includes(searchTerm)) {
                 row.style.display = '';
                 // Also show the variant details row if it exists
                 const variantRow = row.nextElementSibling;
@@ -3768,7 +3775,15 @@ Customer: ${order.customer_name || 'N/A'}
       }
 
       function updateDiscountLabel() {
-
+        const discountType = document.getElementById('promo-discount-type').value;
+        const discountInput = document.getElementById('promo-discount-value');
+        if (discountType === 'percentage') {
+          discountInput.placeholder = 'Enter discount percentage (0-100)';
+          discountInput.max = '100';
+        } else {
+          discountInput.placeholder = 'Enter discount amount in ₱';
+          discountInput.removeAttribute('max');
+        }
       }
 
       // Notifications Functions
@@ -4035,6 +4050,9 @@ Customer: ${order.customer_name || 'N/A'}
       }
 
       function loadAccountSettings() {
+        // Load both brand and account settings for the combined form
+        loadBrandSettings();
+        
         fetch('/seller/account-settings')
           .then(response => {
             console.log('Account settings response status:', response.status);
@@ -4068,6 +4086,22 @@ Customer: ${order.customer_name || 'N/A'}
       function reloadAccountSettings() {
         loadAccountSettings();
         alert('✅ Account settings reloaded!');
+      }
+
+      function focusAccountSettingsSection(section) {
+        if (!section) return;
+        let target = null;
+        if (section === 'brand') {
+          target = document.getElementById('brand-settings-form');
+        } else if (section === 'account') {
+          target = document.getElementById('account-settings-form');
+        }
+
+        if (target) {
+          target.classList.add('section-focus-highlight');
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(() => target.classList.remove('section-focus-highlight'), 1600);
+        }
       }
 
       function sendEmailOTP() {
@@ -4190,28 +4224,29 @@ Customer: ${order.customer_name || 'N/A'}
             }
 
             if (data.products && data.products.length > 0) {
-              let approvedCount = 0, pendingCount = 0;
-
               let html = `
-                <div style="margin-bottom: 16px; display: flex; gap: 12px;">
+                <div style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
                   <div style="background: #dcfce7; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #22c55e;">
                     <small style="color: #666; display: block;">Approved</small>
-                    <strong style="font-size: 18px; color: #15803d;" id="approved-count">0</strong>
+                    <strong style="font-size: 18px; color: #15803d;" id="approved-count">${data.stats?.approved || 0}</strong>
                   </div>
                   <div style="background: #fef3c7; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #eab308;">
                     <small style="color: #666; display: block;">Pending Approval</small>
-                    <strong style="font-size: 18px; color: #b45309;" id="pending-count">0</strong>
+                    <strong style="font-size: 18px; color: #b45309;" id="pending-count">${data.stats?.pending || 0}</strong>
+                  </div>
+                  <div style="background: #fee2e2; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #ef4444;">
+                    <small style="color: #666; display: block;">Rejected</small>
+                    <strong style="font-size: 18px; color: #991b1b;" id="rejected-count">${data.stats?.rejected || 0}</strong>
                   </div>
                   <div style="background: #f3f4f6; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #6b7280;">
                     <small style="color: #666; display: block;">Total Products</small>
-                    <strong style="font-size: 18px; color: #374151;">${data.products.length}</strong>
+                    <strong style="font-size: 18px; color: #374151;">${data.stats?.total || 0}</strong>
                   </div>
                 </div>
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
                     <tr style="background: #f3f4f6;">
                       <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Product Name</th>
-                      <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">SKU</th>
                       <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Price</th>
                       <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Stock</th>
                       <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Status</th>
@@ -4223,19 +4258,21 @@ Customer: ${order.customer_name || 'N/A'}
 
               data.products.forEach(product => {
                 let statusText = '', statusClass = '', statusIcon = '';
+                const approvalStatus = product.approval_status || 'approved';
 
-                if (product.is_active === 1 || product.is_active === true) {
+                if (approvalStatus === 'approved') {
                   statusText = 'Approved ✓';
                   statusClass = 'status-active';
                   statusIcon = '✓';
-                  approvedCount++;
-                } else {
+                } else if (approvalStatus === 'pending') {
                   statusText = 'Pending Review';
                   statusClass = 'status-pending';
                   statusIcon = '⏳';
-                  pendingCount++;
+                } else if (approvalStatus === 'rejected') {
+                  statusText = 'Rejected ❌';
+                  statusClass = 'status-inactive';
+                  statusIcon = '❌';
                 }
-
 
                 if (product.edit_status === 'pending' && product.pending_edits > 0) {
                   statusText = `Edit Pending (${product.pending_edits})`;
@@ -4243,7 +4280,7 @@ Customer: ${order.customer_name || 'N/A'}
                   statusIcon = '⏳';
                 }
 
-                console.log(`Product: ${product.name}, Active: ${product.is_active}, Stock: ${product.stock}`);
+                console.log(`Product: ${product.name}, Status: ${approvalStatus}, Stock: ${product.stock}`);
 
                 html += `
                   <tr style="border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb';" onmouseout="this.style.backgroundColor='';">
@@ -4251,7 +4288,6 @@ Customer: ${order.customer_name || 'N/A'}
                       <div style="font-weight: 600; color: #0a0a0a;">${escapeHtml(product.name)}</div>
                       ${product.category_name ? `<div style="font-size: 12px; color: #777; margin-top: 2px;">${product.category_name}</div>` : ''}
                     </td>
-                    <td style="padding: 12px; border: 1px solid #e5e7eb; font-size: 13px; color: #666;">${product.sku || 'N/A'}</td>
                     <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #0a0a0a;">₱${parseFloat(product.price).toFixed(2)}</td>
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">
                       <div style="font-weight: 600; color: #0a0a0a;">${product.stock} pcs</div>
@@ -4264,10 +4300,10 @@ Customer: ${order.customer_name || 'N/A'}
                     </td>
                     <td style="padding: 12px; border: 1px solid #e5e7eb;">
                       <div style="display: flex; gap: 6px;">
-                        ${product.is_active ? `
+                        ${approvalStatus === 'approved' ? `
                           <button class="action-btn" onclick="editProduct(${product.id})" style="padding: 6px 12px; font-size: 12px;">Edit</button>
                           <button class="action-btn" onclick="archiveProduct(${product.id}, '${product.name.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 12px; background: #ef4444;">Archive</button>
-                        ` : '<span style="color: #999; font-size: 12px;">⏳ Awaiting</span>'}
+                        ` : approvalStatus === 'rejected' ? '<span style="color: #999; font-size: 12px;">Rejected</span>' : '<span style="color: #999; font-size: 12px;">⏳ Awaiting approval</span>'}
                       </div>
                     </td>
                   </tr>
@@ -4276,10 +4312,6 @@ Customer: ${order.customer_name || 'N/A'}
 
               html += '</tbody></table>';
               document.getElementById('products-list').innerHTML = html;
-
-
-              document.getElementById('approved-count').textContent = approvedCount;
-              document.getElementById('pending-count').textContent = pendingCount;
             } else {
               document.getElementById('products-list').innerHTML = '<div style="text-align:center;color:#999;padding:40px;"><p style="font-size:16px; margin-bottom: 16px;">No products yet</p><p>Click the "+ Add Product" button to add your first product</p></div>';
             }
@@ -4709,7 +4741,6 @@ Customer: ${order.customer_name || 'N/A'}
                   <thead>
                     <tr>
                       <th>Product</th>
-                      <th>SKU</th>
                       <th>Price</th>
                       <th>Archived Date</th>
                       <th>Status</th>
@@ -4727,7 +4758,6 @@ Customer: ${order.customer_name || 'N/A'}
                 html += `
                   <tr>
                     <td>${product.name}</td>
-                    <td>${product.sku || 'N/A'}</td>
                     <td>₱${parseFloat(product.price).toFixed(2)}</td>
                     <td style="font-size:13px;color:var(--muted)">${archivedDate}</td>
                     <td><span class="status-badge ${statusClass}">${statusText}</span></td>
@@ -5015,10 +5045,17 @@ Customer: ${order.customer_name || 'N/A'}
           event.preventDefault();
           
           const page = link.getAttribute('data-page');
+          const targetSection = link.dataset.section || null;
           
           if (!page) {
             console.warn('⚠️ No data-page attribute on link', link);
             return;
+          }
+
+          if (targetSection && (page === 'brand-settings' || page === 'account-settings')) {
+            pendingAccountSettingsSection = targetSection;
+          } else if (page !== 'brand-settings') {
+            pendingAccountSettingsSection = null;
           }
 
           // Check if loadPage function is available
@@ -5029,7 +5066,7 @@ Customer: ${order.customer_name || 'N/A'}
 
           // Load the page
           this.currentPage = page;
-          this.setActiveLink(page);
+          this.setActiveLink(page, link);
           loadPage(page);
           
           return false;
@@ -5039,7 +5076,7 @@ Customer: ${order.customer_name || 'N/A'}
          * Set active link styling based on page name
          * @param {string} page - Page identifier
          */
-        setActiveLink(page) {
+        setActiveLink(page, specificLink = null) {
           // Remove active class from all links
           const allLinks = document.querySelectorAll('.side-link');
           allLinks.forEach((link) => {
@@ -5047,7 +5084,7 @@ Customer: ${order.customer_name || 'N/A'}
           });
 
           // Add active class to matching link
-          const activeLink = document.querySelector(`[data-page="${page}"]`);
+          const activeLink = specificLink || document.querySelector(`[data-page="${page}"]`);
           if (activeLink) {
             activeLink.classList.add('active');
             this.activeLink = activeLink;
@@ -5122,10 +5159,17 @@ Customer: ${order.customer_name || 'N/A'}
           event.preventDefault();
           
           const page = element.getAttribute('data-load-page');
+          const targetSection = element.dataset.section || null;
           
           if (!page) {
             console.warn('⚠️ No data-load-page attribute on element', element);
             return;
+          }
+
+          if (targetSection && (page === 'brand-settings' || page === 'account-settings')) {
+            pendingAccountSettingsSection = targetSection;
+          } else if (page !== 'brand-settings') {
+            pendingAccountSettingsSection = null;
           }
 
           if (typeof loadPage !== 'function') {
@@ -5159,6 +5203,61 @@ Customer: ${order.customer_name || 'N/A'}
           // Setup color tab delegation if available
           if (typeof setupColorTabDelegation === 'function') {
             setupColorTabDelegation();
+          }
+
+          // Setup brand settings form listener
+          const brandSettingsForm = document.getElementById('brand-settings-form');
+          if (brandSettingsForm) {
+            brandSettingsForm.addEventListener('submit', (e) => {
+              e.preventDefault();
+
+              const formData = new FormData();
+              formData.append('store_name', document.getElementById('store-name').value);
+              formData.append('description', document.getElementById('store-description').value);
+              formData.append('contact_email', document.getElementById('contact-email').value);
+              formData.append('contact_phone', document.getElementById('contact-phone').value);
+              formData.append('address', document.getElementById('store-address').value);
+              formData.append('island_group', document.getElementById('island-group').value);
+
+              fetch('/seller/brand-settings', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.success) {
+                    alert('✅ Brand settings saved successfully!');
+                    loadBrandSettings();
+                  } else {
+                    alert('❌ Error: ' + (data.error || 'Unknown error'));
+                  }
+                })
+                .catch(error => alert('❌ Error saving brand settings: ' + error.message));
+            });
+            console.log('✅ Brand settings form listener set up');
+          }
+
+          // Setup account settings form listener
+          const accountSettingsForm = document.getElementById('account-settings-form');
+          if (accountSettingsForm) {
+            accountSettingsForm.addEventListener('submit', (e) => {
+              e.preventDefault();
+
+              const formData = new FormData();
+              formData.append('full_name', document.getElementById('full-name').value);
+              formData.append('phone_number', document.getElementById('phone-number').value);
+              formData.append('email', document.getElementById('email-address').value);
+
+              fetch('/seller/account-settings', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.success) {
+                    alert('✅ Account settings saved successfully!');
+                    loadAccountSettings();
+                  } else {
+                    alert('❌ Error: ' + (data.error || 'Unknown error'));
+                  }
+                })
+                .catch(error => alert('❌ Error saving account settings: ' + error.message));
+            });
+            console.log('✅ Account settings form listener set up');
           }
 
           // Setup promotion form listener

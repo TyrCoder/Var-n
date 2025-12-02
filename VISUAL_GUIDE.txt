@@ -1,0 +1,225 @@
+# SELLER DASHBOARD - VISUAL GUIDE
+
+## 🎯 What Users Will See
+
+### 1. PRODUCTS PAGE - Product Approval Tracking
+
+```
+SELLER DASHBOARD > PRODUCTS
+
+┌────────────────────────────────────────────────────────────────┐
+│ STATUS CARDS                                                   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────┐
+│  │ Approved ✓   │  │ Pending App. │  │ Rejected ❌  │  │ Total  │
+│  │              │  │              │  │              │  │        │
+│  │      5       │  │      2       │  │      1       │  │   8    │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └────────┘
+│    (GREEN)          (YELLOW)          (RED)            (GRAY)
+│
+└────────────────────────────────────────────────────────────────┘
+
+PRODUCT TABLE
+┌─────────────────┬──────┬────────┬────────┬──────────────┬─────────────┐
+│ Product Name    │ SKU  │ Price  │ Stock  │ Status       │ Actions     │
+├─────────────────┼──────┼────────┼────────┼──────────────┼─────────────┤
+│ Nike Shoes      │ 001  │ ₱2500  │ 10 pcs │ Approved ✓   │ Edit Archive│
+│ Blue Shirt      │ 002  │ ₱800   │ 5 pcs  │ ⏳ Pending    │ ⏳ Awaiting │
+│ Red Jacket      │ 003  │ ₱3000  │ 0 pcs  │ Rejected ❌  │ Rejected    │
+└─────────────────┴──────┴────────┴────────┴──────────────┴─────────────┘
+```
+
+### 2. ACCOUNT SETTINGS PAGE - Consolidated
+
+```
+SELLER DASHBOARD > ACCOUNT SETTINGS
+
+┌──────────────────────────────────────────────────────────┐
+│ Account Settings                                         │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│ ┌─ BRAND INFORMATION ─────────────────────────────────┐ │
+│ │                                                     │ │
+│ │ Brand Name *                                        │ │
+│ │ [My Fashion Store.....................]            │ │
+│ │                                                     │ │
+│ │ Brand Description *                                 │ │
+│ │ [We specialize in trendy fashion for everyone....] │ │
+│ │                                                     │ │
+│ │ Contact Email                                       │ │
+│ │ [contact@store.com..................]              │ │
+│ │                                                     │ │
+│ │ Contact Phone                                       │ │
+│ │ [+63 912 345 6789....................]              │ │
+│ │                                                     │ │
+│ │ Store Address                                       │ │
+│ │ [123 Main Street, Manila............]              │ │
+│ │                                                     │ │
+│ │ 🗺️ Service Island Location                         │ │
+│ │ [▼ Luzon............................]              │ │
+│ │                                                     │ │
+│ │ [💾 Save Brand Settings]  [⟲ Reload]              │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                          │
+│ ┌─ PERSONAL ACCOUNT ─────────────────────────────────┐  │
+│ │                                                    │  │
+│ │ Username: john_seller                             │  │
+│ │ Account Email: john@email.com                     │  │
+│ │                                                    │  │
+│ │ Full Name                                          │  │
+│ │ [John Doe.......................................]  │  │
+│ │                                                    │  │
+│ │ Phone Number                                       │  │
+│ │ [+63 912 345 6789......................]           │  │
+│ │                                                    │  │
+│ │ Email Address *                                    │  │
+│ │ [john@email.com...................] [Verify Email]│  │
+│ │ Click to send OTP verification code                │  │
+│ │                                                    │  │
+│ │ [💾 Save Account Settings]  [⟲ Reload]           │  │
+│ └─────────────────────────────────────────────────────┘  │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 3. SIDEBAR NAVIGATION - Consolidated
+
+```
+SELLER DASHBOARD
+
+┌─ NAVIGATION ─────┐
+│                  │
+│ 📊 Overview      │
+│ 📦 Products      │
+│ 📋 Orders        │
+│ 🎁 Promotions    │
+│ ⚙️ Account       │ ← SINGLE LINK (was 2 separate links)
+│    Settings      │
+│                  │
+│ 🚪 Logout        │
+└──────────────────┘
+```
+
+### 4. SELLER SIGNUP - Brand Description
+
+```
+SELLER SIGNUP
+
+┌──────────────────────────────────────┐
+│ Create Seller Account                │
+├──────────────────────────────────────┤
+│                                      │
+│ Brand name                           │
+│ [My Fashion Store..................] │
+│                                      │
+│ Brand description                    │ ← NEW
+│ [Tell customers about your brand..] │ ← NEW
+│ This helps customers learn more...  │ ← NEW
+│                                      │
+│ Email address                        │
+│ [you@business.com...............]   │
+│                                      │
+│ Contact number                       │
+│ [+63 9xx xxx xxxx...............]   │
+│                                      │
+│ Create password                      │
+│ [••••••..................]           │
+│                                      │
+│ Confirm password                     │
+│ [••••••..................]           │
+│                                      │
+│ ☑️ I agree to Terms & Conditions     │
+│                                      │
+│ [Create seller account]              │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+---
+
+## 🔄 Product Approval Workflow
+
+### Seller Perspective:
+```
+1. Seller adds product
+   ↓
+2. Product shows "⏳ Pending Review" on dashboard
+   ↓
+3a. Admin APPROVES → Status changes to "✓ Approved" → Visible to buyers
+   OR
+3b. Admin REJECTS → Status changes to "❌ Rejected" → Still visible to seller
+   ↓
+4. Seller can edit rejected product and resubmit
+```
+
+### Admin Perspective:
+```
+1. Admin sees pending products
+   ↓
+2. Reviews product details
+   ↓
+3. Clicks "Approve" or "Reject"
+   ↓
+4. Seller gets notification
+   ↓
+5. Rejected products stay in database (not deleted)
+```
+
+---
+
+## 📊 Dashboard Statistics
+
+**Counts in Status Cards:**
+- **Approved:** Number of products visible to buyers
+- **Pending:** Waiting for admin review
+- **Rejected:** Admin didn't approve (seller can improve/resubmit)
+- **Total:** Sum of all above
+
+**Example:**
+```
+Approved: 15 products → Live on store
+Pending: 3 products → Awaiting admin review
+Rejected: 2 products → Seller can edit and resubmit
+Total: 20 products in system
+```
+
+---
+
+## ✨ Key Features
+
+✅ Real-time status updates
+✅ Color-coded status cards for quick scanning
+✅ One unified settings page (no more switching between tabs)
+✅ Brand customization from signup
+✅ Rejected products preserved (better workflow)
+✅ All in English (as requested)
+✅ Mobile responsive
+✅ Clear action buttons (Edit/Archive for approved, messaging for pending/rejected)
+
+---
+
+## 🎯 Expected User Benefits
+
+1. **Sellers Know Submission Status**
+   - No confusion about whether product was submitted
+   - Clear indication of what needs admin attention
+
+2. **Better Settings Management**
+   - Everything in one place
+   - Less clicking around to find settings
+   - Organized by Brand vs Personal
+
+3. **Brand Customization**
+   - Show personality from day one (signup)
+   - Customers learn about brand immediately
+   - Can update description anytime
+
+4. **Transparency**
+   - Rejected products visible (not mysteriously deleted)
+   - Sellers can understand and fix issues
+   - Improve and resubmit workflow
+
+---
+
+**Status: READY FOR TESTING ✅**
