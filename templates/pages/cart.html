@@ -535,6 +535,109 @@
         box-shadow: 0 8px 24px rgba(0,0,0,0.2);
       }
 
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 10, 10, 0.45);
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+      }
+
+      .confirm-modal {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 32px;
+        width: min(420px, 92%);
+        box-shadow: 0 24px 60px rgba(10,10,10,0.16);
+        border: 1px solid #e5e7eb;
+        position: relative;
+        font-family: 'Commissioner', sans-serif;
+      }
+
+      .confirm-modal-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #000, #1f1f1f);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 20px;
+        margin-bottom: 18px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      }
+
+      .confirm-modal h2 {
+        margin: 0 0 8px;
+        font-size: 20px;
+        font-weight: 600;
+        color: #0a0a0a;
+      }
+
+      .confirm-modal p {
+        margin: 0 0 20px;
+        color: #4b5563;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .confirm-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      .confirm-modal button {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 10px 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .confirm-modal button.confirm-secondary {
+        border: 1px solid #e5e5e5;
+        background: #f9fafb;
+        color: #111827;
+      }
+
+      .confirm-modal button.confirm-secondary:hover {
+        background: #f3f4f6;
+      }
+
+      .confirm-modal button.confirm-primary {
+        border: none;
+        background: #000000;
+        color: #ffffff;
+      }
+
+      .confirm-modal button.confirm-primary:hover {
+        background: #1a1a1a;
+      }
+
+      .confirm-modal-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        background: none;
+        border: none;
+        font-size: 22px;
+        color: #9ca3af;
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      .confirm-modal-close:hover {
+        color: #6b7280;
+      }
+
       @media (max-width: 968px) {
         .cart-page {
           padding: 0 20px;
@@ -674,6 +777,20 @@
       </div>
     </div>
 
+    <!-- Remove Item Confirmation Modal -->
+    <div id="removeItemModal" class="modal-overlay">
+      <div class="confirm-modal">
+        <button class="confirm-modal-close" onclick="closeRemoveItemModal()">×</button>
+        <div class="confirm-modal-icon">🛒</div>
+        <h2>Remove Item?</h2>
+        <p>Are you sure you want to remove this item from your cart?</p>
+        <div class="confirm-modal-actions">
+          <button class="confirm-secondary" onclick="closeRemoveItemModal()">Cancel</button>
+          <button class="confirm-primary" onclick="confirmRemoveCartItem()">Yes, Remove</button>
+        </div>
+      </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
@@ -704,6 +821,33 @@
 
       function proceedLogout() {
         window.location.href = '{{ url_for("logout") }}';
+      }
+
+
+      let pendingCartRemovalId = null;
+
+      function promptRemoveCartItem(cartId) {
+        pendingCartRemovalId = cartId;
+        const modal = document.getElementById('removeItemModal');
+        if (modal) {
+           modal.classList.add('show');
+        }
+      }
+
+      function closeRemoveItemModal() {
+        pendingCartRemovalId = null;
+        const modal = document.getElementById('removeItemModal');
+        if (modal) {
+           modal.classList.remove('show');
+        }
+      }
+
+      async function confirmRemoveCartItem() {
+        if (pendingCartRemovalId === null) return;
+        const removed = await removeCartItem(pendingCartRemovalId);
+        if (removed) {
+          closeRemoveItemModal();
+        }
       }
 
 
@@ -816,7 +960,7 @@
                   <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity + 1})">+</button>
                 </div>
                 <div class="cart-item-total">₱${itemTotal.toFixed(2)}</div>
-                <button class="remove-btn" onclick="removeCartItem(${cartId})" title="Remove item">×</button>
+                <button class="remove-btn" onclick="promptRemoveCartItem(${cartId})" title="Remove item">×</button>
               </div>`;
           }).join('');
 
@@ -886,8 +1030,10 @@
           const success = await VaronCart.remove(cartId);
           if (success) {
             await loadCartPage();
+            return true;
           }
         }
+        return false;
       }
 
 

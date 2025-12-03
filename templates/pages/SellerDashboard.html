@@ -91,6 +91,72 @@
         color: #991b1b;
       }
 
+      .status-summary-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .status-summary-card {
+        flex: 1;
+        min-width: 180px;
+        border-radius: 12px;
+        padding: 14px 18px;
+        border: 1px solid var(--line);
+        background: #fff;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        outline: none;
+      }
+
+      .status-summary-card small {
+        display: block;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 6px;
+        font-size: 11px;
+      }
+
+      .status-summary-card strong {
+        font-size: 22px;
+        font-weight: 700;
+        display: block;
+      }
+
+      .status-summary-card:hover,
+      .status-summary-card:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      }
+
+      .status-summary-card--active {
+        transform: translateY(-2px);
+        box-shadow: 0 0 0 2px rgba(10,10,10,0.5);
+      }
+
+      .status-card-approved {
+        background: #dcfce7;
+        border-left: 4px solid #22c55e;
+      }
+
+      .status-card-pending {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+      }
+
+      .status-card-rejected {
+        background: #fee2e2;
+        border-left: 4px solid #ef4444;
+      }
+      
+      .status-card-total {
+        background: #f3f4f6;
+        border-left: 4px solid #6b7280;
+      }
+
       @keyframes fadeOut {
         from {
           opacity: 1;
@@ -198,8 +264,7 @@
         </div>
         <div class="side-group">
           <div class="side-title">Settings</div>
-          <a class="side-link" href="#" data-page="brand-settings" data-section="brand">Brand Settings</a>
-          <a class="side-link" href="#" data-page="account-settings" data-section="account">Account</a>
+          <a class="side-link" href="#" data-page="account-settings">Account</a>
         </div>
       </aside>
 
@@ -395,6 +460,8 @@
       let pendingAccountSettingsSection = null;
       let allOrders = []; // Global orders array for filtering
       let currentOrderFilter = 'confirmed'; // Track current filter state
+      let sellerProductsCache = [];
+      let currentProductStatusFilter = 'all';
 
       function updateOrderCount(count) {
         const badge = document.getElementById('order-count-badge');
@@ -463,7 +530,6 @@
             'notifications': 'Notifications',
             'sales': 'Sales Analytics',
             'performance': 'Performance',
-            'brand-settings': 'Brand Settings',
             'account-settings': 'Account Settings'
           };
           const titleEl = document.querySelector('.page-title');
@@ -481,7 +547,11 @@
 
           if (pageTemplates[page]) {
             content.innerHTML = pageTemplates[page];
-            const accountSectionToFocus = pendingAccountSettingsSection || (page === 'brand-settings' ? 'brand' : null);
+
+            if (typeof PageNavigator !== 'undefined' && typeof PageNavigator.bindPageLoadElements === 'function') {
+              PageNavigator.bindPageLoadElements();
+            }
+            const accountSectionToFocus = pendingAccountSettingsSection;
             pendingAccountSettingsSection = null;
 
             requestAnimationFrame(() => {
@@ -501,11 +571,6 @@
                 loadSalesAnalytics();
               } else if (page === 'performance') {
                 loadPerformance();
-              } else if (page === 'brand-settings') {
-                loadAccountSettings();
-                if (accountSectionToFocus) {
-                  setTimeout(() => focusAccountSettingsSection(accountSectionToFocus), 200);
-                }
               } else if (page === 'account-settings') {
                 loadAccountSettings();
                 if (accountSectionToFocus) {
@@ -1262,8 +1327,6 @@
 
         'overview': null
       };
-
-      pageTemplates_content['brand-settings'] = pageTemplates_content['account-settings'];
 
       // Populate pageTemplates with the content
       pageTemplates = pageTemplates_content;
@@ -4292,24 +4355,29 @@
               return;
             }
 
-            if (data.products && data.products.length > 0) {
+            sellerProductsCache = Array.isArray(data.products) ? data.products : [];
+
+            if (sellerProductsCache.length > 0) {
+              const stats = data.stats || {};
+              currentProductStatusFilter = 'all';
+
               let html = `
-                <div style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
-                  <div style="background: #dcfce7; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #22c55e;">
-                    <small style="color: #666; display: block;">Approved</small>
-                    <strong style="font-size: 18px; color: #15803d;" id="approved-count">${data.stats?.approved || 0}</strong>
+                <div class="status-summary-grid" role="group" aria-label="Product status summary">
+                  <div class="status-summary-card status-card-approved" role="button" tabindex="0" data-status="approved" aria-pressed="false" onclick="filterProductsByStatus('approved')" onkeydown="handleStatusCardKey(event, 'approved')">
+                    <small>Approved</small>
+                    <strong id="approved-count">${stats.approved || 0}</strong>
                   </div>
-                  <div style="background: #fef3c7; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #eab308;">
-                    <small style="color: #666; display: block;">Pending Approval</small>
-                    <strong style="font-size: 18px; color: #b45309;" id="pending-count">${data.stats?.pending || 0}</strong>
+                  <div class="status-summary-card status-card-pending" role="button" tabindex="0" data-status="pending" aria-pressed="false" onclick="filterProductsByStatus('pending')" onkeydown="handleStatusCardKey(event, 'pending')">
+                    <small>Pending Approval</small>
+                    <strong id="pending-count">${stats.pending || 0}</strong>
                   </div>
-                  <div style="background: #fee2e2; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #ef4444;">
-                    <small style="color: #666; display: block;">Rejected</small>
-                    <strong style="font-size: 18px; color: #991b1b;" id="rejected-count">${data.stats?.rejected || 0}</strong>
+                  <div class="status-summary-card status-card-rejected" role="button" tabindex="0" data-status="rejected" aria-pressed="false" onclick="filterProductsByStatus('rejected')" onkeydown="handleStatusCardKey(event, 'rejected')">
+                    <small>Rejected</small>
+                    <strong id="rejected-count">${stats.rejected || 0}</strong>
                   </div>
-                  <div style="background: #f3f4f6; padding: 10px 16px; border-radius: 8px; border-left: 4px solid #6b7280;">
-                    <small style="color: #666; display: block;">Total Products</small>
-                    <strong style="font-size: 18px; color: #374151;">${data.stats?.total || 0}</strong>
+                  <div class="status-summary-card status-card-total" role="button" tabindex="0" data-status="all" aria-pressed="false" onclick="filterProductsByStatus('all')" onkeydown="handleStatusCardKey(event, 'all')" aria-label="Show all products">
+                    <small>Total Products</small>
+                    <strong>${stats.total || 0}</strong>
                   </div>
                 </div>
                 <table style="width: 100%; border-collapse: collapse;">
@@ -4322,65 +4390,17 @@
                       <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody id="products-table-body">
+                    <tr>
+                      <td colspan="5" style="padding: 24px; text-align: center; color: #6b7280;">Preparing product list...</td>
+                    </tr>
+                  </tbody>
+                </table>
               `;
 
-              data.products.forEach(product => {
-                let statusText = '', statusClass = '', statusIcon = '';
-                const approvalStatus = product.approval_status || 'approved';
-
-                if (approvalStatus === 'approved') {
-                  statusText = 'Approved ✓';
-                  statusClass = 'status-active';
-                  statusIcon = '✓';
-                } else if (approvalStatus === 'pending') {
-                  statusText = 'Pending Review';
-                  statusClass = 'status-pending';
-                  statusIcon = '⏳';
-                } else if (approvalStatus === 'rejected') {
-                  statusText = 'Rejected ❌';
-                  statusClass = 'status-inactive';
-                  statusIcon = '❌';
-                }
-
-                if (product.edit_status === 'pending' && product.pending_edits > 0) {
-                  statusText = `Edit Pending (${product.pending_edits})`;
-                  statusClass = 'status-pending';
-                  statusIcon = '⏳';
-                }
-
-                console.log(`Product: ${product.name}, Status: ${approvalStatus}, Stock: ${product.stock}`);
-
-                html += `
-                  <tr style="border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb';" onmouseout="this.style.backgroundColor='';">
-                    <td style="padding: 12px; border: 1px solid #e5e7eb;">
-                      <div style="font-weight: 600; color: #0a0a0a;">${escapeHtml(product.name)}</div>
-                      ${product.category_name ? `<div style="font-size: 12px; color: #777; margin-top: 2px;">${product.category_name}</div>` : ''}
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #0a0a0a;">₱${parseFloat(product.price).toFixed(2)}</td>
-                    <td style="padding: 12px; border: 1px solid #e5e7eb;">
-                      <div style="font-weight: 600; color: #0a0a0a;">${product.stock} pcs</div>
-                      ${product.stock < 5 ? '<div style="font-size: 11px; color: #ef4444; margin-top: 2px;">⚠ Low stock</div>' : ''}
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #e5e7eb;">
-                      <span class="status-badge ${statusClass}" style="display: inline-flex; align-items: center; gap: 6px;">
-                        ${statusIcon} ${statusText}
-                      </span>
-                    </td>
-                    <td style="padding: 12px; border: 1px solid #e5e7eb;">
-                      <div style="display: flex; gap: 6px;">
-                        ${approvalStatus === 'approved' ? `
-                          <button class="action-btn" onclick="editProduct(${product.id})" style="padding: 6px 12px; font-size: 12px;">Edit</button>
-                          <button class="action-btn" onclick="archiveProduct(${product.id}, '${product.name.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 12px; background: #ef4444;">Archive</button>
-                        ` : approvalStatus === 'rejected' ? '<span style="color: #999; font-size: 12px;">Rejected</span>' : '<span style="color: #999; font-size: 12px;">⏳ Awaiting approval</span>'}
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              });
-
-              html += '</tbody></table>';
-              document.getElementById('products-list').innerHTML = html;
+              container.innerHTML = html;
+              renderProductsTable(currentProductStatusFilter);
+              updateStatusCardActiveStates();
             } else {
               document.getElementById('products-list').innerHTML = '<div style="text-align:center;color:#999;padding:40px;"><p style="font-size:16px; margin-bottom: 16px;">No products yet</p><p>Click the "+ Add Product" button to add your first product</p></div>';
             }
@@ -4392,6 +4412,127 @@
               container.innerHTML = '<div style="color:#ef4444; text-align: center; padding: 20px;"><strong>Failed to load products</strong><br><small>' + error.message + '</small></div>';
             }
           });
+      }
+
+      function filterProductsByStatus(status = 'all') {
+        currentProductStatusFilter = (status || 'all').toLowerCase();
+        renderProductsTable(currentProductStatusFilter);
+        updateStatusCardActiveStates();
+      }
+
+      function renderProductsTable(statusFilter = 'all') {
+        const tbody = document.getElementById('products-table-body');
+        if (!tbody) {
+          return;
+        }
+
+        const normalizedStatus = (statusFilter || 'all').toLowerCase();
+        const filteredProducts = sellerProductsCache.filter(product => {
+          const approvalStatus = (product.approval_status || 'approved').toLowerCase();
+          if (normalizedStatus === 'all') {
+            return true;
+          }
+          return approvalStatus === normalizedStatus;
+        });
+
+        if (filteredProducts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="padding: 32px; text-align: center; color: #6b7280;">No products found for this status.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = filteredProducts.map(product => getProductRowHtml(product)).join('');
+      }
+
+      function getProductRowHtml(product) {
+        let statusText = '';
+        let statusClass = '';
+        let statusIcon = '';
+        const approvalStatus = (product.approval_status || 'approved').toLowerCase();
+
+        if (approvalStatus === 'approved') {
+          statusText = 'Approved ✓';
+          statusClass = 'status-active';
+          statusIcon = '✓';
+        } else if (approvalStatus === 'pending') {
+          statusText = 'Pending Review';
+          statusClass = 'status-pending';
+          statusIcon = '⏳';
+        } else if (approvalStatus === 'rejected') {
+          statusText = 'Rejected ❌';
+          statusClass = 'status-inactive';
+          statusIcon = '❌';
+        }
+
+        if (product.edit_status === 'pending' && product.pending_edits > 0) {
+          statusText = `Edit Pending (${product.pending_edits})`;
+          statusClass = 'status-pending';
+          statusIcon = '⏳';
+        }
+
+        const safeName = escapeHtml(product.name || 'Untitled Product');
+        const category = product.category_name ? `<div style="font-size: 12px; color: #777; margin-top: 2px;">${product.category_name}</div>` : '';
+        const priceNumber = Number(product.price);
+        const priceValue = Number.isFinite(priceNumber) ? priceNumber.toFixed(2) : '0.00';
+        const stockNumber = Number(product.stock);
+        const hasStockValue = Number.isFinite(stockNumber);
+        const stockDisplay = hasStockValue ? `${stockNumber} pcs` : '—';
+        const lowStockLabel = hasStockValue && stockNumber < 5
+          ? '<div style="font-size: 11px; color: #ef4444; margin-top: 2px;">⚠ Low stock</div>'
+          : '';
+        const sanitizedNameForAction = (product.name || '').replace(/'/g, "\\'");
+
+        let actionContent = '';
+        if (approvalStatus === 'approved') {
+          actionContent = `
+            <button class="action-btn" onclick="editProduct(${product.id})" style="padding: 6px 12px; font-size: 12px;">Edit</button>
+            <button class="action-btn" onclick="archiveProduct(${product.id}, '${sanitizedNameForAction}')" style="padding: 6px 12px; font-size: 12px; background: #ef4444;">Archive</button>
+          `;
+        } else if (approvalStatus === 'rejected') {
+          actionContent = '<span style="color: #999; font-size: 12px;">Rejected</span>';
+        } else {
+          actionContent = '<span style="color: #999; font-size: 12px;">⏳ Awaiting approval</span>';
+        }
+
+        return `
+          <tr style="border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb';" onmouseout="this.style.backgroundColor='';">
+            <td style="padding: 12px; border: 1px solid #e5e7eb;">
+              <div style="font-weight: 600; color: #0a0a0a;">${safeName}</div>
+              ${category}
+            </td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; font-weight: 600; color: #0a0a0a;">₱${priceValue}</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb;">
+              <div style="font-weight: 600; color: #0a0a0a;">${stockDisplay}</div>
+              ${lowStockLabel}
+            </td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb;">
+              <span class="status-badge ${statusClass}" style="display: inline-flex; align-items: center; gap: 6px;">
+                ${statusIcon} ${statusText}
+              </span>
+            </td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb;">
+              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                ${actionContent}
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+
+      function updateStatusCardActiveStates() {
+        const cards = document.querySelectorAll('.status-summary-card[role="button"]');
+        cards.forEach(card => {
+          const status = (card.dataset.status || 'all').toLowerCase();
+          const isActive = status === currentProductStatusFilter;
+          card.classList.toggle('status-summary-card--active', isActive);
+          card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+      }
+
+      function handleStatusCardKey(event, status) {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          filterProductsByStatus(status);
+        }
       }
 
       function escapeHtml(text) {
@@ -5154,9 +5295,9 @@
             return;
           }
 
-          if (targetSection && (page === 'brand-settings' || page === 'account-settings')) {
+          if (targetSection && page === 'account-settings') {
             pendingAccountSettingsSection = targetSection;
-          } else if (page !== 'brand-settings') {
+          } else if (page !== 'account-settings') {
             pendingAccountSettingsSection = null;
           }
 
@@ -5245,11 +5386,19 @@
             return;
           }
 
-          elements.forEach((element) => {
+          const newElements = Array.from(elements).filter((element) => element.dataset.pageNavBound !== 'true');
+
+          if (newElements.length === 0) {
+            console.log('ℹ️ All page navigation elements already bound');
+            return;
+          }
+
+          newElements.forEach((element) => {
             element.addEventListener('click', (event) => this.handleNavigation(event, element));
+            element.dataset.pageNavBound = 'true';
           });
 
-          console.log(`✅ Bound ${elements.length} page navigation elements`);
+          console.log(`✅ Bound ${newElements.length} page navigation elements`);
         },
 
         /**
@@ -5268,9 +5417,9 @@
             return;
           }
 
-          if (targetSection && (page === 'brand-settings' || page === 'account-settings')) {
+          if (targetSection && page === 'account-settings') {
             pendingAccountSettingsSection = targetSection;
-          } else if (page !== 'brand-settings') {
+          } else if (page !== 'account-settings') {
             pendingAccountSettingsSection = null;
           }
 
@@ -5458,7 +5607,6 @@
         }
       });
     </script>
-
     <!-- Logout Confirmation Modal -->
     <div id="logoutModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; padding:32px; border-radius:12px; max-width:400px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">

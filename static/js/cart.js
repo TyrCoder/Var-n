@@ -180,7 +180,7 @@ const VaronCart = {
   // Update cart badge count
   async updateBadge() {
     const items = await this.get();
-    const count = items.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
+    const count = items.length;
     
     const badges = document.querySelectorAll('#cartCount, #cartCountSidebar, #floatingCartBadge');
     badges.forEach(badge => {
