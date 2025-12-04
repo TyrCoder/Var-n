@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 import os
+import json
 import mysql.connector
 import time
 import secrets
@@ -7,39 +8,36 @@ import shutil
 from dotenv import load_dotenv
 from decimal import Decimal
 from utils.otp_service import OTPService
-import json
 
 
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-app = Flask(__name__, template_folder='templates', static_folder='static', static_url_path='/static')
-app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production-please')
 
-
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Decimal):
-            return float(obj)
-        return super(DecimalEncoder, self).default(obj)
-
-app.json_encoder = DecimalEncoder
-
+app = Flask(__name__, static_folder='static', template_folder='templates')
+app.secret_key = os.getenv('SECRET_KEY', 'varon-dev-secret')
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'false').strip().lower() == 'true'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USER', 'root'),
     'password': os.getenv('DB_PASSWORD', ''),
-    'database': os.getenv('DB_NAME', 'varon')
+    'database': os.getenv('DB_NAME', 'varon'),
+    'port': int(os.getenv('DB_PORT', '3306') or 3306)
 }
 
+
 def get_db():
+    """Create a new MySQL connection using environment configuration."""
     try:
         conn = mysql.connector.connect(
             host=DB_CONFIG['host'],
             user=DB_CONFIG['user'],
             password=DB_CONFIG['password'],
             database=DB_CONFIG['database'],
+            port=DB_CONFIG.get('port', 3306),
             autocommit=True
         )
         return conn
@@ -55,13 +53,14 @@ def get_db():
         print(f"[DB ERROR] Unexpected error: {err}")
         return None
 
+
 def convert_decimals_to_float(obj):
-    """Recursively convert Decimal objects to float in dicts and lists"""
+    """Recursively convert Decimal objects to floats for JSON serialization."""
     if isinstance(obj, dict):
         return {k: convert_decimals_to_float(v) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple)):
+    if isinstance(obj, (list, tuple)):
         return [convert_decimals_to_float(item) for item in obj]
-    elif isinstance(obj, Decimal):
+    if isinstance(obj, Decimal):
         return float(obj)
     return obj
 
@@ -76,6 +75,7 @@ CITY_COORDINATE_HINTS = {
     ('santa cruz', 'laguna'): (14.2767, 121.4155),
     ('calamba', 'laguna'): (14.2117, 121.1653),
     ('los baños', 'laguna'): (14.1697, 121.2408),
+    ('los banos', 'laguna'): (14.1697, 121.2408),
     ('batangas city', 'batangas'): (13.7565, 121.0583),
     ('lipa city', 'batangas'): (13.9398, 121.1702),
     ('tagaytay', 'cavite'): (14.1177, 120.9338),
@@ -121,6 +121,7 @@ REQUIRED_RIDER_DOCUMENTS = {
 APPROVED_RIDER_STATUSES = {'approved', 'active'}
 
 PROVINCE_REGION_MAP = {
+    # North Luzon
     'ilocos norte': 'north luzon',
     'ilocos sur': 'north luzon',
     'la union': 'north luzon',
@@ -132,85 +133,160 @@ PROVINCE_REGION_MAP = {
     'mountain province': 'north luzon',
     'nueva vizcaya': 'north luzon',
     'quirino': 'north luzon',
-    'cagayan': 'north luzon',
     'isabela': 'north luzon',
-    'aurora': 'north luzon',
-    'pampanga': 'central luzon',
-    'tarlac': 'central luzon',
-    'bataan': 'central luzon',
-    'bulacan': 'central luzon',
+    'cagayan': 'north luzon',
+
+    # Central Luzon (includes NCR + CALABARZON grouping for rider allocation)
     'nueva ecija': 'central luzon',
+    'bulacan': 'central luzon',
+    'tarlac': 'central luzon',
+    'aurora': 'central luzon',
+    'bataan': 'central luzon',
+    'pampanga': 'central luzon',
     'zambales': 'central luzon',
+    'cavite': 'central luzon',
+    'laguna': 'central luzon',
+    'batangas': 'central luzon',
+    'quezon': 'central luzon',
+    'marinduque': 'central luzon',
+    'palawan': 'central luzon',
     'metro manila': 'central luzon',
     'manila': 'central luzon',
-    'cavite': 'south luzon',
-    'laguna': 'south luzon',
-    'batangas': 'south luzon',
-    'quezon': 'south luzon',
-    'marinduque': 'south luzon',
-    'mindoro oriental': 'south luzon',
-    'mindoro occidental': 'south luzon',
-    'palawan': 'south luzon',
+    'manila city': 'central luzon',
+    'ncr': 'central luzon',
+    'quezon city': 'central luzon',
+    'pasig': 'central luzon',
+    'makati': 'central luzon',
+    'taguig': 'central luzon',
+    'caloocan': 'central luzon',
+    'parañaque': 'central luzon',
+    'paranaque': 'central luzon',
+    'las pinas': 'central luzon',
+    'las piñas': 'central luzon',
+    'muntinlupa': 'central luzon',
+    'marikina': 'central luzon',
+    'san juan': 'central luzon',
+    'mandaluyong': 'central luzon',
+    'navotas': 'central luzon',
+    'valenzuela': 'central luzon',
+
+    # South Luzon / Bicol
+    'camarines norte': 'south luzon',
+    'camarines sur': 'south luzon',
     'albay': 'south luzon',
     'sorsogon': 'south luzon',
-    'camarines sur': 'south luzon',
-    'camarines norte': 'south luzon',
     'masbate': 'south luzon',
-    'aklan': 'visayas',
-    'antique': 'visayas',
-    'bohol': 'visayas',
-    'capiz': 'visayas',
+    'catanduanes': 'south luzon',
+
+    # Visayas
     'cebu': 'visayas',
-    'guimaras': 'visayas',
-    'iloilo': 'visayas',
-    'leyte': 'visayas',
+    'bohol': 'visayas',
     'negros occidental': 'visayas',
     'negros oriental': 'visayas',
-    'samar': 'visayas',
-    'biliran': 'visayas',
+    'aklan': 'visayas',
+    'capiz': 'visayas',
+    'antique': 'visayas',
+    'guimaras': 'visayas',
     'siquijor': 'visayas',
+    'iloilo': 'visayas',
+    'leyte': 'visayas',
+    'samar': 'visayas',
+    'eastern samar': 'visayas',
+    'northern samar': 'visayas',
+
+    # Mindanao
     'davao del sur': 'mindanao',
     'davao del norte': 'mindanao',
+    'davao occidental': 'mindanao',
     'davao oriental': 'mindanao',
-    'bukidnon': 'mindanao',
-    'misamis oriental': 'mindanao',
-    'misamis occidental': 'mindanao',
-    'zamboanga del sur': 'mindanao',
+    'davao de oro': 'mindanao',
     'zamboanga del norte': 'mindanao',
+    'zamboanga del sur': 'mindanao',
+    'zamboanga sibugay': 'mindanao',
+    'bukidnon': 'mindanao',
     'cotabato': 'mindanao',
+    'north cotabato': 'mindanao',
     'south cotabato': 'mindanao',
     'sultan kudarat': 'mindanao',
+    'lanao del norte': 'mindanao',
+    'lanao del sur': 'mindanao',
+    'maguindanao': 'mindanao',
+    'maguindanao del norte': 'mindanao',
+    'maguindanao del sur': 'mindanao',
+    'misamis oriental': 'mindanao',
+    'misamis occidental': 'mindanao',
+    'surigao del norte': 'mindanao',
+    'surigao del sur': 'mindanao',
     'agusan del norte': 'mindanao',
     'agusan del sur': 'mindanao',
-    'surigao del norte': 'mindanao',
-    'surigao del sur': 'mindanao'
+    'sarangani': 'mindanao',
+    'basilan': 'mindanao',
+    'camiguin': 'mindanao'
 }
 
 CITY_REGION_OVERRIDES = {
+    'baguio': 'north luzon',
+    'baguio city': 'north luzon',
+    'san fernando': 'north luzon',
+    'tuguegarao': 'north luzon',
+    'laoag': 'north luzon',
+    'batac': 'north luzon',
+    'vigan': 'north luzon',
+    'dagupan': 'north luzon',
+
     'quezon city': 'central luzon',
     'manila': 'central luzon',
+    'manila city': 'central luzon',
     'pasig': 'central luzon',
+    'makati': 'central luzon',
     'taguig': 'central luzon',
-    'calamba': 'south luzon',
-    'santa rosa': 'south luzon',
-    'sta. rosa': 'south luzon',
-    'sta rosa': 'south luzon',
-    'sta. cruz': 'south luzon',
-    'santa cruz': 'south luzon',
-    'lipa city': 'south luzon',
-    'batangas city': 'south luzon',
-    'tagaytay': 'south luzon',
-    'baguio city': 'north luzon',
-    'laoag city': 'north luzon',
-    'angeles city': 'central luzon',
-    'malolos': 'central luzon',
-    'cabanatuan city': 'central luzon',
-    'cebu city': 'visayas',
+    'caloocan': 'central luzon',
+    'mandaluyong': 'central luzon',
+    'marikina': 'central luzon',
+    'san juan': 'central luzon',
+    'muntinlupa': 'central luzon',
+    'parañaque': 'central luzon',
+    'paranaque': 'central luzon',
+    'las pinas': 'central luzon',
+    'las piñas': 'central luzon',
+    'navotas': 'central luzon',
+    'valenzuela': 'central luzon',
+    'antipolo': 'central luzon',
+    'cainta': 'central luzon',
+
+    'santa rosa': 'central luzon',
+    'sta. rosa': 'central luzon',
+    'sta rosa': 'central luzon',
+    'calamba': 'central luzon',
+    'sta. cruz': 'central luzon',
+    'santa cruz': 'central luzon',
+    'san pablo': 'central luzon',
+    'tagaytay': 'central luzon',
+    'lipa': 'central luzon',
+    'batangas city': 'central luzon',
+
+    'naga': 'south luzon',
+    'legazpi': 'south luzon',
+    'legazpi city': 'south luzon',
+    'sorsogon city': 'south luzon',
+
     'iloilo city': 'visayas',
+    'bacolod': 'visayas',
     'bacolod city': 'visayas',
+    'cebu city': 'visayas',
     'mandaue': 'visayas',
+    'lapu-lapu': 'visayas',
+    'lapu lapu': 'visayas',
+    'dumaguete': 'visayas',
+    'dumaguete city': 'visayas',
+
     'davao city': 'mindanao',
+    'cagayan de oro': 'mindanao',
     'cagayan de oro city': 'mindanao',
+    'zamboanga city': 'mindanao',
+    'butuan': 'mindanao',
+    'butuan city': 'mindanao',
+    'general santos': 'mindanao',
     'general santos city': 'mindanao'
 }
 
@@ -240,7 +316,7 @@ def derive_region_tokens(city, province):
     tokens = []
     for value in (city, province):
         if value:
-            tokens.append(value)
+            tokens.append(normalize_location_piece(value))
 
     norm_city = normalize_location_piece(city)
     norm_province = normalize_location_piece(province)
@@ -2157,14 +2233,6 @@ def place_order():
 
 
             cursor.execute('UPDATE products SET sales_count = sales_count + %s WHERE id = %s', (quantity, product_id))
-
-
-            cursor.execute('''
-                UPDATE inventory
-                SET stock_quantity = GREATEST(0, stock_quantity - %s),
-                    reserved_quantity = reserved_quantity + %s
-                WHERE product_id = %s
-            ''', (quantity, quantity, product_id))
 
 
         if selected_cart_ids:
@@ -5132,6 +5200,104 @@ def fetch_cart_items_for_user(conn, user_id, cart_ids=None):
 
     cursor.close()
     return items
+
+
+def adjust_inventory_for_order(conn, order_id, action):
+    """Deduct or restore inventory rows for every item in the given order."""
+    if action not in {'deduct', 'restore'}:
+        return False, 'Unsupported inventory action.'
+    if not conn or not order_id:
+        return False, 'Invalid inventory adjustment request.'
+
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('''
+        SELECT product_id, variant_id, quantity
+        FROM order_items
+        WHERE order_id = %s
+    ''', (order_id,))
+    items = cursor.fetchall() or []
+    cursor.close()
+
+    if not items:
+        return True, None
+
+    adjust_cursor = conn.cursor()
+    failure_message = None
+
+    for item in items:
+        product_id = item.get('product_id')
+        variant_id = item.get('variant_id')
+        quantity = int(item.get('quantity') or 0)
+
+        if not product_id or quantity <= 0:
+            continue
+
+        if action == 'deduct':
+            if not _deduct_inventory_row(adjust_cursor, product_id, variant_id, quantity):
+                failure_message = f'Insufficient stock for product ID {product_id}.'
+                break
+        else:
+            _restore_inventory_row(adjust_cursor, product_id, variant_id, quantity)
+
+    adjust_cursor.close()
+
+    if failure_message:
+        return False, failure_message
+    return True, None
+
+
+def _deduct_inventory_row(cursor, product_id, variant_id, quantity):
+    """Attempt to deduct quantity from the most specific inventory row available."""
+    targets = []
+    if variant_id is not None:
+        targets.append(('variant', variant_id))
+    # Fallback to product-level stock if variant-specific inventory is not tracked
+    targets.append(('product', None))
+
+    for target_type, target_variant in targets:
+        if target_variant is None:
+            cursor.execute('''
+                UPDATE inventory
+                SET stock_quantity = stock_quantity - %s
+                WHERE product_id = %s AND variant_id IS NULL AND stock_quantity >= %s
+            ''', (quantity, product_id, quantity))
+        else:
+            cursor.execute('''
+                UPDATE inventory
+                SET stock_quantity = stock_quantity - %s
+                WHERE product_id = %s AND variant_id = %s AND stock_quantity >= %s
+            ''', (quantity, product_id, target_variant, quantity))
+
+        if cursor.rowcount:
+            return True
+
+    return False
+
+
+def _restore_inventory_row(cursor, product_id, variant_id, quantity):
+    """Return deducted inventory back to the matching row (or create one when missing)."""
+    if variant_id is not None:
+        cursor.execute('''
+            UPDATE inventory
+            SET stock_quantity = stock_quantity + %s
+            WHERE product_id = %s AND variant_id = %s
+        ''', (quantity, product_id, variant_id))
+        if cursor.rowcount:
+            return True
+
+    cursor.execute('''
+        UPDATE inventory
+        SET stock_quantity = stock_quantity + %s
+        WHERE product_id = %s AND variant_id IS NULL
+    ''', (quantity, product_id))
+    if cursor.rowcount:
+        return True
+
+    cursor.execute('''
+        INSERT INTO inventory (product_id, variant_id, stock_quantity)
+        VALUES (%s, %s, %s)
+    ''', (product_id, variant_id, quantity))
+    return True
 
 def send_email(to_email, subject, html_body):
     """Send email notification (using simple SMTP or print for development)"""
@@ -12037,33 +12203,37 @@ def set_default_address(address_id):
 
 @app.route('/seller/confirm-order', methods=['POST'])
 def seller_confirm_order():
-    """Seller confirms an order - immediately assigns to available rider in service area"""
+    """Seller confirms an order. Inventory is deducted only after confirmation."""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user_id = session['user_id']
+    order_id = request.form.get('order_id')
+
+    if not order_id:
+        return jsonify({'success': False, 'error': 'Missing order_id'}), 400
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+
     try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-
-        user_id = session['user_id']
-        order_id = request.form.get('order_id')
-
-        if not order_id:
-            return jsonify({'success': False, 'error': 'Missing order_id'}), 400
-
-        conn = get_db()
-        cursor = conn.cursor(dictionary=True)
-
+        conn.start_transaction()
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
         seller_result = cursor.fetchone()
         if not seller_result:
+            conn.rollback()
             cursor.close()
             conn.close()
             return jsonify({'success': False, 'error': 'Not a seller'}), 403
 
         seller_id = seller_result['id']
 
-
         verify_query = """
-            SELECT o.id, o.shipping_address_id
+            SELECT o.id, o.shipping_address_id, o.order_status
             FROM orders o
             LEFT JOIN order_items oi ON o.id = oi.order_id
             LEFT JOIN products p ON oi.product_id = p.id
@@ -12075,14 +12245,32 @@ def seller_confirm_order():
         order_check = cursor.fetchone()
 
         if not order_check:
+            conn.rollback()
             cursor.close()
             conn.close()
             return jsonify({'success': False, 'error': 'Order not found or you do not have permission'}), 403
 
+        previous_status = (order_check.get('order_status') or 'pending').lower()
+        if previous_status == 'confirmed':
+            conn.rollback()
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order is already confirmed.'}), 400
+        if previous_status not in {'pending'}:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Only pending orders can be confirmed.'}), 400
+
+        success, error_msg = adjust_inventory_for_order(conn, order_id, 'deduct')
+        if not success:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': error_msg or 'Unable to deduct stock for this order.'}), 400
 
         cursor.execute('SELECT province, city, postal_code FROM addresses WHERE id = %s', (order_check['shipping_address_id'],))
         address = cursor.fetchone()
-
 
         cursor.execute('''
             UPDATE orders
@@ -12090,54 +12278,23 @@ def seller_confirm_order():
             WHERE id = %s
         ''', (order_id,))
 
-        conn.commit()
-
-        # Create notification for seller confirming order
-        create_seller_notification(
-            seller_id=seller_id,
-            order_id=order_id,
-            notification_type='order_confirmed',
-            title='Order Confirmed',
-            message=f'Order {order_id} has been confirmed and is being processed',
-            priority='normal'
-        )
-
-        # Record order status change
-        record_order_status_change(
-            order_id=order_id,
-            seller_id=seller_id,
-            old_status='pending',
-            new_status='confirmed',
-            changed_by_user_id=user_id,
-            reason='Seller confirmed order',
-            notes='Order status changed from pending to confirmed'
-        )
-
-
         cursor.execute('SELECT id FROM shipments WHERE order_id = %s', (order_id,))
         shipment = cursor.fetchone()
 
         if shipment:
             shipment_id = shipment['id']
-
-            cursor.execute('''
-                UPDATE shipments
-                SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
-                WHERE id = %s
-            ''', (shipment_id,))
-            conn.commit()
         else:
             tracking_number = f"SHIP{order_id}{int(time.time())}"
             cursor.execute('''
                 INSERT INTO shipments (order_id, tracking_number, status, seller_confirmed, seller_confirmed_at, created_at)
                 VALUES (%s, %s, 'pending', TRUE, NOW(), NOW())
             ''', (order_id, tracking_number))
-            conn.commit()
             shipment_id = cursor.lastrowid
 
+        rider_assigned = False
+        response_message = 'Order confirmed! Waiting for a rider to accept.'
 
         if address:
-
             cursor.execute('''
                 SELECT id, user_id FROM riders
                 WHERE (service_area LIKE %s OR service_area LIKE %s OR service_area LIKE %s)
@@ -12149,61 +12306,78 @@ def seller_confirm_order():
             rider = cursor.fetchone()
 
             if rider:
-
                 cursor.execute('''
                     UPDATE shipments
                     SET rider_id = %s, seller_confirmed = TRUE, seller_confirmed_at = NOW()
                     WHERE id = %s
                 ''', (rider['id'], shipment_id))
-                conn.commit()
-                print(f"[✅] Order {order_id} confirmed and assigned to rider {rider['id']}")
-
-                cursor.close()
-                conn.close()
-
-                return jsonify({
-                    'success': True,
-                    'message': 'Order confirmed and assigned to a rider! They will start the delivery soon.',
-                    'rider_assigned': True
-                }), 200
+                rider_assigned = True
+                response_message = 'Order confirmed and assigned to a rider! They will start the delivery soon.'
             else:
-
                 cursor.execute('''
                     UPDATE shipments
                     SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
                     WHERE id = %s
                 ''', (shipment_id,))
-                conn.commit()
-                print(f"[⚠️] Order {order_id} confirmed but no rider available in area")
+                response_message = 'Order confirmed! Waiting for a rider to accept in your area.'
+        else:
+            cursor.execute('''
+                UPDATE shipments
+                SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
+                WHERE id = %s
+            ''', (shipment_id,))
 
-                cursor.close()
-                conn.close()
-
-                return jsonify({
-                    'success': True,
-                    'message': 'Order confirmed! Waiting for a rider to accept in your area.',
-                    'rider_assigned': False
-                }), 200
-
+        conn.commit()
         cursor.close()
         conn.close()
 
+        create_seller_notification(
+            seller_id=seller_id,
+            order_id=order_id,
+            notification_type='order_confirmed',
+            title='Order Confirmed',
+            message=f'Order {order_id} has been confirmed and is being processed',
+            priority='normal'
+        )
+
+        record_order_status_change(
+            order_id=order_id,
+            seller_id=seller_id,
+            old_status=previous_status,
+            new_status='confirmed',
+            changed_by_user_id=user_id,
+            reason='Seller confirmed order',
+            notes='Order status changed from pending to confirmed'
+        )
+
         return jsonify({
             'success': True,
-            'message': 'Order confirmed! Waiting for a rider to accept.'
+            'message': response_message,
+            'rider_assigned': rider_assigned
         }), 200
 
     except Exception as e:
         print(f"[ERROR] seller_confirm_order: {e}")
         import traceback
         traceback.print_exc()
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
         return jsonify({
             'success': False,
-            'error': str(e)
-        }), 500
-        return jsonify({
-            'success': False,
-            'error': str(e)
+            'error': 'Failed to confirm this order. Please try again.'
         }), 500
 
 
