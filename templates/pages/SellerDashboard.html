@@ -658,7 +658,7 @@
                   <div style="display: grid; grid-template-columns: 1fr; gap: 14px;">
                     <div>
                       <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">Price (₱) *</label>
-                      <input type="number" name="price" step="0.01" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; transition: border-color 0.2s;" placeholder="0.00">
+                      <input type="number" name="price" step="0.01" min="0.01" data-field-label="Price" data-require-positive="true" oninput="enforceNonNegativeValue(this)" required style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; transition: border-color 0.2s;" placeholder="0.00">
                       <small style="color: var(--muted); font-size: 11px; margin-top: 4px; display: block;">Selling price of your product</small>
                     </div>
                   </div>
@@ -683,7 +683,7 @@
                     </div>
                     <div>
                       <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #0a0a0a;">Stock Quantity *</label>
-                      <input type="number" name="grooming_stock" min="0" style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;" placeholder="0">
+                      <input type="number" name="grooming_stock" min="1" data-field-label="Stock quantity" data-require-positive="true" oninput="enforceNonNegativeValue(this)" style="width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px;" placeholder="0">
                     </div>
                   </div>
                 </div>
@@ -1484,8 +1484,13 @@
           return;
         }
 
-        if (!priceInput.value || parseFloat(priceInput.value) <= 0) {
-          VaronNotifications.warning('Please enter a valid price');
+        const invalidNumbers = findInvalidNumberInputs(form);
+        if (invalidNumbers.length > 0) {
+          const firstInvalid = invalidNumbers[0];
+          const fieldLabel = firstInvalid.dataset.fieldLabel || firstInvalid.name || 'This field';
+          VaronNotifications.warning(`${fieldLabel} cannot be negative.`);
+          firstInvalid.focus();
+          firstInvalid.reportValidity();
           return;
         }
 
@@ -1593,8 +1598,13 @@
           return;
         }
 
-        if (!price || parseFloat(price) <= 0) {
-          VaronNotifications.error('Valid price is required');
+        const invalidNumbers = findInvalidNumberInputs(form);
+        if (invalidNumbers.length > 0) {
+          const firstInvalid = invalidNumbers[0];
+          const fieldLabel = firstInvalid.dataset.fieldLabel || firstInvalid.name || 'This field';
+          VaronNotifications.error(`${fieldLabel} cannot be negative.`);
+          firstInvalid.focus();
+          firstInvalid.reportValidity();
           return;
         }
 
@@ -1951,6 +1961,57 @@
         console.log('[SUCCESS] Ingredients section initialized');
       }
 
+      function enforceNonNegativeValue(input) {
+        if (!input) return;
+
+        const rawValue = input.value;
+        if (rawValue === '') {
+          input.setCustomValidity('');
+          return;
+        }
+
+        const numericValue = Number(rawValue);
+        if (Number.isNaN(numericValue)) {
+          input.setCustomValidity('');
+          return;
+        }
+
+        const requirePositive = input.dataset.requirePositive === 'true';
+        const label = input.dataset.fieldLabel || input.getAttribute('placeholder') || input.name || 'This field';
+
+        if (numericValue < 0) {
+          input.setCustomValidity(`${label} cannot be negative.`);
+          input.reportValidity();
+        } else if (requirePositive && numericValue === 0) {
+          input.setCustomValidity(`${label} must be greater than zero.`);
+          input.reportValidity();
+        } else {
+          input.setCustomValidity('');
+        }
+      }
+
+      function findInvalidNumberInputs(form) {
+        if (!form) return [];
+
+        const invalidInputs = [];
+        const numberInputs = form.querySelectorAll('input[type="number"]');
+
+        numberInputs.forEach(input => {
+          if (input.disabled) return;
+          if (input.value === '') return;
+
+          const numericValue = Number(input.value);
+          if (Number.isNaN(numericValue)) return;
+
+          const requirePositive = input.dataset.requirePositive === 'true';
+          if (numericValue < 0 || (requirePositive && numericValue === 0)) {
+            invalidInputs.push(input);
+          }
+        });
+
+        return invalidInputs;
+      }
+
       function updateStockInputs() {
         console.log('[UPDATE] Updating stock inputs - generating for ALL colors');
 
@@ -2052,7 +2113,12 @@
         
         // Attach event listeners to stock inputs to update summary on change
         stockInputsDiv.querySelectorAll('input[type="number"]').forEach(input => {
-          input.addEventListener('input', updateStockSummary);
+          input.setAttribute('min', '0');
+          input.dataset.fieldLabel = `${input.name.replace('stock_', '').replace(/_/g, ' ')} stock`;
+          input.addEventListener('input', event => {
+            enforceNonNegativeValue(event.target);
+            updateStockSummary();
+          });
         });
       }
 
@@ -4524,6 +4590,67 @@
         }
       }
 
+      function normalizeProductArray(rawProducts) {
+        if (!rawProducts) {
+          return [];
+        }
+
+        if (Array.isArray(rawProducts)) {
+          return rawProducts;
+        }
+
+        if (typeof rawProducts === 'object') {
+          return Object.values(rawProducts);
+        }
+
+        return [];
+      }
+
+      function renderProductStatusCards(stats = {}) {
+        return `
+          <div class="status-summary-grid" role="group" aria-label="Product status summary">
+            <div class="status-summary-card status-card-approved" role="button" tabindex="0" data-status="approved" aria-pressed="false" onclick="filterProductsByStatus('approved')" onkeydown="handleStatusCardKey(event, 'approved')">
+              <small>Approved</small>
+              <strong id="approved-count">${stats.approved || 0}</strong>
+            </div>
+            <div class="status-summary-card status-card-pending" role="button" tabindex="0" data-status="pending" aria-pressed="false" onclick="filterProductsByStatus('pending')" onkeydown="handleStatusCardKey(event, 'pending')">
+              <small>Pending Approval</small>
+              <strong id="pending-count">${stats.pending || 0}</strong>
+            </div>
+            <div class="status-summary-card status-card-rejected" role="button" tabindex="0" data-status="rejected" aria-pressed="false" onclick="filterProductsByStatus('rejected')" onkeydown="handleStatusCardKey(event, 'rejected')">
+              <small>Rejected</small>
+              <strong id="rejected-count">${stats.rejected || 0}</strong>
+            </div>
+            <div class="status-summary-card status-card-total" role="button" tabindex="0" data-status="all" aria-pressed="false" onclick="filterProductsByStatus('all')" onkeydown="handleStatusCardKey(event, 'all')" aria-label="Show all products">
+              <small>Total Products</small>
+              <strong>${stats.total || 0}</strong>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderProductsTableShell(stats = {}) {
+        return `
+          ${renderProductStatusCards(stats)}
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f3f4f6;">
+                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Product Name</th>
+                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Price</th>
+                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Stock</th>
+                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Status</th>
+                <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="products-table-body">
+              <tr>
+                <td colspan="5" style="padding: 24px; text-align: center; color: #6b7280;">Preparing product list...</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+      }
+
       function loadProducts() {
         console.log('[FETCH] Loading products...');
         const container = document.getElementById('products-list');
@@ -4533,7 +4660,7 @@
           return;
         }
 
-        fetch('/seller/products')
+        fetch('/seller/products', { credentials: 'include' })
           .then(response => {
             console.log('[RESPONSE] Products response status:', response.status);
             if (!response.ok) {
@@ -4549,52 +4676,19 @@
               return;
             }
 
-            sellerProductsCache = Array.isArray(data.products) ? data.products : [];
+            sellerProductsCache = normalizeProductArray(data.products);
 
             if (sellerProductsCache.length > 0) {
               const stats = data.stats || {};
               currentProductStatusFilter = 'all';
 
-              let html = `
-                <div class="status-summary-grid" role="group" aria-label="Product status summary">
-                  <div class="status-summary-card status-card-approved" role="button" tabindex="0" data-status="approved" aria-pressed="false" onclick="filterProductsByStatus('approved')" onkeydown="handleStatusCardKey(event, 'approved')">
-                    <small>Approved</small>
-                    <strong id="approved-count">${stats.approved || 0}</strong>
-                  </div>
-                  <div class="status-summary-card status-card-pending" role="button" tabindex="0" data-status="pending" aria-pressed="false" onclick="filterProductsByStatus('pending')" onkeydown="handleStatusCardKey(event, 'pending')">
-                    <small>Pending Approval</small>
-                    <strong id="pending-count">${stats.pending || 0}</strong>
-                  </div>
-                  <div class="status-summary-card status-card-rejected" role="button" tabindex="0" data-status="rejected" aria-pressed="false" onclick="filterProductsByStatus('rejected')" onkeydown="handleStatusCardKey(event, 'rejected')">
-                    <small>Rejected</small>
-                    <strong id="rejected-count">${stats.rejected || 0}</strong>
-                  </div>
-                  <div class="status-summary-card status-card-total" role="button" tabindex="0" data-status="all" aria-pressed="false" onclick="filterProductsByStatus('all')" onkeydown="handleStatusCardKey(event, 'all')" aria-label="Show all products">
-                    <small>Total Products</small>
-                    <strong>${stats.total || 0}</strong>
-                  </div>
-                </div>
-                <table style="width: 100%; border-collapse: collapse;">
-                  <thead>
-                    <tr style="background: #f3f4f6;">
-                      <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Product Name</th>
-                      <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Price</th>
-                      <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Stock</th>
-                      <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Status</th>
-                      <th style="padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody id="products-table-body">
-                    <tr>
-                      <td colspan="5" style="padding: 24px; text-align: center; color: #6b7280;">Preparing product list...</td>
-                    </tr>
-                  </tbody>
-                </table>
-              `;
+              container.innerHTML = renderProductsTableShell(stats);
 
-              container.innerHTML = html;
-              renderProductsTable(currentProductStatusFilter);
-              updateStatusCardActiveStates();
+              // Defer rendering to ensure the table body exists in the DOM
+              requestAnimationFrame(() => {
+                renderProductsTable(currentProductStatusFilter);
+                updateStatusCardActiveStates();
+              });
             } else {
               document.getElementById('products-list').innerHTML = '<div style="text-align:center;color:#999;padding:40px;"><p style="font-size:16px; margin-bottom: 16px;">No products yet</p><p>Click the "+ Add Product" button to add your first product</p></div>';
             }

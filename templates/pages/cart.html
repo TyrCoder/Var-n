@@ -987,6 +987,7 @@
       let currentCartItems = [];
       let hasInitializedCartSelection = false;
       let userAdjustedCartSelection = false;
+      let hasLoadedPersistedSelection = false;
 
       function promptRemoveCartItem(cartId) {
         pendingCartRemovalId = cartId;
@@ -1066,6 +1067,7 @@
           }
 
           currentCartItems = items;
+          await hydrateCheckoutSelection(items);
           syncSelectedCartIds(items);
           renderCart(items);
         } catch (error) {
@@ -1094,6 +1096,42 @@
 
         if (!userAdjustedCartSelection && selectedCartIds.size === 0 && selectableIds.length > 0) {
           selectedCartIds = new Set(selectableIds);
+        }
+      }
+
+      async function hydrateCheckoutSelection(items) {
+        if (hasLoadedPersistedSelection) {
+          return;
+        }
+
+        const validCartIds = new Set(
+          (items || [])
+            .map(item => Number(item.cart_id))
+            .filter(id => Number.isFinite(id))
+        );
+
+        if (!validCartIds.size) {
+          hasLoadedPersistedSelection = true;
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/cart/selection');
+          const result = await response.json();
+          if (result.success && Array.isArray(result.cart_ids) && result.cart_ids.length) {
+            const allowedSelection = result.cart_ids
+              .map(id => Number(id))
+              .filter(id => validCartIds.has(id));
+            if (allowedSelection.length) {
+              selectedCartIds = new Set(allowedSelection);
+              hasInitializedCartSelection = true;
+              userAdjustedCartSelection = true;
+            }
+          }
+        } catch (error) {
+          console.error('Error loading saved checkout selection:', error);
+        } finally {
+          hasLoadedPersistedSelection = true;
         }
       }
 
@@ -1424,13 +1462,55 @@
         }
       }
 
-      function confirmCheckoutSelection() {
+      async function confirmCheckoutSelection() {
         if (!selectedCartIds.size) {
           closeCheckoutConfirmModal();
           return;
         }
+
         closeCheckoutConfirmModal();
-        window.location.href = '/checkout';
+
+        try {
+          await persistCheckoutSelection(Array.from(selectedCartIds));
+          window.location.href = '/checkout';
+        } catch (error) {
+          console.error('Unable to save checkout selection:', error);
+          if (window.VaronCart && typeof window.VaronCart.showMessage === 'function') {
+            window.VaronCart.showMessage(error.message || 'Unable to prepare your checkout. Please try again.', 'error');
+          } else {
+            alert(error.message || 'Unable to prepare your checkout. Please try again.');
+          }
+          await loadCartPage();
+        }
+      }
+
+      async function persistCheckoutSelection(cartIds) {
+        if (!Array.isArray(cartIds) || !cartIds.length) {
+          throw new Error('Please select at least one available item.');
+        }
+
+        try {
+          const payloadIds = cartIds
+            .map(id => Number(id))
+            .filter(id => Number.isFinite(id) && id > 0);
+
+          if (!payloadIds.length) {
+            throw new Error('Please select at least one available item.');
+          }
+
+          const response = await fetch('/api/cart/selection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cart_ids: payloadIds })
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Unable to save your selection.');
+          }
+          return result;
+        } catch (error) {
+          throw error;
+        }
       }
     </script>
   </body>

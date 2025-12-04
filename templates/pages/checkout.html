@@ -427,12 +427,27 @@
         min-width: 0;
       }
 
+      .order-item-headline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 4px;
+      }
+
       .order-item-name {
         font-size: 16px;
         font-weight: 600;
         color: #000000;
         margin: 0 0 4px;
         display: block;
+      }
+
+      .order-item-qty {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+        white-space: nowrap;
       }
 
       .order-item-details {
@@ -786,6 +801,9 @@
 
       // Store default address globally
       let defaultAddress = null;
+      let checkoutSelectedItems = [];
+      let checkoutSelectedCartIds = [];
+      let checkoutSelectionLoaded = false;
 
       document.addEventListener('DOMContentLoaded', async () => {
 
@@ -808,25 +826,61 @@
       });
 
 
+      async function fetchCheckoutSelection(forceRefresh = false) {
+        if (checkoutSelectionLoaded && !forceRefresh) {
+          return { items: checkoutSelectedItems, cart_ids: checkoutSelectedCartIds };
+        }
+
+        try {
+          const response = await fetch('/api/cart/selection');
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            const message = data.error || 'Please select items in your cart before checking out.';
+            checkoutSelectedItems = [];
+            checkoutSelectedCartIds = [];
+            checkoutSelectionLoaded = true;
+            return { items: [], cart_ids: [], error: message };
+          }
+
+          checkoutSelectedItems = data.items || [];
+          checkoutSelectedCartIds = data.cart_ids || [];
+          checkoutSelectionLoaded = true;
+          return data;
+        } catch (error) {
+          console.error('Error fetching checkout selection:', error);
+          checkoutSelectedItems = [];
+          checkoutSelectedCartIds = [];
+          checkoutSelectionLoaded = true;
+          return { items: [], cart_ids: [], error: 'Unable to load your cart items. Please refresh the page.' };
+        }
+      }
+
+
       async function loadOrderSummary() {
         const orderItems = document.getElementById('orderItems');
         const subtotalEl = document.getElementById('subtotal');
         const totalEl = document.getElementById('total');
         const shippingEl = document.getElementById('shipping');
 
-        if (!window.VaronCart) {
-          orderItems.innerHTML = '<p>Cart system not loaded</p>';
-          return;
-        }
-
         try {
-          const items = await VaronCart.get();
+          const selection = await fetchCheckoutSelection(true);
+          const items = selection.items || [];
 
-          if (!items || items.length === 0) {
-            orderItems.innerHTML = '<p>No items in cart</p>';
+          if (!items.length) {
+            orderItems.innerHTML = `
+              <div style="text-align:center;padding:32px 16px;color:#6b7280;line-height:1.6">
+                <p style="margin-bottom:12px;font-weight:600;color:#111">No items selected for checkout</p>
+                <p style="margin-bottom:16px">Go back to your cart and select the items you want to purchase.</p>
+                <a href="/cart" style="display:inline-block;padding:10px 20px;border:1px solid #111;border-radius:999px;color:#111;text-decoration:none;font-weight:600">Return to Cart</a>
+              </div>`;
             subtotalEl.textContent = '₱0.00';
+            shippingEl.textContent = '₱0.00';
             totalEl.textContent = '₱0.00';
             document.getElementById('placeOrderBtn').disabled = true;
+            if (selection.error && window.VaronNotifications) {
+              VaronNotifications.warning(selection.error);
+            }
             return;
           }
 
@@ -834,7 +888,9 @@
 
           let subtotal = 0;
           const itemsHtml = items.map(item => {
-            const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+            const quantityRaw = parseInt(item.quantity, 10);
+            const quantity = Number.isFinite(quantityRaw) && quantityRaw > 0 ? quantityRaw : 1;
+            const itemTotal = parseFloat(item.price) * quantity;
             subtotal += itemTotal;
 
             const sizeColor = [];
@@ -848,7 +904,10 @@
                   <img src="${item.image_url || '/static/images/placeholder.svg'}" alt="${item.name}" onerror="this.src='/static/images/placeholder.svg'">
                 </div>
                 <div class="order-item-info">
-                  <div class="order-item-name">${item.name}</div>
+                  <div class="order-item-headline">
+                    <div class="order-item-name">${item.name}</div>
+                    <span class="order-item-qty">${quantity}x</span>
+                  </div>
                   ${variant ? `<div class="order-item-details">${variant}</div>` : ''}
                   <div class="order-item-price">₱${itemTotal.toFixed(2)}</div>
                 </div>
@@ -945,14 +1004,16 @@
           return;
         }
 
-        if (!window.VaronCart) {
-          VaronNotifications.error('Cart system not loaded. Please refresh the page.');
-          return;
-        }
-
-        const cartItems = await VaronCart.get();
-        if (!cartItems || cartItems.length === 0) {
-          VaronNotifications.warning('Your cart is empty.');
+        const selection = await fetchCheckoutSelection(true);
+        const cartItems = selection.items || [];
+        if (!cartItems.length) {
+          const message = selection.error || 'Please select items in your cart before placing an order.';
+          if (window.VaronNotifications) {
+            VaronNotifications.warning(message);
+          } else {
+            alert(message);
+          }
+          document.getElementById('placeOrderBtn').disabled = true;
           return;
         }
 
@@ -1019,7 +1080,9 @@
           const result = await response.json();
 
           if (result.success) {
-            await VaronCart.clear();
+            if (window.VaronCart && typeof window.VaronCart.updateBadge === 'function') {
+              await VaronCart.updateBadge();
+            }
 
             const orderNumber = result.order_number || 'your order';
             VaronNotifications.success(

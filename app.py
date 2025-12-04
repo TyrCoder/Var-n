@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 import os
 import mysql.connector
 import time
+import secrets
+import shutil
 from dotenv import load_dotenv
 from decimal import Decimal
 from utils.otp_service import OTPService
@@ -109,6 +111,14 @@ CITY_COORDINATE_HINTS = {
     ('', 'misamis oriental'): (8.4542, 124.6319),
     ('', 'south cotabato'): (6.1050, 125.1716)
 }
+
+REQUIRED_RIDER_DOCUMENTS = {
+    'government_id': "Driver's License",
+    'vehicle_registration': 'Vehicle Registration',
+    'orcr': 'Official Receipt (OR/CR)'
+}
+
+APPROVED_RIDER_STATUSES = {'approved', 'active'}
 
 PROVINCE_REGION_MAP = {
     'ilocos norte': 'north luzon',
@@ -313,18 +323,20 @@ def init_db():
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
         cursor.execute(f"USE {DB_CONFIG['database']}")
 
-
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             first_name VARCHAR(100) NOT NULL,
             last_name VARCHAR(100) NOT NULL,
             email VARCHAR(190) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
-            phone VARCHAR(20) NOT NULL,
             role ENUM('buyer', 'seller', 'admin', 'rider') NOT NULL DEFAULT 'buyer',
+            phone VARCHAR(20),
             status ENUM('active', 'inactive', 'pending', 'suspended') DEFAULT 'active',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_email (email),
+            INDEX idx_role (role),
+            INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
 
@@ -414,9 +426,6 @@ def init_db():
             product_id INT NOT NULL,
             size VARCHAR(20),
             color VARCHAR(50),
-            stock_quantity INT DEFAULT 0,
-            price_adjustment DECIMAL(10,2) DEFAULT 0.00,
-            weight_adjustment DECIMAL(8,2) DEFAULT 0.00,
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
@@ -593,6 +602,27 @@ def init_db():
             INDEX idx_order (order_id),
             INDEX idx_seller (seller_id),
             INDEX idx_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS order_cancellation_requests (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            order_id INT NOT NULL,
+            buyer_id INT NOT NULL,
+            seller_id INT,
+            reason TEXT NOT NULL,
+            status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+            decision_notes TEXT,
+            decided_by INT,
+            decided_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE SET NULL,
+            FOREIGN KEY (decided_by) REFERENCES users(id) ON DELETE SET NULL,
+            INDEX idx_order_status (order_id, status),
+            INDEX idx_seller (seller_id),
+            INDEX idx_buyer (buyer_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
         try:
@@ -1698,14 +1728,12 @@ def rider_rating_stats():
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
 
-        # Get rider id from user_id
-        cursor.execute('SELECT id, rating FROM riders WHERE user_id = %s', (user_id,))
-        rider = cursor.fetchone()
-
-        if not rider:
+        rider, error = fetch_rider_with_guard(cursor, user_id)
+        if error:
             cursor.close()
             conn.close()
-            return jsonify({'success': False, 'error': 'Rider not found'}), 404
+            response, status_code = error
+            return response, status_code
 
         # Get rating stats
         cursor.execute('''
@@ -1960,14 +1988,49 @@ def place_order():
         payment_provider = data.get('payment_provider', None)
         items = data.get('items', [])
         subtotal = float(data.get('subtotal', 0))
-        shipping_fee = float(data.get('shipping_fee', 0))
-        total_amount = float(data.get('total', 0))
+        shipping_fee = max(0.0, float(data.get('shipping_fee', 0)))
+        total_amount = subtotal + shipping_fee
         notes = shipping.get('notes', '')
         save_address = data.get('save_address', False)
 
 
         if not items or len(items) == 0:
             return jsonify({'success': False, 'message': 'No items in order'}), 400
+
+        selected_cart_ids = session.get('checkout_selection', []) or []
+        if selected_cart_ids:
+            cart_items = fetch_cart_items_for_user(conn, user_id, selected_cart_ids)
+            if not cart_items:
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'message': 'Selected cart items are no longer available.'}), 400
+
+            unavailable = [item for item in cart_items if item.get('available_stock') is not None and item['available_stock'] <= 0]
+            insufficient = [item for item in cart_items if item.get('available_stock') is not None and item['available_stock'] < item.get('quantity', 0)]
+            if unavailable or insufficient:
+                names = ', '.join((item.get('name') or 'item') for item in (unavailable or insufficient))
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'message': f'Please update your cart. These items are no longer available in the requested quantity: {names}.'}), 400
+
+            normalized_items = []
+            subtotal = 0
+            for cart_item in cart_items:
+                quantity = int(cart_item.get('quantity', 0))
+                price = float(cart_item.get('price', 0))
+                subtotal += price * quantity
+                normalized_items.append({
+                    'cart_id': cart_item.get('cart_id'),
+                    'id': cart_item.get('product_id'),
+                    'name': cart_item.get('name', 'Product'),
+                    'price': price,
+                    'quantity': quantity,
+                    'size': cart_item.get('size') or '',
+                    'color': cart_item.get('color') or ''
+                })
+
+            items = normalized_items
+            total_amount = subtotal + shipping_fee
 
 
         # Only insert/save address if user explicitly wants to save it
@@ -2102,6 +2165,14 @@ def place_order():
                     reserved_quantity = reserved_quantity + %s
                 WHERE product_id = %s
             ''', (quantity, quantity, product_id))
+
+
+        if selected_cart_ids:
+            placeholders = ','.join(['%s'] * len(selected_cart_ids))
+            cursor.execute(f'''DELETE FROM cart WHERE user_id = %s AND id IN ({placeholders})''',
+                           tuple([user_id] + selected_cart_ids))
+            session['checkout_selection'] = []
+            session.modified = True
 
 
         cursor.execute('''
@@ -2548,6 +2619,8 @@ def signup():
                 except:
                     pass
 
+                cleanup_pending_rider_upload(pending_upload_token)
+                session.pop('pending_rider_signup', None)
                 conn.close()
                 return jsonify({'success': False, 'message': 'Failed to generate OTP. Please check database connection and ensure otp_verifications table exists. Check server logs for details.'}), 500
 
@@ -2564,9 +2637,14 @@ def signup():
                 }
                 return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
             else:
+                cleanup_pending_rider_upload(pending_upload_token)
+                session.pop('pending_rider_signup', None)
                 return jsonify({'success': False, 'message': 'Failed to send OTP email. Please check email configuration (MAIL_USERNAME and MAIL_PASSWORD in .env file).'}), 500
 
         except Exception as err:
+            pending_ctx = session.get('pending_rider_signup') or {}
+            cleanup_pending_rider_upload(pending_ctx.get('upload_token'))
+            session.pop('pending_rider_signup', None)
             return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
 
     return render_template('auth/signup.html')
@@ -2664,6 +2742,60 @@ def signup_rider():
                 return jsonify({'success': False, 'message': 'This email is already registered. Please use a different email or try logging in.'}), 400
 
 
+            doc_files = {
+                'government_id': request.files.get('document_government_id'),
+                'vehicle_registration': request.files.get('document_vehicle_registration'),
+                'orcr': request.files.get('document_orcr')
+            }
+
+            missing_docs = [REQUIRED_RIDER_DOCUMENTS.get(doc, doc.replace('_', ' ').title())
+                            for doc, upload in doc_files.items()
+                            if not upload or not upload.filename.strip()]
+            if missing_docs:
+                cursor.close()
+                conn.close()
+                return jsonify({
+                    'success': False,
+                    'message': f"Please upload the following documents: {', '.join(missing_docs)}"
+                }), 400
+
+            allowed_extensions = ('.jpg', '.jpeg', '.png', '.pdf', '.heic', '.heif')
+            from werkzeug.utils import secure_filename
+
+            previous_pending = session.get('pending_rider_signup') or {}
+            prev_token = previous_pending.get('upload_token')
+            if prev_token:
+                cleanup_pending_rider_upload(prev_token)
+
+            pending_upload_token = f"{int(time.time())}_{secrets.token_hex(6)}"
+            pending_dir = get_pending_rider_upload_dir(pending_upload_token)
+            os.makedirs(pending_dir, exist_ok=True)
+            documents_meta = {}
+
+            try:
+                for doc_key, upload in doc_files.items():
+                    original_name = secure_filename(upload.filename)
+                    if not original_name.lower().endswith(allowed_extensions):
+                        raise ValueError(f"Unsupported file type for {REQUIRED_RIDER_DOCUMENTS.get(doc_key, doc_key.title())}. Please upload JPG, PNG, PDF, or HEIC files.")
+
+                    doc_folder = os.path.join(pending_dir, doc_key)
+                    os.makedirs(doc_folder, exist_ok=True)
+                    stored_name = f"{doc_key}_{int(time.time() * 1000)}_{original_name}"
+                    upload.save(os.path.join(doc_folder, stored_name))
+                    documents_meta[doc_key] = stored_name
+            except ValueError as ve:
+                cleanup_pending_rider_upload(pending_upload_token)
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'message': str(ve)}), 400
+            except Exception as upload_err:
+                print(f"[ERROR] Rider signup document upload failed: {upload_err}")
+                cleanup_pending_rider_upload(pending_upload_token)
+                cursor.close()
+                conn.close()
+                return jsonify({'success': False, 'message': 'Failed to upload verification documents. Please try again.'}), 500
+
+
             session['pending_rider_signup'] = {
                 'first_name': first_name,
                 'last_name': last_name,
@@ -2673,7 +2805,9 @@ def signup_rider():
                 'vehicle_type': vehicle_type,
                 'vehicle_plate': vehicle_plate,
                 'license_number': license_number,
-                'service_area': service_area
+                'service_area': service_area,
+                'upload_token': pending_upload_token,
+                'documents': documents_meta
             }
 
 
@@ -4901,6 +5035,104 @@ def record_order_status_change(order_id, seller_id, old_status, new_status, chan
         print(f"[STATUS HISTORY ERROR] Failed to record status change: {e}")
         return False
 
+def fetch_cart_items_for_user(conn, user_id, cart_ids=None):
+    """Return cart items for a user, optionally filtering by specific cart IDs"""
+    if not conn or not user_id:
+        return []
+
+    cursor = conn.cursor(dictionary=True)
+
+    query = '''
+        SELECT
+            c.id AS cart_id,
+            c.product_id,
+            c.variant_id,
+            c.quantity,
+            p.name,
+            p.price,
+            p.brand,
+            p.seller_id,
+            s.store_name,
+            pv.size,
+            pv.color,
+            pv.stock_quantity AS variant_stock,
+            inv.inventory_stock
+        FROM cart c
+        JOIN products p ON c.product_id = p.id
+        LEFT JOIN sellers s ON p.seller_id = s.id
+        LEFT JOIN product_variants pv ON c.variant_id = pv.id
+        LEFT JOIN (
+            SELECT product_id, SUM(stock_quantity) AS inventory_stock
+            FROM inventory
+            GROUP BY product_id
+        ) inv ON inv.product_id = p.id
+        WHERE c.user_id = %s
+    '''
+
+    params = [user_id]
+    if cart_ids:
+        placeholders = ','.join(['%s'] * len(cart_ids))
+        query += f' AND c.id IN ({placeholders})'
+        params.extend(cart_ids)
+
+    cursor.execute(query, tuple(params))
+    cart_rows = cursor.fetchall()
+
+    product_ids = [row['product_id'] for row in cart_rows if row.get('product_id')]
+    unique_product_ids = list(dict.fromkeys(product_ids)) if product_ids else []
+    image_map = {}
+    if unique_product_ids:
+        image_cursor = conn.cursor(dictionary=True)
+        placeholders = ','.join(['%s'] * len(unique_product_ids))
+        image_cursor.execute(f'''
+            SELECT product_id,
+                   MAX(CASE WHEN is_primary = 1 THEN image_url END) AS primary_image,
+                   MIN(image_url) AS fallback_image
+            FROM product_images
+            WHERE product_id IN ({placeholders})
+            GROUP BY product_id
+        ''', tuple(unique_product_ids))
+
+        for image in image_cursor.fetchall() or []:
+            image_map[image['product_id']] = image.get('primary_image') or image.get('fallback_image')
+
+        image_cursor.close()
+
+    items = []
+    for row in cart_rows:
+        raw_brand = row.get('brand') or row.get('store_name') or 'Independent Sellers'
+        if isinstance(raw_brand, str):
+            raw_brand = raw_brand.strip()
+        brand_name = raw_brand or 'Independent Sellers'
+
+        variant_stock = row.get('variant_stock')
+        inventory_stock = row.get('inventory_stock')
+        available_stock = None
+        if variant_stock is not None:
+            available_stock = int(variant_stock)
+        elif inventory_stock is not None:
+            available_stock = int(inventory_stock)
+
+        items.append({
+            'cart_id': int(row['cart_id']) if row.get('cart_id') is not None else None,
+            'product_id': row.get('product_id'),
+            'id': row.get('product_id'),
+            'variant_id': row.get('variant_id'),
+            'quantity': int(row.get('quantity') or 0),
+            'name': row.get('name'),
+            'price': float(row.get('price') or 0),
+            'brand': brand_name,
+            'seller_id': row.get('seller_id'),
+            'store_name': row.get('store_name'),
+            'size': row.get('size'),
+            'color': row.get('color'),
+            'available_stock': available_stock,
+            'image_url': image_map.get(row.get('product_id')) or '/static/images/placeholder.svg'
+        })
+
+    cursor.close()
+    return items
+
 def send_email(to_email, subject, html_body):
     """Send email notification (using simple SMTP or print for development)"""
     try:
@@ -5803,7 +6035,11 @@ def seller_add_product():
 
         if not name:
             return jsonify({'error': 'Product name is required'}), 400
-        if not price or float(price) <= 0:
+        try:
+            price_value = float(price)
+        except ValueError:
+            return jsonify({'error': 'Valid price is required'}), 400
+        if price_value <= 0:
             return jsonify({'error': 'Valid price is required'}), 400
         if not category_id:
             return jsonify({'error': 'Category is required'}), 400
@@ -5897,7 +6133,11 @@ def seller_add_product():
         if is_grooming:
             ingredients_raw = request.form.get('ingredients', '').strip()
             volume = request.form.get('volume', '').strip()
-            grooming_stock = int(request.form.get('grooming_stock', 0))
+            grooming_stock_raw = request.form.get('grooming_stock', 0)
+            try:
+                grooming_stock = int(grooming_stock_raw)
+            except (TypeError, ValueError):
+                return jsonify({'error': 'Stock quantity is required for grooming products'}), 400
 
             if not ingredients_raw:
                 return jsonify({'error': 'Please provide the ingredient list for grooming products'}), 400
@@ -5914,7 +6154,7 @@ def seller_add_product():
                 return jsonify({'error': 'Volume/Size is required for grooming products'}), 400
 
             if grooming_stock <= 0:
-                return jsonify({'error': 'Stock quantity is required for grooming products'}), 400
+                return jsonify({'error': 'Stock quantity must be greater than zero for grooming products'}), 400
 
             # Flatten ingredient objects into readable text
             ingredient_names = [item.get('name') for item in parsed_ingredients if isinstance(item, dict) and item.get('name')]
@@ -6007,6 +6247,9 @@ def seller_add_product():
 
                     print(f"[DEBUG] Processing variant: size='{size}', color='{color}', stock_key='{stock_key}', stock={variant_stock}")
 
+                    if variant_stock < 0:
+                        return jsonify({'error': f"Stock value cannot be negative for {size} / {color}"}), 400
+
                     if variant_stock > 0:
                         total_stock += variant_stock
                         cursor.execute('''
@@ -6074,7 +6317,14 @@ def seller_update_stock():
             return jsonify({'error': 'Seller not found'}), 404
 
         product_id = request.form.get('product_id')
-        stock_quantity = request.form.get('stock_quantity')
+        stock_quantity_raw = request.form.get('stock_quantity')
+        try:
+            stock_quantity = int(stock_quantity_raw)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Stock quantity must be a number'}), 400
+
+        if stock_quantity < 0:
+            return jsonify({'error': 'Stock quantity cannot be negative'}), 400
 
 
         cursor.execute('SELECT id FROM products WHERE id = %s AND seller_id = %s',
@@ -7130,6 +7380,155 @@ def api_my_orders():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/my-orders/<int:order_id>/cancel', methods=['POST'])
+def api_cancel_my_order(order_id):
+    """Allow buyers to cancel their own orders before fulfillment"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    user_id = session.get('user_id')
+    instant_cancel_statuses = {'pending'}
+    approval_required_statuses = {'confirmed'}
+    allowed_statuses = instant_cancel_statuses | approval_required_statuses
+
+    try:
+        if request.is_json:
+            reason = (request.get_json(silent=True) or {}).get('reason', '')
+        else:
+            reason = request.form.get('reason', '')
+
+        reason = (reason or '').strip()
+        if not reason:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Please provide a short reason for cancelling this order.'}), 400
+
+        if len(reason) > 500:
+            reason = reason[:500]
+
+        cursor.execute('''
+            SELECT id, order_status, seller_id
+            FROM orders
+            WHERE id = %s AND user_id = %s
+            LIMIT 1
+        ''', (order_id, user_id))
+        order = cursor.fetchone()
+
+        if not order:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+        current_status = order.get('order_status')
+        if current_status not in allowed_statuses:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Orders that already moved to shipment can no longer be cancelled online.'}), 400
+
+        if current_status in instant_cancel_statuses:
+            cursor.execute('''
+                UPDATE orders
+                SET order_status = 'cancelled', updated_at = NOW()
+                WHERE id = %s
+            ''', (order_id,))
+
+            cursor.execute('''
+                UPDATE shipments
+                SET status = 'cancelled', updated_at = NOW()
+                WHERE order_id = %s
+            ''', (order_id,))
+
+            conn.commit()
+
+            record_order_status_change(
+                order_id,
+                order.get('seller_id'),
+                current_status,
+                'cancelled',
+                user_id,
+                reason,
+                'Buyer cancellation via dashboard'
+            )
+
+            if order.get('seller_id'):
+                create_seller_notification(
+                    order['seller_id'],
+                    order_id,
+                    'order_cancelled',
+                    'Order cancelled by buyer',
+                    f'Buyer cancelled order #{order_id}. Reason: {reason}',
+                    priority='high'
+                )
+
+            cursor.close()
+            conn.close()
+
+            return jsonify({'success': True, 'message': 'Order cancelled successfully.'})
+
+        # Seller approval required
+        cursor.execute('''
+            SELECT id FROM order_cancellation_requests
+            WHERE order_id = %s AND buyer_id = %s AND status = 'pending'
+            LIMIT 1
+        ''', (order_id, user_id))
+        existing_request = cursor.fetchone()
+
+        if existing_request:
+            cursor.execute('''
+                UPDATE order_cancellation_requests
+                SET reason = %s, updated_at = NOW()
+                WHERE id = %s
+            ''', (reason, existing_request['id']))
+            approval_message = 'Your cancellation request was updated. The seller still needs to approve it.'
+        else:
+            cursor.execute('''
+                INSERT INTO order_cancellation_requests (order_id, buyer_id, seller_id, reason)
+                VALUES (%s, %s, %s, %s)
+            ''', (order_id, user_id, order.get('seller_id'), reason))
+            approval_message = 'Your cancellation request was sent to the seller for approval.'
+
+        conn.commit()
+
+        record_order_status_change(
+            order_id,
+            order.get('seller_id'),
+            current_status,
+            current_status,
+            user_id,
+            reason,
+            'Buyer requested cancellation; awaiting seller approval'
+        )
+
+        if order.get('seller_id'):
+            create_seller_notification(
+                order['seller_id'],
+                order_id,
+                'order_cancelled',
+                'Cancellation request pending',
+                f'Buyer requested to cancel order #{order_id}. Reason: {reason}',
+                priority='high'
+            )
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': approval_message
+        })
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        cursor.close()
+        conn.close()
+        print(f"[ERROR] api_cancel_my_order: {e}")
+        return jsonify({'success': False, 'error': 'Unable to cancel this order right now.'}), 500
 
 @app.route('/api/order/tracking/<int:order_id>', methods=['GET'])
 def api_order_tracking(order_id):
@@ -9278,6 +9677,42 @@ def verify_otp():
                         ''', (user_id, pending_rider_signup.get('vehicle_type', 'motorcycle'), pending_rider_signup['license_number'],
                               pending_rider_signup.get('vehicle_plate', ''), pending_rider_signup['service_area']))
 
+                        rider_id = cursor.lastrowid
+
+                        documents_meta = pending_rider_signup.get('documents') or {}
+                        upload_token = pending_rider_signup.get('upload_token')
+                        pending_dir = get_pending_rider_upload_dir(upload_token)
+
+                        if documents_meta and pending_dir:
+                            ensure_rider_documents_table(cursor)
+                            for doc_type, stored_name in documents_meta.items():
+                                source_path = os.path.join(pending_dir, doc_type, stored_name)
+                                if not os.path.isfile(source_path):
+                                    print(f"[WARN] Pending document missing for rider signup: {source_path}")
+                                    continue
+
+                                final_dir = os.path.join('static', 'uploads', 'riders', doc_type)
+                                os.makedirs(final_dir, exist_ok=True)
+                                final_name = f"rider_{rider_id}_{doc_type}_{int(time.time() * 1000)}_{stored_name}"
+                                final_path = os.path.join(final_dir, final_name)
+
+                                try:
+                                    shutil.move(source_path, final_path)
+                                except Exception as move_err:
+                                    print(f"[ERROR] Failed moving rider document {source_path} -> {final_path}: {move_err}")
+                                    continue
+
+                                file_url = f"/static/uploads/riders/{doc_type}/{final_name}"
+                                cursor.execute('''
+                                    INSERT INTO rider_documents (rider_id, document_type, file_url, verified, uploaded_at, updated_at)
+                                    VALUES (%s, %s, %s, 0, NOW(), NOW())
+                                    ON DUPLICATE KEY UPDATE file_url = VALUES(file_url), verified = 0, updated_at = NOW()
+                                ''', (rider_id, doc_type, file_url))
+
+                            cleanup_pending_rider_upload(upload_token)
+                        else:
+                            cleanup_pending_rider_upload(upload_token)
+
                         conn.commit()
                         cursor.close()
                         conn.close()
@@ -9504,104 +9939,18 @@ def api_get_cart():
     try:
         user_id = session.get('user_id')
         print(f"[CART GET] Fetching cart for user {user_id}")
-        cursor = conn.cursor(dictionary=True)
 
-        # First, try to get cart items
-        cursor.execute('''
-            SELECT
-                c.id as cart_id,
-                c.product_id,
-                c.quantity,
-                p.name,
-                p.price,
-                p.brand,
-                p.seller_id,
-                s.store_name,
-                pv.size,
-                pv.color,
-                pv.stock_quantity as variant_stock,
-                inv.inventory_stock
-            FROM cart c
-            JOIN products p ON c.product_id = p.id
-            LEFT JOIN sellers s ON p.seller_id = s.id
-            LEFT JOIN product_variants pv ON c.variant_id = pv.id
-            LEFT JOIN (
-                SELECT product_id, SUM(stock_quantity) as inventory_stock
-                FROM inventory
-                GROUP BY product_id
-            ) inv ON inv.product_id = p.id
-            WHERE c.user_id = %s
-        ''', (user_id,))
+        items_list = fetch_cart_items_for_user(conn, user_id)
+        unique_product_count = len({item['id'] for item in items_list}) if items_list else 0
+        total_quantity = sum(item['quantity'] for item in items_list) if items_list else 0
 
-        cart_items_raw = cursor.fetchall()
-        print(f"[CART GET] Found {len(cart_items_raw) if cart_items_raw else 0} items for user {user_id}")
-        
-        # Now build the items list with images
-        items = []
-        if cart_items_raw:
-            for cart_item in cart_items_raw:
-                product_id = cart_item.get('product_id')
-                
-                # Get the best image for this product
-                image_url = None
-                try:
-                    cursor.execute('''
-                        SELECT image_url FROM product_images
-                        WHERE product_id = %s
-                        ORDER BY is_primary DESC, id ASC
-                        LIMIT 1
-                    ''', (product_id,))
-                    image_result = cursor.fetchone()
-                    if image_result:
-                        image_url = image_result.get('image_url')
-                except Exception as img_err:
-                    print(f"[CART GET] Warning: Could not fetch image for product {product_id}: {img_err}")
-                    image_url = None
-                
-                size_val = cart_item.get('size')
-                color_val = cart_item.get('color')
-                raw_brand = cart_item.get('brand') or cart_item.get('store_name') or 'Independent Sellers'
-                if isinstance(raw_brand, str):
-                    raw_brand = raw_brand.strip()
-                brand_name = raw_brand or 'Independent Sellers'
-                variant_stock = cart_item.get('variant_stock')
-                product_stock = cart_item.get('inventory_stock')
-                available_stock = None
-                if variant_stock is not None:
-                    available_stock = int(variant_stock)
-                elif product_stock is not None:
-                    available_stock = int(product_stock)
-                else:
-                    available_stock = 0
-                
-                items.append({
-                    'id': product_id,
-                    'cart_id': cart_item.get('cart_id'),
-                    'product_id': product_id,
-                    'quantity': int(cart_item.get('quantity', 0)),
-                    'name': cart_item.get('name'),
-                    'price': float(cart_item.get('price', 0)) if cart_item.get('price') else 0,
-                    'image_url': image_url or '/static/images/placeholder.svg',
-                    'size': size_val if size_val else None,
-                    'color': color_val if color_val else None,
-                    'brand': brand_name,
-                    'available_stock': available_stock,
-                    'seller_id': cart_item.get('seller_id')
-                })
-                print(f"[CART GET]   - {cart_item.get('name')} (qty {cart_item.get('quantity')}, size: {size_val}, color: {color_val}, img: {image_url})")
-
-        items_list = items
-
-        unique_product_count = len(set(item['id'] for item in items_list)) if items_list else 0
-
-        cursor.close()
         conn.close()
 
         return jsonify({
             'success': True,
             'items': items_list,
             'unique_count': unique_product_count,
-            'total_quantity': sum(item['quantity'] for item in items_list) if items_list else 0
+            'total_quantity': total_quantity
         })
     except Exception as e:
         print(f"[ERROR] Error getting cart: {e}")
@@ -9611,6 +9960,79 @@ def api_get_cart():
             conn.close()
         return jsonify({'success': False, 'error': str(e), 'unique_count': 0}), 500
 
+@app.route('/api/cart/selection', methods=['GET', 'POST'])
+def api_cart_selection():
+    """Persist and retrieve the buyer's checkout selection"""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'error': 'Not authorized'}), 401
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    user_id = session.get('user_id')
+
+    try:
+        if request.method == 'GET':
+            selected_ids = session.get('checkout_selection', []) or []
+            if not selected_ids:
+                conn.close()
+                return jsonify({'success': True, 'cart_ids': [], 'items': []})
+
+            items = fetch_cart_items_for_user(conn, user_id, selected_ids)
+            valid_ids = [item['cart_id'] for item in items if item.get('cart_id') is not None]
+
+            if len(valid_ids) != len(selected_ids):
+                session['checkout_selection'] = valid_ids
+                session.modified = True
+
+            conn.close()
+            return jsonify({'success': True, 'cart_ids': valid_ids, 'items': items})
+
+        data = request.get_json(silent=True) or {}
+        cart_ids = data.get('cart_ids', [])
+
+        try:
+            normalized_ids = [int(cid) for cid in cart_ids]
+        except (TypeError, ValueError):
+            conn.close()
+            return jsonify({'success': False, 'error': 'Invalid cart selection payload.'}), 400
+
+        normalized_ids = [cid for cid in dict.fromkeys(normalized_ids) if cid > 0]
+        if not normalized_ids:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Please select at least one available item.'}), 400
+
+        cursor = conn.cursor(dictionary=True)
+        placeholders = ','.join(['%s'] * len(normalized_ids))
+        cursor.execute(f'''SELECT id FROM cart WHERE user_id = %s AND id IN ({placeholders})''',
+                       tuple([user_id] + normalized_ids))
+        found_ids = [row['id'] for row in cursor.fetchall() or []]
+        cursor.close()
+
+        if len(found_ids) != len(normalized_ids):
+            conn.close()
+            return jsonify({'success': False, 'error': 'Some selected items are no longer in your cart.'}), 400
+
+        items = fetch_cart_items_for_user(conn, user_id, normalized_ids)
+        unavailable = [item for item in items if item.get('available_stock') is not None and item['available_stock'] <= 0]
+        insufficient = [item for item in items if item.get('available_stock') is not None and item['available_stock'] < item.get('quantity', 0)]
+        if unavailable or insufficient:
+            problem_items = unavailable or insufficient
+            names = ', '.join(item.get('name') or 'item' for item in problem_items)
+            conn.close()
+            return jsonify({'success': False, 'error': f'Please update your cart. These items are no longer available in the requested quantity: {names}.'}), 400
+
+        session['checkout_selection'] = normalized_ids
+        session.modified = True
+
+        conn.close()
+        return jsonify({'success': True, 'cart_ids': normalized_ids, 'items': items})
+    except Exception as e:
+        print(f"[ERROR] api_cart_selection: {e}")
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': 'Unable to save checkout selection.'}), 500
 @app.route('/api/cart/update', methods=['POST'])
 def api_update_cart():
     """Update cart item quantity"""
@@ -9896,11 +10318,14 @@ def api_rider_available_orders():
         user_id = session.get('user_id')
         cursor = conn.cursor(dictionary=True)
 
+        rider, error = fetch_rider_with_guard(cursor, user_id)
+        if error:
+            cursor.close()
+            conn.close()
+            response, status_code = error
+            return response, status_code
 
-        cursor.execute('SELECT id, service_area FROM riders WHERE user_id = %s', (user_id,))
-        rider = cursor.fetchone()
-
-        if not rider or not rider.get('service_area'):
+        if not rider.get('service_area'):
             cursor.close()
             conn.close()
             return jsonify({'success': True, 'orders': [], 'service_area': None, 'message': 'No service area assigned'})
@@ -10040,13 +10465,12 @@ def api_rider_active_deliveries():
         cursor = conn.cursor(dictionary=True)
 
 
-        cursor.execute('SELECT id, service_area FROM riders WHERE user_id = %s', (rider_id,))
-        rider_record = cursor.fetchone()
-        if not rider_record:
-            print(f"⚠️ No rider record found for user_id: {rider_id}")
+        rider_record, error = fetch_rider_with_guard(cursor, rider_id)
+        if error:
             cursor.close()
             conn.close()
-            return jsonify({'success': True, 'deliveries': [], 'service_area': None, 'message': 'No rider profile found'})
+            response, status_code = error
+            return response, status_code
 
         rider_db_id = rider_record['id']
         service_area = rider_record.get('service_area', '')
@@ -10142,6 +10566,175 @@ def api_rider_active_deliveries():
             conn.close()
         return jsonify({'success': False, 'error': str(e), 'details': 'Check server logs for more information'}), 500
 
+
+def ensure_rider_documents_table(cursor):
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rider_documents (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            rider_id INT NOT NULL,
+            document_type ENUM('government_id','vehicle_registration','orcr') NOT NULL,
+            file_url VARCHAR(500) NOT NULL,
+            verified TINYINT(1) DEFAULT 0,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_rider_doc (rider_id, document_type),
+            FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ''')
+
+
+def get_pending_rider_upload_dir(token):
+    if not token:
+        return None
+    return os.path.join('static', 'uploads', 'riders', 'pending', str(token))
+
+
+def cleanup_pending_rider_upload(token):
+    pending_dir = get_pending_rider_upload_dir(token)
+    if pending_dir and os.path.isdir(pending_dir):
+        shutil.rmtree(pending_dir, ignore_errors=True)
+
+
+def fetch_rider_with_guard(cursor, user_id, require_approval=True):
+    cursor.execute('SELECT * FROM riders WHERE user_id = %s', (user_id,))
+    rider = cursor.fetchone()
+
+    if not rider:
+        return None, (jsonify({'success': False, 'error': 'Rider profile not found'}), 404)
+
+    if require_approval and rider.get('status') not in APPROVED_RIDER_STATUSES:
+        return rider, (jsonify({
+            'success': False,
+            'error': 'Your rider account is awaiting admin approval. We will notify you once it is activated.',
+            'status': rider.get('status', 'pending')
+        }), 403)
+
+    return rider, None
+
+
+@app.route('/api/rider/document-status', methods=['GET'])
+def api_rider_document_status():
+    """Fetch uploaded document metadata for the logged-in rider"""
+    if not session.get('logged_in') or session.get('role') != 'rider':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+
+    try:
+        user_id = session.get('user_id')
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
+        rider_row = cursor.fetchone()
+        if not rider_row:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': True, 'documents': {}, 'message': 'No rider profile found'})
+
+        ensure_rider_documents_table(cursor)
+        cursor.execute('''
+            SELECT document_type, file_url, verified, uploaded_at, updated_at
+            FROM rider_documents
+            WHERE rider_id = %s
+        ''', (rider_row['id'],))
+        records = cursor.fetchall() or []
+        cursor.close()
+        conn.close()
+
+        documents = {}
+        for record in records:
+            documents[record['document_type']] = {
+                'file_url': record.get('file_url'),
+                'verified': bool(record.get('verified')),
+                'uploaded_at': record.get('uploaded_at').isoformat() if record.get('uploaded_at') else None,
+                'updated_at': record.get('updated_at').isoformat() if record.get('updated_at') else None
+            }
+
+        return jsonify({'success': True, 'documents': documents})
+    except Exception as e:
+        print(f"[ERROR] api_rider_document_status: {e}")
+        import traceback
+        traceback.print_exc()
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/rider/upload-document', methods=['POST'])
+def api_rider_upload_document():
+    """Handle secure uploads of rider compliance documents"""
+    if not session.get('logged_in') or session.get('role') != 'rider':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    allowed_types = {'government_id', 'vehicle_registration', 'orcr'}
+    document_type = request.form.get('document_type')
+
+    if document_type not in allowed_types:
+        return jsonify({'success': False, 'error': 'Invalid document type'}), 400
+
+    if 'document' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+
+    file = request.files['document']
+    if not file or not file.filename:
+        return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+    allowed_extensions = ('.jpg', '.jpeg', '.png', '.pdf', '.heic', '.heif')
+    filename_lower = file.filename.lower()
+    if not filename_lower.endswith(allowed_extensions):
+        return jsonify({'success': False, 'error': 'Unsupported file type'}), 400
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database connection failed'}), 500
+
+    try:
+        user_id = session.get('user_id')
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
+        rider_row = cursor.fetchone()
+        if not rider_row:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Rider profile not found'}), 404
+
+        ensure_rider_documents_table(cursor)
+
+        import os
+        import time
+        from werkzeug.utils import secure_filename
+
+        upload_dir = os.path.join('static', 'uploads', 'riders', document_type)
+        os.makedirs(upload_dir, exist_ok=True)
+
+        safe_name = secure_filename(file.filename)
+        timestamp = int(time.time() * 1000)
+        stored_name = f"rider_{rider_row['id']}_{document_type}_{timestamp}_{safe_name}"
+        file_path = os.path.join(upload_dir, stored_name)
+        file.save(file_path)
+
+        file_url = f"/static/uploads/riders/{document_type}/{stored_name}"
+
+        cursor.execute('''
+            INSERT INTO rider_documents (rider_id, document_type, file_url, verified, uploaded_at, updated_at)
+            VALUES (%s, %s, %s, 0, NOW(), NOW())
+            ON DUPLICATE KEY UPDATE file_url = VALUES(file_url), verified = 0, updated_at = NOW()
+        ''', (rider_row['id'], document_type, file_url))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': True, 'file_url': file_url, 'document_type': document_type})
+    except Exception as e:
+        print(f"[ERROR] api_rider_upload_document: {e}")
+        import traceback
+        traceback.print_exc()
+        if conn:
+            conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/rider/delivery-history', methods=['GET'])
 def api_rider_delivery_history():
     """Get delivery history with individual transaction records for the logged-in rider"""
@@ -10156,13 +10749,12 @@ def api_rider_delivery_history():
         rider_id = session.get('user_id')
         cursor = conn.cursor(dictionary=True)
 
-
-        cursor.execute('SELECT id FROM riders WHERE user_id = %s', (rider_id,))
-        rider_record = cursor.fetchone()
-        if not rider_record:
+        rider_record, error = fetch_rider_with_guard(cursor, rider_id)
+        if error:
             cursor.close()
             conn.close()
-            return jsonify({'success': True, 'history': []})
+            response, status_code = error
+            return response, status_code
 
         rider_db_id = rider_record['id']
 
@@ -10220,13 +10812,12 @@ def api_rider_shipment_details(shipment_id):
         rider_id = session.get('user_id')
         cursor = conn.cursor(dictionary=True)
 
-
-        cursor.execute('SELECT id FROM riders WHERE user_id = %s', (rider_id,))
-        rider_record = cursor.fetchone()
-        if not rider_record:
+        rider_record, error = fetch_rider_with_guard(cursor, rider_id)
+        if error:
             cursor.close()
             conn.close()
-            return jsonify({'success': False, 'error': 'Rider not found'})
+            response, status_code = error
+            return response, status_code
 
         rider_db_id = rider_record['id']
 
@@ -10249,7 +10840,7 @@ def api_rider_shipment_details(shipment_id):
         conn.close()
 
         if not shipment:
-            return jsonify({'success': False, 'error': 'Shipment not found or access denied'})
+            return jsonify({'success': False, 'error': 'Shipment not found or access denied'}), 404
 
 
         if shipment.get('total_amount'):

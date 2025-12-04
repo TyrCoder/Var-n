@@ -89,12 +89,12 @@
           <a class="side-link" href="#" onclick="switchSection('deliveries'); return false;">Active Deliveries</a>
           <a class="side-link" href="#" onclick="switchSection('history'); return false;">Delivery History</a>
           <a class="side-link" href="#" onclick="switchSection('earnings'); return false;">Earnings</a>
-          <a class="side-link" href="#" onclick="switchSection('schedule'); return false;">Schedule</a>
           <a class="side-link" href="#" onclick="switchSection('ratings'); return false;">Ratings & Reviews</a>
         </div>
         <div class="side-group">
-          <div class="side-title">Account</div>
+          <div class="side-title">Account &amp; Docs</div>
           <a class="side-link" href="#" onclick="switchSection('profile'); return false;">Profile</a>
+          <a class="side-link" href="#" onclick="switchSection('documents'); return false;">Documents</a>
           <a class="side-link" href="#" onclick="switchSection('settings'); return false;">Settings</a>
           <a class="side-link" href="#" onclick="switchSection('support'); return false;">Support</a>
         </div>
@@ -354,32 +354,6 @@
             </div>
           </div>
 
-          <!-- Schedule Section -->
-          <div id="schedule-section" style="display: none;">
-            <div class="card">
-              <div class="inner">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div class="metric">Your Schedule</div>
-                  <div class="tag" style="background:#10b981;color:#fff">Online</div>
-                </div>
-                <div style="margin-top:20px">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-                    <div>Today's Hours</div>
-                    <div>8:00 AM - 5:00 PM</div>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-                    <div>Break Time</div>
-                    <div>12:00 PM - 1:00 PM</div>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-                    <div>Area Coverage</div>
-                    <div>Sta Cruz, Laguna</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Ratings Section -->
           <div id="ratings-section" style="display: none;">
             <div class="card">
@@ -572,9 +546,78 @@
             </div>
           </div>
 
+          <!-- Documents Section -->
+          <div id="documents-section" style="display: none;">
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                  <div>
+                    <div class="metric">Registration Documents</div>
+                    <div style="font-size:13px;color:#6b7280;margin-top:4px">Upload your driver's license, vehicle registration, and OR/CR for verification.</div>
+                  </div>
+                  <div class="tag" style="background:#0a0a0a;color:#fff">Secure Uploads</div>
+                </div>
+
+                <div class="document-grid" style="margin-top:16px">
+                  <div class="document-card" data-doc-type="government_id">
+                    <div class="document-card-header">
+                      <div class="document-icon">🪪</div>
+                      <div>
+                        <div class="document-title">Driver's License</div>
+                        <div class="document-description">Upload a clear copy of your valid driver's license.</div>
+                      </div>
+                      <span class="doc-status doc-status-missing">Not uploaded</span>
+                    </div>
+                    <div class="doc-upload-status">No file uploaded yet.</div>
+                    <div class="document-card-actions">
+                      <button class="doc-upload-btn" type="button" onclick="triggerDocumentUpload('government_id')">Upload license</button>
+                      <a class="doc-view-link" href="#" target="_blank" rel="noopener" style="display:none">🔎 View file</a>
+                    </div>
+                    <input type="file" id="doc-file-government_id" accept="image/*,.pdf" style="display:none" onchange="handleDocumentUpload(event, 'government_id')">
+                  </div>
+
+                  <div class="document-card" data-doc-type="vehicle_registration">
+                    <div class="document-card-header">
+                      <div class="document-icon">🛵</div>
+                      <div>
+                        <div class="document-title">Vehicle Registration</div>
+                        <div class="document-description">Latest vehicle registration card or certificate.</div>
+                      </div>
+                      <span class="doc-status doc-status-missing">Not uploaded</span>
+                    </div>
+                    <div class="doc-upload-status">No file uploaded yet.</div>
+                    <div class="document-card-actions">
+                      <button class="doc-upload-btn" type="button" onclick="triggerDocumentUpload('vehicle_registration')">Upload Registration</button>
+                      <a class="doc-view-link" href="#" target="_blank" rel="noopener" style="display:none">🔎 View file</a>
+                    </div>
+                    <input type="file" id="doc-file-vehicle_registration" accept="image/*,.pdf" style="display:none" onchange="handleDocumentUpload(event, 'vehicle_registration')">
+                  </div>
+
+                  <div class="document-card" data-doc-type="orcr">
+                    <div class="document-card-header">
+                      <div class="document-icon">📄</div>
+                      <div>
+                        <div class="document-title">Official Receipt / CR</div>
+                        <div class="document-description">Upload your latest OR/CR copy for compliance.</div>
+                      </div>
+                      <span class="doc-status doc-status-missing">Not uploaded</span>
+                    </div>
+                    <div class="doc-upload-status">No file uploaded yet.</div>
+                    <div class="document-card-actions">
+                      <button class="doc-upload-btn" type="button" onclick="triggerDocumentUpload('orcr')">Upload OR/CR</button>
+                      <a class="doc-view-link" href="#" target="_blank" rel="noopener" style="display:none">🔎 View file</a>
+                    </div>
+                    <input type="file" id="doc-file-orcr" accept="image/*,.pdf" style="display:none" onchange="handleDocumentUpload(event, 'orcr')">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </main>
       </section>
     </div>
+
     <style>
       /* Hide all sections by default */
       [id$="-section"] {
@@ -769,6 +812,121 @@
         font-weight: 600;
         cursor: pointer;
       }
+
+      .status-actions-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .status-actions-wrapper .status-stepper {
+        margin-bottom: 0;
+      }
+
+      .document-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .document-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 2px 8px rgba(15,23,42,0.03);
+      }
+
+      .document-card-header {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .document-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+      }
+
+      .document-title {
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .document-description {
+        font-size: 12px;
+        color: #6b7280;
+        line-height: 1.4;
+      }
+
+      .doc-status {
+        margin-left: auto;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+
+      .doc-status-missing {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .doc-status-pending {
+        background: #fef3c7;
+        color: #b45309;
+      }
+
+      .doc-status-verified {
+        background: #dcfce7;
+        color: #15803d;
+      }
+
+      .doc-upload-status {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .document-card-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .doc-upload-btn {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 14px;
+        background: #0a0a0a;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+      }
+
+      .doc-upload-btn:hover {
+        opacity: 0.85;
+      }
+
+      .doc-view-link {
+        font-size: 12px;
+        color: #3b82f6;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
     </style>
 
     <script>
@@ -787,6 +945,385 @@
         'manila': { center: [14.5995, 120.9842], zoom: 12, radius: 8000, displayName: 'Manila (NCR)' },
         'quezon city': { center: [14.6760, 121.0437], zoom: 12, radius: 10000, displayName: 'Quezon City (NCR)' }
       };
+
+      const shipmentStatusMeta = {
+        'pending': { label: 'Waiting Approval', color: '#92400e', bg: '#fffbeb' },
+        'assigned_to_rider': { label: 'Assigned to You', color: '#2563eb', bg: '#dbeafe' },
+        'picked_up': { label: 'Picked Up', color: '#1d4ed8', bg: '#dbeafe' },
+        'in_transit': { label: 'In Transit', color: '#8b5cf6', bg: '#f3e8ff' },
+        'out_for_delivery': { label: 'Out for Delivery', color: '#ec4899', bg: '#fce7f3' },
+        'delivered': { label: 'Delivered', color: '#15803d', bg: '#dcfce7' }
+      };
+
+      const riderStatusFlow = [
+        { key: 'picked_up', label: 'Picked Up', emoji: '📦' },
+        { key: 'in_transit', label: 'In Transit', emoji: '🚗' },
+        { key: 'out_for_delivery', label: 'Out for Delivery', emoji: '🚪' },
+        { key: 'delivered', label: 'Delivered', emoji: '✅' }
+      ];
+
+      let activeDeliveryCache = [];
+
+      function getShipmentStatusMeta(status) {
+        if (!status) {
+          return { label: 'Pending', color: '#6b7280', bg: '#f3f4f6' };
+        }
+        return shipmentStatusMeta[status] || {
+          label: status.replace('_', ' ').toUpperCase(),
+          color: '#6b7280',
+          bg: '#f3f4f6'
+        };
+      }
+
+      function formatDateTime(dateString) {
+        if (!dateString) {
+          return '—';
+        }
+        const parsed = new Date(dateString);
+        if (Number.isNaN(parsed.getTime())) {
+          return '—';
+        }
+        return parsed.toLocaleString('en-PH', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      function getNextStatus(currentStatus) {
+        if (!currentStatus || currentStatus === 'pending' || currentStatus === 'assigned_to_rider') {
+          return riderStatusFlow[0].key;
+        }
+        const index = riderStatusFlow.findIndex(step => step.key === currentStatus);
+        if (index === -1 || index === riderStatusFlow.length - 1) {
+          return null;
+        }
+        return riderStatusFlow[index + 1].key;
+      }
+
+      function renderStatusStepper(order) {
+        const currentStatus = order.shipment_status || 'pending';
+        const deliveredComplete = currentStatus === 'delivered';
+        const currentIndex = riderStatusFlow.findIndex(step => step.key === currentStatus);
+        const isPending = currentStatus === 'pending' || currentStatus === 'assigned_to_rider';
+
+        return riderStatusFlow.map((step, index) => {
+          const isCompleted = deliveredComplete ? true : currentIndex > index;
+          const isCurrent = !deliveredComplete && currentIndex === index;
+          const canAdvanceFromPending = isPending && index === 0;
+          const canAdvance = (!deliveredComplete) && (
+            (isPending && canAdvanceFromPending) ||
+            (currentIndex >= 0 && index === currentIndex + 1)
+          );
+          const shouldDisable = isCompleted || isCurrent || !canAdvance;
+          const stateClass = isCompleted ? 'done' : isCurrent ? 'active' : canAdvance ? 'next' : '';
+          const disabledAttr = shouldDisable ? 'disabled' : '';
+          const handler = shouldDisable ? '' : ` onclick="updateDeliveryStatus(${order.shipment_id}, '${step.key}')"`;
+          return `<button class="status-chip ${stateClass}" ${disabledAttr}${handler}>${step.emoji} ${step.label}</button>`;
+        }).join('');
+      }
+
+      function renderActiveDeliveryModalContent(deliveries = []) {
+        const container = document.getElementById('activeDeliveryList');
+        if (!container) {
+          return;
+        }
+
+        if (!deliveries.length) {
+          container.innerHTML = '<div style="padding:30px;text-align:center;color:#6b7280">No active deliveries right now. Accept an order to see live updates here.</div>';
+          return;
+        }
+
+        container.innerHTML = deliveries.map(delivery => {
+          const statusMeta = getShipmentStatusMeta(delivery.shipment_status);
+          const earning = (parseFloat(delivery.total_amount || 0) * 0.15).toFixed(2);
+          const totalAmount = parseFloat(delivery.total_amount || 0).toFixed(2);
+          const nextStatus = getNextStatus(delivery.shipment_status);
+          const nextStatusMeta = nextStatus ? getShipmentStatusMeta(nextStatus) : null;
+
+          const nextButton = nextStatus ? `
+            <button style="background:#10b981;color:#fff" onclick="updateDeliveryStatus(${delivery.shipment_id}, '${nextStatus}')">
+              Advance to ${nextStatusMeta.label}
+            </button>
+          ` : '';
+
+          const acceptButton = (delivery.shipment_status === 'pending' || delivery.shipment_status === 'assigned_to_rider') ? `
+            <button style="background:#f97316;color:#fff" onclick="acceptOrder(${delivery.shipment_id})">
+              Accept Delivery
+            </button>
+          ` : '';
+
+          return `
+            <div class="active-delivery-card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Order #${delivery.order_number}</div>
+                  <div class="card-subtitle">Updated ${formatDateTime(delivery.available_since || delivery.created_at)}</div>
+                </div>
+                <span class="status-pill" style="background:${statusMeta.bg};color:${statusMeta.color}">${statusMeta.label}</span>
+              </div>
+              <div class="card-details">
+                <div>
+                  <div class="label">Customer</div>
+                  <div class="value">${delivery.customer_name || 'N/A'}</div>
+                  <div class="muted">${delivery.customer_phone || 'No phone on file'}</div>
+                </div>
+                <div>
+                  <div class="label">Dropoff</div>
+                  <div class="value">${delivery.delivery_address || 'Not provided'}</div>
+                  <div class="muted">${[delivery.city, delivery.province].filter(Boolean).join(', ')}</div>
+                </div>
+                <div>
+                  <div class="label">Earnings</div>
+                  <div class="value">₱${earning}</div>
+                  <div class="muted">Order ₱${totalAmount}</div>
+                </div>
+              </div>
+              <div class="status-stepper">
+                ${renderStatusStepper(delivery)}
+              </div>
+              <div class="card-actions">
+                ${acceptButton}
+                ${nextButton}
+                <button style="background:#3b82f6;color:#fff" onclick="viewShipmentDetails(${delivery.shipment_id}, '${delivery.order_number}')">View Details</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function updateActiveDeliveryNotifications(deliveries = []) {
+        activeDeliveryCache = deliveries;
+        const alertBtn = document.getElementById('activeDeliveryAlerts');
+        const badge = document.getElementById('activeDeliveryBadge');
+
+        if (!alertBtn || !badge) {
+          return;
+        }
+
+        const count = deliveries.length;
+        badge.textContent = count;
+
+        if (count === 0) {
+          alertBtn.classList.add('disabled-alert');
+          alertBtn.setAttribute('disabled', 'disabled');
+        } else {
+          alertBtn.classList.remove('disabled-alert');
+          alertBtn.removeAttribute('disabled');
+        }
+
+        renderActiveDeliveryModalContent(deliveries);
+      }
+
+      function buildActiveDeliveryActions(order) {
+        if (!order.seller_confirmed) {
+          return `
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center">
+              <span style="font-size:12px;color:#f59e0b;font-weight:600">⏳ Waiting for seller</span>
+              <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
+                      style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                      onmouseover="this.style.background='#2563eb'"
+                      onmouseout="this.style.background='#3b82f6'">
+                📊 Details
+              </button>
+            </div>
+          `;
+        }
+
+        if (order.shipment_status === 'pending' || order.shipment_status === 'assigned_to_rider') {
+          return `
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center">
+              <button onclick="acceptOrder(${order.shipment_id})"
+                      style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
+                      onmouseover="this.style.background='#059669'"
+                      onmouseout="this.style.background='#10b981'">
+                Accept
+              </button>
+              <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
+                      style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                      onmouseover="this.style.background='#4b5563'"
+                      onmouseout="this.style.background='#6b7280'">
+                📊 Details
+              </button>
+            </div>
+          `;
+        }
+
+        if (order.shipment_status === 'delivered') {
+          return `
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center">
+              <span style="background:#10b981;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600">✓ Delivered</span>
+              <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
+                      style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                      onmouseover="this.style.background='#4b5563'"
+                      onmouseout="this.style.background='#6b7280'">
+                📊 Details
+              </button>
+            </div>
+          `;
+        }
+
+        const nextStatus = getNextStatus(order.shipment_status);
+        const nextStatusMeta = nextStatus ? getShipmentStatusMeta(nextStatus) : null;
+        const nextButton = nextStatus ? `
+          <button onclick="updateDeliveryStatus(${order.shipment_id}, '${nextStatus}')"
+                  style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
+                  onmouseover="this.style.background='#059669'"
+                  onmouseout="this.style.background='#10b981'">
+            Advance to ${nextStatusMeta.label}
+          </button>
+        ` : '';
+
+        return `
+          <div class="status-actions-wrapper">
+            <div class="status-stepper">
+              ${renderStatusStepper(order)}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+              ${nextButton}
+              <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
+                      style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
+                      onmouseover="this.style.background='#4b5563'"
+                      onmouseout="this.style.background='#6b7280'">
+                📊 Details
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      const documentTypeDefinitions = [
+        { key: 'government_id', label: "Driver's License" },
+        { key: 'vehicle_registration', label: 'Vehicle Registration' },
+        { key: 'orcr', label: 'Official Receipt / CR' }
+      ];
+
+      function triggerDocumentUpload(docType) {
+        const input = document.getElementById(`doc-file-${docType}`);
+        if (input) {
+          input.click();
+        }
+      }
+
+      function handleDocumentUpload(event, docType) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+
+        const card = document.querySelector(`[data-doc-type="${docType}"]`);
+        const statusNote = card ? card.querySelector('.doc-upload-status') : null;
+        if (statusNote) {
+          statusNote.textContent = 'Uploading document...';
+        }
+
+        const formData = new FormData();
+        formData.append('document_type', docType);
+        formData.append('document', file);
+
+        fetch('/api/rider/upload-document', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            throw new Error(data.error || 'Upload failed');
+          }
+          loadDocumentStatuses();
+          alert('Document uploaded successfully. It will be reviewed shortly.');
+        })
+        .catch(error => {
+          console.error('Error uploading document:', error);
+          alert('Failed to upload document. Please try again.');
+          if (statusNote) {
+            statusNote.textContent = 'Upload failed. Please retry.';
+          }
+        })
+        .finally(() => {
+          event.target.value = '';
+        });
+      }
+
+      function loadDocumentStatuses() {
+        fetch('/api/rider/document-status')
+          .then(response => response.json())
+          .then(data => {
+            if (!data.success || !data.documents) {
+              throw new Error(data.error || 'Unable to load documents');
+            }
+
+            documentTypeDefinitions.forEach(def => {
+              const card = document.querySelector(`[data-doc-type="${def.key}"]`);
+              if (!card) {
+                return;
+              }
+              const badge = card.querySelector('.doc-status');
+              const note = card.querySelector('.doc-upload-status');
+              const viewLink = card.querySelector('.doc-view-link');
+              const docData = data.documents[def.key];
+
+              if (!docData) {
+                badge.textContent = 'Not uploaded';
+                badge.className = 'doc-status doc-status-missing';
+                if (note) {
+                  note.textContent = 'No file uploaded yet.';
+                }
+                if (viewLink) {
+                  viewLink.style.display = 'none';
+                  viewLink.removeAttribute('href');
+                }
+                return;
+              }
+
+              if (docData.verified) {
+                badge.textContent = 'Verified';
+                badge.className = 'doc-status doc-status-verified';
+                if (note) {
+                  note.textContent = `Approved ${formatDateTime(docData.updated_at || docData.uploaded_at)}`;
+                }
+              } else {
+                badge.textContent = 'Pending review';
+                badge.className = 'doc-status doc-status-pending';
+                if (note) {
+                  note.textContent = `Uploaded ${formatDateTime(docData.uploaded_at)} · Awaiting approval`;
+                }
+              }
+
+              if (viewLink) {
+                if (docData.file_url) {
+                  viewLink.style.display = 'inline-flex';
+                  viewLink.href = docData.file_url;
+                } else {
+                  viewLink.style.display = 'none';
+                  viewLink.removeAttribute('href');
+                }
+              }
+            });
+          })
+          .catch(error => {
+            console.error('Error loading document statuses:', error);
+          });
+      }
+
+      function openActiveDeliveryModal() {
+        if (!activeDeliveryCache.length) {
+          alert('No active deliveries yet. Accept an order to see notifications.');
+          return;
+        }
+        const modal = document.getElementById('activeDeliveryModal');
+        if (modal) {
+          modal.style.display = 'flex';
+        }
+      }
+
+      function closeActiveDeliveryModal() {
+        const modal = document.getElementById('activeDeliveryModal');
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      }
 
 
       function initializeMap() {
@@ -931,6 +1468,8 @@
             document.getElementById('riderServiceArea').textContent = activeData.service_area || 'Not assigned';
           }
 
+          updateActiveDeliveryNotifications(activeData.deliveries || []);
+
 
           document.getElementById('order-count').textContent = `${allOrders.length} Orders`;
 
@@ -947,32 +1486,10 @@
                 statusColor = '#059669';
                 statusBg = '#ecfdf5';
               } else {
-
-                if (!order.seller_confirmed && order.shipment_status === 'pending') {
-                  statusText = 'Waiting Approval';
-                  statusColor = '#f59e0b';
-                  statusBg = '#fffbeb';
-                } else if (order.shipment_status === 'delivered') {
-                  statusText = 'Delivered';
-                  statusColor = '#10b981';
-                  statusBg = '#ecfdf5';
-                } else if (order.shipment_status === 'picked_up') {
-                  statusText = 'Picked Up';
-                  statusColor = '#3b82f6';
-                  statusBg = '#eff6ff';
-                } else if (order.shipment_status === 'in_transit') {
-                  statusText = 'In Transit';
-                  statusColor = '#8b5cf6';
-                  statusBg = '#faf5ff';
-                } else if (order.shipment_status === 'out_for_delivery') {
-                  statusText = 'Out for Delivery';
-                  statusColor = '#ec4899';
-                  statusBg = '#fce7f3';
-                } else {
-                  statusText = order.shipment_status.replace('_', ' ');
-                  statusColor = '#6b7280';
-                  statusBg = '#f3f4f6';
-                }
+                const statusMeta = getShipmentStatusMeta(order.shipment_status);
+                statusText = statusMeta.label;
+                statusColor = statusMeta.color;
+                statusBg = statusMeta.bg;
               }
 
 
@@ -988,100 +1505,7 @@
                   </button>
                 `;
               } else {
-
-                if (!order.seller_confirmed) {
-                  actionButton = `
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <span style="font-size:12px;color:#f59e0b;font-weight:600">⏳ Waiting...</span>
-                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
-                              style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#2563eb'"
-                              onmouseout="this.style.background='#3b82f6'">
-                        📊 Details
-                      </button>
-                    </div>
-                  `;
-                } else if (order.shipment_status === 'pending' || order.shipment_status === 'assigned_to_rider') {
-                  actionButton = `
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="acceptOrder(${order.shipment_id})"
-                              style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#059669'"
-                              onmouseout="this.style.background='#10b981'">
-                        Accept
-                      </button>
-                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
-                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#4b5563'"
-                              onmouseout="this.style.background='#6b7280'">
-                        📊 Details
-                      </button>
-                    </div>
-                  `;
-                } else if (order.shipment_status === 'picked_up') {
-                  actionButton = `
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'in_transit')"
-                              style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#2563eb'"
-                              onmouseout="this.style.background='#3b82f6'">
-                        Transit
-                      </button>
-                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
-                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#4b5563'"
-                              onmouseout="this.style.background='#6b7280'">
-                        📊 Details
-                      </button>
-                    </div>
-                  `;
-                } else if (order.shipment_status === 'in_transit') {
-                  actionButton = `
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'out_for_delivery')"
-                              style="background:#8b5cf6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#7c3aed'"
-                              onmouseout="this.style.background='#8b5cf6'">
-                        Out for Delivery
-                      </button>
-                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
-                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#4b5563'"
-                              onmouseout="this.style.background='#6b7280'">
-                        📊 Details
-                      </button>
-                    </div>
-                  `;
-                } else if (order.shipment_status === 'out_for_delivery') {
-                  actionButton = `
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'delivered')"
-                              style="background:#059669;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#047857'"
-                              onmouseout="this.style.background='#059669'">
-                        Complete
-                      </button>
-                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
-                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#4b5563'"
-                              onmouseout="this.style.background='#6b7280'">
-                        📊 Details
-                      </button>
-                    </div>
-                  `;
-                } else if (order.shipment_status === 'delivered') {
-                  actionButton = `
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <span style="background:#10b981;color:#fff;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:600">✓ Done</span>
-                      <button onclick="viewShipmentDetails(${order.shipment_id}, '${order.order_number}')"
-                              style="background:#6b7280;color:#fff;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;transition:all 0.2s;white-space:nowrap"
-                              onmouseover="this.style.background='#4b5563'"
-                              onmouseout="this.style.background='#6b7280'">
-                        📊 Details
-                      </button>
-                    </div>
-                  `;
-                }
+                actionButton = buildActiveDeliveryActions(order);
               }
 
               const availableDate = order.available_since || order.created_at;
@@ -1134,6 +1558,7 @@
           console.error('Error loading orders and deliveries:', error);
           document.querySelector('#orders-deliveries-tbody').innerHTML =
             '<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:40px">Error loading orders</td></tr>';
+          updateActiveDeliveryNotifications([]);
         });
       }
 
@@ -1851,9 +2276,37 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
           });
         });
 
+        const activeModal = document.getElementById('activeDeliveryModal');
+        if (activeModal) {
+          activeModal.addEventListener('click', function(e) {
+            if (e.target === activeModal) {
+              closeActiveDeliveryModal();
+            }
+          });
+        }
+
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            closeActiveDeliveryModal();
+          }
+        });
+
+        updateActiveDeliveryNotifications([]);
+        loadDocumentStatuses();
+
         console.log('Rider Dashboard initialized');
       });
     </script>
+
+    <!-- Active Delivery Modal -->
+    <div id="activeDeliveryModal" style="position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1000">
+      <div style="background:#fff;border-radius:12px;padding:24px;max-width:900px;width:90%;max-height:80vh;overflow:auto;box-shadow:0 20px 45px rgba(0,0,0,0.25);position:relative">
+        <button onclick="closeActiveDeliveryModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:26px;color:#9ca3af;cursor:pointer">×</button>
+        <h2 style="margin:0 0 12px;font-size:20px;color:#0a0a0a">Active Delivery Details</h2>
+        <p style="margin:0 0 18px;color:#6b7280;font-size:13px">Monitor every accepted delivery, update statuses, and review customer info in one place.</p>
+        <div id="activeDeliveryList"></div>
+      </div>
+    </div>
 
     <!-- Change Password Modal -->
     <div id="changePasswordModal" style="position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1000">
