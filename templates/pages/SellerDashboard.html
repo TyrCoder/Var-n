@@ -573,6 +573,7 @@
                 loadPerformance();
               } else if (page === 'account-settings') {
                 loadAccountSettings();
+                setupProfileSettingsForm();
                 if (accountSectionToFocus) {
                   setTimeout(() => focusAccountSettingsSection(accountSectionToFocus), 200);
                 }
@@ -1233,38 +1234,37 @@
             <div class="inner">
               <h2 style="margin: 0 0 24px;">Account Settings</h2>
               
-              <!-- Brand Settings Section -->
-              <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
-                <h3 style="margin: 0 0 16px; color: #0a0a0a; font-size: 16px;">Brand Information</h3>
-                <form id="brand-settings-form">
+              <form id="profile-settings-form">
+                <div id="brand-settings-section" style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
+                  <h3 style="margin: 0 0 16px; color: #0a0a0a; font-size: 16px;">Brand Information</h3>
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Name *</label>
-                    <input type="text" id="store-name" placeholder="Enter brand name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required>
+                    <input type="text" id="store-name" name="store_name" placeholder="Enter brand name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required>
                   </div>
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Brand Description *</label>
-                    <textarea id="store-description" placeholder="Tell customers about your brand" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required></textarea>
+                    <textarea id="store-description" name="description" placeholder="Tell customers about your brand" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;" required></textarea>
                   </div>
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Email</label>
-                    <input type="email" id="contact-email" placeholder="Enter contact email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                    <input type="email" id="contact-email" name="contact_email" placeholder="Enter contact email" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                   </div>
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Contact Phone</label>
-                    <input type="text" id="contact-phone" placeholder="Enter contact phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                    <input type="text" id="contact-phone" name="contact_phone" placeholder="Enter contact phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                   </div>
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Store Address</label>
-                    <input type="text" id="store-address" placeholder="Enter store address" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                    <input type="text" id="store-address" name="address" placeholder="Enter store address" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                   </div>
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">🗺️ Service Island Location</label>
-                    <select id="island-group" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px;">
+                    <select id="island-group" name="island_group" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px;">
                       <option value="">Select your service island...</option>
                       <option value="Luzon">🏝️ Luzon</option>
                       <option value="Visayas">🏝️ Visayas</option>
@@ -1272,18 +1272,10 @@
                     </select>
                     <p style="margin: 8px 0 0; font-size: 12px; color: #666;">Your store will be matched with riders serving this island group</p>
                   </div>
+                </div>
 
-                  <div style="display: flex; gap: 12px;">
-                    <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Brand Settings</button>
-                    <button type="button" onclick="reloadBrandSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
-                  </div>
-                </form>
-              </div>
-              
-              <!-- Account Settings Section -->
-              <div>
-                <h3 style="margin: 0 0 16px; color: #0a0a0a; font-size: 16px;">Personal Account</h3>
-                <form id="account-settings-form">
+                <div id="personal-settings-section">
+                  <h3 style="margin: 0 0 16px; color: #0a0a0a; font-size: 16px;">Personal Account</h3>
                   <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
                     <p style="margin: 0; color: #666; font-size: 13px;"><strong id="account-username">Loading...</strong></p>
                     <p style="margin: 8px 0 0; color: #999; font-size: 12px;">Account Email: <strong id="account-email">Loading...</strong></p>
@@ -1291,18 +1283,18 @@
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Full Name</label>
-                    <input type="text" id="full-name" placeholder="Enter full name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                    <input type="text" id="full-name" name="full_name" placeholder="Enter full name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                   </div>
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone Number</label>
-                    <input type="text" id="phone-number" placeholder="Enter phone number" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                    <input type="text" id="phone-number" name="phone_number" placeholder="Enter phone number" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                   </div>
 
                   <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address *</label>
                     <div style="display: flex; gap: 8px;">
-                      <input type="email" id="email-address" placeholder="Enter email address" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
+                      <input type="email" id="email-address" name="email" placeholder="Enter email address" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
                       <button type="button" id="verify-email-btn" onclick="sendEmailOTP()" class="action-btn" style="background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Verify Email</button>
                     </div>
                     <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Click "Verify Email" to send OTP verification code</small>
@@ -1314,13 +1306,13 @@
                       ✓ Email verified successfully
                     </div>
                   </div>
+                </div>
 
-                  <div style="display: flex; gap: 12px;">
-                    <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save Account Settings</button>
-                    <button type="button" onclick="reloadAccountSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload</button>
-                  </div>
-                </form>
-              </div>
+                <div style="display: flex; gap: 12px;">
+                  <button type="submit" class="action-btn" style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">💾 Save All Settings</button>
+                  <button type="button" onclick="reloadAccountSettings()" class="action-btn" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">⟲ Reload Data</button>
+                </div>
+              </form>
             </div>
           </div>
         `,
@@ -2137,7 +2129,7 @@
         }
       }
 
-      function loadOrders(initialFilter = 'confirmed') {
+      function loadOrders(initialFilter = 'all') {
         console.log('[FETCH] Fetching orders from /seller/orders');
         
         // Update current filter
@@ -2160,11 +2152,8 @@
               updateOrderCount(allOrders.length);
               updateStatusCounts();
 
-              if (initialFilter && initialFilter !== 'all') {
-                filterOrders(initialFilter);
-              } else {
-                displayOrders(allOrders);
-              }
+              const nextFilter = initialFilter || 'all';
+              filterOrders(nextFilter);
             } else {
               console.warn('❌ No orders in response or invalid format:', data);
               allOrders = [];
@@ -2298,19 +2287,192 @@
       }
 
       function viewOrderDetails(orderId) {
-        console.log('👀 Viewing order details:', orderId);
-        const order = allOrders.find(o => o.id === orderId);
+        const modal = ensureOrderDetailsModal();
+        const body = modal.querySelector('#order-modal-body');
+        body.innerHTML = '<p style="padding:40px 0; text-align:center; color:#6b7280;">Loading order details...</p>';
+        modal.style.display = 'flex';
 
-        if (!order) {
-          VaronNotifications.error('Order not found');
-          return;
+        fetch(`/seller/order/${orderId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (!data.success || !data.order) {
+              body.innerHTML = `<p style="padding:40px 0; text-align:center; color:#ef4444;">${data.error || 'Unable to load order details'}</p>`;
+              return;
+            }
+
+            const order = data.order;
+            const items = data.items || [];
+            const formatCurrency = (amount) => '₱' + parseFloat(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const sellerSubtotal = parseFloat(order.seller_subtotal ?? order.seller_total_amount ?? order.subtotal ?? 0);
+            const sellerTotal = parseFloat(order.seller_total_amount ?? sellerSubtotal);
+            const sellerItemCount = order.seller_item_count ?? order.item_count ?? items.length;
+            const buyerShipping = order.shipping_fee !== null && order.shipping_fee !== undefined ? parseFloat(order.shipping_fee) : null;
+            const buyerOrderTotal = parseFloat(order.order_total_amount ?? sellerTotal);
+
+            const statusColors = {
+              'pending': '#ff9800',
+              'confirmed': '#2196f3',
+              'waiting_for_pickup': '#8b5cf6',
+              'processing': '#ff5722',
+              'shipped': '#4caf50',
+              'released_to_rider': '#10b981',
+              'delivered': '#059669',
+              'cancelled': '#f44336',
+              'returned': '#795548'
+            };
+            const statusEmoji = {
+              'pending': '⏳',
+              'confirmed': '✔️',
+              'waiting_for_pickup': '⏰',
+              'processing': '🔄',
+              'shipped': '📦',
+              'released_to_rider': '🚚',
+              'delivered': '✅',
+              'cancelled': '❌',
+              'returned': '↩️'
+            };
+            const badgeColor = statusColors[order.order_status] || '#374151';
+            const badgeEmoji = statusEmoji[order.order_status] || '📋';
+            const orderDate = order.created_at ? new Date(order.created_at).toLocaleString('en-PH', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric'
+            }) : '—';
+
+            let itemsHtml = '';
+            if (items.length === 0) {
+              itemsHtml = '<tr><td colspan="5" style="text-align:center; color:#999; padding:16px;">No products found for this order</td></tr>';
+            } else {
+              items.forEach(item => {
+                const image = item.image_url || '/static/images/placeholder-product.png';
+                itemsHtml += `
+                  <tr style="border-bottom:1px solid #f1f1f1;">
+                    <td style="padding:12px 8px;">
+                      <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="${image}" alt="${item.product_name}" style="width:48px; height:48px; object-fit:cover; border-radius:8px; border:1px solid #eee;" onerror="this.src='/static/images/placeholder-product.png'">
+                        <div>
+                          <div style="font-weight:600;">${item.product_name}</div>
+                          <div style="font-size:12px; color:#6b7280;">${item.size ? 'Size: ' + item.size : ''}${item.size && item.color ? ' • ' : ''}${item.color ? 'Color: ' + item.color : ''}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding:12px 8px; text-align:center;">${item.quantity}</td>
+                    <td style="padding:12px 8px; text-align:right;">${formatCurrency(item.unit_price)}</td>
+                    <td style="padding:12px 8px; text-align:right; font-weight:600;">${formatCurrency(item.subtotal)}</td>
+                  </tr>
+                `;
+              });
+            }
+
+            const shippingRecipient = order.recipient_name || order.customer_name || 'Customer';
+            const shippingPhone = order.recipient_phone || 'Not provided';
+            const shippingAddress = order.shipping_address_text || 'Shipping address not available';
+
+            body.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                <div>
+                  <div style="font-size:13px; color:#6b7280;">Order Number</div>
+                  <div style="font-size:22px; font-weight:700;">${order.order_number}</div>
+                  <div style="font-size:13px; color:#6b7280; margin-top:4px;">${sellerItemCount} item(s) for your store</div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                  <span style="background:${badgeColor}; color:#fff; padding:6px 12px; border-radius:999px; font-size:13px; font-weight:600;">
+                    ${badgeEmoji} ${order.order_status.replace(/_/g, ' ').toUpperCase()}
+                  </span>
+                  <button type="button" onclick="closeOrderDetailsModal()" style="border:none; background:#f3f4f6; color:#6b7280; width:36px; height:36px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;">×</button>
+                </div>
+              </div>
+              <p style="margin:12px 0 24px; color:#6b7280; font-size:13px;">Placed on ${orderDate}</p>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-bottom:24px;">
+                <div style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+                  <h3 style="margin:0 0 8px; font-size:15px;">Customer</h3>
+                  <p style="margin:0; font-weight:600;">${order.customer_name || 'N/A'}</p>
+                  <p style="margin:4px 0 0; color:#6b7280; font-size:13px;">${order.customer_email || ''}</p>
+                </div>
+                <div style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+                  <h3 style="margin:0 0 8px; font-size:15px;">Shipping</h3>
+                  <p style="margin:0; font-weight:600;">${shippingRecipient}</p>
+                  <p style="margin:4px 0; color:#6b7280; font-size:13px;">${shippingAddress}</p>
+                  <p style="margin:4px 0 0; color:#6b7280; font-size:13px;">📞 ${shippingPhone}</p>
+                </div>
+                <div style="border:1px solid #e5e7eb; border-radius:12px; padding:16px;">
+                  <h3 style="margin:0 0 8px; font-size:15px;">Payment</h3>
+                  <p style="margin:0; font-weight:600;">${order.payment_method || 'N/A'}</p>
+                  <p style="margin:4px 0 0; color:#6b7280; font-size:13px;">Buyer paid (entire order): ${formatCurrency(buyerOrderTotal)}</p>
+                  <p style="margin:4px 0 0; color:#6b7280; font-size:13px;">Your earnings for this order: <strong>${formatCurrency(sellerTotal)}</strong></p>
+                </div>
+              </div>
+
+              <h3 style="margin:0 0 12px; font-size:16px;">Ordered Products</h3>
+              <div style="border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                  <thead style="background:#f9fafb;">
+                    <tr>
+                      <th style="text-align:left; padding:12px 8px;">Product</th>
+                      <th style="text-align:center; padding:12px 8px; width:80px;">Qty</th>
+                      <th style="text-align:right; padding:12px 8px; width:120px;">Price</th>
+                      <th style="text-align:right; padding:12px 8px; width:140px;">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${itemsHtml}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; margin-top:20px;">
+                <div style="width:260px;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#6b7280;">
+                    <span>Seller Subtotal</span>
+                    <span>${formatCurrency(sellerSubtotal)}</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#6b7280;">
+                    <span>Buyer Paid Shipping</span>
+                    <span>${buyerShipping !== null ? formatCurrency(buyerShipping) : '—'}</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-weight:700; font-size:16px; border-top:1px solid #e5e7eb; padding-top:8px;">
+                    <span>Amount Due to You</span>
+                    <span>${formatCurrency(sellerTotal)}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .catch(error => {
+            console.error('Error loading order details:', error);
+            body.innerHTML = '<p style="padding:40px 0; text-align:center; color:#ef4444;">Error loading order details</p>';
+          });
+      }
+
+      function ensureOrderDetailsModal() {
+        let modal = document.getElementById('order-details-modal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'order-details-modal';
+          modal.style.cssText = 'position:fixed; inset:0; background:rgba(10,10,10,0.65); display:none; align-items:center; justify-content:center; z-index:1100; padding:20px;';
+          modal.innerHTML = `
+            <div style="background:#fff; border-radius:16px; width:min(900px, 95vw); max-height:90vh; overflow-y:auto; padding:32px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+              <div id="order-modal-body"></div>
+            </div>
+          `;
+          modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+              closeOrderDetailsModal();
+            }
+          });
+          document.body.appendChild(modal);
         }
+        return modal;
+      }
 
-        const shippingLocation = `${order.shipping_city || ''}${order.shipping_city ? ', ' : ''}${order.shipping_province || ''}${order.shipping_province ? ' ' : ''}${order.shipping_postal_code || ''}`.trim();
-
-        const details = `Order #${order.order_number}. Customer: ${order.customer_name || 'N/A'}. Total: ₱${parseFloat(order.total_amount || 0).toFixed(2)}. Status: ${order.order_status.replace(/_/g, ' ').toUpperCase()}. Items: ${order.item_count || 1}. Shipping To: ${shippingLocation || 'N/A'}. Date: ${new Date(order.created_at).toLocaleDateString()}`;
-
-        VaronNotifications.info(details, 5000);
+      function closeOrderDetailsModal() {
+        const modal = document.getElementById('order-details-modal');
+        if (modal) {
+          modal.style.display = 'none';
+        }
       }
 
       // Filter orders by status
@@ -4150,32 +4312,7 @@
         document.getElementById('top-rated-products').innerHTML = html;
       }
 
-      function loadBrandSettings() {
-        fetch('/seller/brand-settings')
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              const settings = data.settings;
-              document.getElementById('store-name').value = settings.store_name || '';
-              document.getElementById('store-description').value = settings.description || '';
-              document.getElementById('contact-email').value = settings.contact_email || '';
-              document.getElementById('contact-phone').value = settings.contact_phone || '';
-              document.getElementById('store-address').value = settings.address || '';
-              document.getElementById('island-group').value = settings.island_group || 'Luzon';
-            }
-          })
-          .catch(error => console.error('Error loading brand settings:', error));
-      }
-
-      function reloadBrandSettings() {
-        loadBrandSettings();
-        alert('✅ Brand settings reloaded!');
-      }
-
       function loadAccountSettings() {
-        // Load both brand and account settings for the combined form
-        loadBrandSettings();
-        
         fetch('/seller/account-settings')
           .then(response => {
             console.log('Account settings response status:', response.status);
@@ -4185,6 +4322,15 @@
             console.log('Account settings data:', data);
             if (data.success) {
               const account = data.account;
+              const brand = data.brand || {};
+
+              document.getElementById('store-name').value = brand.store_name || '';
+              document.getElementById('store-description').value = brand.description || '';
+              document.getElementById('contact-email').value = brand.contact_email || '';
+              document.getElementById('contact-phone').value = brand.contact_phone || '';
+              document.getElementById('store-address').value = brand.address || '';
+              document.getElementById('island-group').value = brand.island_group || 'Luzon';
+
               document.getElementById('account-username').textContent = account.username || 'User';
               document.getElementById('account-email').textContent = account.email || '';
               document.getElementById('full-name').value = account.full_name || '';
@@ -4208,16 +4354,64 @@
 
       function reloadAccountSettings() {
         loadAccountSettings();
-        alert('✅ Account settings reloaded!');
+        alert('✅ Account data refreshed!');
+      }
+
+      function setupProfileSettingsForm() {
+        const profileSettingsForm = document.getElementById('profile-settings-form');
+        if (!profileSettingsForm) {
+          console.log('[PROFILE FORM] Not present on current page.');
+          return;
+        }
+
+        if (profileSettingsForm.dataset.bound === 'true') {
+          return;
+        }
+
+        profileSettingsForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+
+          const submitBtn = profileSettingsForm.querySelector('button[type="submit"]');
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+          }
+
+          try {
+            const formData = new FormData(profileSettingsForm);
+            const response = await fetch('/seller/account-settings', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+              alert('✅ Profile settings saved successfully!');
+              loadAccountSettings();
+            } else {
+              alert('❌ Error: ' + (data.error || 'Unknown error'));
+            }
+          } catch (error) {
+            alert('❌ Error saving profile settings: ' + error.message);
+          } finally {
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = '💾 Save All Settings';
+            }
+          }
+        });
+
+        profileSettingsForm.dataset.bound = 'true';
+        console.log('✅ Profile settings form listener set up');
       }
 
       function focusAccountSettingsSection(section) {
         if (!section) return;
         let target = null;
         if (section === 'brand') {
-          target = document.getElementById('brand-settings-form');
+          target = document.getElementById('brand-settings-section');
         } else if (section === 'account') {
-          target = document.getElementById('account-settings-form');
+          target = document.getElementById('personal-settings-section');
         }
 
         if (target) {
@@ -5456,60 +5650,7 @@
             setupColorTabDelegation();
           }
 
-          // Setup brand settings form listener
-          const brandSettingsForm = document.getElementById('brand-settings-form');
-          if (brandSettingsForm) {
-            brandSettingsForm.addEventListener('submit', (e) => {
-              e.preventDefault();
-
-              const formData = new FormData();
-              formData.append('store_name', document.getElementById('store-name').value);
-              formData.append('description', document.getElementById('store-description').value);
-              formData.append('contact_email', document.getElementById('contact-email').value);
-              formData.append('contact_phone', document.getElementById('contact-phone').value);
-              formData.append('address', document.getElementById('store-address').value);
-              formData.append('island_group', document.getElementById('island-group').value);
-
-              fetch('/seller/brand-settings', { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                  if (data.success) {
-                    alert('✅ Brand settings saved successfully!');
-                    loadBrandSettings();
-                  } else {
-                    alert('❌ Error: ' + (data.error || 'Unknown error'));
-                  }
-                })
-                .catch(error => alert('❌ Error saving brand settings: ' + error.message));
-            });
-            console.log('✅ Brand settings form listener set up');
-          }
-
-          // Setup account settings form listener
-          const accountSettingsForm = document.getElementById('account-settings-form');
-          if (accountSettingsForm) {
-            accountSettingsForm.addEventListener('submit', (e) => {
-              e.preventDefault();
-
-              const formData = new FormData();
-              formData.append('full_name', document.getElementById('full-name').value);
-              formData.append('phone_number', document.getElementById('phone-number').value);
-              formData.append('email', document.getElementById('email-address').value);
-
-              fetch('/seller/account-settings', { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                  if (data.success) {
-                    alert('✅ Account settings saved successfully!');
-                    loadAccountSettings();
-                  } else {
-                    alert('❌ Error: ' + (data.error || 'Unknown error'));
-                  }
-                })
-                .catch(error => alert('❌ Error saving account settings: ' + error.message));
-            });
-            console.log('✅ Account settings form listener set up');
-          }
+          setupProfileSettingsForm();
 
           // Setup promotion form listener
           const promotionForm = document.getElementById('promotion-form');

@@ -176,9 +176,10 @@
 
       .cart-container {
         display: grid;
-        grid-template-columns: 1fr 380px;
+        grid-template-columns: minmax(0, 1fr) 380px;
         gap: 32px;
         margin-bottom: 40px;
+        align-items: flex-start;
       }
 
       .cart-items {
@@ -191,12 +192,12 @@
       /* Table-style layout */
       .cart-table-header {
         display: grid;
-        grid-template-columns: 80px 2fr 180px 1fr 140px 100px 80px;
+        grid-template-columns: 40px 80px 2fr 180px 1fr 140px 100px 80px;
         gap: 16px;
         padding: 16px 24px;
         background: #fafafa;
         border-bottom: 2px solid #f0f0f0;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         color: #737373;
         text-transform: uppercase;
@@ -205,9 +206,9 @@
 
       .cart-item {
         display: grid;
-        grid-template-columns: 80px 2fr 180px 1fr 140px 100px 80px;
+        grid-template-columns: 40px 80px 2fr 180px 1fr 140px 100px 80px;
         gap: 16px;
-        padding: 20px 24px;
+        padding: 18px 24px;
         border-bottom: 1px solid #f5f5f5;
         align-items: center;
         transition: background 0.2s ease;
@@ -285,6 +286,17 @@
         transition: color 0.2s ease;
       }
 
+      .cart-item-name .quantity-pill {
+        margin-left: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        background: #f3f4f6;
+        padding: 2px 8px;
+        border-radius: 999px;
+        text-transform: uppercase;
+      }
+
       .cart-item-name:hover {
         color: #404040;
       }
@@ -322,6 +334,84 @@
         height: 2px;
         background: linear-gradient(to right, #f0f0f0 0%, #ddd 50%, #f0f0f0 100%);
         margin: 12px 0;
+      }
+
+      .brand-section {
+        border-bottom: 2px solid #f5f5f5;
+        padding-bottom: 8px;
+      }
+
+      .brand-section:last-child {
+        border-bottom: none;
+      }
+
+      .brand-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px 8px;
+        gap: 16px;
+      }
+
+      .brand-checkbox {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #0f172a;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .brand-checkbox input[type="checkbox"],
+      .item-checkbox input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: #000000;
+        cursor: pointer;
+      }
+
+      .brand-checkbox.disabled {
+        opacity: 0.45;
+      }
+
+      .item-checkbox {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cart-item-select {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .stock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-radius: 999px;
+        padding: 4px 10px;
+        margin-top: 6px;
+        width: fit-content;
+      }
+
+      .stock-badge.out {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+      }
+
+      .stock-badge.low {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
       }
 
       .cart-section-header {
@@ -371,6 +461,13 @@
 
       .qty-btn:hover {
         background: #f5f5f5;
+      }
+      
+      .qty-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        border-color: #e5e7eb;
+        color: #9ca3af;
       }
 
       .qty-input {
@@ -456,6 +553,50 @@
         border-top: 2px solid #f0f0f0;
       }
 
+      .summary-breakdown {
+        margin: 18px 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .summary-breakdown li {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        font-size: 13px;
+        color: #374151;
+      }
+
+      .summary-breakdown li span.summary-item-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .summary-breakdown li span.summary-item-info strong {
+        font-size: 14px;
+        color: #0f172a;
+      }
+
+      .summary-breakdown li span.summary-qty {
+        font-weight: 600;
+        color: #4b5563;
+      }
+
+      .summary-breakdown li span.summary-price {
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .summary-breakdown li.summary-empty {
+        justify-content: center;
+        color: #9ca3af;
+      }
+
       .checkout-btn {
         width: 100%;
         padding: 14px;
@@ -474,6 +615,15 @@
         background: #1a1a1a;
         transform: translateY(-1px);
         box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      }
+
+      .checkout-btn:disabled,
+      .checkout-btn:disabled:hover {
+        background: #d1d5db;
+        color: #6b7280;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
       }
 
       .continue-shopping {
@@ -653,46 +803,41 @@
           display: none;
         }
         .cart-item {
-          grid-template-columns: 70px 1fr;
-          grid-template-rows: auto auto auto auto;
-          gap: 12px;
+          grid-template-columns: 30px 60px 1fr;
+          grid-template-rows: auto auto auto;
+          gap: 10px;
           padding: 16px;
         }
         .cart-item-image {
-          width: 70px;
-          height: 70px;
-          grid-row: 1 / 3;
+          width: 60px;
+          height: 60px;
+          grid-column: 2;
+          grid-row: 1 / span 2;
         }
         .cart-item-info {
-          grid-column: 2;
+          grid-column: 3;
           grid-row: 1;
         }
         .cart-item-variants {
-          grid-column: 2;
+          grid-column: 3;
           grid-row: 2;
           display: flex;
           gap: 12px;
           flex-wrap: wrap;
         }
-        .cart-item-price {
-          grid-column: 2;
+        .cart-item-price,
+        .cart-item-total {
+          grid-column: 3;
+          grid-row: 3;
           text-align: left;
           font-size: 14px;
-          grid-row: 3;
         }
         .quantity-control {
-          grid-column: 1 / 2;
+          grid-column: 3;
           grid-row: 4;
-        }
-        .cart-item-total {
-          grid-column: 2;
-          grid-row: 4;
-          text-align: left;
-          display: flex;
-          align-items: center;
         }
         .remove-btn {
-          grid-column: 2;
+          grid-column: 1 / 4;
           grid-row: 1;
           justify-self: end;
         }
@@ -791,6 +936,19 @@
       </div>
     </div>
 
+    <div id="checkoutConfirmModal" class="modal-overlay">
+      <div class="confirm-modal">
+        <button class="confirm-modal-close" onclick="closeCheckoutConfirmModal()">×</button>
+        <div class="confirm-modal-icon">🧾</div>
+        <h2>Ready to check out?</h2>
+        <p>Are you sure to check out?</p>
+        <div class="confirm-modal-actions">
+          <button class="confirm-secondary" onclick="closeCheckoutConfirmModal()">Not Yet</button>
+          <button class="confirm-primary" onclick="confirmCheckoutSelection()">Yes, Check Out</button>
+        </div>
+      </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
@@ -825,6 +983,10 @@
 
 
       let pendingCartRemovalId = null;
+      let selectedCartIds = new Set();
+      let currentCartItems = [];
+      let hasInitializedCartSelection = false;
+      let userAdjustedCartSelection = false;
 
       function promptRemoveCartItem(cartId) {
         pendingCartRemovalId = cartId;
@@ -879,18 +1041,13 @@
         }
 
         try {
-          console.log('Loading cart items...');
           const items = await VaronCart.get();
-          console.log('Cart items loaded:', items);
-          console.log('Items type:', typeof items, 'Is array:', Array.isArray(items), 'Length:', items?.length);
-          
-          // Debug: log the actual response structure
-          if (items && items.length > 0) {
-            console.log('First item structure:', items[0]);
-            console.log('First item keys:', Object.keys(items[0]));
-          }
 
           if (!items || items.length === 0) {
+            selectedCartIds.clear();
+            currentCartItems = [];
+            hasInitializedCartSelection = false;
+            userAdjustedCartSelection = false;
             cartContent.innerHTML = `
               <div class="empty-cart">
                 <div class="empty-cart-icon">
@@ -908,111 +1065,314 @@
             return;
           }
 
-          let total = 0;
-          let totalItems = 0;
-          
-          const cartItemsHtml = items.map(item => {
-            const price = parseFloat(item.price) || 0;
-            const quantity = parseInt(item.quantity) || 0;
-            const itemTotal = price * quantity;
-            total += itemTotal;
-            totalItems += quantity;
-
-            // Build variant display
-            let variantInfoHtml = '';
-            if (item.color || item.size) {
-              let variantParts = [];
-              
-              if (item.color) {
-                variantParts.push(`<div class="variant-info">
-                  <span class="variant-label">Color:</span>
-                  <span class="variant-value">${item.color}</span>
-                </div>`);
-              }
-              if (item.size) {
-                variantParts.push(`<div class="variant-info">
-                  <span class="variant-label">Size:</span>
-                  <span class="variant-value">${item.size}</span>
-                </div>`);
-              }
-              variantInfoHtml = `<div class="cart-item-variants">${variantParts.join('')}</div>`;
-            }
-
-            const productId = item.id || item.product_id || 0;
-            const cartId = item.cart_id || 0;
-            const imageUrl = item.image_url || '/static/images/placeholder.svg';
-            const name = item.name || 'Product';
-
-            return `<div class="cart-item">
-                <div class="cart-item-image">
-                  <img src="${imageUrl}" alt="${name}" onerror="this.src='/static/images/placeholder.svg'">
-                </div>
-                <div class="cart-item-info">
-                  <a href="/product/${productId}" class="cart-item-name">${name}</a>
-                </div>
-                <div class="cart-item-variants">
-                  ${variantInfoHtml || '<span style="color: #bbb; font-size: 13px;">No variants</span>'}
-                </div>
-                <div class="cart-item-price">₱${price.toFixed(2)}</div>
-                <div class="quantity-control">
-                  <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity - 1})">−</button>
-                  <input type="number" class="qty-input" value="${quantity}" readonly>
-                  <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity + 1})">+</button>
-                </div>
-                <div class="cart-item-total">₱${itemTotal.toFixed(2)}</div>
-                <button class="remove-btn" onclick="promptRemoveCartItem(${cartId})" title="Remove item">×</button>
-              </div>`;
-          }).join('');
-
-          cartContent.innerHTML = `
-            <div class="cart-header">
-              <h1>Shopping Cart</h1>
-              <div class="cart-header-stats">${items.length} ${items.length === 1 ? 'product' : 'products'} · ${totalItems} ${totalItems === 1 ? 'item' : 'items'}</div>
-            </div>
-            <div class="cart-container">
-              <div class="cart-items">
-                <div class="cart-table-header">
-                  <div></div>
-                  <div>Product</div>
-                  <div>Variants</div>
-                  <div style="text-align: right;">Price</div>
-                  <div style="text-align: center;">Quantity</div>
-                  <div style="text-align: right;">Total</div>
-                  <div></div>
-                </div>
-                ${cartItemsHtml}
-              </div>
-              <div class="cart-summary">
-                <h2>Order Summary</h2>
-                <div class="summary-row">
-                  <span>Subtotal (${totalItems} items)</span>
-                  <span>₱${total.toFixed(2)}</span>
-                </div>
-                <div class="summary-row">
-                  <span>Shipping Fee</span>
-                  <span style="color: #10b981; font-weight: 500;">At checkout</span>
-                </div>
-                <div class="summary-row total">
-                  <span>Total</span>
-                  <span>₱${total.toFixed(2)}</span>
-                </div>
-                <button class="checkout-btn" onclick="proceedToCheckout()">Proceed to Checkout</button>
-                <a href="{{ url_for('buyer_dashboard') }}" class="continue-shopping">← Continue Shopping</a>
-              </div>
-            </div>
-          `;
-
+          currentCartItems = items;
+          syncSelectedCartIds(items);
+          renderCart(items);
         } catch (error) {
           console.error('Error loading cart:', error);
-          console.error('Error stack:', error.stack);
+          const cartContent = document.getElementById('cartContent');
           cartContent.innerHTML = `<div class="empty-cart"><h2>Error loading cart</h2><p>${error.message || 'Please try again later'}</p></div>`;
         }
+      }
+
+      function syncSelectedCartIds(items) {
+        const selectableIds = items
+          .filter(item => isItemSelectable(item))
+          .map(item => Number(item.cart_id))
+          .filter(id => Number.isFinite(id));
+        const selectableSet = new Set(selectableIds);
+
+        selectedCartIds = new Set(Array.from(selectedCartIds).filter(id => selectableSet.has(id)));
+
+        if (!hasInitializedCartSelection) {
+          selectedCartIds = new Set(selectableIds);
+          if (selectableIds.length > 0) {
+            hasInitializedCartSelection = true;
+          }
+          return;
+        }
+
+        if (!userAdjustedCartSelection && selectedCartIds.size === 0 && selectableIds.length > 0) {
+          selectedCartIds = new Set(selectableIds);
+        }
+      }
+
+      function getBrandLabel(item) {
+        const brand = (item.brand && String(item.brand).trim()) || 'Independent Sellers';
+        return brand;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function getBrandKey(label) {
+        return encodeURIComponent(String(label ?? ''));
+      }
+
+      function getAvailableStock(item) {
+        const value = Number(item.available_stock);
+        return Number.isFinite(value) ? value : null;
+      }
+
+      function isItemSelectable(item) {
+        const stock = getAvailableStock(item);
+        return stock === null || stock > 0;
+      }
+
+      function formatCurrency(amount) {
+        const value = Number(amount) || 0;
+        return `₱${value.toFixed(2)}`;
+      }
+
+      function buildVariantMarkup(item) {
+        const parts = [];
+        if (item.color) {
+          parts.push(`<div class="variant-info"><span class="variant-label">Color:</span><span class="variant-value">${escapeHtml(item.color)}</span></div>`);
+        }
+        if (item.size) {
+          parts.push(`<div class="variant-info"><span class="variant-label">Size:</span><span class="variant-value">${escapeHtml(item.size)}</span></div>`);
+        }
+        return parts.join('');
+      }
+
+      function renderCartItemRow(item) {
+        const price = Number(item.price) || 0;
+        const quantity = Number(item.quantity) || 0;
+        const itemTotal = price * quantity;
+        const productId = item.id || item.product_id || 0;
+        const cartId = Number(item.cart_id) || 0;
+        const imageUrl = item.image_url || '/static/images/placeholder.svg';
+        const availableStock = getAvailableStock(item);
+        const isOutOfStock = availableStock !== null && availableStock <= 0;
+        const lowStock = availableStock !== null && availableStock > 0 && availableStock < quantity;
+        let stockBadge = '';
+        if (isOutOfStock) {
+          stockBadge = '<span class="stock-badge out">Out of Stock</span>';
+        } else if (lowStock) {
+          stockBadge = `<span class="stock-badge low">Only ${availableStock} left</span>`;
+        }
+        const variantMarkup = buildVariantMarkup(item) || '<span style="color:#bbb;font-size:13px;">No variants</span>';
+        const isSelected = selectedCartIds.has(cartId);
+        const brandLabel = getBrandLabel(item);
+        const brandKey = getBrandKey(brandLabel);
+        const disableIncrease = availableStock !== null ? quantity >= availableStock : false;
+        const safeName = escapeHtml(item.name || 'Product');
+
+        return `
+          <div class="cart-item" data-cart-id="${cartId}" data-brand="${brandKey}">
+            <div class="cart-item-select">
+              <label class="item-checkbox">
+                <input type="checkbox" data-action="item-toggle" data-cart-id="${cartId}" ${isOutOfStock ? 'disabled' : ''} ${!isOutOfStock && isSelected ? 'checked' : ''}>
+              </label>
+            </div>
+            <div class="cart-item-image">
+              <img src="${imageUrl}" alt="${item.name || 'Product'}" onerror="this.src='/static/images/placeholder.svg'">
+            </div>
+            <div class="cart-item-info">
+              <a href="/product/${productId}" class="cart-item-name">${safeName}<span class="quantity-pill">x${quantity}</span></a>
+              ${stockBadge}
+            </div>
+            <div class="cart-item-variants">${variantMarkup}</div>
+            <div class="cart-item-price">${formatCurrency(price)}</div>
+            <div class="quantity-control">
+              <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity - 1})">−</button>
+              <input type="number" class="qty-input" value="${quantity}" readonly>
+              <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity + 1})" ${disableIncrease ? 'disabled' : ''}>+</button>
+            </div>
+            <div class="cart-item-total">${formatCurrency(itemTotal)}</div>
+            <button class="remove-btn" onclick="promptRemoveCartItem(${cartId})" title="Remove item">×</button>
+          </div>
+        `;
+      }
+
+      function buildBrandSections(items) {
+        const grouped = items.reduce((acc, item) => {
+          const brand = getBrandLabel(item);
+          if (!acc[brand]) acc[brand] = [];
+          acc[brand].push(item);
+          return acc;
+        }, {});
+
+        const brands = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+
+        return brands.map(brand => {
+          const brandItems = grouped[brand];
+          const selectable = brandItems.filter(item => isItemSelectable(item));
+          const brandChecked = selectable.length > 0 && selectable.every(item => selectedCartIds.has(Number(item.cart_id)));
+          const disabled = selectable.length === 0;
+          const brandKey = getBrandKey(brand);
+          const displayBrand = escapeHtml(brand);
+          return `
+            <div class="brand-section" data-brand="${brandKey}">
+              <div class="brand-section-header">
+                <label class="brand-checkbox ${disabled ? 'disabled' : ''}">
+                  <input type="checkbox" data-action="brand-toggle" data-brand="${brandKey}" ${disabled ? 'disabled' : ''} ${brandChecked && !disabled ? 'checked' : ''}>
+                  <span>${displayBrand}</span>
+                </label>
+                <span class="brand-count">${brandItems.length} ${brandItems.length === 1 ? 'item' : 'items'}</span>
+              </div>
+              ${brandItems.map(renderCartItemRow).join('')}
+            </div>
+          `;
+        }).join('');
+      }
+
+      function buildSummary(items) {
+        const selectedItems = items.filter(item => selectedCartIds.has(Number(item.cart_id)));
+        const subtotal = selectedItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
+        const totalItems = selectedItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const listHtml = selectedItems.length
+          ? selectedItems.map(item => {
+              const variantBits = [];
+              if (item.size) variantBits.push(`Size: ${item.size}`);
+              if (item.color) variantBits.push(`Color: ${item.color}`);
+              const variantText = variantBits.length ? variantBits.join(' / ') : 'Standard option';
+              const quantity = Number(item.quantity) || 0;
+              const total = (Number(item.price) || 0) * quantity;
+              return `<li>
+                <span class="summary-item-info">
+                  <strong>${escapeHtml(item.name || 'Product')}</strong>
+                  <span>${escapeHtml(variantText)}</span>
+                </span>
+                <span class="summary-qty">x${quantity}</span>
+                <span class="summary-price">${formatCurrency(total)}</span>
+              </li>`;
+            }).join('')
+          : '<li class="summary-empty">Select items to include in checkout</li>';
+
+        return {
+          subtotal,
+          totalItems,
+          listHtml,
+          hasSelection: selectedItems.length > 0
+        };
+      }
+
+      function renderCart(items) {
+        const cartContent = document.getElementById('cartContent');
+        const totalProducts = items.length;
+        const totalUnits = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const brandSections = buildBrandSections(items);
+        const summary = buildSummary(items);
+
+        cartContent.innerHTML = `
+          <div class="cart-header">
+            <h1>Shopping Cart</h1>
+            <div class="cart-header-stats">${totalProducts} ${totalProducts === 1 ? 'product' : 'products'} · ${totalUnits} ${totalUnits === 1 ? 'item' : 'items'}</div>
+          </div>
+          <div class="cart-container">
+            <div class="cart-items">
+              <div class="cart-table-header">
+                <div>Select</div>
+                <div>Preview</div>
+                <div>Product</div>
+                <div>Variants</div>
+                <div style="text-align:right;">Price</div>
+                <div style="text-align:center;">Quantity</div>
+                <div style="text-align:right;">Total</div>
+                <div></div>
+              </div>
+              ${brandSections}
+            </div>
+            <div class="cart-summary">
+              <h2>Order Summary</h2>
+              <div class="summary-row">
+                <span>Subtotal (${summary.totalItems} ${summary.totalItems === 1 ? 'item' : 'items'})</span>
+                <span>${formatCurrency(summary.subtotal)}</span>
+              </div>
+              <div class="summary-row">
+                <span>Shipping Fee</span>
+                <span style="color:#10b981;font-weight:500;">Calculated at checkout</span>
+              </div>
+              <div class="summary-row total">
+                <span>Total</span>
+                <span>${formatCurrency(summary.subtotal)}</span>
+              </div>
+              <ul class="summary-breakdown">${summary.listHtml}</ul>
+              <button class="checkout-btn" onclick="proceedToCheckout()" ${summary.hasSelection ? '' : 'disabled'}>Proceed to Checkout</button>
+              <a href="{{ url_for('buyer_dashboard') }}" class="continue-shopping">← Continue Shopping</a>
+            </div>
+          </div>
+        `;
+
+        bindCartSelectionEvents(items);
+      }
+
+      function bindCartSelectionEvents(items) {
+        document.querySelectorAll('input[data-action="item-toggle"]').forEach(input => {
+          input.addEventListener('change', (event) => {
+            userAdjustedCartSelection = true;
+            const cartId = Number(event.target.dataset.cartId);
+            if (!Number.isFinite(cartId)) {
+              return;
+            }
+            if (event.target.checked) {
+              selectedCartIds.add(cartId);
+            } else {
+              selectedCartIds.delete(cartId);
+            }
+            renderCart(items);
+          });
+        });
+
+        document.querySelectorAll('input[data-action="brand-toggle"]').forEach(input => {
+          const brandKey = input.dataset.brand;
+          input.addEventListener('change', (event) => {
+            userAdjustedCartSelection = true;
+            const shouldSelect = event.target.checked;
+            items.forEach(item => {
+              if (getBrandKey(getBrandLabel(item)) === brandKey && isItemSelectable(item)) {
+                const cartId = Number(item.cart_id);
+                if (!Number.isFinite(cartId)) {
+                  return;
+                }
+                if (shouldSelect) {
+                  selectedCartIds.add(cartId);
+                } else {
+                  selectedCartIds.delete(cartId);
+                }
+              }
+            });
+            renderCart(items);
+          });
+        });
+
+        setBrandIndeterminateStates(items);
+      }
+
+      function setBrandIndeterminateStates(items) {
+        document.querySelectorAll('input[data-action="brand-toggle"]').forEach(input => {
+          const brandKey = input.dataset.brand;
+          input.indeterminate = computeBrandIndeterminateState(items, brandKey);
+        });
+      }
+
+      function computeBrandIndeterminateState(items, brandKey) {
+        const brandItems = items.filter(item => getBrandKey(getBrandLabel(item)) === brandKey && isItemSelectable(item));
+        if (!brandItems.length) return false;
+        const selectedCount = brandItems.filter(item => selectedCartIds.has(Number(item.cart_id))).length;
+        return selectedCount > 0 && selectedCount < brandItems.length;
       }
 
 
       async function updateCartQuantity(cartId, newQuantity) {
         if (newQuantity < 1) {
           await removeCartItem(cartId);
+          return;
+        }
+
+        const targetItem = currentCartItems.find(item => Number(item.cart_id) === Number(cartId));
+        const stockLimit = targetItem ? getAvailableStock(targetItem) : null;
+        if (stockLimit !== null && newQuantity > stockLimit) {
+          if (window.VaronCart && typeof window.VaronCart.showMessage === 'function') {
+            window.VaronCart.showMessage(`Only ${stockLimit} pcs available for this item.`, 'warning');
+          } else {
+            alert(`Only ${stockLimit} pcs available for this item.`);
+          }
           return;
         }
 
@@ -1038,6 +1398,38 @@
 
 
       function proceedToCheckout() {
+        const selectedItems = currentCartItems.filter(item => selectedCartIds.has(Number(item.cart_id)));
+        if (!selectedItems.length) {
+          if (window.VaronCart && typeof window.VaronCart.showMessage === 'function') {
+            window.VaronCart.showMessage('Select at least one available item before checking out.', 'warning');
+          } else {
+            alert('Select at least one available item before checking out.');
+          }
+          return;
+        }
+        openCheckoutConfirmModal();
+      }
+
+      function openCheckoutConfirmModal() {
+        const modal = document.getElementById('checkoutConfirmModal');
+        if (modal) {
+          modal.classList.add('show');
+        }
+      }
+
+      function closeCheckoutConfirmModal() {
+        const modal = document.getElementById('checkoutConfirmModal');
+        if (modal) {
+          modal.classList.remove('show');
+        }
+      }
+
+      function confirmCheckoutSelection() {
+        if (!selectedCartIds.size) {
+          closeCheckoutConfirmModal();
+          return;
+        }
+        closeCheckoutConfirmModal();
         window.location.href = '/checkout';
       }
     </script>

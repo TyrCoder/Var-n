@@ -1818,6 +1818,12 @@
         });
       }
 
+      function escapeHtml(value) {
+        if (typeof value !== 'string') return value;
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return value.replace(/[&<>"']/g, char => map[char] || char);
+      }
+
       // Check and display low stock indicator
       function checkLowStock() {
         const lowStockIndicator = document.getElementById('lowStockIndicator');
@@ -1855,19 +1861,25 @@
         selectedColor = 'Standard';
         selectedSize = 'One Size';
       }
-      // Initial render of sizes when no color is selected
+      // Initial render of sizes when the page loads
       (function initSizesGrid() {
         const sizeGrid = document.getElementById('sizeGrid');
         if (!sizeGrid) return;
-        if (hasSizes) {
-          const sortedSizes = sortSizes([...allSizes]);
-          sizeGrid.innerHTML = sortedSizes.map(size => 
-            `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
-          ).join('');
-        } else {
-          // If product has no sizes, ensure grid is cleared
+
+        if (!hasSizes) {
           sizeGrid.innerHTML = '';
+          return;
         }
+
+        if (hasColors) {
+          sizeGrid.innerHTML = '<p style="margin: 12px 0; color: #6b7280; font-size: 13px;">Select a color to see available {% if "grooming" in product.category_name|lower %}volumes{% else %}sizes{% endif %}.</p>';
+          return;
+        }
+
+        const sortedSizes = sortSizes([...allSizes]);
+        sizeGrid.innerHTML = sortedSizes.map(size => 
+          `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
+        ).join('');
       })();
       function changeMainImage(imageUrl, thumbnail) {
         const mainImg = document.querySelector('#mainImage img');
@@ -1997,25 +2009,43 @@
         const sizeGrid = document.getElementById('sizeGrid');
         if (!sizeGrid) return;
 
-        // Get all sizes that have stock for this color
-        const availableSizes = Object.keys(stockMap)
-          .filter(key => key.endsWith('_' + color))
-          .map(key => key.split('_')[0])
-          .filter((value, index, self) => self.indexOf(value) === index); // Remove duplicates
+        const variantsForColor = Object.entries(stockMap)
+          .map(([key, stock]) => {
+            const lastUnderscore = key.lastIndexOf('_');
+            const sizePart = lastUnderscore > -1 ? key.slice(0, lastUnderscore) : key;
+            const colorPart = lastUnderscore > -1 ? key.slice(lastUnderscore + 1) : '';
+            return {
+              size: sizePart,
+              color: colorPart,
+              stock: parseInt(stock, 10) || 0
+            };
+          })
+          .filter(variant => variant.color === color && variant.stock > 0);
 
-        if (availableSizes.length === 0) {
-          // If no specific sizes found, show all sizes sorted
-          const sortedSizes = sortSizes([...allSizes]);
-          sizeGrid.innerHTML = sortedSizes.map(size => 
-            `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
-          ).join('');
-        } else {
-          // Show only sizes available for this color, sorted
-          const sortedAvailableSizes = sortSizes([...availableSizes]);
-          sizeGrid.innerHTML = sortedAvailableSizes.map(size => 
-            `<button class="size-btn" onclick="selectSize('${size}')">${size}</button>`
-          ).join('');
+        const safeColor = escapeHtml(color);
+
+        if (variantsForColor.length === 0) {
+          sizeGrid.innerHTML = `<p style="margin: 12px 0; color: #dc2626; font-size: 13px;">No available {% if "grooming" in product.category_name|lower %}volumes{% else %}sizes{% endif %} for <strong>${safeColor}</strong> right now.</p>`;
+          return;
         }
+
+        const uniqueSizes = Array.from(new Set(variantsForColor.map(v => v.size)));
+        const sortedAvailableSizes = sortSizes([...uniqueSizes]);
+
+        sizeGrid.innerHTML = sortedAvailableSizes.map(size => {
+          const variant = variantsForColor.find(v => v.size === size);
+          const stockHint = variant && variant.stock <= 5
+            ? `<span style="display:block;font-size:11px;color:#b45309;margin-top:4px;">Only ${variant.stock} left</span>`
+            : '';
+          const safeSize = escapeHtml(size);
+          const sizeArg = JSON.stringify(size);
+          return `
+            <button class="size-btn" onclick='selectSize(${sizeArg})'>
+              ${safeSize}
+              ${stockHint}
+            </button>
+          `;
+        }).join('');
       }
 
       function selectSize(size) {
@@ -2100,7 +2130,7 @@
         } else {
           btn.disabled = true;
           const missing = [];
-          if (!sizeOk) missing.push(isGrooming ? 'Volume' : 'Size');
+          if (!sizeOk) missing.push(isGroomingProduct ? 'Volume' : 'Size');
           if (!colorOk) missing.push('Color');
           btn.textContent = missing.length > 0 ? `Select ${missing.join(' and ')}` : 'Add to Cart';
           btn.style.opacity = '0.4';

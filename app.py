@@ -63,6 +63,184 @@ def convert_decimals_to_float(obj):
         return float(obj)
     return obj
 
+
+CITY_COORDINATE_HINTS = {
+    ('taguig', 'metro manila'): (14.5453, 121.0537),
+    ('taguig', ''): (14.5453, 121.0537),
+    ('santa rosa', 'laguna'): (14.2734, 121.0813),
+    ('sta. rosa', 'laguna'): (14.2734, 121.0813),
+    ('sta rosa', 'laguna'): (14.2734, 121.0813),
+    ('sta. cruz', 'laguna'): (14.2767, 121.4155),
+    ('santa cruz', 'laguna'): (14.2767, 121.4155),
+    ('calamba', 'laguna'): (14.2117, 121.1653),
+    ('los baños', 'laguna'): (14.1697, 121.2408),
+    ('batangas city', 'batangas'): (13.7565, 121.0583),
+    ('lipa city', 'batangas'): (13.9398, 121.1702),
+    ('tagaytay', 'cavite'): (14.1177, 120.9338),
+    ('quezon city', 'metro manila'): (14.6760, 121.0437),
+    ('pasig', 'metro manila'): (14.5864, 121.0616),
+    ('manila', 'metro manila'): (14.5995, 120.9842),
+    ('malolos', 'bulacan'): (14.8441, 120.8101),
+    ('angeles city', 'pampanga'): (15.1456, 120.5890),
+    ('clark', 'pampanga'): (15.1860, 120.5590),
+    ('cabanatuan city', 'nueva ecija'): (15.4869, 120.9674),
+    ('baguio city', 'benguet'): (16.4023, 120.5960),
+    ('laoag city', 'ilocos norte'): (18.1930, 120.5936),
+    ('cebu city', 'cebu'): (10.3157, 123.8854),
+    ('mandaue', 'cebu'): (10.3333, 123.9417),
+    ('iloilo city', 'iloilo'): (10.7202, 122.5621),
+    ('bacolod city', 'negros occidental'): (10.6760, 122.9500),
+    ('davao city', 'davao del sur'): (7.1907, 125.4553),
+    ('cagayan de oro city', 'misamis oriental'): (8.4542, 124.6319),
+    ('general santos city', 'south cotabato'): (6.1050, 125.1716),
+    ('', 'laguna'): (14.2691, 121.4147),
+    ('', 'cavite'): (14.2110, 120.9740),
+    ('', 'batangas'): (13.9398, 121.1702),
+    ('', 'metro manila'): (14.5995, 120.9842),
+    ('', 'bulacan'): (14.8886, 120.8579),
+    ('', 'pampanga'): (15.0333, 120.6833),
+    ('', 'nueva ecija'): (15.4869, 120.9674),
+    ('', 'benguet'): (16.4023, 120.5960),
+    ('', 'ilocos norte'): (18.1930, 120.5936),
+    ('', 'cebu'): (10.3157, 123.8854),
+    ('', 'iloilo'): (10.7202, 122.5621),
+    ('', 'negros occidental'): (10.6760, 122.9500),
+    ('', 'davao del sur'): (7.1907, 125.4553),
+    ('', 'misamis oriental'): (8.4542, 124.6319),
+    ('', 'south cotabato'): (6.1050, 125.1716)
+}
+
+PROVINCE_REGION_MAP = {
+    'ilocos norte': 'north luzon',
+    'ilocos sur': 'north luzon',
+    'la union': 'north luzon',
+    'pangasinan': 'north luzon',
+    'benguet': 'north luzon',
+    'abra': 'north luzon',
+    'ifugao': 'north luzon',
+    'kalinga': 'north luzon',
+    'mountain province': 'north luzon',
+    'nueva vizcaya': 'north luzon',
+    'quirino': 'north luzon',
+    'cagayan': 'north luzon',
+    'isabela': 'north luzon',
+    'aurora': 'north luzon',
+    'pampanga': 'central luzon',
+    'tarlac': 'central luzon',
+    'bataan': 'central luzon',
+    'bulacan': 'central luzon',
+    'nueva ecija': 'central luzon',
+    'zambales': 'central luzon',
+    'metro manila': 'central luzon',
+    'manila': 'central luzon',
+    'cavite': 'south luzon',
+    'laguna': 'south luzon',
+    'batangas': 'south luzon',
+    'quezon': 'south luzon',
+    'marinduque': 'south luzon',
+    'mindoro oriental': 'south luzon',
+    'mindoro occidental': 'south luzon',
+    'palawan': 'south luzon',
+    'albay': 'south luzon',
+    'sorsogon': 'south luzon',
+    'camarines sur': 'south luzon',
+    'camarines norte': 'south luzon',
+    'masbate': 'south luzon',
+    'aklan': 'visayas',
+    'antique': 'visayas',
+    'bohol': 'visayas',
+    'capiz': 'visayas',
+    'cebu': 'visayas',
+    'guimaras': 'visayas',
+    'iloilo': 'visayas',
+    'leyte': 'visayas',
+    'negros occidental': 'visayas',
+    'negros oriental': 'visayas',
+    'samar': 'visayas',
+    'biliran': 'visayas',
+    'siquijor': 'visayas',
+    'davao del sur': 'mindanao',
+    'davao del norte': 'mindanao',
+    'davao oriental': 'mindanao',
+    'bukidnon': 'mindanao',
+    'misamis oriental': 'mindanao',
+    'misamis occidental': 'mindanao',
+    'zamboanga del sur': 'mindanao',
+    'zamboanga del norte': 'mindanao',
+    'cotabato': 'mindanao',
+    'south cotabato': 'mindanao',
+    'sultan kudarat': 'mindanao',
+    'agusan del norte': 'mindanao',
+    'agusan del sur': 'mindanao',
+    'surigao del norte': 'mindanao',
+    'surigao del sur': 'mindanao'
+}
+
+CITY_REGION_OVERRIDES = {
+    'quezon city': 'central luzon',
+    'manila': 'central luzon',
+    'pasig': 'central luzon',
+    'taguig': 'central luzon',
+    'calamba': 'south luzon',
+    'santa rosa': 'south luzon',
+    'sta. rosa': 'south luzon',
+    'sta rosa': 'south luzon',
+    'sta. cruz': 'south luzon',
+    'santa cruz': 'south luzon',
+    'lipa city': 'south luzon',
+    'batangas city': 'south luzon',
+    'tagaytay': 'south luzon',
+    'baguio city': 'north luzon',
+    'laoag city': 'north luzon',
+    'angeles city': 'central luzon',
+    'malolos': 'central luzon',
+    'cabanatuan city': 'central luzon',
+    'cebu city': 'visayas',
+    'iloilo city': 'visayas',
+    'bacolod city': 'visayas',
+    'mandaue': 'visayas',
+    'davao city': 'mindanao',
+    'cagayan de oro city': 'mindanao',
+    'general santos city': 'mindanao'
+}
+
+
+def normalize_location_piece(value):
+    if not value:
+        return ''
+    return str(value).strip().lower()
+
+
+def infer_coordinates_from_hints(city, province):
+    norm_city = normalize_location_piece(city)
+    norm_province = normalize_location_piece(province)
+    candidates = [
+        (norm_city, norm_province),
+        (norm_city, ''),
+        ('', norm_province)
+    ]
+
+    for candidate in candidates:
+        if candidate in CITY_COORDINATE_HINTS:
+            return CITY_COORDINATE_HINTS[candidate]
+    return None
+
+
+def derive_region_tokens(city, province):
+    tokens = []
+    for value in (city, province):
+        if value:
+            tokens.append(value)
+
+    norm_city = normalize_location_piece(city)
+    norm_province = normalize_location_piece(province)
+
+    region = CITY_REGION_OVERRIDES.get(norm_city) or PROVINCE_REGION_MAP.get(norm_province)
+    if region:
+        tokens.append(region)
+
+    return tokens
+
 def get_delivery_region(city, province):
     """
     Map Philippine city/province to delivery region for rider matching.
@@ -1543,21 +1721,43 @@ def rider_rating_stats():
             WHERE rider_id = %s
         ''', (rider['id'],))
 
-        stats = cursor.fetchone()
+        stats = cursor.fetchone() or {}
+
+        cursor.execute('''
+            SELECT 
+                rr.id,
+                rr.rating,
+                rr.comment,
+                rr.created_at,
+                CONCAT(u.first_name, ' ', u.last_name) as customer_name
+            FROM rider_ratings rr
+            JOIN users u ON rr.user_id = u.id
+            WHERE rr.rider_id = %s
+            ORDER BY rr.created_at DESC
+            LIMIT 50
+        ''', (rider['id'],))
+
+        reviews = cursor.fetchall() or []
+
+        for review in reviews:
+            if review.get('created_at'):
+                review['created_at'] = review['created_at'].isoformat()
+
         cursor.close()
         conn.close()
 
         return jsonify({
             'success': True,
-            'avg_rating': float(stats['avg_rating']) if stats['avg_rating'] else 0,
-            'total_ratings': stats['total_ratings'] if stats['total_ratings'] else 0,
+            'avg_rating': float(stats['avg_rating']) if stats.get('avg_rating') else 0,
+            'total_ratings': stats.get('total_ratings') if stats.get('total_ratings') else 0,
             'rating_breakdown': {
-                '5': stats['five_star'] if stats['five_star'] else 0,
-                '4': stats['four_star'] if stats['four_star'] else 0,
-                '3': stats['three_star'] if stats['three_star'] else 0,
-                '2': stats['two_star'] if stats['two_star'] else 0,
-                '1': stats['one_star'] if stats['one_star'] else 0
-            }
+                '5': stats.get('five_star') if stats.get('five_star') else 0,
+                '4': stats.get('four_star') if stats.get('four_star') else 0,
+                '3': stats.get('three_star') if stats.get('three_star') else 0,
+                '2': stats.get('two_star') if stats.get('two_star') else 0,
+                '1': stats.get('one_star') if stats.get('one_star') else 0
+            },
+            'reviews': reviews
         }), 200
 
     except Exception as e:
@@ -5461,6 +5661,19 @@ def seller_account_settings():
             print("[DEBUG] User not found in database")
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
+        cursor.execute('''
+            SELECT id, store_name, description, contact_email, contact_phone, address, island_group
+            FROM sellers
+            WHERE user_id = %s
+        ''', (user_id,))
+        seller_profile = cursor.fetchone()
+
+        if not seller_profile:
+            cursor.close()
+            conn.close()
+            print("[DEBUG] Seller profile not found")
+            return jsonify({'success': False, 'error': 'Seller profile not found'}), 404
+
         if request.method == 'GET':
 
             cursor.close()
@@ -5474,6 +5687,14 @@ def seller_account_settings():
                     'email': user.get('email', ''),
                     'full_name': full_name,
                     'phone_number': user.get('phone', '') or ''
+                },
+                'brand': {
+                    'store_name': seller_profile.get('store_name', '') if seller_profile else '',
+                    'description': seller_profile.get('description', '') if seller_profile else '',
+                    'contact_email': seller_profile.get('contact_email', '') if seller_profile else '',
+                    'contact_phone': seller_profile.get('contact_phone', '') if seller_profile else '',
+                    'address': seller_profile.get('address', '') if seller_profile else '',
+                    'island_group': seller_profile.get('island_group', 'Luzon') if seller_profile else 'Luzon'
                 }
             }
             print(f"[DEBUG] Returning account settings: {response_data}")
@@ -5485,6 +5706,21 @@ def seller_account_settings():
             full_name = request.form.get('full_name', '').strip()
             phone_number = request.form.get('phone_number', '').strip()
             new_email = request.form.get('email', '').strip()
+            store_name = request.form.get('store_name', '').strip()
+            description = request.form.get('description', '').strip()
+            contact_email = request.form.get('contact_email', '').strip()
+            contact_phone = request.form.get('contact_phone', '').strip()
+            address = request.form.get('address', '').strip()
+            island_group = request.form.get('island_group', 'Luzon').strip() or 'Luzon'
+
+            if island_group not in ['Luzon', 'Visayas', 'Mindanao']:
+                island_group = 'Luzon'
+
+            if not store_name:
+                cursor.close()
+                conn.close()
+                print("[DEBUG] Store name missing in submission")
+                return jsonify({'success': False, 'error': 'Brand name is required'}), 400
 
             print(f"[DEBUG] Updating - full_name: {full_name}, phone: {phone_number}, email: {new_email}")
 
@@ -5513,12 +5749,23 @@ def seller_account_settings():
                 WHERE id = %s
             ''', (first_name, last_name, phone_number, user_id))
 
+            cursor.execute('''
+                UPDATE sellers
+                SET store_name = %s,
+                    description = %s,
+                    contact_email = %s,
+                    contact_phone = %s,
+                    address = %s,
+                    island_group = %s
+                WHERE id = %s
+            ''', (store_name, description, contact_email, contact_phone, address, island_group, seller_profile['id']))
+
             conn.commit()
             cursor.close()
             conn.close()
 
-            print("[DEBUG] Account settings saved successfully")
-            return jsonify({'success': True, 'message': 'Account settings updated'}), 200
+            print("[DEBUG] Account & brand settings saved successfully")
+            return jsonify({'success': True, 'message': 'Profile settings updated'}), 200
 
     except Exception as err:
         print(f"[ERROR] seller_account_settings: {str(err)}")
@@ -5590,6 +5837,40 @@ def seller_add_product():
             colors.extend(custom_color_list)
             print(f"[DEBUG] Custom colors added: {custom_color_list}")
 
+        color_sizes_mapping_raw = request.form.get('color_sizes_mapping', '').strip()
+        color_sizes_mapping = {}
+        if color_sizes_mapping_raw:
+            try:
+                parsed_mapping = json.loads(color_sizes_mapping_raw)
+            except Exception:
+                return jsonify({'error': 'Invalid color and size mapping payload'}), 400
+
+            if not isinstance(parsed_mapping, dict):
+                return jsonify({'error': 'Invalid color and size mapping payload'}), 400
+
+            for color_label, size_list in parsed_mapping.items():
+                if not isinstance(color_label, str):
+                    continue
+                if not isinstance(size_list, list):
+                    continue
+
+                cleaned_sizes = []
+                for size_value in size_list:
+                    if isinstance(size_value, str):
+                        trimmed = size_value.strip()
+                        if trimmed:
+                            cleaned_sizes.append(trimmed)
+
+                if cleaned_sizes:
+                    color_sizes_mapping[color_label.strip()] = cleaned_sizes
+
+        print(f"[DEBUG] Normalized color_sizes_mapping: {color_sizes_mapping}")
+
+        if color_sizes_mapping:
+            # Ensure base size/color collections reflect the normalized mapping
+            sizes = sorted({size for values in color_sizes_mapping.values() for size in values})
+            colors = list(color_sizes_mapping.keys())
+
         print(f"[DEBUG] Final sizes list: {sizes}")
         print(f"[DEBUG] Final colors list: {colors}")
 
@@ -5604,20 +5885,40 @@ def seller_add_product():
         is_grooming = category_type == 'grooming'
 
         if not is_grooming:
-            # Allow products with custom sizes/colors even if no predefined options are selected
-            if not sizes and not colors:
-                return jsonify({'error': 'Please select at least one size and color, or add custom sizes and colors'}), 400
+            has_mapping = any(color_sizes_mapping.values())
+            if not has_mapping:
+                return jsonify({'error': 'Please select at least one color with its sizes before submitting the product'}), 400
 
         # Handle ingredients and volume for grooming products
         ingredients = ''
         volume = ''
         grooming_stock = 0
+        parsed_ingredients = []
         if is_grooming:
-            ingredients = request.form.get('ingredients', '').strip()
+            ingredients_raw = request.form.get('ingredients', '').strip()
             volume = request.form.get('volume', '').strip()
             grooming_stock = int(request.form.get('grooming_stock', 0))
+
+            if not ingredients_raw:
+                return jsonify({'error': 'Please provide the ingredient list for grooming products'}), 400
+
+            try:
+                parsed_ingredients = json.loads(ingredients_raw)
+            except Exception:
+                return jsonify({'error': 'Invalid ingredients payload. Please refresh and try again.'}), 400
+
+            if not isinstance(parsed_ingredients, list) or len(parsed_ingredients) == 0:
+                return jsonify({'error': 'Please list at least one ingredient for grooming products'}), 400
+
+            if not volume:
+                return jsonify({'error': 'Volume/Size is required for grooming products'}), 400
+
             if grooming_stock <= 0:
                 return jsonify({'error': 'Stock quantity is required for grooming products'}), 400
+
+            # Flatten ingredient objects into readable text
+            ingredient_names = [item.get('name') for item in parsed_ingredients if isinstance(item, dict) and item.get('name')]
+            ingredients = '\n'.join(ingredient_names)
 
 
         uploaded_images = []
@@ -5683,26 +5984,42 @@ def seller_add_product():
         # Use category_type instead of checking name
         if not is_grooming:
             import re
-            for size in sizes:
-                for color in colors:
 
-                    safe_size = re.sub(r'[^a-zA-Z0-9]', '_', size)
-                    safe_color = re.sub(r'[^a-zA-Z0-9]', '_', color)
+            def sanitize_variant_value(value):
+                return re.sub(r'[^a-zA-Z0-9]', '_', value or '')
+
+            inserted_variants = 0
+            for color, size_list in color_sizes_mapping.items():
+                for size in size_list:
+                    safe_size = sanitize_variant_value(size)
+                    safe_color = sanitize_variant_value(color)
                     stock_key = f'stock_{safe_size}_{safe_color}'
-                    variant_stock = int(request.form.get(stock_key, 0))
-                    
+
+                    if stock_key not in request.form:
+                        error_message = f"Missing stock quantity for size '{size}' in color '{color}'."
+                        return jsonify({'error': error_message}), 400
+
+                    stock_raw = request.form.get(stock_key, '').strip()
+                    try:
+                        variant_stock = int(stock_raw or 0)
+                    except ValueError:
+                        return jsonify({'error': f"Invalid stock value for {size} / {color}"}), 400
+
                     print(f"[DEBUG] Processing variant: size='{size}', color='{color}', stock_key='{stock_key}', stock={variant_stock}")
 
-                    # Only insert variant if stock > 0, and only count non-zero stock in total
                     if variant_stock > 0:
                         total_stock += variant_stock
                         cursor.execute('''
                             INSERT INTO product_variants (product_id, size, color, stock_quantity)
                             VALUES (%s, %s, %s, %s)
                         ''', (product_id, size, color, variant_stock))
+                        inserted_variants += 1
                         print(f"[DEBUG] ✅ Inserted variant with stock {variant_stock}")
                     else:
-                        print(f"[DEBUG] ⚠️ Skipping variant with 0 stock")
+                        print(f"[DEBUG] ⚠️ Skipping variant with 0 stock for size='{size}' color='{color}'")
+
+            if inserted_variants == 0:
+                return jsonify({'error': 'Please provide stock for at least one color/size combination'}), 400
         else:
             # Handle grooming products: store ingredients, volume in description
             grooming_desc_parts = []
@@ -6345,7 +6662,38 @@ def api_products():
 
         limit = request.args.get('limit', 50, type=int)
         search = request.args.get('search', '').strip()
-        category_id = request.args.get('category_id', type=int)
+        raw_category_ids = request.args.getlist('category_id')
+        category_ids = []
+        for raw_id in raw_category_ids:
+            try:
+                category_ids.append(int(raw_id))
+            except (TypeError, ValueError):
+                continue
+
+        category_filter_ids = []
+        if category_ids:
+            expanded_ids = set(category_ids)
+            placeholders = ','.join(['%s'] * len(category_ids))
+            cursor.execute(f"""
+                SELECT id, parent_id
+                FROM categories
+                WHERE id IN ({placeholders})
+            """, tuple(category_ids))
+            selected_categories = cursor.fetchall()
+            parent_ids = [row['id'] for row in selected_categories if not row['parent_id']]
+
+            if parent_ids:
+                parent_placeholders = ','.join(['%s'] * len(parent_ids))
+                cursor.execute(f"""
+                    SELECT id
+                    FROM categories
+                    WHERE parent_id IN ({parent_placeholders}) AND is_active = TRUE
+                """, tuple(parent_ids))
+                child_rows = cursor.fetchall()
+                for child in child_rows:
+                    expanded_ids.add(child['id'])
+
+            category_filter_ids = sorted(expanded_ids)
 
 
         query = """
@@ -6379,9 +6727,10 @@ def api_products():
             params.extend([search_pattern, search_pattern])
 
 
-        if category_id:
-            query += " AND p.category_id = %s"
-            params.append(category_id)
+        if category_filter_ids:
+            placeholders = ','.join(['%s'] * len(category_filter_ids))
+            query += f" AND p.category_id IN ({placeholders})"
+            params.extend(category_filter_ids)
 
         query += " GROUP BY p.id, p.name, p.price, p.description, p.category_id, pi.image_url, c.name"
         query += " ORDER BY p.created_at DESC LIMIT %s"
@@ -6488,10 +6837,10 @@ def api_categories():
 
         # Get all parent categories (where parent_id IS NULL)
         cursor.execute("""
-            SELECT id, name, slug, category_type, is_active
+            SELECT id, name, slug, category_type, is_active, parent_id
             FROM categories
             WHERE is_active = TRUE AND parent_id IS NULL
-            ORDER BY name ASC
+            ORDER BY id ASC
         """)
         parent_categories = cursor.fetchall()
 
@@ -6503,7 +6852,7 @@ def api_categories():
                 SELECT id, name, slug, category_type, parent_id
                 FROM categories
                 WHERE is_active = TRUE AND parent_id = %s
-                ORDER BY name ASC
+                ORDER BY id ASC
             """, (parent['id'],))
             children = cursor.fetchall()
             
@@ -6512,6 +6861,7 @@ def api_categories():
                 'name': parent['name'],
                 'slug': parent['slug'],
                 'category_type': parent['category_type'] or 'general',
+                'parent_id': parent['parent_id'],
                 'children': []
             }
             
@@ -7818,15 +8168,15 @@ def seller_orders():
                 o.id,
                 o.order_number,
                 o.user_id,
-                o.total_amount,
+                o.total_amount AS overall_total_amount,
                 o.order_status,
                 o.seller_confirmed_rider,
                 o.buyer_approved_rider,
                 o.created_at,
                 o.updated_at,
                 CONCAT(u.first_name, ' ', u.last_name) as customer_name,
-                (SELECT COUNT(*) FROM order_items oi2
-                 WHERE oi2.order_id = o.id) as item_count,
+                SUM(oi.quantity) as item_count,
+                SUM(oi.subtotal) as seller_total_amount,
                 IFNULL(s.status, 'pending') as shipment_status,
                 IFNULL(s.rider_id, 0) as shipment_rider_id,
                 s.id as shipment_id,
@@ -7869,8 +8219,15 @@ def seller_orders():
                 order['created_at'] = order['created_at'].isoformat()
             if order.get('updated_at'):
                 order['updated_at'] = order['updated_at'].isoformat() if order['updated_at'] else None
-            if order.get('total_amount'):
-                order['total_amount'] = float(order['total_amount'])
+
+            seller_total = float(order['seller_total_amount']) if order.get('seller_total_amount') else 0.0
+            overall_total = float(order['overall_total_amount']) if order.get('overall_total_amount') else 0.0
+
+            order['item_count'] = int(order['item_count']) if order.get('item_count') is not None else 0
+            order['seller_total_amount'] = seller_total
+            order['order_total_amount'] = overall_total
+            order['total_amount'] = seller_total
+            order.pop('overall_total_amount', None)
 
             if 'shipment_status' not in order:
                 order['shipment_status'] = 'pending'
@@ -7893,6 +8250,135 @@ def seller_orders():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/seller/order/<int:order_id>', methods=['GET'])
+def seller_order_details(order_id):
+    """Return detailed info and items for a single order owned by the seller"""
+    try:
+        if 'user_id' not in session or session.get('role') != 'seller':
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+        user_id = session['user_id']
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        if not seller:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Seller profile not found'}), 404
+
+        seller_id = seller['id']
+
+        cursor.execute('''
+            SELECT DISTINCT
+                o.id,
+                o.order_number,
+                o.total_amount,
+                o.subtotal,
+                o.shipping_fee,
+                o.order_status,
+                o.payment_method,
+                o.created_at,
+                o.notes,
+                CONCAT(u.first_name, ' ', u.last_name) as customer_name,
+                u.email as customer_email,
+                a.full_name as recipient_name,
+                a.phone as recipient_phone,
+                a.street_address,
+                a.barangay,
+                a.city,
+                a.province,
+                a.postal_code,
+                a.country
+            FROM orders o
+            JOIN order_items oi ON o.id = oi.order_id
+            JOIN products p ON oi.product_id = p.id
+            LEFT JOIN users u ON o.user_id = u.id
+            LEFT JOIN addresses a ON o.shipping_address_id = a.id
+            WHERE o.id = %s AND p.seller_id = %s
+            LIMIT 1
+        ''', (order_id, seller_id))
+
+        order = cursor.fetchone()
+        if not order:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+        cursor.execute('''
+            SELECT
+                oi.id,
+                oi.product_id,
+                oi.product_name,
+                oi.quantity,
+                oi.unit_price,
+                oi.subtotal,
+                oi.size,
+                oi.color,
+                COALESCE(pi_primary.image_url, pi_fallback.image_url) AS image_url
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            LEFT JOIN product_images pi_primary
+                ON oi.product_id = pi_primary.product_id AND pi_primary.is_primary = 1
+            LEFT JOIN (
+                SELECT product_id, MIN(image_url) AS image_url
+                FROM product_images
+                GROUP BY product_id
+            ) pi_fallback ON oi.product_id = pi_fallback.product_id
+            WHERE oi.order_id = %s AND p.seller_id = %s
+        ''', (order_id, seller_id))
+
+        items = cursor.fetchall() or []
+
+        if order.get('created_at'):
+            order['created_at'] = order['created_at'].isoformat()
+        if order.get('total_amount') is not None:
+            order['total_amount'] = float(order['total_amount'])
+        if order.get('subtotal') is not None:
+            order['subtotal'] = float(order['subtotal'])
+        if order.get('shipping_fee') is not None:
+            order['shipping_fee'] = float(order['shipping_fee'])
+
+        address_parts = [
+            order.get('street_address'),
+            order.get('barangay'),
+            order.get('city'),
+            order.get('province'),
+            order.get('postal_code'),
+            order.get('country')
+        ]
+        order['shipping_address_text'] = ', '.join([part for part in address_parts if part])
+
+        for item in items:
+            if item.get('unit_price') is not None:
+                item['unit_price'] = float(item['unit_price'])
+            if item.get('subtotal') is not None:
+                item['subtotal'] = float(item['subtotal'])
+
+        seller_subtotal = float(sum(item.get('subtotal') or 0 for item in items))
+        seller_item_count = sum(item.get('quantity') or 0 for item in items)
+        overall_total = float(order['total_amount']) if order.get('total_amount') is not None else 0.0
+
+        order['seller_subtotal'] = seller_subtotal
+        order['seller_total_amount'] = seller_subtotal
+        order['seller_item_count'] = seller_item_count
+        order['order_total_amount'] = overall_total
+        order['total_amount'] = seller_subtotal
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'order': order,
+            'items': items
+        }), 200
+    except Exception as e:
+        print(f"[ERROR] seller_order_details: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/seller/update-order-status', methods=['POST'])
 def update_order_status():
@@ -9028,11 +9514,22 @@ def api_get_cart():
                 c.quantity,
                 p.name,
                 p.price,
+                p.brand,
+                p.seller_id,
+                s.store_name,
                 pv.size,
-                pv.color
+                pv.color,
+                pv.stock_quantity as variant_stock,
+                inv.inventory_stock
             FROM cart c
             JOIN products p ON c.product_id = p.id
+            LEFT JOIN sellers s ON p.seller_id = s.id
             LEFT JOIN product_variants pv ON c.variant_id = pv.id
+            LEFT JOIN (
+                SELECT product_id, SUM(stock_quantity) as inventory_stock
+                FROM inventory
+                GROUP BY product_id
+            ) inv ON inv.product_id = p.id
             WHERE c.user_id = %s
         ''', (user_id,))
 
@@ -9063,6 +9560,19 @@ def api_get_cart():
                 
                 size_val = cart_item.get('size')
                 color_val = cart_item.get('color')
+                raw_brand = cart_item.get('brand') or cart_item.get('store_name') or 'Independent Sellers'
+                if isinstance(raw_brand, str):
+                    raw_brand = raw_brand.strip()
+                brand_name = raw_brand or 'Independent Sellers'
+                variant_stock = cart_item.get('variant_stock')
+                product_stock = cart_item.get('inventory_stock')
+                available_stock = None
+                if variant_stock is not None:
+                    available_stock = int(variant_stock)
+                elif product_stock is not None:
+                    available_stock = int(product_stock)
+                else:
+                    available_stock = 0
                 
                 items.append({
                     'id': product_id,
@@ -9073,7 +9583,10 @@ def api_get_cart():
                     'price': float(cart_item.get('price', 0)) if cart_item.get('price') else 0,
                     'image_url': image_url or '/static/images/placeholder.svg',
                     'size': size_val if size_val else None,
-                    'color': color_val if color_val else None
+                    'color': color_val if color_val else None,
+                    'brand': brand_name,
+                    'available_stock': available_stock,
+                    'seller_id': cart_item.get('seller_id')
                 })
                 print(f"[CART GET]   - {cart_item.get('name')} (qty {cart_item.get('quantity')}, size: {size_val}, color: {color_val}, img: {image_url})")
 
@@ -9308,6 +9821,66 @@ def api_delete_address(address_id):
         if conn:
             conn.close()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/rider/store-locations', methods=['GET'])
+def api_rider_store_locations():
+    """Provide seller store coordinates for rider coverage map."""
+    if not session.get('logged_in') or session.get('role') != 'rider':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    cursor = None
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT id, store_name, address, city, province, postal_code, status, rating, total_sales, description
+            FROM sellers
+            WHERE status = 'approved'
+        ''')
+
+        rows = cursor.fetchall() or []
+        stores = []
+
+        for row in rows:
+            latitude, longitude = (None, None)
+            inferred = infer_coordinates_from_hints(row.get('city'), row.get('province'))
+            if inferred:
+                latitude, longitude = inferred
+
+            store_entry = {
+                'id': row.get('id'),
+                'name': row.get('store_name'),
+                'address': row.get('address'),
+                'city': row.get('city'),
+                'province': row.get('province'),
+                'postal_code': row.get('postal_code'),
+                'status': row.get('status'),
+                'rating': float(row['rating']) if row.get('rating') is not None else None,
+                'total_sales': float(row['total_sales']) if row.get('total_sales') is not None else None,
+                'description': row.get('description'),
+                'regions': derive_region_tokens(row.get('city'), row.get('province'))
+            }
+
+            if latitude is not None and longitude is not None:
+                store_entry['coordinates'] = [latitude, longitude]
+
+            stores.append(store_entry)
+
+        return jsonify({'success': True, 'stores': stores})
+    except mysql.connector.Error as db_err:
+        print(f"[ERROR] Fetching store locations failed: {db_err}")
+        return jsonify({'success': False, 'error': 'Failed to load store locations'}), 500
+    except Exception as exc:
+        print(f"[ERROR] Unexpected store location failure: {exc}")
+        return jsonify({'success': False, 'error': 'Unexpected error'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        conn.close()
+
 
 @app.route('/api/rider/available-orders', methods=['GET'])
 def api_rider_available_orders():

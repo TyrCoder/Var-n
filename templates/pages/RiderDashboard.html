@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <style>
       :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef;--success:#10b981;--warning:#f59e0b;--error:#ef4444}
       *{box-sizing:border-box}
@@ -19,7 +18,6 @@
       .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
       .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px}
       .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px}
-      .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
       .side-group{margin-top:8px}
       .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
       .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea;cursor:pointer;user-select:none}
@@ -83,7 +81,6 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="logo">
-          <div class="dot"></div>
           <strong>Varón Rider</strong>
         </div>
         <div class="side-group">
@@ -230,6 +227,13 @@
                   </div>
                   <div style="display:flex;gap:8px;flex-wrap:wrap">
                     <button onclick="loadOrdersAndDeliveries()" class="tag" style="background:#0a0a0a;color:#fff;border:none;cursor:pointer;padding:8px 14px">🔄 Refresh</button>
+                    <button id="activeDeliveryAlerts"
+                            class="alert-button disabled-alert"
+                            onclick="openActiveDeliveryModal()"
+                            disabled>
+                      🔔 Active Alerts
+                      <span id="activeDeliveryBadge" style="margin-left:6px;background:#fff;color:#0a0a0a;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">0</span>
+                    </button>
                     <div class="tag" style="background:#10b981;color:#fff" id="order-count">0 Orders</div>
                   </div>
                 </div>
@@ -257,8 +261,8 @@
                   📍 Your Service Area: <strong id="riderServiceArea">Loading...</strong>
                 </div>
 
-                <div id="orders-deliveries-container" style="overflow-x:auto;overflow-y:hidden;width:100%">
-                  <table id="orders-deliveries-table" style="width:100%;border-collapse:collapse;background:#fff;min-width:900px">
+                <div id="orders-deliveries-container" style="overflow:auto">
+                  <table id="orders-deliveries-table" style="width:100%;border-collapse:collapse;background:#fff">
                     <thead>
                       <tr style="background:#f8fafc;border-bottom:2px solid #e5e7eb">
                         <th style="padding:12px 14px;text-align:left;font-size:12px;font-weight:700;color:#374151;letter-spacing:0.5px;min-width:100px">Order ID</th>
@@ -619,6 +623,152 @@
         color: #0a0a0a;
         font-size: 13px;
       }
+
+      .alert-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        background: #f97316;
+        color: #fff;
+        transition: all 0.2s ease;
+      }
+
+      .alert-button:not(.disabled-alert):hover {
+        background: #ea580c;
+        transform: translateY(-1px);
+      }
+
+      .alert-button.disabled-alert {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .active-delivery-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        background: #fff;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 6px rgba(10,10,10,0.04);
+      }
+
+      .active-delivery-card:last-child {
+        margin-bottom: 0;
+      }
+
+      .active-delivery-card .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .active-delivery-card .card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #0a0a0a;
+      }
+
+      .active-delivery-card .card-subtitle {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .status-pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .active-delivery-card .card-details {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        margin-bottom: 12px;
+      }
+
+      .active-delivery-card .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #9ca3af;
+        margin-bottom: 4px;
+      }
+
+      .active-delivery-card .value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #0a0a0a;
+      }
+
+      .active-delivery-card .muted {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .status-stepper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .status-chip {
+        border-radius: 999px;
+        border: 1px solid #d1d5db;
+        padding: 6px 12px;
+        background: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .status-chip.done {
+        background: #dcfce7;
+        border-color: #10b981;
+        color: #15803d;
+        cursor: default;
+      }
+
+      .status-chip.active {
+        background: #dbeafe;
+        border-color: #3b82f6;
+        color: #1d4ed8;
+        cursor: default;
+      }
+
+      .status-chip.next {
+        background: #fef3c7;
+        border-color: #fbbf24;
+        color: #92400e;
+      }
+
+      .status-chip:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .active-delivery-card .card-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .active-delivery-card .card-actions button {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
     </style>
 
     <script>
@@ -757,33 +907,23 @@
         ])
         .then(([availableData, activeData]) => {
           const tbody = document.querySelector('#orders-deliveries-tbody');
-          const orderMap = new Map();
-
-          const addOrder = (order, type) => {
-            if (!order) return;
-            const key = order.order_number || order.shipment_id || order.id;
-            if (!key) return;
-
-            const normalized = { ...order, type };
-            const existing = orderMap.get(key);
-
-            // Prefer active entries (they contain richer shipment data)
-            if (!existing || (existing.type !== 'active' && type === 'active')) {
-              orderMap.set(key, normalized);
-            }
-          };
+          const allOrders = [];
 
 
           if (availableData.success && availableData.orders && availableData.orders.length > 0) {
             const availableOrders = availableData.orders.filter(order =>
               order.order_status === 'waiting_for_pickup' && !order.assigned_rider_id
             );
-            availableOrders.forEach(order => addOrder(order, 'available'));
+            availableOrders.forEach(order => {
+              allOrders.push({...order, type: 'available'});
+            });
           }
 
 
           if (activeData.deliveries && activeData.deliveries.length > 0) {
-            activeData.deliveries.forEach(order => addOrder(order, 'active'));
+            activeData.deliveries.forEach(order => {
+              allOrders.push({...order, type: 'active'});
+            });
           }
 
 
@@ -791,13 +931,6 @@
             document.getElementById('riderServiceArea').textContent = activeData.service_area || 'Not assigned';
           }
 
-
-          // Sort orders by date - newest first (latest transactions at the top)
-          const allOrders = Array.from(orderMap.values()).sort((a, b) => {
-            const dateA = new Date(a.created_at || a.order_date || 0);
-            const dateB = new Date(b.created_at || b.order_date || 0);
-            return dateB - dateA; // Descending order (newest first)
-          });
 
           document.getElementById('order-count').textContent = `${allOrders.length} Orders`;
 
@@ -888,7 +1021,7 @@
                 } else if (order.shipment_status === 'picked_up') {
                   actionButton = `
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(event, ${order.shipment_id}, 'in_transit')"
+                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'in_transit')"
                               style="background:#3b82f6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
                               onmouseover="this.style.background='#2563eb'"
                               onmouseout="this.style.background='#3b82f6'">
@@ -905,7 +1038,7 @@
                 } else if (order.shipment_status === 'in_transit') {
                   actionButton = `
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(event, ${order.shipment_id}, 'out_for_delivery')"
+                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'out_for_delivery')"
                               style="background:#8b5cf6;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
                               onmouseover="this.style.background='#7c3aed'"
                               onmouseout="this.style.background='#8b5cf6'">
@@ -922,7 +1055,7 @@
                 } else if (order.shipment_status === 'out_for_delivery') {
                   actionButton = `
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-                      <button onclick="updateDeliveryStatus(event, ${order.shipment_id}, 'delivered')"
+                      <button onclick="updateDeliveryStatus(${order.shipment_id}, 'delivered')"
                               style="background:#059669;color:#fff;border:none;cursor:pointer;padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px;transition:all 0.2s;white-space:nowrap"
                               onmouseover="this.style.background='#047857'"
                               onmouseout="this.style.background='#059669'">
@@ -1014,84 +1147,75 @@
       }
 
 
-      async function acceptOrder(shipmentId) {
-        const confirmed = await VaronNotifications.confirm('Accept this delivery order?', {
-          confirmText: 'Accept Order',
-          cancelText: 'Not Now',
-          confirmClass: 'confirm'
-        });
+      function acceptOrder(shipmentId) {
+        if (!confirm('Accept this delivery order?')) return;
 
-        if (!confirmed) return;
-
-        try {
-          const response = await fetch('/api/rider/accept-order', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ shipment_id: shipmentId })
-          });
-
-          const data = await response.json();
-
+        fetch('/api/rider/accept-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ shipment_id: shipmentId })
+        })
+        .then(response => response.json())
+        .then(data => {
           if (data.success) {
-            VaronNotifications.success('Order accepted! You can now start the delivery.');
+            alert('Order accepted! You can now start the delivery.');
             loadAvailableOrders();
             loadMyActiveDeliveries();
           } else {
-            VaronNotifications.error('Failed to accept order: ' + (data.error || 'Unknown error'));
+            alert('Failed to accept order: ' + (data.error || 'Unknown error'));
           }
-        } catch (error) {
+        })
+        .catch(error => {
           console.error('Error accepting order:', error);
-          VaronNotifications.error('Error accepting order. Please try again.');
-        }
+          alert('Error accepting order. Please try again.');
+        });
       }
 
 
-      async function updateDeliveryStatus(evt, shipmentId, newStatus) {
+      function updateDeliveryStatus(shipmentId, newStatus) {
         if (!newStatus) return;
 
-        const statusText = newStatus.replace(/_/g, ' ').toUpperCase();
-        const confirmed = await VaronNotifications.confirm(`Update status to ${statusText}?`, {
-          confirmText: 'Update Status',
-          cancelText: 'Not Yet',
-          confirmClass: 'confirm'
-        });
+        const statusText = newStatus.replace('_', ' ').toUpperCase();
+        if (!confirm(`Update status to ${statusText}?`)) {
 
-        if (!confirmed) {
+          event.target.value = '';
           return;
         }
 
-        try {
-          const response = await fetch('/api/rider/update-delivery-status', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              shipment_id: shipmentId,
-              status: newStatus
-            })
-          });
-
-          const data = await response.json();
-
+        fetch('/api/rider/update-delivery-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shipment_id: shipmentId,
+            status: newStatus
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
           if (data.success) {
-            VaronNotifications.success('Status updated successfully!');
+            alert('Status updated successfully!');
             if (newStatus === 'delivered') {
-              VaronNotifications.success('🎉 Delivery completed! Your earnings have been updated.');
+              alert('🎉 Delivery completed! Your earnings have been updated.');
+
               loadMyActiveDeliveries();
               loadDeliveryHistory();
             } else {
               loadMyActiveDeliveries();
             }
           } else {
-            VaronNotifications.error('Failed to update status: ' + (data.error || 'Unknown error'));
+            alert('Failed to update status: ' + (data.error || 'Unknown error'));
+            event.target.value = '';
           }
-        } catch (error) {
+        })
+        .catch(error => {
           console.error('Error updating status:', error);
-          VaronNotifications.error('Error updating status. Please try again.');
-        }
+          alert('Error updating status. Please try again.');
+          event.target.value = '';
+        });
       }
 
 
@@ -1267,42 +1391,7 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
 
               document.getElementById('weekly-earnings').textContent = '₱' + parseFloat(data.weekly_earnings).toFixed(2);
               document.getElementById('monthly-earnings').textContent = '₱' + parseFloat(data.monthly_earnings).toFixed(2);
-      function sanitizeReviewText(text) {
-        if (text === null || text === undefined) {
-          return '';
-        }
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-        return String(text).replace(/[&<>"']/g, (m) => map[m]);
-      }
 
-      function convertToDisplayDate(dateString) {
-        if (!dateString) {
-          return '—';
-        }
-        const parsed = new Date(dateString);
-        if (Number.isNaN(parsed.getTime())) {
-          return dateString;
-        }
-        return parsed.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-      }
-
-      function formatRiderReviewComment(comment) {
-        const safeText = sanitizeReviewText(comment);
-        if (!safeText || safeText.trim().length === 0) {
-          return '<span style="color:#9ca3af;">No comment provided.</span>';
-        }
-        return safeText.replace(/\n/g, '<br>');
-      }
-
-
-        const reviewsTableBody = document.querySelector('#reviews-table tbody');
-        if (reviewsTableBody) {
-          reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999">Loading reviews...</td></tr>';
-        }
 
               const tbody = document.querySelector('#earnings-breakdown-table tbody');
               tbody.innerHTML = `
@@ -1389,64 +1478,50 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
                 breakdownEl.innerHTML = breakdownHTML;
               }
 
-              // Note: Individual reviews not implemented yet - would need to fetch from rider_ratings table with buyer info
-              const reviewsTableBody = document.querySelector('#reviews-table tbody');
-              if (reviewsTableBody) {
-                reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999">Review details coming soon</td></tr>';
-              }
+              renderReviewsTable(data.reviews || []);
             }
           })
           .catch(error => {
             console.error('Error loading ratings:', error);
-            const reviewsTableBody = document.querySelector('#reviews-table tbody');
-            if (reviewsTableBody) {
-              reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Error loading reviews</td></tr>';
-            }
+            renderReviewsTable(null, true);
           });
-        loadRiderReviews();
       }
 
-      function loadRiderReviews() {
+      function renderReviewsTable(reviews, hasError = false) {
         const reviewsTableBody = document.querySelector('#reviews-table tbody');
         if (!reviewsTableBody) {
           return;
         }
 
-        fetch('/api/rider/ratings')
-          .then(response => response.json())
-          .then(data => {
-            if (!data.success) {
-              reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Unable to load reviews</td></tr>';
-              return;
-            }
+        if (hasError) {
+          reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Error loading reviews</td></tr>';
+          return;
+        }
 
-            if (!data.reviews || data.reviews.length === 0) {
-              reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999">No reviews yet</td></tr>';
-              return;
-            }
+        if (!reviews || reviews.length === 0) {
+          reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#999">No reviews yet</td></tr>';
+          return;
+        }
 
-            reviewsTableBody.innerHTML = data.reviews.map(review => {
-              const ratingValue = review.rating ? Number(review.rating) : 0;
-              const stars = ratingValue ? '⭐'.repeat(Math.max(1, Math.round(ratingValue))) : '—';
-              const ratingLabel = ratingValue ? `${stars} <span style="color:#6b7280;font-size:12px;margin-left:4px;">${ratingValue.toFixed(1).replace(/\.0$/, '')}</span>` : '—';
-              const name = sanitizeReviewText(review.customer_name || 'Buyer');
-              const comment = formatRiderReviewComment(review.comment);
-              const reviewDate = convertToDisplayDate(review.created_at);
+        let html = '';
+        reviews.forEach(review => {
+          const formattedDate = review.created_at ? new Date(review.created_at).toLocaleDateString('en-PH', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }) : '—';
+          const stars = '⭐'.repeat(Math.max(1, Math.round(review.rating || 0)));
+          html += `
+            <tr>
+              <td>${formattedDate}</td>
+              <td>${review.customer_name || 'Customer'}</td>
+              <td>${stars}</td>
+              <td>${review.comment || 'No comment provided'}</td>
+            </tr>
+          `;
+        });
 
-              return `
-                <tr>
-                  <td>${reviewDate}</td>
-                  <td>${name}</td>
-                  <td>${ratingLabel}</td>
-                  <td>${comment}</td>
-                </tr>
-              `;
-            }).join('');
-          })
-          .catch(error => {
-            console.error('Error loading rider reviews:', error);
-            reviewsTableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444">Error loading reviews</td></tr>';
-          });
+        reviewsTableBody.innerHTML = html;
       }
 
 
