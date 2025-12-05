@@ -2593,7 +2593,6 @@ def place_order():
                 normalized_items.append({
                     'cart_id': cart_item.get('cart_id'),
                     'id': cart_item.get('product_id'),
-                    'variant_id': cart_item.get('variant_id'),
                     'name': cart_item.get('name', 'Product'),
                     'price': price,
                     'quantity': quantity,
@@ -2718,51 +2717,17 @@ def place_order():
             item_subtotal = unit_price * quantity
             size = item.get('size', '')
             color = item.get('color', '')
-            variant_id = item.get('variant_id')
-
-            if variant_id in ('', 0):
-                variant_id = None
-
-            if variant_id is None and (size or color):
-                variant_query = ['product_id = %s']
-                variant_params = [product_id]
-                if size:
-                    variant_query.append('size = %s')
-                    variant_params.append(size)
-                if color:
-                    variant_query.append('color = %s')
-                    variant_params.append(color)
-                cursor.execute(
-                    f"SELECT id FROM product_variants WHERE {' AND '.join(variant_query)} LIMIT 1",
-                    tuple(variant_params)
-                )
-                variant_row = cursor.fetchone()
-                if variant_row:
-                    variant_id = variant_row['id']
-
-            if variant_id is not None:
-                try:
-                    variant_id = int(variant_id)
-                except (TypeError, ValueError):
-                    variant_id = None
 
 
             cursor.execute('''
                 INSERT INTO order_items (
-                    order_id, product_id, variant_id, product_name,
+                    order_id, product_id, product_name,
                     size, color, quantity, unit_price, subtotal
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (order_id, product_id, variant_id, product_name, size, color, quantity, unit_price, item_subtotal))
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (order_id, product_id, product_name, size, color, quantity, unit_price, item_subtotal))
 
 
             cursor.execute('UPDATE products SET sales_count = sales_count + %s WHERE id = %s', (quantity, product_id))
-
-        success, error_msg = adjust_inventory_for_order(conn, order_id, 'deduct')
-        if not success:
-            conn.rollback()
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'message': error_msg or 'Insufficient stock for one of the ordered items.'}), 400
 
 
         if selected_cart_ids:
@@ -4091,26 +4056,26 @@ def send_rider_review_email(rider, action, reason=None):
     rider_portal_link = f"{base_url}/rider/login"
 
     if action == 'approved':
-        subject = 'Varon Rider Application Approved'
+        subject = 'Var-n Rider Application Approved'
         html_body = f"""
             <h2>Hi {safe_first_name},</h2>
-            <p>Your Varon rider application has been <strong>approved</strong>. You can now start accepting delivery assignments.</p>
+            <p>Your Var-n rider application has been <strong>approved</strong>. You can now start accepting delivery assignments.</p>
             <ul>
               <li><strong>Vehicle Type:</strong> {safe_vehicle}</li>
               <li><strong>Service Area:</strong> {safe_service_area}</li>
             </ul>
             <p><a href="{rider_portal_link}">Log in to your rider dashboard</a> to complete any remaining onboarding steps.</p>
-            <p>Ride safe,<br>Varon Support Team</p>
+            <p>Ride safe,<br>Var-n Support Team</p>
         """
     elif action == 'rejected':
         safe_reason = html.escape(reason or 'No reason provided').replace('\n', '<br>')
-        subject = 'Update on Your Varon Rider Application'
+        subject = 'Update on Your Var-n Rider Application'
         html_body = f"""
             <h2>Hi {safe_first_name},</h2>
-            <p>Thank you for applying to become a Varon rider. After reviewing the documents we are unable to approve your application at this time.</p>
+            <p>Thank you for applying to become a Var-n rider. After reviewing the documents we are unable to approve your application at this time.</p>
             <p><strong>Reason provided:</strong><br>{safe_reason}</p>
             <p>If you believe this decision was made in error or you have updated documents, please reply to this email or contact {support_email}. You may reapply anytime.</p>
-            <p>We appreciate your interest,<br>Varon Support Team</p>
+            <p>We appreciate your interest,<br>Var-n Support Team</p>
         """
     else:
         return False
@@ -5895,7 +5860,6 @@ def adjust_inventory_for_order(conn, order_id, action):
         return True, None
 
     adjust_cursor = conn.cursor()
-    variant_cursor = conn.cursor()
     failure_message = None
 
     for item in items:
@@ -5906,40 +5870,14 @@ def adjust_inventory_for_order(conn, order_id, action):
         if not product_id or quantity <= 0:
             continue
 
-        if variant_id:
-            try:
-                variant_id_int = int(variant_id)
-            except (TypeError, ValueError):
-                variant_id_int = None
-        else:
-            variant_id_int = None
-
-        if variant_id_int:
-            if action == 'deduct':
-                variant_cursor.execute('''
-                    UPDATE product_variants
-                    SET stock_quantity = stock_quantity - %s
-                    WHERE id = %s AND stock_quantity >= %s
-                ''', (quantity, variant_id_int, quantity))
-                if not variant_cursor.rowcount:
-                    failure_message = f'Insufficient stock for the selected variant of product ID {product_id}.'
-                    break
-            else:
-                variant_cursor.execute('''
-                    UPDATE product_variants
-                    SET stock_quantity = stock_quantity + %s
-                    WHERE id = %s
-                ''', (quantity, variant_id_int))
-
         if action == 'deduct':
-            if not _deduct_inventory_row(adjust_cursor, product_id, variant_id_int, quantity):
+            if not _deduct_inventory_row(adjust_cursor, product_id, variant_id, quantity):
                 failure_message = f'Insufficient stock for product ID {product_id}.'
                 break
         else:
-            _restore_inventory_row(adjust_cursor, product_id, variant_id_int, quantity)
+            _restore_inventory_row(adjust_cursor, product_id, variant_id, quantity)
 
     adjust_cursor.close()
-    variant_cursor.close()
 
     if failure_message:
         return False, failure_message
@@ -6005,7 +5943,6 @@ def send_email(to_email, subject, html_body):
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
-        from email.utils import formataddr
 
         smtp_server = os.getenv('SMTP_SERVER') or os.getenv('MAIL_SERVER') or 'localhost'
         smtp_port = int(os.getenv('SMTP_PORT') or os.getenv('MAIL_PORT') or '587')
@@ -6015,11 +5952,6 @@ def send_email(to_email, subject, html_body):
             or os.getenv('MAIL_USERNAME')
             or os.getenv('MAIL_DEFAULT_SENDER')
             or 'noreply@varon.com'
-        )
-        sender_name = (
-            os.getenv('SENDER_NAME')
-            or os.getenv('MAIL_SENDER_NAME')
-            or 'Varon Support'
         )
         smtp_username = os.getenv('SMTP_USERNAME') or os.getenv('MAIL_USERNAME') or sender_email
         sender_password = (
@@ -6044,7 +5976,7 @@ def send_email(to_email, subject, html_body):
 
         message = MIMEMultipart('alternative')
         message['Subject'] = subject
-        message['From'] = formataddr((sender_name, sender_email))
+        message['From'] = sender_email
         message['To'] = to_email
         message.attach(MIMEText(html_body, 'html'))
 
@@ -12997,7 +12929,7 @@ def set_default_address(address_id):
 
 @app.route('/seller/confirm-order', methods=['POST'])
 def seller_confirm_order():
-    """Seller confirms an order. Inventory is already reserved during checkout."""
+    """Seller confirms an order. Inventory is deducted only after confirmation."""
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
@@ -13055,6 +12987,13 @@ def seller_confirm_order():
             cursor.close()
             conn.close()
             return jsonify({'success': False, 'error': 'Only pending orders can be confirmed.'}), 400
+
+        success, error_msg = adjust_inventory_for_order(conn, order_id, 'deduct')
+        if not success:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': error_msg or 'Unable to deduct stock for this order.'}), 400
 
         cursor.execute('SELECT province, city, postal_code FROM addresses WHERE id = %s', (order_check['shipping_address_id'],))
         address = cursor.fetchone()

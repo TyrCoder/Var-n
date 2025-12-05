@@ -174,6 +174,10 @@
         color: var(--heading);
       }
 
+      .topbar .search {
+        display: none;
+      }
+
       .search input {
         width: 240px;
         background: #f9fafb;
@@ -235,12 +239,12 @@
       .main {
         display: flex;
         flex-direction: column;
-        gap: 28px;
+        gap: 24px;
       }
 
       .grid {
         display: grid;
-        gap: 24px;
+        gap: 20px;
       }
 
       .grid.stats {
@@ -260,7 +264,68 @@
       }
 
       .card .inner {
-        padding: 24px;
+        padding: 24px 24px 28px;
+      }
+
+      .page-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        padding-bottom: 16px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .page-section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 22px;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .page-section-subtitle {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .page-section-eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 6px;
+        font-weight: 600;
+      }
+
+      .page-section-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .page-section-actions input[type="text"],
+      .page-section-actions input[type="search"] {
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        font-size: 13px;
+        min-width: 220px;
+      }
+
+      .table-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .table-scroll {
+        overflow-x: auto;
       }
 
       .metric {
@@ -357,39 +422,100 @@
         font-weight: 600;
       }
 
+      .status-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 14px;
+      }
+
       .status-summary-card {
-        border-radius: 18px;
-        padding: 18px;
-        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-radius: 14px;
+        padding: 14px 16px;
+        border: 1px solid #e2e8f0;
         background: #fff;
-        box-shadow: var(--shadow);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+        cursor: pointer;
         transition: transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
       }
 
       .status-summary-card--active {
-        border-color: #0a0a0a;
-        transform: translateY(-4px);
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+        border-color: #0f172a;
+        transform: translateY(-3px);
+        box-shadow: 0 18px 34px rgba(15, 23, 42, 0.15);
+      }
+
+      .status-card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .status-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .status-card-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #475569;
+      }
+
+      .status-card-count {
+        font-size: 26px;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1;
       }
 
       .status-card-approved {
-        background: rgba(34, 197, 94, 0.08);
-        border-left: 4px solid #16a34a;
+        border-color: #bbf7d0;
+        background: linear-gradient(145deg, #f0fdf4, #ffffff);
+      }
+
+      .status-card-approved .status-card-icon {
+        background: #ecfdf5;
+        color: #0f766e;
       }
 
       .status-card-pending {
-        background: rgba(234, 179, 8, 0.12);
-        border-left: 4px solid #ca8a04;
+        border-color: #fde68a;
+        background: linear-gradient(145deg, #fffbeb, #ffffff);
+      }
+
+      .status-card-pending .status-card-icon {
+        background: #fef3c7;
+        color: #b45309;
       }
 
       .status-card-rejected {
-        background: rgba(248, 113, 113, 0.14);
-        border-left: 4px solid #dc2626;
+        border-color: #fecdd3;
+        background: linear-gradient(145deg, #fef2f2, #ffffff);
+      }
+
+      .status-card-rejected .status-card-icon {
+        background: #fee2e2;
+        color: #b91c1c;
       }
       
       .status-card-total {
-        background: rgba(15, 23, 42, 0.04);
-        border-left: 4px solid #94a3b8;
+        border-color: #c7d2fe;
+        background: linear-gradient(145deg, #eef2ff, #ffffff);
+      }
+
+      .status-card-total .status-card-icon {
+        background: #e0e7ff;
+        color: #4338ca;
       }
 
       .add-product-sidebar-content {
@@ -528,7 +654,6 @@
           </a>
           <a class="side-link" href="#" data-page="inventory">Inventory</a>
           <a class="side-link" href="#" data-page="reviews">Customer Reviews</a>
-          <a class="side-link" href="#" data-page="promotions">Promotions</a>
           <a class="side-link" href="#" data-page="notifications">Notifications</a>
         </div>
         <div class="side-group">
@@ -736,6 +861,9 @@
       let currentOrderFilter = 'confirmed'; // Track current filter state
       let sellerProductsCache = [];
       let currentProductStatusFilter = 'all';
+      let currentProductSearchTerm = '';
+      let archivedProductsCache = [];
+      let currentArchivedSearchTerm = '';
 
       function formatPHDate(value, options) {
         if (!value) return 'N/A';
@@ -793,6 +921,31 @@
             console.error('Error fetching order count:', error);
           });
       }
+
+      const searchCapablePages = new Set(['orders', 'inventory', 'notifications']);
+      const searchPlaceholders = {
+        'archived-products': 'Search archived products...',
+        'orders': 'Search orders or customers...',
+        'inventory': 'Search SKUs, colors, sizes...',
+        'notifications': 'Search notifications...'
+      };
+
+      function updateSearchBarVisibility(page) {
+        const searchContainer = document.querySelector('.topbar .search');
+        const searchInput = document.getElementById('dashboardSearch');
+        if (!searchContainer || !searchInput) {
+          return;
+        }
+
+        const shouldShow = searchCapablePages.has(page);
+        searchContainer.style.display = shouldShow ? 'flex' : 'none';
+
+        if (shouldShow) {
+          searchInput.placeholder = searchPlaceholders[page] || 'Search records...';
+        } else {
+          searchInput.value = '';
+        }
+      }
       
       function loadPage(page) {
         console.log('=== LOADING PAGE:', page, '===');
@@ -809,6 +962,7 @@
         }
 
         try {
+          updateSearchBarVisibility(page);
           if (page === 'add-product') {
             app.classList.add('add-product-mode');
             updateAddProductSidebar();
@@ -824,17 +978,16 @@
 
           const pageNames = {
             'overview': 'Store Dashboard',
-            'add-product': 'Add New Product',
-            'products': 'Products',
-            'archived-products': 'Archived Products',
-            'inventory': 'Inventory',
-            'orders': 'Order Management',
-            'reviews': 'Customer Reviews',
-            'promotions': 'Promotions',
-            'notifications': 'Notifications',
-            'sales': 'Sales Analytics',
-            'performance': 'Performance',
-            'account-settings': 'Account Settings'
+            'add-product': '➕ Add New Product',
+            'products': '📦 Product Management',
+            'archived-products': '🗄️ Archived Products',
+            'inventory': '📋 Inventory Management',
+            'orders': '🛒 Order Management',
+            'reviews': '⭐ Customer Reviews',
+            'notifications': '🔔 Notifications',
+            'sales': '📊 Sales Analytics',
+            'performance': '📈 Performance',
+            'account-settings': '⚙️ Account Settings'
           };
           const titleEl = document.querySelector('.page-title');
           if (titleEl) titleEl.textContent = pageNames[page] || 'Seller Dashboard';
@@ -867,8 +1020,6 @@
                 loadInventory();
               } else if (page === 'reviews') {
                 loadReviews();
-              } else if (page === 'promotions') {
-                loadPromotions();
               } else if (page === 'notifications') {
                 loadNotifications();
               } else if (page === 'sales') {
@@ -906,7 +1057,7 @@
         'add-product': `
           <div class="card">
             <div class="inner" style="max-width: 900px; margin: 0 auto;">
-              <h2 style="margin: 0 0 24px; padding-bottom: 16px; border-bottom: 2px solid var(--line);">📦 Add New Product</h2>
+              <h2 style="margin: 0 0 24px; padding-bottom: 16px; border-bottom: 2px solid var(--line);"></h2>
               <form id="addProductForm" action="/seller/add-product" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 24px;">
 
                 
@@ -1089,7 +1240,7 @@
 
                   
                   <div style="margin-bottom: 20px; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-                    <p style="margin: 0 0 10px; font-size: 13px; font-weight: 500; color: #0a0a0a;">👇 Select a color to set its sizes:</p>
+                    <p style="margin: 0 0 10px; font-size: 13px; font-weight: 500; color: #0a0a0a; text-align: left; line-height: 1.4;">👇 Select a color to set its sizes:</p>
                     <div id="colorTabs" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px;">
                       
                     </div>
@@ -1296,9 +1447,15 @@
         'products': `
           <div class="card">
             <div class="inner">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 style="margin: 0;">All Products</h2>
-                <button class="action-btn" onclick="loadPage('add-product')">+ Add Product</button>
+              <div class="page-section-header">
+                <div>
+                  <p class="page-section-eyebrow">Catalog Oversight</p>
+                  <p class="page-section-subtitle">Review approvals, edit listings, and keep every item shopper-ready.</p>
+                </div>
+                <div class="page-section-actions">
+                  <input type="search" id="product-search-input" placeholder="Search by name, category, or status" autocomplete="off">
+                  <button class="action-btn" onclick="loadPage('add-product')">+ Add Product</button>
+                </div>
               </div>
               <div id="products-list">Loading products...</div>
             </div>
@@ -1317,8 +1474,14 @@
         'archived-products': `
           <div class="card">
             <div class="inner">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h2 style="margin: 0;">🗄️ Archived Products</h2>
+              <div class="page-section-header">
+                <div>
+                  <p class="page-section-eyebrow">Product Lifecycle</p>
+                  <p class="page-section-subtitle">Review what is shelved and request speedy recoveries when ready.</p>
+                </div>
+                <div class="page-section-actions">
+                  <input type="search" id="archived-search-input" placeholder="Search archived items by name or status" autocomplete="off">
+                </div>
               </div>
               <div id="archived-products-list">Loading archived products...</div>
             </div>
@@ -1330,7 +1493,7 @@
             <div class="inner">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb;">
                 <div>
-                  <h2 style="margin: 0 0 4px 0; font-size: 24px; font-weight: 700;">📦 Inventory Management</h2>
+                  <h2 style="margin: 0 0 4px 0; font-size: 24px; font-weight: 700;"></h2>
                   <p style="margin: 0; font-size: 13px; color: #6b7280;">Manage stock levels for all your products and variants</p>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center;">
@@ -1354,7 +1517,7 @@
           <div class="card">
             <div class="inner">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0;">📦 Order Management</h2>
+                <h2 style="margin: 0;"></h2>
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <button style="background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;" onclick="loadNotifications()">
                      Notifications
@@ -1395,7 +1558,7 @@
           <div class="card">
             <div class="inner">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0;">⭐ Customer Reviews</h2>
+                <h2 style="margin: 0;"></h2>
                 <div style="display: flex; gap: 8px;">
                   <button class="action-btn" onclick="filterReviews('all')" data-review-filter="all" style="background: #666;">All Reviews</button>
                   <button class="action-btn" onclick="filterReviews('pending')" data-review-filter="pending" style="background: #ff9800;">Pending</button>
@@ -1406,68 +1569,11 @@
           </div>
         `,
 
-        'promotions': `
-          <div class="card">
-            <div class="inner">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0;">🎯 Promotions</h2>
-                <button class="action-btn" onclick="openCreatePromotion()" style="background: #0a0a0a; padding: 8px 16px;">+ Create Promotion</button>
-              </div>
-              <div id="promotions-list">Loading promotions...</div>
-
-              
-              <div id="promotion-modal" style="position: fixed; inset: 0; background: rgba(10,10,10,0.6); display: none; align-items: center; justify-content: center; z-index: 1000;">
-                <div style="background: #fff; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line);">
-                    <h3 style="margin: 0; font-size: 18px;">Create Promotion</h3>
-                    <button onclick="closePromotionModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
-                  </div>
-                  <form id="promotion-form" style="display: flex; flex-direction: column; gap: 16px;">
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Product *</label>
-                      <select id="promo-product" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
-                        <option value="">Select a product</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Discount Type *</label>
-                      <select id="promo-discount-type" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;" onchange="updateDiscountLabel()">
-                        <option value="percentage">Percentage (%)</option>
-                        <option value="fixed">Fixed Amount (₱)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Discount Value *</label>
-                      <input type="number" id="promo-discount-value" min="0" step="0.01" required placeholder="Enter discount value" style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
-                    </div>
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Start Date *</label>
-                      <input type="datetime-local" id="promo-start-date" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
-                    </div>
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">End Date *</label>
-                      <input type="datetime-local" id="promo-end-date" required style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;">
-                    </div>
-                    <div>
-                      <label style="display: block; margin-bottom: 6px; font-weight: 500;">Description</label>
-                      <textarea id="promo-description" rows="3" placeholder="Promotion details..." style="width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px;"></textarea>
-                    </div>
-                    <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--line);">
-                      <button type="button" class="action-btn" onclick="closePromotionModal()" style="background: #f3f4f6; color: #0a0a0a;">Cancel</button>
-                      <button type="submit" class="action-btn" style="background: #0a0a0a; color: #fff;">Create Promotion</button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
-        `,
-
         'notifications': `
           <div class="card">
             <div class="inner">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0;"> Notifications</h2>
+                <h2 style="margin: 0;"></h2>
                 <button class="action-btn" onclick="markAllNotificationsRead()" style="background: #0a0a0a; padding: 8px 16px;">Mark All as Read</button>
               </div>
               <div id="notifications-list" style="display: grid; gap: 12px;">
@@ -1480,7 +1586,7 @@
         'sales': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 20px;">📊 Sales Analytics</h2>
+              <h2 style="margin: 0 0 20px;"></h2>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
                 <div style="background: #f9f9f9; border: 1px solid var(--line); border-radius: 8px; padding: 16px; text-align: center;">
                   <div style="color: var(--muted); font-size: 13px; margin-bottom: 8px;">Total Revenue (30 days)</div>
@@ -1508,7 +1614,7 @@
         'performance': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 16px;">Performance</h2>
+              <h2 style="margin: 0 0 16px;"></h2>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px;">
                 <div style="background: #f9f9f9; border: 1px solid var(--line); border-radius: 8px; padding: 16px; text-align: center;">
                   <div style="color: var(--muted); font-size: 13px; margin-bottom: 8px;">Average Rating</div>
@@ -1536,7 +1642,7 @@
         'account-settings': `
           <div class="card">
             <div class="inner">
-              <h2 style="margin: 0 0 24px;">Account Settings</h2>
+              <h2 style="margin: 0 0 24px;"></h2>
               
               <form id="profile-settings-form">
                 <div id="brand-settings-section" style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
@@ -1924,12 +2030,17 @@
 
         submitCustomValues();
 
+        const variantStockInputs = document.querySelectorAll('#stock-inputs input[name^="stock_"]');
+        if (variantStockInputs.length && !validateNoZeroStock(variantStockInputs)) {
+          return;
+        }
+
 
         const formData = new FormData(form);
 
-
-        formData.append('color_sizes_mapping', JSON.stringify(colorSizesMapping));
-        console.log('Color sizes mapping being sent:', colorSizesMapping);
+  const colorMappingPayload = buildColorMappingPayload();
+  formData.append('color_sizes_mapping', JSON.stringify(colorMappingPayload));
+  console.log('Color sizes mapping being sent:', colorMappingPayload);
 
 
         console.log('=== Form Data Being Sent ===');
@@ -1975,6 +2086,8 @@
 
             colorSizesMapping = {};
             selectedColor = null;
+            activeColorsCache = [];
+            stockValueCache = {};
 
             loadPage('products');
           } else if (status === 400) {
@@ -2000,30 +2113,171 @@
       let colorSizesMapping = {};
       let selectedColor = null;
       let sizeType = 'clothing';
+      let activeColorsCache = [];
+      let stockValueCache = {};
+
+      function sanitizeVariantToken(value = '') {
+        return value.replace(/[^a-zA-Z0-9]/g, '_');
+      }
+
+      function buildStockInputName(size, color) {
+        return `stock_${sanitizeVariantToken(size)}_${sanitizeVariantToken(color)}`;
+      }
+
+      function captureStockValues() {
+        const inputs = document.querySelectorAll('input[name^="stock_"]');
+        inputs.forEach(input => {
+          stockValueCache[input.name] = input.value;
+        });
+      }
+
+      function purgeStockValuesForColor(color) {
+        if (!color) return;
+        const colorToken = sanitizeVariantToken(color);
+        Object.keys(stockValueCache).forEach(key => {
+          if (key.endsWith(`_${colorToken}`)) {
+            delete stockValueCache[key];
+          }
+        });
+      }
+
+      function purgeStockValueEntry(size, color) {
+        const key = buildStockInputName(size, color);
+        delete stockValueCache[key];
+      }
+
+      function showZeroStockWarning(targetInput) {
+        if (typeof VaronNotifications !== 'undefined' && typeof VaronNotifications.error === 'function') {
+          VaronNotifications.error('Stock quantity cannot be zero. Please enter a valid number.');
+        } else {
+          alert('Stock quantity cannot be zero. Please enter a valid number.');
+        }
+
+        if (targetInput) {
+          if (typeof targetInput.focus === 'function') {
+            targetInput.focus();
+          }
+          if (typeof targetInput.scrollIntoView === 'function') {
+            targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          const originalBorder = targetInput.style.borderColor;
+          const originalShadow = targetInput.style.boxShadow;
+          targetInput.style.borderColor = '#ef4444';
+          targetInput.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.25)';
+          setTimeout(() => {
+            targetInput.style.borderColor = originalBorder;
+            targetInput.style.boxShadow = originalShadow;
+          }, 1500);
+        }
+      }
+
+      function findZeroStockInput(inputs) {
+        if (!inputs) return null;
+        const iterable = Array.from(inputs);
+        for (let i = 0; i < iterable.length; i += 1) {
+          const input = iterable[i];
+          if (!input || input.disabled) continue;
+          const value = input.value;
+          if (value === '' || value === null || value === undefined) continue;
+          const numericValue = Number(value);
+          if (!Number.isNaN(numericValue) && numericValue === 0) {
+            return input;
+          }
+        }
+        return null;
+      }
+
+      function validateNoZeroStock(inputs) {
+        const offendingInput = findZeroStockInput(inputs);
+        if (offendingInput) {
+          showZeroStockWarning(offendingInput);
+          return false;
+        }
+        return true;
+      }
+
+      function getActiveColors() {
+        const colorSet = new Set();
+        document.querySelectorAll('input[name="colors"]:checked').forEach(cb => colorSet.add(cb.value));
+        const customColorsInput = document.getElementById('custom-colors');
+        if (customColorsInput && customColorsInput.value.trim()) {
+          customColorsInput.value.split(',')
+            .map(color => color.trim())
+            .filter(Boolean)
+            .forEach(color => colorSet.add(color));
+        }
+        return Array.from(colorSet);
+      }
+
+      function buildColorMappingPayload() {
+        const activeColors = getActiveColors();
+        const payload = {};
+        activeColors.forEach(color => {
+          if (Array.isArray(colorSizesMapping[color])) {
+            payload[color] = Array.from(new Set(colorSizesMapping[color]));
+          } else {
+            payload[color] = [];
+          }
+        });
+        return payload;
+      }
+
+      function removeColorVariantData(color) {
+        if (!color) return;
+
+        if (colorSizesMapping[color]) {
+          delete colorSizesMapping[color];
+        }
+
+        if (selectedColor === color) {
+          selectedColor = null;
+        }
+
+        purgeStockValuesForColor(color);
+
+        const stockRows = document.querySelectorAll('#stock-inputs tbody tr');
+        let removedAny = false;
+        stockRows.forEach(row => {
+          const colorCell = row.querySelector('td:nth-child(2)');
+          if (colorCell && colorCell.textContent.trim() === color) {
+            row.remove();
+            removedAny = true;
+          }
+        });
+
+        if (removedAny) {
+          updateStockSummary();
+        }
+      }
 
       function updateColorTabs() {
         console.log('🎨 updateColorTabs() called');
-
-        const colors = [];
-
-        const checkedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
-        colors.push(...checkedColors);
-
-        const customColorsInput = document.getElementById('custom-colors');
-        const customColors = customColorsInput && customColorsInput.value.trim()
-          ? customColorsInput.value.split(',').map(c => c.trim()).filter(c => c)
-          : [];
-        colors.push(...customColors);
+        captureStockValues();
+        const previousColors = activeColorsCache.slice();
+        const colors = getActiveColors();
+        const removedColors = previousColors.filter(color => !colors.includes(color));
+        if (removedColors.length) {
+          removedColors.forEach(removeColorVariantData);
+        }
+        activeColorsCache = colors.slice();
 
         console.log('📊 All colors:', colors);
 
         const colorTabsDiv = document.getElementById('colorTabs');
 
         if (colors.length === 0) {
-          colorTabsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic;">Select colors above to create tabs</p>';
+          colorTabsDiv.innerHTML = '<p style="color: var(--muted); font-style: italic; text-align: left; margin: 0; line-height: 1.4;">Select colors above to create tabs</p>';
           selectedColor = null;
+          document.querySelectorAll('.color-size-checkbox').forEach(cb => cb.checked = false);
+          const customSizesField = document.getElementById('custom-sizes-per-color');
+          if (customSizesField) customSizesField.value = '';
           updateStockInputs();
           return;
+        }
+
+        if (selectedColor && !colors.includes(selectedColor)) {
+          selectedColor = null;
         }
 
         let tabsHtml = '';
@@ -2042,6 +2296,8 @@
         if (!selectedColor && colors.length > 0) {
           console.log('⚡ Auto-selecting first color:', colors[0]);
           selectColor(colors[0]);
+        } else {
+          updateStockInputs();
         }
       }
 
@@ -2340,6 +2596,8 @@
       function updateStockInputs() {
         console.log('[UPDATE] Updating stock inputs - generating for ALL colors');
 
+        captureStockValues();
+
         const sizes = [];
 
 
@@ -2370,28 +2628,12 @@
         }
 
 
-        const existingValues = {};
-        const existingInputs = document.querySelectorAll('input[name^="stock_"]');
-        existingInputs.forEach(input => {
-          if (input.value && input.value !== '0') {
-            existingValues[input.name] = input.value;
-          }
-        });
-        console.log('Preserved stock values from ALL inputs:', existingValues);
-
-
-        colorSizesMapping[selectedColor] = sizes;
+        if (selectedColor) {
+          colorSizesMapping[selectedColor] = sizes;
+        }
         console.log('Updated colorSizesMapping:', colorSizesMapping);
 
-        // Get ALL selected colors from checkboxes and custom input
-        const allColors = [];
-        const checkedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
-        allColors.push(...checkedColors);
-        const customColorsInput = document.getElementById('custom-colors');
-        const customColors = customColorsInput && customColorsInput.value.trim()
-          ? customColorsInput.value.split(',').map(c => c.trim()).filter(c => c)
-          : [];
-        allColors.push(...customColors);
+        const allColors = getActiveColors();
 
         console.log('ALL COLORS detected:', allColors);
         console.log('colorSizesMapping:', colorSizesMapping);
@@ -2407,8 +2649,8 @@
           console.log(`Processing color "${color}" with sizes:`, colorSizes);
           
           colorSizes.forEach(size => {
-            const safeName = `stock_${size.replace(/[^a-zA-Z0-9]/g, '_')}_${color.replace(/[^a-zA-Z0-9]/g, '_')}`;
-            const stockValue = existingValues[safeName] || '0';
+            const safeName = buildStockInputName(size, color);
+            const stockValue = (stockValueCache[safeName] !== undefined) ? stockValueCache[safeName] : '0';
             console.log(`Creating stock input: size="${size}", color="${color}", name="${safeName}", value="${stockValue}"`);
             
             // Highlight current color's rows
@@ -2441,9 +2683,11 @@
           input.setAttribute('min', '0');
           input.dataset.fieldLabel = `${input.name.replace('stock_', '').replace(/_/g, ' ')} stock`;
           input.addEventListener('input', event => {
+            stockValueCache[event.target.name] = event.target.value;
             enforceNonNegativeValue(event.target);
             updateStockSummary();
           });
+          stockValueCache[input.name] = input.value;
         });
       }
 
@@ -2510,13 +2754,36 @@
 
       function removeStockRow(button) {
         const row = button.closest('tr');
-        if (row) {
-          row.style.animation = 'fadeOut 0.3s ease-out forwards';
-          setTimeout(() => {
-            row.remove();
-            console.log('Row removed');
-            updateStockSummary(); // Update summary after removal
-          }, 300);
+        if (!row) return;
+
+        const sizeCell = row.querySelector('td:first-child');
+        const colorCell = row.querySelector('td:nth-child(2)');
+        const size = sizeCell ? sizeCell.textContent.trim() : '';
+        const color = colorCell ? colorCell.textContent.trim() : '';
+
+        row.style.animation = 'fadeOut 0.3s ease-out forwards';
+        setTimeout(() => {
+          row.remove();
+          console.log('Row removed');
+          syncRemovedVariantSelection(color, size);
+          updateStockSummary();
+        }, 300);
+      }
+
+      function syncRemovedVariantSelection(color, size) {
+        if (!color || !size) return;
+
+        if (colorSizesMapping[color]) {
+          colorSizesMapping[color] = colorSizesMapping[color].filter(entry => entry !== size);
+          if (colorSizesMapping[color].length === 0) {
+            delete colorSizesMapping[color];
+          }
+        }
+
+        purgeStockValueEntry(size, color);
+
+        if (selectedColor === color) {
+          updateSizesForColor();
         }
       }
 
@@ -4838,104 +5105,6 @@
           });
       }
 
-
-      function loadPromotions() {
-        fetch('/seller/promotions')
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              displayPromotions(data.promotions || []);
-              loadProductsForPromotion();
-            } else {
-              document.getElementById('promotions-list').innerHTML = '<p style="color:#999;padding:40px;">No promotions found</p>';
-            }
-          })
-          .catch(error => {
-            document.getElementById('promotions-list').innerHTML = '<p style="color:#d32f2f;padding:40px;">Error loading promotions</p>';
-          });
-      }
-
-      function displayPromotions(promotions) {
-        if (!promotions || promotions.length === 0) {
-          document.getElementById('promotions-list').innerHTML = '<p style="color:#999;padding:40px;text-align:center;">No active promotions. Create one to get started!</p>';
-          return;
-        }
-
-        let html = `<div style="display: grid; gap: 16px;">`;
-
-        promotions.forEach(promo => {
-          const isActive = new Date(promo.start_date) <= new Date() && new Date() <= new Date(promo.end_date);
-          const discountText = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
-          const isApproved = promo.is_approved;
-          const statusColor = isApproved ? (isActive ? '#10b981' : '#fbbf24') : '#9ca3af';
-          const statusText = isApproved ? (isActive ? 'Active' : 'Scheduled') : 'Pending Approval';
-
-          html += `
-            <div style="background: #f9f9f9; border-left: 4px solid ${statusColor}; border-radius: 8px; padding: 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-                <div>
-                  <strong style="font-size: 14px;">${promo.product_name}</strong>
-                  <p style="margin: 4px 0 0; color: #666; font-size: 13px;">Discount: ${discountText}</p>
-                  ${!isApproved ? '<p style="margin: 4px 0 0; color: #f59e0b; font-size: 12px; font-weight: 500;">⏳ Waiting for admin approval...</p>' : ''}
-                </div>
-                <span class="status-badge ${isApproved ? (isActive ? 'status-active' : 'status-pending') : 'status-pending'}">${statusText}</span>
-              </div>
-              <p style="margin: 0 0 12px; font-size: 13px; color: #666;">${promo.description || 'No description'}</p>
-              <div style="display: flex; gap: 16px; font-size: 12px; color: #999;">
-                <span>Start: ${formatPHDate(promo.start_date)}</span>
-                <span>End: ${formatPHDate(promo.end_date)}</span>
-              </div>
-              <div style="display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-                ${!isApproved ? `<button class="action-btn" disabled style="flex: 1; background: #ccc; color: #999; padding: 8px 12px; font-size: 13px; cursor: not-allowed;">✎ Edit (pending approval)</button>` : `<button class="action-btn" onclick="editPromotion(${promo.id})" style="flex: 1; background: #2196f3; color: #fff; padding: 8px 12px; font-size: 13px;">✎ Edit</button>`}
-                <button class="action-btn" onclick="deletePromotion(${promo.id})" style="flex: 1; background: #ef4444; color: #fff; padding: 8px 12px; font-size: 13px;">🗑 Delete</button>
-              </div>
-            </div>
-          `;
-        });
-
-        html += `</div>`;
-        document.getElementById('promotions-list').innerHTML = html;
-      }
-
-      function loadProductsForPromotion() {
-        fetch('/seller/products')
-          .then(response => response.json())
-          .then(data => {
-            if (data.products) {
-              const select = document.getElementById('promo-product');
-              select.innerHTML = '<option value="">Select a product</option>';
-              data.products.forEach(product => {
-                const option = document.createElement('option');
-                option.value = product.id;
-                option.textContent = product.name + ' (₱' + product.price + ')';
-                select.appendChild(option);
-              });
-            }
-          });
-      }
-
-      function openCreatePromotion() {
-        document.getElementById('promotion-modal').style.display = 'flex';
-        loadProductsForPromotion();
-      }
-
-      function closePromotionModal() {
-        document.getElementById('promotion-modal').style.display = 'none';
-        document.getElementById('promotion-form').reset();
-      }
-
-      function updateDiscountLabel() {
-        const discountType = document.getElementById('promo-discount-type').value;
-        const discountInput = document.getElementById('promo-discount-value');
-        if (discountType === 'percentage') {
-          discountInput.placeholder = 'Enter discount percentage (0-100)';
-          discountInput.max = '100';
-        } else {
-          discountInput.placeholder = 'Enter discount amount in ₱';
-          discountInput.removeAttribute('max');
-        }
-      }
-
       // Notifications Functions
       function loadNotifications() {
         console.log('[NOTIFICATIONS] Loading notifications...');
@@ -5406,24 +5575,25 @@
       }
 
       function renderProductStatusCards(stats = {}) {
+        const buildCard = (key, label, count, icon, options = {}) => {
+          const { filterKey, countId } = options;
+          return `
+            <div class="status-summary-card status-card-${key}" role="button" tabindex="0" data-status="${filterKey}" aria-pressed="false" onclick="filterProductsByStatus('${filterKey}')" onkeydown="handleStatusCardKey(event, '${filterKey}')">
+              <span class="status-card-icon" aria-hidden="true">${icon}</span>
+              <div class="status-card-body">
+                <span class="status-card-label">${label}</span>
+                <span class="status-card-count"${countId ? ` id="${countId}"` : ''}>${count}</span>
+              </div>
+            </div>
+          `;
+        };
+
         return `
           <div class="status-summary-grid" role="group" aria-label="Product status summary">
-            <div class="status-summary-card status-card-approved" role="button" tabindex="0" data-status="approved" aria-pressed="false" onclick="filterProductsByStatus('approved')" onkeydown="handleStatusCardKey(event, 'approved')">
-              <small>Approved</small>
-              <strong id="approved-count">${stats.approved || 0}</strong>
-            </div>
-            <div class="status-summary-card status-card-pending" role="button" tabindex="0" data-status="pending" aria-pressed="false" onclick="filterProductsByStatus('pending')" onkeydown="handleStatusCardKey(event, 'pending')">
-              <small>Pending Approval</small>
-              <strong id="pending-count">${stats.pending || 0}</strong>
-            </div>
-            <div class="status-summary-card status-card-rejected" role="button" tabindex="0" data-status="rejected" aria-pressed="false" onclick="filterProductsByStatus('rejected')" onkeydown="handleStatusCardKey(event, 'rejected')">
-              <small>Rejected</small>
-              <strong id="rejected-count">${stats.rejected || 0}</strong>
-            </div>
-            <div class="status-summary-card status-card-total" role="button" tabindex="0" data-status="all" aria-pressed="false" onclick="filterProductsByStatus('all')" onkeydown="handleStatusCardKey(event, 'all')" aria-label="Show all products">
-              <small>Total Products</small>
-              <strong>${stats.total || 0}</strong>
-            </div>
+            ${buildCard('approved', 'Approved', stats.approved || 0, '✓', { filterKey: 'approved', countId: 'approved-count' })}
+            ${buildCard('pending', 'Pending Approval', stats.pending || 0, '⏳', { filterKey: 'pending', countId: 'pending-count' })}
+            ${buildCard('rejected', 'Rejected', stats.rejected || 0, '⚠️', { filterKey: 'rejected', countId: 'rejected-count' })}
+            ${buildCard('total', 'Total Products', stats.total || 0, '📦', { filterKey: 'all', countId: 'total-products-count' })}
           </div>
         `;
       }
@@ -5450,6 +5620,144 @@
         `;
       }
 
+      function initializeProductSearchField(hasProducts = false) {
+        const searchInput = document.getElementById('product-search-input');
+        if (!searchInput) {
+          return;
+        }
+
+        searchInput.removeEventListener('input', handleProductSearchInput);
+
+        if (!hasProducts) {
+          searchInput.value = '';
+          searchInput.setAttribute('disabled', 'disabled');
+          return;
+        }
+
+        searchInput.removeAttribute('disabled');
+        searchInput.value = currentProductSearchTerm;
+        searchInput.addEventListener('input', handleProductSearchInput);
+      }
+
+      function handleProductSearchInput(event) {
+        currentProductSearchTerm = (event.target.value || '').trim();
+        renderProductsTable(currentProductStatusFilter);
+      }
+
+      function initializeArchivedSearchField(hasProducts = false) {
+        const searchInput = document.getElementById('archived-search-input');
+        if (!searchInput) {
+          return;
+        }
+
+        ['input', 'search'].forEach(eventName => {
+          searchInput.removeEventListener(eventName, handleArchivedSearchInput);
+        });
+
+        if (!hasProducts) {
+          searchInput.value = '';
+          searchInput.setAttribute('disabled', 'disabled');
+          return;
+        }
+
+        searchInput.removeAttribute('disabled');
+        searchInput.value = currentArchivedSearchTerm;
+        ['input', 'search'].forEach(eventName => {
+          searchInput.addEventListener(eventName, handleArchivedSearchInput);
+        });
+      }
+
+      function handleArchivedSearchInput(event) {
+        currentArchivedSearchTerm = (event.target.value || '').trim();
+        renderArchivedProductsTable();
+      }
+
+      function renderArchivedProductsTable() {
+        const container = document.getElementById('archived-products-list');
+        if (!container) {
+          return;
+        }
+
+        if (!archivedProductsCache || archivedProductsCache.length === 0) {
+          container.innerHTML = '<p style="text-align:center;color:#999;padding:24px;">No archived products</p>';
+          return;
+        }
+
+        const normalizedSearchTerm = (currentArchivedSearchTerm || '').toLowerCase();
+        let filteredProducts = archivedProductsCache.slice();
+
+        if (normalizedSearchTerm) {
+          filteredProducts = filteredProducts.filter(product => {
+            const searchableFields = [
+              product.name || '',
+              product.category_name || '',
+              product.archive_status || '',
+              product.archived_at ? formatPHDate(product.archived_at) : '',
+              typeof product.price !== 'undefined' ? String(product.price) : ''
+            ].map(value => (value || '').toString().toLowerCase());
+
+            return searchableFields.some(value => value.includes(normalizedSearchTerm));
+          });
+        }
+
+        if (filteredProducts.length === 0) {
+          const sanitizedTerm = escapeHtml(currentArchivedSearchTerm || '');
+          container.innerHTML = `<p style="text-align:center;color:#999;padding:24px;">No archived products match "${sanitizedTerm}".</p>`;
+          return;
+        }
+
+        const rowsHtml = filteredProducts.map(getArchivedProductRowHtml).join('');
+        container.innerHTML = `
+          <div class="table-scroll">
+            <table style="width:100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background:#f3f4f6;">
+                  <th style="padding:12px; text-align:left; border:1px solid #e5e7eb; font-weight:600;">Product</th>
+                  <th style="padding:12px; text-align:left; border:1px solid #e5e7eb; font-weight:600;">Price</th>
+                  <th style="padding:12px; text-align:left; border:1px solid #e5e7eb; font-weight:600;">Archived</th>
+                  <th style="padding:12px; text-align:left; border:1px solid #e5e7eb; font-weight:600;">Status</th>
+                  <th style="padding:12px; text-align:left; border:1px solid #e5e7eb; font-weight:600;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function getArchivedProductRowHtml(product) {
+        const safeName = escapeHtml(product.name || 'Untitled Product');
+        const sanitizedNameForAction = (product.name || '').replace(/'/g, "\\'");
+        const priceNumber = Number(product.price);
+        const priceDisplay = Number.isFinite(priceNumber) ? priceNumber.toFixed(2) : '0.00';
+        const archivedDate = product.archived_at ? formatPHDate(product.archived_at) : '—';
+        const statusIsRecovery = (product.archive_status || '').toLowerCase() === 'pending_recovery';
+        const statusText = statusIsRecovery ? 'Recovery Pending' : 'Archived';
+        const statusClass = statusIsRecovery ? 'status-pending' : 'status-inactive';
+        const actionContent = statusIsRecovery
+          ? '<span style="color: #f59e0b; font-size: 12px;">⏳ Awaiting admin approval</span>'
+          : `<button class="action-btn" onclick="requestRecovery(${product.id}, '${sanitizedNameForAction}')" style="padding: 6px 12px; font-size: 12px; background: #10b981;">Request Recovery</button>`;
+
+        return `
+          <tr style="border-bottom:1px solid #e5e7eb;">
+            <td style="padding:12px; border:1px solid #e5e7eb; font-weight:600; color:#0a0a0a;">
+              ${safeName}
+              ${product.category_name ? `<div style="font-size:12px;color:#6b7280;margin-top:2px;">${escapeHtml(product.category_name)}</div>` : ''}
+            </td>
+            <td style="padding:12px; border:1px solid #e5e7eb;">₱${priceDisplay}</td>
+            <td style="padding:12px; border:1px solid #e5e7eb; font-size:13px; color:var(--muted);">${archivedDate}</td>
+            <td style="padding:12px; border:1px solid #e5e7eb;">
+              <span class="status-badge ${statusClass}">${statusText}</span>
+            </td>
+            <td style="padding:12px; border:1px solid #e5e7eb;">
+              ${actionContent}
+            </td>
+          </tr>
+        `;
+      }
+
       function loadProducts() {
         console.log('[FETCH] Loading products...');
         const container = document.getElementById('products-list');
@@ -5458,6 +5766,9 @@
           console.error('[ERROR] products-list container not found');
           return;
         }
+
+        currentProductSearchTerm = '';
+        initializeProductSearchField(false);
 
         fetch('/seller/products', { credentials: 'include' })
           .then(response => {
@@ -5480,6 +5791,7 @@
             if (sellerProductsCache.length > 0) {
               const stats = data.stats || {};
               currentProductStatusFilter = 'all';
+              initializeProductSearchField(true);
 
               container.innerHTML = renderProductsTableShell(stats);
 
@@ -5489,6 +5801,7 @@
                 updateStatusCardActiveStates();
               });
             } else {
+              initializeProductSearchField(false);
               document.getElementById('products-list').innerHTML = '<div style="text-align:center;color:#999;padding:40px;"><p style="font-size:16px; margin-bottom: 16px;">No products yet</p><p>Click the "+ Add Product" button to add your first product</p></div>';
             }
           })
@@ -5498,6 +5811,7 @@
             if (container) {
               container.innerHTML = '<div style="color:#ef4444; text-align: center; padding: 20px;"><strong>Failed to load products</strong><br><small>' + error.message + '</small></div>';
             }
+            initializeProductSearchField(false);
           });
       }
 
@@ -5514,7 +5828,7 @@
         }
 
         const normalizedStatus = (statusFilter || 'all').toLowerCase();
-        const filteredProducts = sellerProductsCache.filter(product => {
+        let filteredProducts = sellerProductsCache.filter(product => {
           const approvalStatus = (product.approval_status || 'approved').toLowerCase();
           if (normalizedStatus === 'all') {
             return true;
@@ -5522,8 +5836,24 @@
           return approvalStatus === normalizedStatus;
         });
 
+        const normalizedSearchTerm = (currentProductSearchTerm || '').toLowerCase();
+        const sanitizedSearchTerm = escapeHtml(currentProductSearchTerm || '');
+        if (normalizedSearchTerm) {
+          filteredProducts = filteredProducts.filter(product => {
+            const name = (product.name || '').toLowerCase();
+            const category = (product.category_name || '').toLowerCase();
+            const status = (product.approval_status || '').toLowerCase();
+            return name.includes(normalizedSearchTerm) ||
+              category.includes(normalizedSearchTerm) ||
+              status.includes(normalizedSearchTerm);
+          });
+        }
+
         if (filteredProducts.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="padding: 32px; text-align: center; color: #6b7280;">No products found for this status.</td></tr>';
+          const emptyMessage = normalizedSearchTerm
+            ? `No products match "${sanitizedSearchTerm}".`
+            : 'No products found for this status.';
+          tbody.innerHTML = `<tr><td colspan="5" style="padding: 32px; text-align: center; color: #6b7280;">${emptyMessage}</td></tr>`;
           return;
         }
 
@@ -5954,6 +6284,19 @@
 
       async function submitProductEdit() {
         const form = document.getElementById('editProductForm');
+        captureCurrentEditStockInputs();
+        syncEditVariantsHiddenField();
+
+        const editStockInputs = document.querySelectorAll('#edit-stock-inputs input[type="number"][data-color][data-size]');
+        if (editStockInputs.length && !validateNoZeroStock(editStockInputs)) {
+          return;
+        }
+
+        const manualVariantInputs = document.querySelectorAll('#variant-rows input[type="number"]');
+        if (manualVariantInputs.length && !validateNoZeroStock(manualVariantInputs)) {
+          return;
+        }
+
         const formData = new FormData(form);
 
 
@@ -6091,53 +6434,34 @@
       }
 
       function loadArchivedProducts() {
+        const container = document.getElementById('archived-products-list');
+        if (!container) {
+          console.error('[ERROR] archived-products-list container not found');
+          return;
+        }
+
+        container.innerHTML = '<p style="text-align:center;color:#999;padding:24px;">Loading archived products...</p>';
+        currentArchivedSearchTerm = '';
+        initializeArchivedSearchField(false);
+
         fetch('/seller/archived-products')
           .then(response => response.json())
           .then(data => {
-            if (data.products && data.products.length > 0) {
-              let html = `
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Price</th>
-                      <th>Archived Date</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-              `;
+            archivedProductsCache = Array.isArray(data.products) ? data.products : [];
 
-              data.products.forEach(product => {
-                const archivedDate = formatPHDate(product.archived_at);
-                const statusText = product.archive_status === 'pending_recovery' ? 'Recovery Pending' : 'Archived';
-                const statusClass = product.archive_status === 'pending_recovery' ? 'status-pending' : 'status-inactive';
-
-                html += `
-                  <tr>
-                    <td>${product.name}</td>
-                    <td>₱${parseFloat(product.price).toFixed(2)}</td>
-                    <td style="font-size:13px;color:var(--muted)">${archivedDate}</td>
-                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    <td>
-                      ${product.archive_status === 'archived' ?
-                        `<button class="action-btn" onclick="requestRecovery(${product.id}, '${product.name}')" style="padding: 6px 12px; font-size: 12px; background: #10b981;">Request Recovery</button>` :
-                        '<span style="color: #f59e0b; font-size: 12px;">⏳ Awaiting admin approval</span>'
-                      }
-                    </td>
-                  </tr>
-                `;
-              });
-
-              html += '</tbody></table>';
-              document.getElementById('archived-products-list').innerHTML = html;
-            } else {
-              document.getElementById('archived-products-list').innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No archived products</p>';
+            if (!archivedProductsCache.length) {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:24px;">No archived products</p>';
+              initializeArchivedSearchField(false);
+              return;
             }
+
+            initializeArchivedSearchField(true);
+            renderArchivedProductsTable();
           })
           .catch(error => {
-            document.getElementById('archived-products-list').innerHTML = '<p style="color:#ef4444;">Error loading archived products</p>';
+            console.error('[ERROR] Error loading archived products:', error);
+            container.innerHTML = '<p style="color:#ef4444;text-align:center;padding:24px;">Error loading archived products</p>';
+            initializeArchivedSearchField(false);
           });
       }
 
@@ -6563,6 +6887,8 @@
         console.log('📄 DOMContentLoaded - Setting up all systems...');
         
         try {
+          updateSearchBarVisibility('overview');
+
           // Initialize sidebar navigation
           SidebarNavigator.init();
           
@@ -6578,42 +6904,6 @@
           }
 
           setupProfileSettingsForm();
-
-          // Setup promotion form listener
-          const promotionForm = document.getElementById('promotion-form');
-          if (promotionForm) {
-            promotionForm.addEventListener('submit', (e) => {
-              e.preventDefault();
-
-              const formData = new FormData();
-              formData.append('product_id', document.getElementById('promo-product').value);
-              formData.append('discount_type', document.getElementById('promo-discount-type').value);
-              formData.append('discount_value', document.getElementById('promo-discount-value').value);
-              formData.append('start_date', document.getElementById('promo-start-date').value);
-              formData.append('end_date', document.getElementById('promo-end-date').value);
-              formData.append('description', document.getElementById('promo-description').value);
-
-              fetch('/seller/promotion/create', { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                  if (data.success) {
-                    const productSelect = document.getElementById('promo-product');
-                    const discountType = document.getElementById('promo-discount-type').value;
-                    const discountValue = document.getElementById('promo-discount-value').value;
-                    const selectedProduct = productSelect.options[productSelect.selectedIndex].text;
-                    const discountDisplay = discountType === 'percentage' ? `${discountValue}%` : `₱${discountValue}`;
-
-                    alert(`✅ Promotion Submitted for Admin Approval!. Product: ${selectedProduct}. Discount: ${discountDisplay}. Status: Pending Review. You will receive an email once the admin approves or rejects your promotion.`);
-                    if (typeof closePromotionModal === 'function') closePromotionModal();
-                    if (typeof loadPromotions === 'function') loadPromotions();
-                  } else {
-                    alert('❌ Error: ' + (data.error || 'Unknown error'));
-                  }
-                })
-                .catch(error => alert('❌ Error creating promotion: ' + error.message));
-            });
-            console.log('✅ Promotion form listener set up');
-          }
 
           // Setup drag-and-drop for images
           const dropZone = document.getElementById('dropZone');
