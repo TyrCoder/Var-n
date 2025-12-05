@@ -765,44 +765,51 @@
 
 
 				if (!email || !password || !confirmPassword || !phone || !shopName) {
-					errorDiv.textContent = 'All fields are required';
+					errorDiv.textContent = 'Please complete all required fields.';
 					errorDiv.style.display = 'block';
+					showNotification('Please complete all required fields.', 'error');
 					return;
 				}
 
 
 				if (!tnc) {
-					alert('Please agree to the Terms & Conditions to continue');
+					errorDiv.textContent = 'You must agree to the Terms & Conditions to continue.';
+					errorDiv.style.display = 'block';
+					showNotification('You must agree to the Terms & Conditions to continue.', 'error');
 					return;
 				}
 
 
 				if (!email.includes('@') || !email.includes('.')) {
-					errorDiv.textContent = 'Please enter a valid email address';
+					errorDiv.textContent = 'Please enter a valid email address.';
 					errorDiv.style.display = 'block';
+					showNotification('Please enter a valid email address.', 'error');
 					return;
 				}
 
 
 				const cleanPhone = phone.replace(/[\+\-\s]/g, '');
 				if (!cleanPhone.match(/^\d+$/)) {
-					errorDiv.textContent = 'Please enter a valid phone number';
+					errorDiv.textContent = 'Please enter a valid phone number.';
 					errorDiv.style.display = 'block';
+					showNotification('Please enter a valid phone number.', 'error');
 					return;
 				}
 
 
 				if (password !== confirmPassword) {
-					errorDiv.textContent = 'Passwords do not match';
+					errorDiv.textContent = 'Passwords do not match.';
 					errorDiv.style.display = 'block';
+					showNotification('Passwords do not match.', 'error');
 					return;
 				}
 
 
 				const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
 				if (!passwordRegex.test(password)) {
-					errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
+					errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers.';
 					errorDiv.style.display = 'block';
+					showNotification('Password must be at least 6 characters and contain both letters and numbers.', 'error');
 					return;
 				}
 

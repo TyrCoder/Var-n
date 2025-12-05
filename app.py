@@ -5,6 +5,7 @@ import mysql.connector
 import time
 import secrets
 import shutil
+import html
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from decimal import Decimal
@@ -29,46 +30,91 @@ DB_CONFIG = {
     'port': int(os.getenv('DB_PORT', '3306') or 3306)
 }
 
+UTC_ZONE = timezone.utc
+PH_TIMEZONE = timezone(timedelta(hours=8))
 
-def get_db():
-    """Create a new MySQL connection using environment configuration."""
+def get_db(dictionary=False):
+    """Return a fresh MySQL connection (optionally with dict cursor)."""
+    ensure_db_initialized()
     try:
         conn = mysql.connector.connect(
             host=DB_CONFIG['host'],
             user=DB_CONFIG['user'],
             password=DB_CONFIG['password'],
             database=DB_CONFIG['database'],
-            port=DB_CONFIG.get('port', 3306),
-            autocommit=True
+            port=DB_CONFIG['port']
         )
+        if dictionary:
+            return conn, conn.cursor(dictionary=True)
         return conn
     except mysql.connector.Error as err:
-        if err.errno == 2003:
-            print(f"[DB ERROR] Cannot connect to MySQL server on '{DB_CONFIG['host']}'. Is the MySQL service running?")
-        elif err.errno == 1049:
-            print(f"[DB ERROR] Database '{DB_CONFIG['database']}' does not exist. Please create it first.")
-        else:
-            print(f"[DB ERROR] Database connection failed: {err}")
+        print(f"[DB ERROR] Connection failed: {err}")
         return None
+
+def ensure_table_engine(cursor, table_name, engine='InnoDB'):
+    """Ensure a table uses the expected storage engine so FKs succeed."""
+    try:
+        cursor.execute(
+            """
+            SELECT ENGINE FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+            """,
+            (DB_CONFIG['database'], table_name)
+        )
+        info = cursor.fetchone()
+        current_engine = (info or {}).get('ENGINE') if info else None
+        if current_engine and current_engine.lower() != engine.lower():
+            cursor.execute(f"ALTER TABLE {table_name} ENGINE={engine}")
+            print(f"[DB] Converted {table_name} to {engine} for FK compatibility")
     except Exception as err:
-        print(f"[DB ERROR] Unexpected error: {err}")
-        return None
+        print(f"[DB WARNING] Could not verify engine for {table_name}: {err}")
 
+STORE_MESSAGES_TABLE_SQL = '''
+    CREATE TABLE IF NOT EXISTS store_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        seller_id INT NOT NULL,
+        buyer_id INT NOT NULL,
+        sender_id INT NOT NULL,
+        sender_role ENUM('buyer', 'seller', 'admin') NOT NULL DEFAULT 'buyer',
+        message TEXT NOT NULL,
+        is_read BOOLEAN DEFAULT FALSE,
+        read_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+        FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_seller_buyer (seller_id, buyer_id, created_at),
+        INDEX idx_sender (sender_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+'''
 
-def convert_decimals_to_float(obj):
-    """Recursively convert Decimal objects to floats for JSON serialization."""
-    if isinstance(obj, dict):
-        return {k: convert_decimals_to_float(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [convert_decimals_to_float(item) for item in obj]
-    if isinstance(obj, Decimal):
-        return float(obj)
-    return obj
-
-
-PH_TIMEZONE = timezone(timedelta(hours=8))
-UTC_ZONE = timezone.utc
 MAX_BRAND_CHAT_LENGTH = 2000
+
+
+def convert_decimals_to_float(value):
+    """Recursively convert Decimal objects within nested structures to floats."""
+    if isinstance(value, list):
+        return [convert_decimals_to_float(item) for item in value]
+    if isinstance(value, dict):
+        return {key: convert_decimals_to_float(val) for key, val in value.items()}
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def verify_user_password(hashed_password, password):
+    if not hashed_password or not password:
+        return False
+    return hashed_password == password
+
+
+def ensure_store_messages_table(cursor):
+    try:
+        cursor.execute(STORE_MESSAGES_TABLE_SQL)
+        return True
+    except mysql.connector.Error as err:
+        print(f"[DB ERROR] Failed to ensure store_messages table: {err}")
+        return False
 
 
 def _coerce_datetime(value):
@@ -823,22 +869,7 @@ def init_db():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
 
-        cursor.execute('''CREATE TABLE IF NOT EXISTS store_messages (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            seller_id INT NOT NULL,
-            buyer_id INT NOT NULL,
-            sender_id INT NOT NULL,
-            sender_role ENUM('buyer', 'seller', 'admin') NOT NULL DEFAULT 'buyer',
-            message TEXT NOT NULL,
-            is_read BOOLEAN DEFAULT FALSE,
-            read_at TIMESTAMP NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
-            FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-            INDEX idx_seller_buyer (seller_id, buyer_id, created_at),
-            INDEX idx_sender (sender_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        cursor.execute(STORE_MESSAGES_TABLE_SQL)
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS rider_ratings (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1233,22 +1264,7 @@ def admin_create_tables():
                 messages.append(f"link_url column check: {str(e)}")
 
 
-        cursor.execute('''CREATE TABLE IF NOT EXISTS store_messages (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            seller_id INT NOT NULL,
-            buyer_id INT NOT NULL,
-            sender_id INT NOT NULL,
-            sender_role ENUM('buyer', 'seller', 'admin') NOT NULL DEFAULT 'buyer',
-            message TEXT NOT NULL,
-            is_read BOOLEAN DEFAULT FALSE,
-            read_at TIMESTAMP NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
-            FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-            INDEX idx_seller_buyer (seller_id, buyer_id, created_at),
-            INDEX idx_sender (sender_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        cursor.execute(STORE_MESSAGES_TABLE_SQL)
         messages.append("Store messages table created/verified")
 
         conn.commit()
@@ -1554,6 +1570,11 @@ def messaging_page():
     conversations = []
     try:
         cursor = conn.cursor(dictionary=True)
+        if not ensure_store_messages_table(cursor):
+            cursor.close()
+            conn.close()
+            flash('Unable to load messages right now.', 'error')
+            return redirect(url_for('index'))
         cursor.execute('''
             SELECT s.id, s.store_name, s.store_slug, s.logo_url, s.island_group,
                    MAX(sm.created_at) AS last_message_at
@@ -1786,6 +1807,10 @@ def brand_store_messages(store_slug):
         return _chat_error('Database connection failed', 500)
 
     cursor = conn.cursor(dictionary=True)
+    if not ensure_store_messages_table(cursor):
+        cursor.close()
+        conn.close()
+        return _chat_error('Unable to initialize chat storage', 500)
     try:
         cursor.execute('''
             SELECT id, user_id, store_name, store_slug
@@ -2568,6 +2593,7 @@ def place_order():
                 normalized_items.append({
                     'cart_id': cart_item.get('cart_id'),
                     'id': cart_item.get('product_id'),
+                    'variant_id': cart_item.get('variant_id'),
                     'name': cart_item.get('name', 'Product'),
                     'price': price,
                     'quantity': quantity,
@@ -2692,17 +2718,51 @@ def place_order():
             item_subtotal = unit_price * quantity
             size = item.get('size', '')
             color = item.get('color', '')
+            variant_id = item.get('variant_id')
+
+            if variant_id in ('', 0):
+                variant_id = None
+
+            if variant_id is None and (size or color):
+                variant_query = ['product_id = %s']
+                variant_params = [product_id]
+                if size:
+                    variant_query.append('size = %s')
+                    variant_params.append(size)
+                if color:
+                    variant_query.append('color = %s')
+                    variant_params.append(color)
+                cursor.execute(
+                    f"SELECT id FROM product_variants WHERE {' AND '.join(variant_query)} LIMIT 1",
+                    tuple(variant_params)
+                )
+                variant_row = cursor.fetchone()
+                if variant_row:
+                    variant_id = variant_row['id']
+
+            if variant_id is not None:
+                try:
+                    variant_id = int(variant_id)
+                except (TypeError, ValueError):
+                    variant_id = None
 
 
             cursor.execute('''
                 INSERT INTO order_items (
-                    order_id, product_id, product_name,
+                    order_id, product_id, variant_id, product_name,
                     size, color, quantity, unit_price, subtotal
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (order_id, product_id, product_name, size, color, quantity, unit_price, item_subtotal))
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (order_id, product_id, variant_id, product_name, size, color, quantity, unit_price, item_subtotal))
 
 
             cursor.execute('UPDATE products SET sales_count = sales_count + %s WHERE id = %s', (quantity, product_id))
+
+        success, error_msg = adjust_inventory_for_order(conn, order_id, 'deduct')
+        if not success:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': error_msg or 'Insufficient stock for one of the ordered items.'}), 400
 
 
         if selected_cart_ids:
@@ -3041,7 +3101,7 @@ def login():
             cursor.close()
             conn.close()
 
-            if user and password == user['password']:
+            if user and verify_user_password(user.get('password'), password):
                 session.clear()
                 session['logged_in'] = True
                 session['user_id'] = user['id']
@@ -3157,8 +3217,7 @@ def signup():
                 except:
                     pass
 
-                cleanup_pending_rider_upload(pending_upload_token)
-                session.pop('pending_rider_signup', None)
+                session.pop('pending_signup', None)
                 conn.close()
                 return jsonify({'success': False, 'message': 'Failed to generate OTP. Please check database connection and ensure otp_verifications table exists. Check server logs for details.'}), 500
 
@@ -3173,16 +3232,17 @@ def signup():
                     'verification_type': 'email',
                     'purpose': 'registration'
                 }
-                return jsonify({'success': True, 'message': 'OTP sent successfully', 'redirect': url_for('verify_otp_page')})
+                return jsonify({
+                    'success': True,
+                    'message': 'Rider signup successful! Check your email for the OTP to finish logging in.',
+                    'redirect': url_for('verify_otp_page')
+                })
             else:
-                cleanup_pending_rider_upload(pending_upload_token)
-                session.pop('pending_rider_signup', None)
+                session.pop('pending_signup', None)
                 return jsonify({'success': False, 'message': 'Failed to send OTP email. Please check email configuration (MAIL_USERNAME and MAIL_PASSWORD in .env file).'}), 500
 
         except Exception as err:
-            pending_ctx = session.get('pending_rider_signup') or {}
-            cleanup_pending_rider_upload(pending_ctx.get('upload_token'))
-            session.pop('pending_rider_signup', None)
+            session.pop('pending_signup', None)
             return jsonify({'success': False, 'message': f'Registration failed: {str(err)}'}), 500
 
     return render_template('auth/signup.html')
@@ -3286,9 +3346,16 @@ def signup_rider():
                 'orcr': request.files.get('document_orcr')
             }
 
-            missing_docs = [REQUIRED_RIDER_DOCUMENTS.get(doc, doc.replace('_', ' ').title())
-                            for doc, upload in doc_files.items()
-                            if not upload or not upload.filename.strip()]
+            primary_vehicle = (vehicle_types[0] if vehicle_types else '') or ''
+            required_doc_keys = ['government_id']
+            if primary_vehicle.lower() != 'bicycle':
+                required_doc_keys.extend(['vehicle_registration', 'orcr'])
+
+            missing_docs = [
+                REQUIRED_RIDER_DOCUMENTS.get(doc, doc.replace('_', ' ').title())
+                for doc in required_doc_keys
+                if not doc_files.get(doc) or not doc_files[doc].filename.strip()
+            ]
             if missing_docs:
                 cursor.close()
                 conn.close()
@@ -3312,6 +3379,8 @@ def signup_rider():
 
             try:
                 for doc_key, upload in doc_files.items():
+                    if not upload or not upload.filename.strip():
+                        continue
                     original_name = secure_filename(upload.filename)
                     if not original_name.lower().endswith(allowed_extensions):
                         raise ValueError(f"Unsupported file type for {REQUIRED_RIDER_DOCUMENTS.get(doc_key, doc_key.title())}. Please upload JPG, PNG, PDF, or HEIC files.")
@@ -3955,8 +4024,9 @@ def admin_pending_riders():
     except Exception as err:
         return jsonify({'error': str(err)}), 500
 
-@app.route('/admin/approve-rider/<int:rider_id>', methods=['POST'])
-def admin_approve_rider(rider_id):
+
+@app.route('/admin/riders/<int:rider_id>/details', methods=['GET'])
+def admin_rider_details(rider_id):
     if not session.get('logged_in') or session.get('role') != 'admin':
         return jsonify({'error': 'Access denied'}), 403
 
@@ -3966,17 +4036,128 @@ def admin_approve_rider(rider_id):
 
     try:
         cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT r.*, u.first_name, u.last_name, u.email, u.phone
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.id = %s
+        ''', (rider_id,))
+        rider = cursor.fetchone()
 
+        if not rider:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Rider not found'}), 404
+
+        ensure_rider_documents_table(cursor)
+        cursor.execute('''
+            SELECT document_type, file_url, verified, uploaded_at, updated_at
+            FROM rider_documents
+            WHERE rider_id = %s
+        ''', (rider_id,))
+        documents = cursor.fetchall() or []
+
+        ensure_rider_review_logs_table(cursor)
+        cursor.execute('''
+            SELECT action, reason, created_at
+            FROM rider_review_logs
+            WHERE rider_id = %s
+            ORDER BY created_at DESC
+        ''', (rider_id,))
+        logs = cursor.fetchall() or []
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({'rider': rider, 'documents': documents, 'logs': logs}), 200
+
+    except Exception as err:
+        if conn:
+            conn.close()
+        return jsonify({'error': str(err)}), 500
+
+def send_rider_review_email(rider, action, reason=None):
+    if not rider or not rider.get('email'):
+        return False
+
+    first_name = (rider.get('first_name') or 'Rider').strip() or 'Rider'
+    vehicle = rider.get('vehicle_type') or 'Not specified'
+    service_area = rider.get('service_area') or 'Not specified'
+    safe_first_name = html.escape(first_name)
+    safe_vehicle = html.escape(vehicle)
+    safe_service_area = html.escape(service_area)
+    support_email = os.getenv('SUPPORT_EMAIL', 'support@varn.com')
+    base_url = request.url_root.rstrip('/')
+    rider_portal_link = f"{base_url}/rider/login"
+
+    if action == 'approved':
+        subject = 'Varon Rider Application Approved'
+        html_body = f"""
+            <h2>Hi {safe_first_name},</h2>
+            <p>Your Varon rider application has been <strong>approved</strong>. You can now start accepting delivery assignments.</p>
+            <ul>
+              <li><strong>Vehicle Type:</strong> {safe_vehicle}</li>
+              <li><strong>Service Area:</strong> {safe_service_area}</li>
+            </ul>
+            <p><a href="{rider_portal_link}">Log in to your rider dashboard</a> to complete any remaining onboarding steps.</p>
+            <p>Ride safe,<br>Varon Support Team</p>
+        """
+    elif action == 'rejected':
+        safe_reason = html.escape(reason or 'No reason provided').replace('\n', '<br>')
+        subject = 'Update on Your Varon Rider Application'
+        html_body = f"""
+            <h2>Hi {safe_first_name},</h2>
+            <p>Thank you for applying to become a Varon rider. After reviewing the documents we are unable to approve your application at this time.</p>
+            <p><strong>Reason provided:</strong><br>{safe_reason}</p>
+            <p>If you believe this decision was made in error or you have updated documents, please reply to this email or contact {support_email}. You may reapply anytime.</p>
+            <p>We appreciate your interest,<br>Varon Support Team</p>
+        """
+    else:
+        return False
+
+    return send_email(rider['email'], subject, html_body)
+
+@app.route('/admin/approve-rider/<int:rider_id>', methods=['POST'])
+def admin_approve_rider(rider_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+
+    email_sent = False
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute('''
+            SELECT r.id, r.user_id, r.vehicle_type, r.service_area, r.status,
+                   u.first_name, u.last_name, u.email
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.id = %s
+        ''', (rider_id,))
+        rider = cursor.fetchone()
+
+        if not rider:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Rider not found'}), 404
 
         cursor.execute("UPDATE riders SET status = 'approved' WHERE id = %s", (rider_id,))
+        log_rider_review_action(cursor, rider_id, session.get('user_id'), 'approved')
 
         conn.commit()
         cursor.close()
         conn.close()
 
-        return jsonify({'success': True, 'message': 'Rider approved successfully'}), 200
+        email_sent = send_rider_review_email(rider, 'approved')
+
+        return jsonify({'success': True, 'message': 'Rider approved successfully', 'email_sent': email_sent}), 200
 
     except Exception as err:
+        if conn:
+            conn.close()
         return jsonify({'error': str(err)}), 500
 
 @app.route('/admin/reject-rider/<int:rider_id>', methods=['POST'])
@@ -3988,27 +4169,49 @@ def admin_reject_rider(rider_id):
     if not conn:
         return jsonify({'error': 'Database error'}), 500
 
+    reason = None
+    if request.is_json:
+        reason = (request.json or {}).get('reason')
+    if not reason and request.form:
+        reason = request.form.get('reason')
+    if reason is not None:
+        reason = str(reason)
+    reason = (reason or 'No reason provided').strip() or 'No reason provided'
+
+    email_sent = False
     try:
         cursor = conn.cursor(dictionary=True)
 
-
-        cursor.execute('SELECT user_id FROM riders WHERE id = %s', (rider_id,))
+        cursor.execute('''
+            SELECT r.id, r.user_id, r.vehicle_type, r.service_area,
+                   u.first_name, u.last_name, u.email
+            FROM riders r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.id = %s
+        ''', (rider_id,))
         rider = cursor.fetchone()
 
-        if rider:
-            user_id = rider['user_id']
+        if not rider:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Rider not found'}), 404
 
-            cursor.execute('DELETE FROM riders WHERE id = %s', (rider_id,))
+        cursor.execute('DELETE FROM riders WHERE id = %s', (rider_id,))
+        cursor.execute("UPDATE users SET role = 'buyer' WHERE id = %s", (rider['user_id'],))
 
-            cursor.execute("UPDATE users SET role = 'buyer' WHERE id = %s", (user_id,))
+        log_rider_review_action(cursor, rider_id, session.get('user_id'), 'rejected', reason)
 
         conn.commit()
         cursor.close()
         conn.close()
 
-        return jsonify({'success': True, 'message': 'Rider application rejected'}), 200
+        email_sent = send_rider_review_email(rider, 'rejected', reason)
+
+        return jsonify({'success': True, 'message': 'Rider application rejected', 'reason': reason, 'email_sent': email_sent}), 200
 
     except Exception as err:
+        if conn:
+            conn.close()
         return jsonify({'error': str(err)}), 500
 
 @app.route('/admin/pending-edits', methods=['GET'])
@@ -5692,6 +5895,7 @@ def adjust_inventory_for_order(conn, order_id, action):
         return True, None
 
     adjust_cursor = conn.cursor()
+    variant_cursor = conn.cursor()
     failure_message = None
 
     for item in items:
@@ -5702,14 +5906,40 @@ def adjust_inventory_for_order(conn, order_id, action):
         if not product_id or quantity <= 0:
             continue
 
+        if variant_id:
+            try:
+                variant_id_int = int(variant_id)
+            except (TypeError, ValueError):
+                variant_id_int = None
+        else:
+            variant_id_int = None
+
+        if variant_id_int:
+            if action == 'deduct':
+                variant_cursor.execute('''
+                    UPDATE product_variants
+                    SET stock_quantity = stock_quantity - %s
+                    WHERE id = %s AND stock_quantity >= %s
+                ''', (quantity, variant_id_int, quantity))
+                if not variant_cursor.rowcount:
+                    failure_message = f'Insufficient stock for the selected variant of product ID {product_id}.'
+                    break
+            else:
+                variant_cursor.execute('''
+                    UPDATE product_variants
+                    SET stock_quantity = stock_quantity + %s
+                    WHERE id = %s
+                ''', (quantity, variant_id_int))
+
         if action == 'deduct':
-            if not _deduct_inventory_row(adjust_cursor, product_id, variant_id, quantity):
+            if not _deduct_inventory_row(adjust_cursor, product_id, variant_id_int, quantity):
                 failure_message = f'Insufficient stock for product ID {product_id}.'
                 break
         else:
-            _restore_inventory_row(adjust_cursor, product_id, variant_id, quantity)
+            _restore_inventory_row(adjust_cursor, product_id, variant_id_int, quantity)
 
     adjust_cursor.close()
+    variant_cursor.close()
 
     if failure_message:
         return False, failure_message
@@ -5770,39 +6000,59 @@ def _restore_inventory_row(cursor, product_id, variant_id, quantity):
     return True
 
 def send_email(to_email, subject, html_body):
-    """Send email notification (using simple SMTP or print for development)"""
+    """Send email notification using configured SMTP credentials (or log in dev)."""
     try:
         import smtplib
         from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
+        from email.utils import formataddr
 
+        smtp_server = os.getenv('SMTP_SERVER') or os.getenv('MAIL_SERVER') or 'localhost'
+        smtp_port = int(os.getenv('SMTP_PORT') or os.getenv('MAIL_PORT') or '587')
+        sender_email = (
+            os.getenv('SENDER_EMAIL')
+            or os.getenv('SMTP_USERNAME')
+            or os.getenv('MAIL_USERNAME')
+            or os.getenv('MAIL_DEFAULT_SENDER')
+            or 'noreply@varon.com'
+        )
+        sender_name = (
+            os.getenv('SENDER_NAME')
+            or os.getenv('MAIL_SENDER_NAME')
+            or 'Varon Support'
+        )
+        smtp_username = os.getenv('SMTP_USERNAME') or os.getenv('MAIL_USERNAME') or sender_email
+        sender_password = (
+            os.getenv('SENDER_PASSWORD')
+            or os.getenv('SMTP_PASSWORD')
+            or os.getenv('MAIL_PASSWORD')
+            or ''
+        )
+        use_tls_setting = os.getenv('SMTP_USE_TLS', os.getenv('MAIL_USE_TLS', 'true'))
+        use_tls = str(use_tls_setting).strip().lower() not in ('false', '0', 'no')
 
+        dev_mode = (
+            os.getenv('EMAIL_LOG_ONLY', '').strip().lower() == 'true'
+            or (smtp_server in ('localhost', '127.0.0.1') and not sender_password and not os.getenv('MAIL_USERNAME'))
+        )
 
-        smtp_server = os.getenv('SMTP_SERVER', 'localhost')
-        smtp_port = int(os.getenv('SMTP_PORT', '587'))
-        sender_email = os.getenv('SENDER_EMAIL', 'noreply@varon.com')
-        sender_password = os.getenv('SENDER_PASSWORD', '')
-
-
-        if not sender_email or sender_email == 'noreply@varon.com':
+        if dev_mode:
             print(f"[📧 EMAIL LOG] To: {to_email}")
             print(f"[📧 EMAIL LOG] Subject: {subject}")
-            print(f"[📧 EMAIL LOG] Body: {html_body[:200]}...")
+            print(f"[📧 EMAIL LOG] Body: {html_body[:400]}...")
             return True
-
 
         message = MIMEMultipart('alternative')
         message['Subject'] = subject
-        message['From'] = sender_email
+        message['From'] = formataddr((sender_name, sender_email))
         message['To'] = to_email
+        message.attach(MIMEText(html_body, 'html'))
 
-        part = MIMEText(html_body, 'html')
-        message.attach(part)
-
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
+        with smtplib.SMTP(smtp_server, smtp_port, timeout=20) as server:
             if sender_password:
-                server.starttls()
-                server.login(sender_email, sender_password)
+                if use_tls:
+                    server.starttls()
+                server.login(smtp_username, sender_password)
             server.sendmail(sender_email, to_email, message.as_string())
 
         return True
@@ -6569,7 +6819,6 @@ def seller_account_settings():
             return jsonify(response_data), 200
 
         else:
-            from werkzeug.security import check_password_hash, generate_password_hash
 
             full_name = request.form.get('full_name', '').strip()
             phone_number = request.form.get('phone_number', '').strip()
@@ -11248,6 +11497,7 @@ def api_rider_active_deliveries():
 
 
 def ensure_rider_documents_table(cursor):
+    ensure_table_engine(cursor, 'riders')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS rider_documents (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -11258,9 +11508,40 @@ def ensure_rider_documents_table(cursor):
             uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uniq_rider_doc (rider_id, document_type),
-            FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE
+            INDEX idx_rider_id (rider_id),
+            CONSTRAINT fk_rider_documents_rider
+                FOREIGN KEY (rider_id)
+                REFERENCES riders(id)
+                ON DELETE CASCADE
+                ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ''')
+
+
+def ensure_rider_review_logs_table(cursor):
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rider_review_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            rider_id INT NOT NULL,
+            admin_id INT,
+            action ENUM('approved', 'rejected') NOT NULL,
+            reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
+            FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ''')
+
+
+def log_rider_review_action(cursor, rider_id, admin_id, action, reason=None):
+    try:
+        ensure_rider_review_logs_table(cursor)
+        cursor.execute(
+            'INSERT INTO rider_review_logs (rider_id, admin_id, action, reason) VALUES (%s, %s, %s, %s)',
+            (rider_id, admin_id, action, reason)
+        )
+    except Exception as err:
+        print(f"[WARN] Failed to log rider review action: {err}")
 
 
 def get_pending_rider_upload_dir(token):
@@ -12716,7 +12997,7 @@ def set_default_address(address_id):
 
 @app.route('/seller/confirm-order', methods=['POST'])
 def seller_confirm_order():
-    """Seller confirms an order. Inventory is deducted only after confirmation."""
+    """Seller confirms an order. Inventory is already reserved during checkout."""
     if 'user_id' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
@@ -12774,13 +13055,6 @@ def seller_confirm_order():
             cursor.close()
             conn.close()
             return jsonify({'success': False, 'error': 'Only pending orders can be confirmed.'}), 400
-
-        success, error_msg = adjust_inventory_for_order(conn, order_id, 'deduct')
-        if not success:
-            conn.rollback()
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'error': error_msg or 'Unable to deduct stock for this order.'}), 400
 
         cursor.execute('SELECT province, city, postal_code FROM addresses WHERE id = %s', (order_check['shipping_address_id'],))
         address = cursor.fetchone()

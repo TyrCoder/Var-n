@@ -18,7 +18,7 @@
 				--accent-strong: #f5f5f5;
 				--accent-dark: #272727;
 				--line: rgba(255, 255, 255, 0.18);
-				--error: #4d4d4d;
+				--error: #d64545;
 				--success: #d5d5d5;
 				--shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
 			}
@@ -508,6 +508,100 @@
 				font-weight: 500;
 			}
 
+			.form-group.error label {
+				color: var(--error);
+			}
+
+			.form-group.error .form-input,
+			.form-group.error .form-select {
+				border-color: var(--error);
+				box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+			}
+
+			.error-message {
+				font-size: 12px;
+				color: var(--error);
+				margin-top: 6px;
+			}
+
+			.vehicle-section.error {
+				border-color: var(--error);
+				box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+			}
+
+			.vehicle-section .section-error-message {
+				margin-top: 12px;
+			}
+
+			.tnc-row.error label {
+				color: var(--error);
+			}
+
+			.tnc-row.error input[type="checkbox"] {
+				outline: 2px solid var(--error);
+				outline-offset: 2px;
+			}
+
+			.tnc-row .section-error-message {
+				width: 100%;
+				flex-basis: 100%;
+				margin-top: 8px;
+			}
+
+			.vehicle-upload-card {
+				margin-top: 18px;
+				padding: 16px;
+				border-radius: 16px;
+				border: 1px solid #ececec;
+				background: #fafafa;
+			}
+
+			.upload-table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-top: 12px;
+			}
+
+			.upload-table td {
+				padding: 10px 0;
+				vertical-align: top;
+			}
+
+			.upload-table td:first-child {
+				width: 45%;
+				padding-right: 16px;
+			}
+
+			.upload-input {
+				display: inline-flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.upload-input input[type="file"] {
+				display: none;
+			}
+
+			.upload-btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				padding: 8px 14px;
+				border-radius: 999px;
+				background: #111111;
+				color: #f5f5f5;
+				font-size: 13px;
+				font-weight: 600;
+				cursor: pointer;
+			}
+
+			.file-name {
+				display: block;
+				font-size: 12px;
+				color: #6b6b6b;
+				margin-top: 4px;
+			}
+
 			.service-area-card {
 				margin-top: 16px;
 				padding: 20px;
@@ -812,14 +906,14 @@
 							<div class="vehicle-section" aria-labelledby="vehicle-group-label">
 								<header>
 									<div>
-										<strong id="vehicle-group-label">Vehicle type(s)</strong>
-										<div class="helper-text">Select all that apply. We'll request plate details for each.</div>
+										<strong id="vehicle-group-label">Vehicle type</strong>
+										<div class="helper-text">Choose one vehicle so we can request its plate details.</div>
 									</div>
-									<span class="helper-text">Multi-vehicle ready</span>
+									<span class="helper-text">One selection at a time</span>
 								</header>
 								<div class="vehicle-options">
 									<div class="vehicle-option">
-										<input type="checkbox" id="vehicle-motorcycle" name="vehicle_type" value="motorcycle" onchange="updateVehicleDetails()" />
+										<input type="radio" id="vehicle-motorcycle" name="vehicle_type" value="motorcycle" onchange="updateVehicleDetails()" />
 										<label for="vehicle-motorcycle">
 											<span class="vehicle-icon">
 												<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f1f1f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17a3 3 0 1 0 0-6"/><path d="M20 17a3 3 0 1 0 0-6"/><path d="M4 14h16l-3-5h-4l-3 5"/></svg>
@@ -829,7 +923,7 @@
 										</label>
 									</div>
 									<div class="vehicle-option">
-										<input type="checkbox" id="vehicle-van" name="vehicle_type" value="van" onchange="updateVehicleDetails()" />
+										<input type="radio" id="vehicle-van" name="vehicle_type" value="van" onchange="updateVehicleDetails()" />
 										<label for="vehicle-van">
 											<span class="vehicle-icon">
 												<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f1f1f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13l5 5v5H3z"/><path d="M3 7V5h4"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
@@ -839,7 +933,7 @@
 										</label>
 									</div>
 									<div class="vehicle-option">
-										<input type="checkbox" id="vehicle-truck" name="vehicle_type" value="truck" onchange="updateVehicleDetails()" />
+										<input type="radio" id="vehicle-truck" name="vehicle_type" value="truck" onchange="updateVehicleDetails()" />
 										<label for="vehicle-truck">
 											<span class="vehicle-icon">
 												<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f1f1f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H1v13h15V3Z"/><path d="M16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
@@ -849,7 +943,7 @@
 										</label>
 									</div>
 									<div class="vehicle-option">
-										<input type="checkbox" id="vehicle-car" name="vehicle_type" value="car" onchange="updateVehicleDetails()" />
+										<input type="radio" id="vehicle-car" name="vehicle_type" value="car" onchange="updateVehicleDetails()" />
 										<label for="vehicle-car">
 											<span class="vehicle-icon">
 												<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f1f1f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16V8l2-3h10l2 3v8"/><path d="M2 16h20"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="16.5" cy="18.5" r="2.5"/></svg>
@@ -859,7 +953,7 @@
 										</label>
 									</div>
 									<div class="vehicle-option">
-										<input type="checkbox" id="vehicle-bicycle" name="vehicle_type" value="bicycle" onchange="updateVehicleDetails()" />
+										<input type="radio" id="vehicle-bicycle" name="vehicle_type" value="bicycle" onchange="updateVehicleDetails()" />
 										<label for="vehicle-bicycle">
 											<span class="vehicle-icon">
 												<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f1f1f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M12 5l4 5h-4l3 6"/><path d="M5.5 16.5l3-6h3"/></svg>
@@ -1097,40 +1191,243 @@
 		}
 	};
 
+	const vehiclePlateState = {};
+	const vehicleUploadState = {};
+
+	function persistVehiclePlateState(container) {
+		if (!container) return;
+		const activeInputs = container.querySelectorAll('input[data-vehicle-type]');
+		activeInputs.forEach(input => {
+			const type = input.dataset.vehicleType;
+			if (type) {
+				vehiclePlateState[type] = input.value;
+			}
+		});
+	}
+
+	function clearErrorForElement(element) {
+		if (!element) return;
+		const group = element.closest('.form-group');
+		if (group) {
+			group.classList.remove('error');
+			group.querySelectorAll('.error-message').forEach(msg => msg.remove());
+		}
+	}
+
+	function setFieldError(element, message) {
+		if (!element) return;
+		const group = element.closest('.form-group');
+		const target = group || element.parentElement || element;
+		if (group) {
+			group.classList.add('error');
+		}
+		if (!target) return;
+		target.querySelectorAll('.error-message').forEach(msg => msg.remove());
+		const messageEl = document.createElement('div');
+		messageEl.className = 'error-message';
+		messageEl.textContent = message;
+		target.appendChild(messageEl);
+	}
+
+	function clearSectionError(section) {
+		if (!section) return;
+		section.classList.remove('error');
+		section.querySelectorAll('.section-error-message').forEach(msg => msg.remove());
+	}
+
+	function setSectionError(section, message) {
+		if (!section) return;
+		section.classList.add('error');
+		let messageEl = section.querySelector('.section-error-message');
+		if (!messageEl) {
+			messageEl = document.createElement('div');
+			messageEl.className = 'error-message section-error-message';
+			section.appendChild(messageEl);
+		}
+		messageEl.textContent = message;
+	}
+
+	function clearFieldErrors() {
+		document.querySelectorAll('.form-group.error').forEach(group => {
+			group.classList.remove('error');
+			group.querySelectorAll('.error-message').forEach(msg => msg.remove());
+		});
+		clearSectionError(document.querySelector('.vehicle-section'));
+		clearSectionError(document.querySelector('.tnc-row'));
+	}
+
+	function handleUploadChange(event) {
+		const input = event.target;
+		const type = input.dataset.vehicleType;
+		const field = input.dataset.uploadField;
+		const displayId = input.dataset.displayTarget;
+		const fileName = input.files && input.files[0] ? input.files[0].name : 'No file chosen';
+		if (!vehicleUploadState[type]) {
+			vehicleUploadState[type] = {};
+		}
+		vehicleUploadState[type][field] = fileName;
+		if (displayId) {
+			const target = document.getElementById(displayId);
+			if (target) {
+				target.textContent = fileName;
+			}
+		}
+	}
+
 	window.updateVehicleDetails = function() {
-		const vehicleCheckboxes = document.querySelectorAll('input[name="vehicle_type"]:checked');
 		const container = document.getElementById('vehicleDetailsContainer');
 		if (!container) return;
+		clearSectionError(document.querySelector('.vehicle-section'));
 
-		container.innerHTML = '';
-		if (!vehicleCheckboxes.length) {
+		persistVehiclePlateState(container);
+		const selectedVehicle = document.querySelector('input[name="vehicle_type"]:checked');
+
+		if (!selectedVehicle) {
+			container.innerHTML = '';
 			container.style.display = 'none';
 			return;
 		}
 
+		const type = selectedVehicle.value;
+		const vehicleLabel = selectedVehicle.closest('.vehicle-option')?.querySelector('.vehicle-label')?.textContent || type;
+		const isBicycle = type === 'bicycle';
+		const savedValue = vehiclePlateState[type] || '';
+		if (isBicycle) {
+			vehiclePlateState[type] = 'N/A';
+		}
+
 		container.style.display = 'block';
-		Array.from(vehicleCheckboxes).forEach(cb => {
-			const vehicleLabel = cb.closest('.vehicle-option')?.querySelector('.vehicle-label')?.textContent || cb.value;
-			const vehicleSection = document.createElement('div');
-			vehicleSection.className = 'vehicle-detail-card';
-			vehicleSection.innerHTML = `
-				<div class="vehicle-detail-head">
-					<span>${vehicleLabel}</span>
-					<span>Required</span>
-				</div>
-				<div class="form-group" style="margin-top:12px;">
-					<label for="vehiclePlate_${cb.value}">${vehicleLabel} plate number</label>
-					<input id="vehiclePlate_${cb.value}" name="vehicle_plate_${cb.value}" class="form-input" type="text" placeholder="Enter ${vehicleLabel.toLowerCase()} plate number" required />
-				</div>
+		container.innerHTML = '';
+
+		const vehicleSection = document.createElement('div');
+		vehicleSection.className = 'vehicle-detail-card';
+		vehicleSection.setAttribute('data-vehicle-type', type);
+		const detailHead = document.createElement('div');
+		detailHead.className = 'vehicle-detail-head';
+		detailHead.innerHTML = `<span>${vehicleLabel}</span><span>Required</span>`;
+		vehicleSection.appendChild(detailHead);
+
+		if (!isBicycle) {
+			const plateGroup = document.createElement('div');
+			plateGroup.className = 'form-group';
+			plateGroup.style.marginTop = '12px';
+			plateGroup.innerHTML = `
+				<label for="vehiclePlate_${type}">${vehicleLabel} plate number</label>
+				<input id="vehiclePlate_${type}" name="vehicle_plate_${type}" class="form-input" type="text" placeholder="Enter ${vehicleLabel.toLowerCase()} plate number" required />
 			`;
-			container.appendChild(vehicleSection);
+			const plateInput = plateGroup.querySelector('input');
+			if (plateInput) {
+				plateInput.value = savedValue;
+				plateInput.dataset.vehicleType = type;
+				plateInput.addEventListener('input', event => {
+					vehiclePlateState[type] = event.target.value;
+					clearErrorForElement(event.target);
+				});
+			}
+			vehicleSection.appendChild(plateGroup);
+		} else {
+			vehicleSection.appendChild(document.createRange().createContextualFragment(`
+				<p class="helper-text" style="margin-top:12px;">Bicycles do not require plate numbers.</p>
+				<input type="hidden" name="vehicle_plate_${type}" value="N/A" />
+			`));
+		}
+
+		const uploadCard = document.createElement('div');
+		uploadCard.className = 'vehicle-upload-card';
+		uploadCard.innerHTML = `
+			<div class="vehicle-detail-head">
+				<span>Upload documents</span>
+				<span>Required</span>
+			</div>
+			<table class="upload-table">
+				<tbody></tbody>
+			</table>
+		`;
+
+		const uploadRows = [
+			{
+				key: 'vehicle',
+				label: isBicycle ? 'Bicycle photo' : `${vehicleLabel} photo`,
+				helper: 'Clear image showing the full vehicle.',
+				inputId: `vehicle_image_${type}`,
+				nameAttr: `vehicle_image_${type}`
+			},
+			{
+				key: 'license',
+				label: "Driver's license photo",
+				helper: 'Upload a readable copy of your license.',
+				inputId: `license_image_${type}`,
+				nameAttr: 'document_government_id'
+			}
+		];
+
+		if (!isBicycle) {
+			uploadRows.push(
+				{
+					key: 'vehicle_registration',
+					label: 'Vehicle registration (CR)',
+					helper: 'Upload the LTO certificate of registration.',
+					inputId: `registration_image_${type}`,
+					nameAttr: 'document_vehicle_registration'
+				},
+				{
+					key: 'orcr',
+					label: 'Official Receipt (OR/CR)',
+					helper: 'Upload the latest official receipt for this vehicle.',
+					inputId: `orcr_image_${type}`,
+					nameAttr: 'document_orcr'
+				}
+			);
+		}
+
+		const tbody = uploadCard.querySelector('tbody');
+		const savedUploads = vehicleUploadState[type] || {};
+		uploadRows.forEach(row => {
+			const rowId = `fileName_${row.key}_${type}`;
+			const tr = document.createElement('tr');
+			tr.innerHTML = `
+				<td>
+					<strong>${row.label}</strong>
+					<div class="helper-text">${row.helper}</div>
+				</td>
+				<td>
+					<label class="upload-input" for="${row.inputId}">
+						<input id="${row.inputId}" type="file" name="${row.nameAttr}" accept="image/*,.pdf,.heic,.heif" data-vehicle-type="${type}" data-upload-field="${row.key}" data-display-target="${rowId}" />
+						<span class="upload-btn">Choose file</span>
+					</label>
+					<span class="file-name" id="${rowId}">${savedUploads[row.key] || 'No file chosen'}</span>
+				</td>
+			`;
+			tbody.appendChild(tr);
+		});
+
+		uploadCard.querySelectorAll('input[type="file"]').forEach(input => {
+			input.addEventListener('change', handleUploadChange);
+		});
+
+		vehicleSection.appendChild(uploadCard);
+
+		container.appendChild(vehicleSection);
+
+		Object.keys(vehiclePlateState).forEach(key => {
+			if (key !== type) {
+				delete vehiclePlateState[key];
+			}
+		});
+		Object.keys(vehicleUploadState).forEach(key => {
+			if (key !== type) {
+				delete vehicleUploadState[key];
+			}
 		});
 	};
 
 	function initializeVehicleListeners() {
-		const checkboxes = document.querySelectorAll('input[name="vehicle_type"]');
-		checkboxes.forEach(checkbox => {
-			checkbox.addEventListener('change', updateVehicleDetails);
+		const vehicleInputs = document.querySelectorAll('input[name="vehicle_type"]');
+		vehicleInputs.forEach(input => {
+			input.addEventListener('change', () => {
+				clearSectionError(document.querySelector('.vehicle-section'));
+				updateVehicleDetails();
+			});
 		});
 		updateVehicleDetails();
 	}
@@ -1140,6 +1437,15 @@
 		const errorDiv = document.getElementById('errorDisplay');
 		const phoneInput = document.getElementById('riderPhone');
 		const emailInput = document.getElementById('riderEmail');
+		const firstNameInput = document.getElementById('firstName');
+		const lastNameInput = document.getElementById('lastName');
+		const passwordInput = document.getElementById('riderPassword');
+		const confirmPasswordInput = document.getElementById('riderConfirmPassword');
+		const licenseInput = document.getElementById('licenseNumber');
+		const regionSelect = document.getElementById('riderRegion');
+		const vehicleSection = document.querySelector('.vehicle-section');
+		const tncInput = document.getElementById('riderTnc');
+		const tncRow = document.querySelector('.tnc-row');
 
 		if (emailInput) {
 			emailInput.addEventListener('input', e => {
@@ -1170,18 +1476,38 @@
 		}
 
 		document.querySelectorAll('.form-input, .form-select').forEach(input => {
-			input.addEventListener('input', () => {
+			const resetErrorState = () => {
 				if (errorDiv) {
 					errorDiv.style.display = 'none';
 					errorDiv.textContent = '';
 				}
-			});
+				clearErrorForElement(input);
+			};
+			input.addEventListener('input', resetErrorState);
+			input.addEventListener('change', resetErrorState);
 		});
+
+		if (tncInput && tncRow) {
+			tncInput.addEventListener('change', () => {
+				if (tncInput.checked) {
+					clearSectionError(tncRow);
+					if (errorDiv) {
+						errorDiv.style.display = 'none';
+						errorDiv.textContent = '';
+					}
+				}
+			});
+		}
 
 		if (form) {
 			form.addEventListener('submit', e => {
 				e.preventDefault();
+				clearFieldErrors();
 				updateServiceArea();
+				if (errorDiv) {
+					errorDiv.style.display = 'none';
+					errorDiv.textContent = '';
+				}
 
 				setTimeout(() => {
 					const formData = new FormData(form);
@@ -1197,90 +1523,107 @@
 					const provinces = Array.from(document.querySelectorAll('input[name="province"]:checked')).map(cb => cb.value);
 					const tnc = formData.get('tnc');
 
-					if (errorDiv) {
-						errorDiv.style.display = 'none';
-						errorDiv.textContent = '';
+					let hasError = false;
+					let bannerMessage = '';
+					const ensureBannerMessage = message => {
+						if (!bannerMessage) {
+							bannerMessage = message;
+						}
+					};
+
+					const fieldsConfig = [
+						{ value: firstName, element: firstNameInput },
+						{ value: lastName, element: lastNameInput },
+						{ value: email, element: emailInput },
+						{ value: phone, element: phoneInput },
+						{ value: password, element: passwordInput },
+						{ value: confirmPassword, element: confirmPasswordInput },
+						{ value: licenseNumber, element: licenseInput }
+					];
+
+					fieldsConfig.forEach(({ value, element }) => {
+						if (!value) {
+							setFieldError(element, 'This field is required');
+							hasError = true;
+						}
+					});
+
+					if (email && !validateEmail(email)) {
+						setFieldError(emailInput, 'Enter a valid email address');
+						hasError = true;
+						ensureBannerMessage('Please enter a valid email address.');
 					}
 
-					const requiredFields = [firstName, lastName, email, phone, password, confirmPassword, licenseNumber];
-					if (requiredFields.some(value => !value)) {
-						if (errorDiv) {
-							errorDiv.textContent = 'All fields are required';
-							errorDiv.style.display = 'block';
-						}
-						return;
-					}
-
-					if (!validateEmail(email)) {
-						if (errorDiv) {
-							errorDiv.textContent = 'Please enter a valid email address';
-							errorDiv.style.display = 'block';
-						}
-						return;
-					}
-
-					if (!validatePhoneNumber(phone || '')) {
-						if (errorDiv) {
-							errorDiv.textContent = 'Please enter a valid phone number';
-							errorDiv.style.display = 'block';
-						}
-						return;
-					}
-
-					if (password !== confirmPassword) {
-						if (errorDiv) {
-							errorDiv.textContent = 'Passwords do not match';
-							errorDiv.style.display = 'block';
-						}
-						return;
+					if (phone && !validatePhoneNumber(phone || '')) {
+						setFieldError(phoneInput, 'Enter a valid phone number');
+						hasError = true;
+						ensureBannerMessage('Please enter a valid phone number.');
 					}
 
 					const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
-					if (!passwordRegex.test(password || '')) {
-						if (errorDiv) {
-							errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers';
-							errorDiv.style.display = 'block';
-						}
-						return;
+					if (password && !passwordRegex.test(password)) {
+						setFieldError(passwordInput, 'Use at least 6 characters with letters and numbers');
+						hasError = true;
+						ensureBannerMessage('Password must include letters and numbers.');
+					}
+
+					if (password && confirmPassword && password !== confirmPassword) {
+						setFieldError(passwordInput, 'Passwords must match');
+						setFieldError(confirmPasswordInput, 'Passwords must match');
+						hasError = true;
+						ensureBannerMessage('Passwords do not match.');
 					}
 
 					if (!vehicleTypes.length) {
-						if (errorDiv) {
-							errorDiv.textContent = 'Please select at least one vehicle type';
-							errorDiv.style.display = 'block';
+						setSectionError(vehicleSection, 'Please select a vehicle type.');
+						hasError = true;
+						ensureBannerMessage('Please select your vehicle type.');
+					} else {
+						const selectedType = vehicleTypes[0];
+						if (selectedType !== 'bicycle') {
+							const plateInput = document.getElementById(`vehiclePlate_${selectedType}`);
+							if (!plateInput || !plateInput.value.trim()) {
+								setFieldError(plateInput, 'Plate number is required');
+								hasError = true;
+								ensureBannerMessage('Please complete your vehicle details.');
+							}
 						}
-						return;
 					}
 
 					if (!region) {
-						if (errorDiv) {
-							errorDiv.textContent = 'Please select a region';
-							errorDiv.style.display = 'block';
-						}
-						return;
+						setFieldError(regionSelect, 'Please select a region');
+						hasError = true;
+						ensureBannerMessage('Please select your service area.');
 					}
 
 					const serviceAreas = [region, ...provinces];
-					const finalServiceArea = serviceAreas.join(',');
-					if (!finalServiceArea) {
-						if (errorDiv) {
-							errorDiv.textContent = 'Service area validation failed. Please try again.';
-							errorDiv.style.display = 'block';
+					const finalServiceArea = serviceAreas.filter(Boolean).join(',');
+					if (finalServiceArea) {
+						formData.set('service_area', finalServiceArea);
+						const serviceAreaInput = document.getElementById('serviceAreaInput');
+						if (serviceAreaInput) {
+							serviceAreaInput.value = finalServiceArea;
 						}
-						return;
-					}
-
-					formData.set('service_area', finalServiceArea);
-					const serviceAreaInput = document.getElementById('serviceAreaInput');
-					if (serviceAreaInput) {
-						serviceAreaInput.value = finalServiceArea;
+					} else {
+						hasError = true;
+						ensureBannerMessage('Service area validation failed. Please try again.');
 					}
 
 					if (!tnc) {
+						setSectionError(tncRow, 'You must agree to the Terms & Conditions and confirm you have a valid driver\'s license.');
+						hasError = true;
+						ensureBannerMessage('Please agree to the Terms & Conditions and confirm you have a valid driver\'s license.');
+					}
+
+					if (hasError) {
+						if (!bannerMessage) {
+							bannerMessage = 'Please fix the highlighted fields to continue.';
+						}
 						if (errorDiv) {
-							errorDiv.textContent = 'Please agree to the Terms & Conditions to continue';
+							errorDiv.textContent = bannerMessage;
 							errorDiv.style.display = 'block';
 						}
+						showNotification(bannerMessage, 'error');
 						return;
 					}
 
@@ -1296,15 +1639,16 @@
 						.then(response => response.json())
 						.then(data => {
 							if (data.success) {
-								showNotification('✅ Rider account created! Redirecting to verification...', 'success');
+								const successMessage = data.message || 'Rider account created! Redirecting...';
+								showNotification(successMessage, 'success');
 								setTimeout(() => {
-									window.location.href = data.redirect;
+									window.location.href = data.redirect || '/login';
 								}, 1500);
 							} else {
-								if (data.message && (data.message.includes('email') || data.message.includes('Email') || data.message.includes('phone') || data.message.includes('Phone number'))) {
-									showNotification(data.message, 'error');
-								} else if (errorDiv) {
-									errorDiv.textContent = data.message || 'An error occurred';
+								const message = data.message || 'An error occurred. Please try again.';
+								showNotification(message, 'error');
+								if (errorDiv) {
+									errorDiv.textContent = message;
 									errorDiv.style.display = 'block';
 								}
 								submitBtn.disabled = false;
@@ -1312,10 +1656,12 @@
 							}
 						})
 						.catch(error => {
+							const fallbackMessage = 'An error occurred. Please try again later.';
 							if (errorDiv) {
-								errorDiv.textContent = 'An error occurred. Please try again later.';
+								errorDiv.textContent = fallbackMessage;
 								errorDiv.style.display = 'block';
 							}
+							showNotification(fallbackMessage, 'error');
 							console.error('Error:', error);
 							submitBtn.disabled = false;
 							submitBtn.textContent = originalText;
