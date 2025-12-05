@@ -5,6 +5,7 @@ import mysql.connector
 import time
 import secrets
 import shutil
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from decimal import Decimal
 from utils.otp_service import OTPService
@@ -63,6 +64,63 @@ def convert_decimals_to_float(obj):
     if isinstance(obj, Decimal):
         return float(obj)
     return obj
+
+
+PH_TIMEZONE = timezone(timedelta(hours=8))
+UTC_ZONE = timezone.utc
+MAX_BRAND_CHAT_LENGTH = 2000
+
+
+def _coerce_datetime(value):
+    """Attempt to parse supported datetime inputs into datetime objects."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if normalized.endswith('Z'):
+            normalized = normalized[:-1] + '+00:00'
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    return None
+
+
+def ensure_ph_time(value):
+    """Convert naive or timezone-aware datetimes to Asia/Manila timezone."""
+    dt = _coerce_datetime(value)
+    if not dt:
+        return None
+    # Treat naive timestamps as UTC from the database and shift accordingly.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC_ZONE)
+    else:
+        dt = dt.astimezone(UTC_ZONE)
+    return dt.astimezone(PH_TIMEZONE)
+
+
+def isoformat_ph(value):
+    """Return ISO 8601 string for datetime converted to Philippine Time."""
+    dt = ensure_ph_time(value)
+    return dt.isoformat() if dt else None
+
+
+def format_ph_time(value, fmt='%B %d, %Y at %I:%M %p'):
+    """Format datetime in Philippine Time using provided format string."""
+    dt = ensure_ph_time(value)
+    return dt.strftime(fmt) if dt else None
+
+
+def ph_time_filter(value, fmt='%B %d, %Y at %I:%M %p'):
+    formatted = format_ph_time(value, fmt)
+    return formatted or ''
+
+
+app.jinja_env.filters['ph_time'] = ph_time_filter
 
 
 CITY_COORDINATE_HINTS = {
@@ -764,6 +822,24 @@ def init_db():
             INDEX idx_product (product_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS store_messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            seller_id INT NOT NULL,
+            buyer_id INT NOT NULL,
+            sender_id INT NOT NULL,
+            sender_role ENUM('buyer', 'seller', 'admin') NOT NULL DEFAULT 'buyer',
+            message TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT FALSE,
+            read_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+            FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+            INDEX idx_seller_buyer (seller_id, buyer_id, created_at),
+            INDEX idx_sender (sender_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
         cursor.execute('''CREATE TABLE IF NOT EXISTS rider_ratings (
             id INT AUTO_INCREMENT PRIMARY KEY,
             rider_id INT NOT NULL,
@@ -1156,6 +1232,25 @@ def admin_create_tables():
             if 'Unknown column' not in str(e):
                 messages.append(f"link_url column check: {str(e)}")
 
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS store_messages (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            seller_id INT NOT NULL,
+            buyer_id INT NOT NULL,
+            sender_id INT NOT NULL,
+            sender_role ENUM('buyer', 'seller', 'admin') NOT NULL DEFAULT 'buyer',
+            message TEXT NOT NULL,
+            is_read BOOLEAN DEFAULT FALSE,
+            read_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
+            FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+            INDEX idx_seller_buyer (seller_id, buyer_id, created_at),
+            INDEX idx_sender (sender_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        messages.append("Store messages table created/verified")
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -1344,6 +1439,383 @@ def product_page(product_id):
                          seller_name=product.get('seller_name') if product else None,
                          store_name=product.get('store_name') if product else None)
 
+@app.route('/brands/<string:store_slug>')
+def brand_store_page(store_slug):
+    """Public brand store showcasing a seller's catalog."""
+    conn = get_db()
+    if not conn:
+        flash('Unable to load brand right now.', 'error')
+        destination = 'buyer_dashboard' if session.get('logged_in') and session.get('role') == 'buyer' else 'index'
+        return redirect(url_for(destination))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+
+        cursor.execute('''
+            SELECT id, user_id, store_name, store_slug, description, logo_url, address,
+                   city, province, island_group, rating, total_sales
+            FROM sellers
+            WHERE store_slug = %s AND status = 'approved'
+            LIMIT 1
+        ''', (store_slug,))
+
+        brand = cursor.fetchone()
+        if not brand:
+            cursor.close()
+            conn.close()
+            flash('Brand not found.', 'error')
+            destination = 'buyer_dashboard' if session.get('logged_in') and session.get('role') == 'buyer' else 'index'
+            return redirect(url_for(destination))
+
+        cursor.execute('''
+            SELECT
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.brand,
+                pi.image_url,
+                COALESCE(AVG(r.rating), 0) as avg_rating,
+                COUNT(DISTINCT r.id) as review_count,
+                COALESCE(SUM(oi.quantity), 0) as sold_count,
+                MAX(p.created_at) as created_at
+            FROM products p
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+            LEFT JOIN order_items oi ON p.id = oi.product_id
+            LEFT JOIN orders o ON o.id = oi.order_id AND o.order_status IN ('delivered', 'completed')
+            WHERE p.seller_id = %s
+              AND p.is_active = 1
+              AND (p.archive_status IS NULL OR p.archive_status = 'active')
+            GROUP BY p.id, p.name, p.description, p.price, p.brand, pi.image_url
+            ORDER BY created_at DESC
+        ''', (brand['id'],))
+
+        products = cursor.fetchall()
+
+
+        cursor.close()
+        conn.close()
+
+        if brand.get('rating') is not None:
+            brand['rating'] = float(brand['rating'])
+        if brand.get('total_sales') is not None:
+            brand['total_sales'] = float(brand['total_sales'])
+        brand['product_count'] = len(products)
+
+        for product in products:
+            product['price'] = float(product['price']) if product.get('price') is not None else 0
+            product['avg_rating'] = float(product['avg_rating']) if product.get('avg_rating') is not None else 0
+            product['sold_count'] = int(product.get('sold_count') or 0)
+            product['review_count'] = int(product.get('review_count') or 0)
+
+        brand['owner_user_id'] = brand.get('user_id')
+
+        viewer_info = {
+            'id': session.get('user_id'),
+            'role': session.get('role'),
+            'is_logged_in': bool(session.get('logged_in'))
+        }
+
+        return render_template('pages/brand_store.html', brand=brand, products=products, viewer=viewer_info)
+
+    except Exception as err:
+        print(f"[ERROR] Failed to render brand store: {err}")
+        if conn:
+            conn.close()
+        flash('Unable to load brand right now.', 'error')
+        destination = 'buyer_dashboard' if session.get('logged_in') and session.get('role') == 'buyer' else 'index'
+        return redirect(url_for(destination))
+
+
+def _chat_error(message, status_code=400):
+    return jsonify({'success': False, 'error': message}), status_code
+
+
+@app.route('/messages')
+def messaging_page():
+    if not session.get('logged_in'):
+        flash('Please log in to view your messages.', 'error')
+        return redirect(url_for('index'))
+
+    viewer_id = session.get('user_id')
+    viewer_role = session.get('role')
+    if viewer_role != 'buyer':
+        flash('Messaging is available for buyers.', 'error')
+        return redirect(url_for('index'))
+
+    conn = get_db()
+    if not conn:
+        flash('Unable to load messages right now.', 'error')
+        return redirect(url_for('index'))
+
+    store_slug = request.args.get('store_slug')
+    conversations = []
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT s.id, s.store_name, s.store_slug, s.logo_url, s.island_group,
+                   MAX(sm.created_at) AS last_message_at
+            FROM store_messages sm
+            JOIN sellers s ON s.id = sm.seller_id
+            WHERE sm.buyer_id = %s
+            GROUP BY s.id, s.store_name, s.store_slug, s.logo_url, s.island_group
+            ORDER BY last_message_at DESC
+        ''', (viewer_id,))
+
+        rows = cursor.fetchall() or []
+        for row in rows:
+            last_msg = None
+            cursor.execute('''
+                SELECT message, sender_role, created_at
+                FROM store_messages
+                WHERE seller_id = %s AND buyer_id = %s
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+            ''', (row['id'], viewer_id))
+            last_msg = cursor.fetchone()
+
+            conversations.append({
+                'store_id': row['id'],
+                'store_name': row['store_name'],
+                'store_slug': row['store_slug'],
+                'logo_url': row.get('logo_url'),
+                'island_group': row.get('island_group'),
+                'last_message': (last_msg or {}).get('message'),
+                'last_sender_role': (last_msg or {}).get('sender_role'),
+                'last_time': format_ph_time((last_msg or {}).get('created_at'), '%b %d • %I:%M %p') if last_msg else None
+            })
+
+        # Ensure target store is present when navigating directly from a brand page
+        if store_slug and not any(c['store_slug'] == store_slug for c in conversations):
+            cursor.execute('''
+                SELECT id, store_name, store_slug, logo_url, island_group
+                FROM sellers
+                WHERE store_slug = %s AND status = 'approved'
+                LIMIT 1
+            ''', (store_slug,))
+            target_brand = cursor.fetchone()
+            if target_brand:
+                conversations.insert(0, {
+                    'store_id': target_brand['id'],
+                    'store_name': target_brand['store_name'],
+                    'store_slug': target_brand['store_slug'],
+                    'logo_url': target_brand.get('logo_url'),
+                    'island_group': target_brand.get('island_group'),
+                    'last_message': None,
+                    'last_sender_role': None,
+                    'last_time': None
+                })
+
+        active_slug = None
+        if store_slug and any(c['store_slug'] == store_slug for c in conversations):
+            active_slug = store_slug
+        elif conversations:
+            active_slug = conversations[0]['store_slug']
+
+        cursor.close()
+        conn.close()
+
+        viewer_info = {
+            'id': viewer_id,
+            'role': viewer_role,
+            'is_logged_in': True
+        }
+
+        return render_template('pages/messages.html',
+                               conversations=conversations,
+                               active_slug=active_slug,
+                               viewer=viewer_info)
+
+    except Exception as err:
+        print(f"[ERROR] Failed to render messaging page: {err}")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        flash('Unable to load messages right now.', 'error')
+        return redirect(url_for('index'))
+
+
+def _safe_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _resolve_chat_buyer_id(viewer_role, viewer_id, brand_owner_id, provided_buyer_id):
+    normalized_role = (viewer_role or '').lower()
+    if normalized_role == 'buyer':
+        return viewer_id, None
+    if normalized_role == 'seller':
+        if viewer_id != brand_owner_id:
+            return None, _chat_error('Access denied for this brand', 403)
+        if not provided_buyer_id:
+            return None, _chat_error('buyer_id is required for seller messaging', 400)
+        return provided_buyer_id, None
+    if normalized_role == 'admin':
+        if not provided_buyer_id:
+            return None, _chat_error('buyer_id is required for this action', 400)
+        return provided_buyer_id, None
+    return None, _chat_error('Messaging is available to buyers, sellers, or admins only', 403)
+
+
+def _ensure_chat_buyer_exists(cursor, buyer_id):
+    cursor.execute('SELECT id FROM users WHERE id = %s AND role = %s LIMIT 1', (buyer_id, 'buyer'))
+    return cursor.fetchone() is not None
+
+
+def _serialize_store_message(row, viewer_id):
+    created_at = row.get('created_at') if row else None
+    return {
+        'id': row.get('id') if row else None,
+        'seller_id': row.get('seller_id') if row else None,
+        'buyer_id': row.get('buyer_id') if row else None,
+        'sender_id': row.get('sender_id') if row else None,
+        'sender_role': row.get('sender_role') if row else None,
+        'message': row.get('message') if row else '',
+        'is_read': bool(row.get('is_read')) if row else False,
+        'read_at': isoformat_ph(row.get('read_at')) if row and row.get('read_at') else None,
+        'created_at': isoformat_ph(created_at),
+        'display_time': format_ph_time(created_at, '%b %d • %I:%M %p') if created_at else '',
+        'is_self': row.get('sender_id') == viewer_id if row else False
+    }
+
+
+def _handle_brand_chat_get(cursor, brand, viewer_id, viewer_role):
+    buyer_hint = request.args.get('buyer_id', type=int)
+    buyer_id, error_response = _resolve_chat_buyer_id(viewer_role, viewer_id, brand['user_id'], buyer_hint)
+    if error_response:
+        return error_response
+
+    if buyer_id is None:
+        return _chat_error('Unable to resolve conversation', 400)
+
+    if (viewer_role or '').lower() != 'buyer' and not _ensure_chat_buyer_exists(cursor, buyer_id):
+        return _chat_error('Buyer not found', 404)
+
+    cursor.execute('''
+        SELECT id, seller_id, buyer_id, sender_id, sender_role, message, is_read, read_at, created_at
+        FROM store_messages
+        WHERE seller_id = %s AND buyer_id = %s
+        ORDER BY created_at ASC, id ASC
+    ''', (brand['id'], buyer_id))
+
+    rows = cursor.fetchall() or []
+    serialized = [_serialize_store_message(row, viewer_id) for row in rows]
+
+    return jsonify({
+        'success': True,
+        'messages': serialized,
+        'brand': {
+            'id': brand['id'],
+            'store_name': brand['store_name'],
+            'store_slug': brand['store_slug']
+        },
+        'buyer_id': buyer_id
+    })
+
+
+def _handle_brand_chat_post(conn, cursor, brand, viewer_id, viewer_role, payload):
+    message_body = (payload.get('message') or '').strip()
+    if not message_body:
+        return _chat_error('Message cannot be empty', 400)
+    if len(message_body) > MAX_BRAND_CHAT_LENGTH:
+        message_body = message_body[:MAX_BRAND_CHAT_LENGTH]
+
+    buyer_hint = _safe_int(payload.get('buyer_id'))
+    buyer_id, error_response = _resolve_chat_buyer_id(viewer_role, viewer_id, brand['user_id'], buyer_hint)
+    if error_response:
+        return error_response
+
+    if buyer_id is None:
+        return _chat_error('Unable to resolve conversation', 400)
+
+    if (viewer_role or '').lower() != 'buyer' and not _ensure_chat_buyer_exists(cursor, buyer_id):
+        return _chat_error('Buyer not found', 404)
+
+    sender_role = (viewer_role or 'buyer').lower()
+    if sender_role not in {'buyer', 'seller', 'admin'}:
+        sender_role = 'buyer'
+
+    cursor.execute('''
+        INSERT INTO store_messages (seller_id, buyer_id, sender_id, sender_role, message)
+        VALUES (%s, %s, %s, %s, %s)
+    ''', (brand['id'], buyer_id, viewer_id, sender_role, message_body))
+
+    new_id = cursor.lastrowid
+    try:
+        conn.commit()
+    except Exception:
+        pass
+    cursor.execute('''
+        SELECT id, seller_id, buyer_id, sender_id, sender_role, message, is_read, read_at, created_at
+        FROM store_messages
+        WHERE id = %s
+        LIMIT 1
+    ''', (new_id,))
+    fresh_row = cursor.fetchone()
+    serialized = _serialize_store_message(fresh_row, viewer_id)
+
+    return jsonify({
+        'success': True,
+        'message': serialized,
+        'brand': {
+            'id': brand['id'],
+            'store_name': brand['store_name'],
+            'store_slug': brand['store_slug']
+        },
+        'buyer_id': buyer_id
+    }), 201
+
+
+@app.route('/api/brands/<string:store_slug>/messages', methods=['GET', 'POST'])
+def brand_store_messages(store_slug):
+    if not session.get('logged_in'):
+        return _chat_error('Please log in to chat with brands', 401)
+
+    viewer_id = session.get('user_id')
+    viewer_role = session.get('role')
+    if not viewer_id:
+        return _chat_error('Please log in again to continue', 401)
+
+    conn = get_db()
+    if not conn:
+        return _chat_error('Database connection failed', 500)
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute('''
+            SELECT id, user_id, store_name, store_slug
+            FROM sellers
+            WHERE store_slug = %s AND status = 'approved'
+            LIMIT 1
+        ''', (store_slug,))
+        brand = cursor.fetchone()
+        if not brand:
+            return _chat_error('Brand not found', 404)
+
+        if request.method == 'GET':
+            response = _handle_brand_chat_get(cursor, brand, viewer_id, viewer_role)
+        else:
+            payload = request.get_json(silent=True) or {}
+            response = _handle_brand_chat_post(conn, cursor, brand, viewer_id, viewer_role, payload)
+        return response
+    except Exception as err:
+        print(f"[ERROR] Brand chat API failed: {err}")
+        return _chat_error('Unable to process chat request right now', 500)
+    finally:
+        try:
+            cursor.close()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
 @app.route('/api/product/<int:product_id>')
 def get_product_detail(product_id):
     conn = get_db()
@@ -1468,8 +1940,7 @@ def get_product_reviews(product_id):
 
 
         for review in reviews:
-            if review.get('created_at'):
-                review['created_at'] = review['created_at'].isoformat()
+            review['created_at'] = isoformat_ph(review.get('created_at'))
             review['comment'] = review.get('comment') or ''
 
         cursor.close()
@@ -1844,8 +2315,7 @@ def rider_rating_stats():
         reviews = cursor.fetchall() or []
 
         for review in reviews:
-            if review.get('created_at'):
-                review['created_at'] = review['created_at'].isoformat()
+            review['created_at'] = isoformat_ph(review.get('created_at'))
 
         cursor.close()
         conn.close()
@@ -5624,8 +6094,8 @@ def admin_approve_promotion(promo_id):
         conn.close()
 
 
-        start_date = promo['start_date'].strftime('%B %d, %Y') if promo['start_date'] else 'TBD'
-        end_date = promo['end_date'].strftime('%B %d, %Y') if promo['end_date'] else 'TBD'
+        start_date = format_ph_time(promo.get('start_date'), '%B %d, %Y') or 'TBD'
+        end_date = format_ph_time(promo.get('end_date'), '%B %d, %Y') or 'TBD'
 
 
         if promo['discount_type'] == 'percentage':
@@ -7135,12 +7605,13 @@ def api_products():
         """
 
         params = []
+        search_pattern = None
 
 
         if search:
-            query += " AND (p.name LIKE %s OR p.description LIKE %s)"
             search_pattern = f"%{search}%"
-            params.extend([search_pattern, search_pattern])
+            query += " AND (p.name LIKE %s OR p.description LIKE %s OR p.brand LIKE %s)"
+            params.extend([search_pattern, search_pattern, search_pattern])
 
 
         if category_filter_ids:
@@ -7228,12 +7699,51 @@ def api_products():
                 product['promotion'] = None
                 product['price_to_display'] = float(product['price'])
 
+        brand_matches = []
+        if search_pattern:
+            try:
+                cursor.execute("""
+                    SELECT
+                        s.id,
+                        s.store_name,
+                        s.store_slug,
+                        s.description,
+                        s.logo_url,
+                        s.island_group,
+                        s.rating,
+                        s.total_sales,
+                        COALESCE(COUNT(DISTINCT CASE
+                            WHEN p.is_active = 1 AND (p.archive_status IS NULL OR p.archive_status = 'active') THEN p.id
+                        END), 0) AS product_count,
+                        MAX(p.brand) AS primary_brand
+                    FROM sellers s
+                    LEFT JOIN products p ON p.seller_id = s.id
+                    WHERE s.status = 'approved'
+                      AND (s.store_name LIKE %s OR p.brand LIKE %s)
+                    GROUP BY s.id, s.store_name, s.store_slug, s.description, s.logo_url, s.island_group, s.rating, s.total_sales
+                    ORDER BY product_count DESC, s.store_name ASC
+                    LIMIT 4
+                """, (search_pattern, search_pattern))
+                brand_matches = cursor.fetchall()
+            except Exception as brand_err:
+                print(f"[WARNING] Failed to load brand matches: {brand_err}")
+                brand_matches = []
+
+        for brand in brand_matches:
+            if brand.get('rating') is not None:
+                brand['rating'] = float(brand['rating'])
+            if brand.get('total_sales') is not None:
+                brand['total_sales'] = float(brand['total_sales'])
+            brand['product_count'] = int(brand.get('product_count') or 0)
+            brand['brand_url'] = url_for('brand_store_page', store_slug=brand['store_slug'])
+
         cursor.close()
         conn.close()
 
         return jsonify({
             'success': True,
-            'products': products_list
+            'products': products_list,
+            'brands': brand_matches
         }), 200
     except Exception as e:
         print(f"[ERROR] /api/products: {e}")
@@ -7450,6 +7960,10 @@ def api_my_orders():
                 order['total_amount'] = float(order['total_amount'])
             if 'id' in order and order['id']:
                 order['id'] = int(order['id'])
+            if order.get('created_at'):
+                order['created_at'] = isoformat_ph(order['created_at'])
+            if order.get('delivered_at'):
+                order['delivered_at'] = isoformat_ph(order['delivered_at'])
 
 
             current_order_status = order.get('order_status', 'pending')
@@ -7774,7 +8288,7 @@ def api_order_tracking(order_id):
                 'status': 'pending',
                 'label': 'Order Placed',
                 'description': 'Your order has been received',
-                'timestamp': order['created_at'].isoformat() if order['created_at'] else None,
+                'timestamp': isoformat_ph(order.get('created_at')),
                 'completed': True
             })
 
@@ -7802,7 +8316,7 @@ def api_order_tracking(order_id):
                 'status': 'released_to_rider',
                 'label': 'Out for Delivery',
                 'description': f'Courier {rider_info} is on the way',
-                'timestamp': order['shipped_at'].isoformat() if order['shipped_at'] else None,
+                'timestamp': isoformat_ph(order.get('shipped_at')),
                 'completed': True,
                 'rider_name': rider_info,
                 'rider_phone': order['rider_phone']
@@ -7813,7 +8327,7 @@ def api_order_tracking(order_id):
                 'status': 'delivered',
                 'label': 'Delivered',
                 'description': 'Order has been delivered successfully',
-                'timestamp': order['delivered_at'].isoformat() if order['delivered_at'] else None,
+                'timestamp': isoformat_ph(order.get('delivered_at')),
                 'completed': True
             })
 
@@ -7824,7 +8338,7 @@ def api_order_tracking(order_id):
                 'order_number': order['order_number'],
                 'status': order['order_status'],
                 'total_amount': float(order['total_amount']),
-                'created_at': order['created_at'].isoformat() if order['created_at'] else None,
+                'created_at': isoformat_ph(order.get('created_at')),
                 'buyer_name': f"{order['buyer_first_name']} {order['buyer_last_name']}",
                 'shipment_status': order['shipment_status'],
                 'rider_name': f"{order['rider_first_name']} {order['rider_last_name']}" if order['rider_first_name'] else None,
@@ -8033,7 +8547,8 @@ def api_order_details(order_id):
 
             for key in ['shipped_at', 'estimated_delivery', 'delivered_at', 'created_at', 'updated_at', 'seller_confirmed_at']:
                 if shipment.get(key):
-                    shipment[key] = shipment[key].isoformat() if hasattr(shipment[key], 'isoformat') else str(shipment[key])
+                    formatted = isoformat_ph(shipment.get(key))
+                    shipment[key] = formatted if formatted else str(shipment[key])
 
 
         cursor.execute('''
@@ -8780,10 +9295,8 @@ def seller_orders():
 
 
         for order in orders:
-            if order.get('created_at'):
-                order['created_at'] = order['created_at'].isoformat()
-            if order.get('updated_at'):
-                order['updated_at'] = order['updated_at'].isoformat() if order['updated_at'] else None
+            order['created_at'] = isoformat_ph(order.get('created_at'))
+            order['updated_at'] = isoformat_ph(order.get('updated_at'))
 
             seller_total = float(order['seller_total_amount']) if order.get('seller_total_amount') else 0.0
             overall_total = float(order['overall_total_amount']) if order.get('overall_total_amount') else 0.0
@@ -8898,8 +9411,7 @@ def seller_order_details(order_id):
 
         items = cursor.fetchall() or []
 
-        if order.get('created_at'):
-            order['created_at'] = order['created_at'].isoformat()
+        order['created_at'] = isoformat_ph(order.get('created_at'))
         if order.get('total_amount') is not None:
             order['total_amount'] = float(order['total_amount'])
         if order.get('subtotal') is not None:
@@ -9552,8 +10064,8 @@ def get_order_status(order_id):
                 'status_label': status_info['label'],
                 'status_emoji': status_info['emoji'],
                 'progress_step': status_info['step'],
-                'created_at': order['created_at'].isoformat() if order['created_at'] else None,
-                'updated_at': order['updated_at'].isoformat() if order['updated_at'] else None,
+                'created_at': isoformat_ph(order.get('created_at')),
+                'updated_at': isoformat_ph(order.get('updated_at')),
                 'total_amount': float(order['total_amount']),
                 'payment_method': order['payment_method'],
                 'customer_name': f"{order['first_name']} {order['last_name']}",
@@ -9621,8 +10133,8 @@ def get_user_orders_detailed():
                     'order_number': order['order_number'],
                     'status': order['order_status'],
                     'status_emoji': status_emoji.get(order['order_status'], '📋'),
-                    'created_at': order['created_at'].isoformat() if order['created_at'] else None,
-                    'updated_at': order['updated_at'].isoformat() if order['updated_at'] else None,
+                    'created_at': isoformat_ph(order.get('created_at')),
+                    'updated_at': isoformat_ph(order.get('updated_at')),
                     'total_amount': float(order['total_amount']),
                     'payment_method': order['payment_method'],
                     'store_name': order['store_name'] or 'Store',
@@ -10709,9 +11221,11 @@ def api_rider_active_deliveries():
             if delivery.get('total_amount'):
                 delivery['total_amount'] = float(delivery['total_amount'])
             if delivery.get('created_at'):
-                delivery['created_at'] = delivery['created_at'].isoformat() if hasattr(delivery['created_at'], 'isoformat') else str(delivery['created_at'])
+                formatted_created = isoformat_ph(delivery.get('created_at'))
+                delivery['created_at'] = formatted_created if formatted_created else str(delivery['created_at'])
             if delivery.get('available_since'):
-                delivery['available_since'] = delivery['available_since'].isoformat() if hasattr(delivery['available_since'], 'isoformat') else str(delivery['available_since'])
+                formatted_available = isoformat_ph(delivery.get('available_since'))
+                delivery['available_since'] = formatted_available if formatted_available else str(delivery['available_since'])
 
             if delivery.get('seller_confirmed') is None:
                 delivery['seller_confirmed'] = False
@@ -10813,8 +11327,8 @@ def api_rider_document_status():
             documents[record['document_type']] = {
                 'file_url': record.get('file_url'),
                 'verified': bool(record.get('verified')),
-                'uploaded_at': record.get('uploaded_at').isoformat() if record.get('uploaded_at') else None,
-                'updated_at': record.get('updated_at').isoformat() if record.get('updated_at') else None
+                'uploaded_at': isoformat_ph(record.get('uploaded_at')),
+                'updated_at': isoformat_ph(record.get('updated_at'))
             }
 
         return jsonify({'success': True, 'documents': documents})
@@ -11149,8 +11663,7 @@ def api_rider_ratings():
 
         reviews = cursor.fetchall()
         for review in reviews:
-            if review.get('created_at'):
-                review['created_at'] = review['created_at'].isoformat()
+            review['created_at'] = isoformat_ph(review.get('created_at'))
             review['comment'] = review.get('comment') or ''
 
         cursor.close()
@@ -12861,10 +13374,8 @@ def get_seller_notifications():
 
         # Format timestamps
         for notif in notifications:
-            if notif.get('created_at'):
-                notif['created_at'] = notif['created_at'].isoformat()
-            if notif.get('read_at'):
-                notif['read_at'] = notif['read_at'].isoformat()
+            notif['created_at'] = isoformat_ph(notif.get('created_at'))
+            notif['read_at'] = isoformat_ph(notif.get('read_at'))
 
         # Get unread count
         cursor.execute(
@@ -13044,10 +13555,8 @@ def get_orders_by_status(status):
 
         # Format timestamps and amounts
         for order in orders:
-            if order.get('created_at'):
-                order['created_at'] = order['created_at'].isoformat()
-            if order.get('updated_at'):
-                order['updated_at'] = order['updated_at'].isoformat()
+            order['created_at'] = isoformat_ph(order.get('created_at'))
+            order['updated_at'] = isoformat_ph(order.get('updated_at'))
             if order.get('total_amount'):
                 order['total_amount'] = float(order['total_amount'])
 

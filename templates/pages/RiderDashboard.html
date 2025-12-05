@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="{{ url_for('static', filename='js/timezone.js') }}"></script>
     <style>
       :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef;--success:#10b981;--warning:#f59e0b;--error:#ef4444}
       *{box-sizing:border-box}
@@ -198,7 +199,7 @@
                         <tr>
                           <td>#{{ delivery.order_number }}</td>
                           <td>{{ delivery.pickup_location or 'N/A' }} → {{ delivery.delivery_location or 'N/A' }}</td>
-                          <td>{{ delivery.delivered_at.strftime('%I:%M %p') if delivery.delivered_at else 'N/A' }}</td>
+                          <td>{{ delivery.delivered_at|ph_time('%I:%M %p') or 'N/A' }}</td>
                           <td><span class="status {{ delivery.status }}">{{ delivery.status|title|replace('_', ' ') }}</span></td>
                           <td>₱{{ "%.2f"|format(delivery.total_amount * 0.15) }}</td>
                         </tr>
@@ -979,6 +980,18 @@
         if (!dateString) {
           return '—';
         }
+        if (window.PhilippineTime && typeof window.PhilippineTime.formatDateTime === 'function') {
+          const formatted = window.PhilippineTime.formatDateTime(dateString, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          if (formatted) {
+            return formatted;
+          }
+        }
         const parsed = new Date(dateString);
         if (Number.isNaN(parsed.getTime())) {
           return '—';
@@ -986,8 +999,10 @@
         return parsed.toLocaleString('en-PH', {
           month: 'short',
           day: 'numeric',
+          year: 'numeric',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
+          timeZone: 'Asia/Manila'
         });
       }
 
@@ -1509,13 +1524,7 @@
               }
 
               const availableDate = order.available_since || order.created_at;
-              const dateFormatted = availableDate ? new Date(availableDate).toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              }) : 'N/A';
+              const dateFormatted = availableDate ? formatDateTime(availableDate) : 'N/A';
 
               return `
                 <tr style="border-bottom:1px solid #e5e7eb;transition:background 0.2s">
@@ -1717,8 +1726,8 @@ Delivery Timeline:
 ${timeline}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${s.created_at ? `Created: ${new Date(s.created_at).toLocaleString()}` : ''}
-${s.updated_at ? `Last Updated: ${new Date(s.updated_at).toLocaleString()}` : ''}
+${s.created_at ? `Created: ${formatDateTime(s.created_at)}` : ''}
+${s.updated_at ? `Last Updated: ${formatDateTime(s.updated_at)}` : ''}
               `;
 
               alert(details);
@@ -1740,7 +1749,7 @@ ${s.updated_at ? `Last Updated: ${new Date(s.updated_at).toLocaleString()}` : ''
             const tbody = document.querySelector('#history-table tbody');
             if (data.success && data.history && data.history.length > 0) {
               tbody.innerHTML = data.history.map((delivery) => {
-                const deliveredDate = delivery.delivered_at ? new Date(delivery.delivered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const deliveredDate = delivery.delivered_at ? formatDateTime(delivery.delivered_at) : 'N/A';
                 const earning = (parseFloat(delivery.total_amount) * 0.15).toFixed(2);
                 const location = `${delivery.city}, ${delivery.province}`.trim();
 
@@ -1930,11 +1939,7 @@ Daily Earnings: ₱${parseFloat(earnings).toFixed(2)}
 
         let html = '';
         reviews.forEach(review => {
-          const formattedDate = review.created_at ? new Date(review.created_at).toLocaleDateString('en-PH', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          }) : '—';
+          const formattedDate = review.created_at ? formatDateTime(review.created_at) : '—';
           const stars = '⭐'.repeat(Math.max(1, Math.round(review.rating || 0)));
           html += `
             <tr>

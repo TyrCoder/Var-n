@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages | Varón</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --charcoal: #0f172a;
+      --ink: #111315;
+      --muted: #6b7280;
+      --cloud: #f8fafc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --accent: #d4a373;
+      --hover-bg: #f9fafb;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      margin: 0;
+      font-family: 'Commissioner', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fafafa;
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* Top Bar - Matching system design */
+    header.site-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 75px;
+      background: #ffffff;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      z-index: 999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand-wordmark {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: #000000;
+      letter-spacing: 0.03em;
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .brand-wordmark:hover {
+      opacity: 0.7;
+    }
+
+    .back-link {
+      text-decoration: none;
+      color: #000000;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .back-link:hover {
+      background: #f5f5f5;
+      border-color: #d4d4d4;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+
+    main.messages-shell {
+      max-width: 1400px;
+      margin: 100px auto 60px;
+      padding: 0 48px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 32px;
+    }
+
+    .panel {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+
+    .conversation-list {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 180px);
+      max-height: 800px;
+    }
+
+    .conversation-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .conversation-header h2 {
+      margin: 0 0 8px 0;
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .conversation-header p {
+      margin: 0;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    .conversation-items {
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .conversation-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .conversation-tile {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      text-align: left;
+      width: 100%;
+    }
+
+    .conversation-tile:hover {
+      background: #f9fafb;
+      border-color: #e5e7eb;
+      transform: translateY(-1px);
+    }
+
+    .conversation-tile.is-active {
+      background: #0f172a;
+      border-color: #0f172a;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+    }
+
+    .conversation-tile.is-active .conversation-title,
+    .conversation-tile.is-active .conversation-meta,
+    .conversation-tile.is-active .conversation-snippet {
+      color: #ffffff;
+    }
+
+    .conversation-logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      background: linear-gradient(135deg, #f7f4ee, #ffffff);
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 18px;
+      font-family: 'Playfair Display', serif;
+      color: #0f172a;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .conversation-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 11px;
+    }
+
+    .conversation-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .conversation-title {
+      margin: 0 0 6px 0;
+      font-weight: 600;
+      font-size: 15px;
+      color: #111315;
+    }
+
+    .conversation-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: #6b7280;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .conversation-snippet {
+      margin: 0;
+      font-size: 13px;
+      color: #6b7280;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    .chat-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto auto;
+      height: calc(100vh - 180px);
+      max-height: 800px;
+    }
+
+    .chat-head {
+      padding: 24px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .chat-head h3 {
+      margin: 0 0 4px 0;
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .chat-head .subtext {
+      margin: 0;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .chat-feed {
+      padding: 24px;
+      overflow-y: auto;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chat-placeholder {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+      padding: 60px 20px;
+    }
+
+    .chat-bubble {
+      max-width: 75%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+      line-height: 1.6;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .chat-bubble--self {
+      margin-left: auto;
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    }
+
+    .chat-bubble strong {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    .chat-bubble small {
+      display: block;
+      margin-top: 10px;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .chat-status {
+      min-height: 20px;
+      padding: 0 24px 12px;
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    .chat-form {
+      padding: 16px 24px 24px;
+      border-top: 1px solid #f0f0f0;
+      background: #ffffff;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .chat-form textarea {
+      flex: 1;
+      min-height: 90px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      padding: 14px 16px;
+      font-family: 'Commissioner', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .chat-form textarea:focus {
+      outline: none;
+      border-color: #0f172a;
+      box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+    }
+
+    .chat-form button {
+      border: none;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 10px;
+      padding: 14px 24px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      min-width: 100px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    }
+
+    .chat-form button:hover { 
+      background: #1e293b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+    }
+    
+    .chat-form.is-sending { 
+      opacity: 0.6; 
+      pointer-events: none; 
+    }
+
+    .empty-chat {
+      padding: 40px 20px;
+      text-align: center;
+      color: #9ca3af;
+    }
+
+    @media (max-width: 1200px) {
+      main.messages-shell {
+        grid-template-columns: 320px 1fr;
+        padding: 0 32px;
+        margin: 100px auto 40px;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      header.site-header {
+        padding: 0 32px;
+      }
+
+      main.messages-shell {
+        grid-template-columns: 1fr;
+        padding: 0 24px;
+        gap: 24px;
+      }
+
+      .conversation-list, .chat-panel {
+        height: auto;
+        max-height: none;
+      }
+
+      .conversation-list {
+        min-height: 300px;
+      }
+
+      .chat-panel {
+        min-height: 500px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header.site-header {
+        padding: 0 20px;
+        height: 65px;
+      }
+
+      .brand-wordmark {
+        font-size: 22px;
+      }
+
+      main.messages-shell {
+        margin: 85px auto 30px;
+        padding: 0 16px;
+      }
+    }
+  </style>
+</head>
+<body data-active-slug="{{ active_slug or '' }}">
+  <header class="site-header">
+    <a href="{{ url_for('index') }}" class="brand-wordmark">Varón</a>
+    <a href="{{ url_for('buyer_dashboard') if session.get('logged_in') and session.get('role') == 'buyer' else url_for('index') }}" class="back-link">← Back</a>
+  </header>
+
+  <main class="messages-shell">
+    <section class="panel conversation-list" aria-label="Conversations">
+      <div class="conversation-header">
+        <h2>Messages</h2>
+        <p>Select a brand to view your thread.</p>
+      </div>
+      <div class="conversation-items" id="conversationList">
+        {% if conversations %}
+          {% for convo in conversations %}
+            <button type="button" class="conversation-tile" data-store-slug="{{ convo.store_slug }}" data-store-name="{{ convo.store_name }}">
+              <div class="conversation-logo">
+                {% if convo.logo_url %}
+                  <img src="{{ convo.logo_url }}" alt="{{ convo.store_name }} logo">
+                {% else %}
+                  <span>{{ convo.store_name[:1]|upper }}</span>
+                {% endif %}
+              </div>
+              <div class="conversation-body">
+                <p class="conversation-title">{{ convo.store_name }}</p>
+                <div class="conversation-meta">
+                  <span>{{ convo.island_group or 'Philippines' }}</span>
+                  <span>{{ convo.last_time or '—' }}</span>
+                </div>
+                <p class="conversation-snippet">{{ (convo.last_message or 'Start a conversation with this store.') | truncate(90) }}</p>
+              </div>
+            </button>
+          {% endfor %}
+        {% else %}
+          <div class="conversation-empty">No conversations yet. Pick a store from the catalog to start chatting.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="panel chat-panel" aria-label="Conversation" data-endpoint-template="{{ url_for('brand_store_messages', store_slug='__SLUG__') }}">
+      <div class="chat-head">
+        <div>
+          <h3 id="chatStoreName">{{ conversations[0].store_name if conversations else 'Select a store' }}</h3>
+          <p class="subtext" id="chatStoreMeta">{{ conversations[0].island_group if conversations else '' }}</p>
+        </div>
+        <a id="chatStoreLink" href="{{ url_for('brand_store_page', store_slug=conversations[0].store_slug) if conversations else '#' }}" style="font-size:13px;color:var(--muted);text-decoration:none">View store →</a>
+      </div>
+      <div class="chat-feed" id="chatFeed">
+        <div class="chat-placeholder">{% if active_slug %}Loading messages…{% else %}Select a conversation to begin.{% endif %}</div>
+      </div>
+      <div class="chat-status" id="chatStatus"></div>
+      <form id="chatForm" class="chat-form">
+        <textarea name="message" placeholder="Type your message…" maxlength="2000" required></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const state = {
+        activeSlug: document.body.dataset.activeSlug || '',
+        poller: null,
+        isLoading: false
+      };
+
+      const list = document.getElementById('conversationList');
+      const feed = document.getElementById('chatFeed');
+      const statusEl = document.getElementById('chatStatus');
+      const form = document.getElementById('chatForm');
+      const textarea = form ? form.querySelector('textarea') : null;
+      const endpointTemplate = document.querySelector('.chat-panel')?.dataset.endpointTemplate || '';
+      const storeNameEl = document.getElementById('chatStoreName');
+      const storeMetaEl = document.getElementById('chatStoreMeta');
+      const storeLinkEl = document.getElementById('chatStoreLink');
+
+      const escapeHTML = (value = '') => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      function resolveEndpoint(slug) {
+        if (!slug) return '';
+        return endpointTemplate.replace('__SLUG__', slug);
+      }
+
+      function setStatus(message) {
+        if (statusEl) {
+          statusEl.textContent = message || '';
+        }
+      }
+
+      function highlightActiveTile() {
+        if (!list) return;
+        list.querySelectorAll('.conversation-tile').forEach(tile => {
+          const isActive = tile.dataset.storeSlug === state.activeSlug;
+          tile.classList.toggle('is-active', isActive);
+        });
+      }
+
+      function renderMessages(messages, brandName) {
+        if (!feed) return;
+        if (!messages || !messages.length) {
+          feed.innerHTML = '<div class="chat-placeholder">No messages yet. Say hello to begin.</div>';
+          return;
+        }
+
+        feed.innerHTML = messages.map(msg => {
+          const bubbleClass = msg.is_self ? 'chat-bubble chat-bubble--self' : 'chat-bubble';
+          const senderLabel = msg.is_self ? 'You' : (brandName || 'Seller');
+          const body = escapeHTML(msg.message || '');
+          const time = escapeHTML(msg.display_time || 'Just now');
+          return `
+            <div class="${bubbleClass}">
+              <strong style="display:block;font-size:12px;margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase;">${escapeHTML(senderLabel)}</strong>
+              <div>${body.replace(/\n/g, '<br>')}</div>
+              <small>${time}</small>
+            </div>
+          `;
+        }).join('');
+        feed.scrollTop = feed.scrollHeight;
+      }
+
+      async function loadMessages() {
+        if (!state.activeSlug) {
+          setStatus('');
+          feed.innerHTML = '<div class="chat-placeholder">Select a conversation to begin.</div>';
+          return;
+        }
+        const endpoint = resolveEndpoint(state.activeSlug);
+        if (!endpoint || state.isLoading) return;
+        state.isLoading = true;
+        setStatus('Loading conversation…');
+        try {
+          const resp = await fetch(endpoint, { credentials: 'same-origin' });
+          const data = await resp.json();
+          if (!resp.ok || !data.success) {
+            throw new Error(data.error || 'Unable to load chat');
+          }
+          renderMessages(data.messages || [], storeNameEl?.textContent || 'Seller');
+          setStatus('');
+        } catch (err) {
+          setStatus(err.message || 'Unable to reach chat server');
+        } finally {
+          state.isLoading = false;
+        }
+      }
+
+      function startPolling() {
+        if (state.poller) {
+          clearInterval(state.poller);
+        }
+        state.poller = setInterval(loadMessages, 12000);
+      }
+
+      function updateChatHeader(tile) {
+        if (!tile) return;
+        const name = tile.dataset.storeName || 'Store';
+        const slug = tile.dataset.storeSlug;
+        storeNameEl.textContent = name;
+        storeMetaEl.textContent = tile.querySelector('.conversation-meta span')?.textContent || '';
+        if (storeLinkEl) {
+          storeLinkEl.href = slug ? `/brands/${slug}` : '#';
+        }
+      }
+
+      function setActiveSlug(slug) {
+        state.activeSlug = slug;
+        highlightActiveTile();
+        loadMessages();
+        startPolling();
+      }
+
+      if (list) {
+        list.addEventListener('click', (evt) => {
+          const tile = evt.target.closest('.conversation-tile');
+          if (!tile) return;
+          updateChatHeader(tile);
+          setActiveSlug(tile.dataset.storeSlug || '');
+        });
+      }
+
+      if (form && textarea) {
+        form.addEventListener('submit', async (evt) => {
+          evt.preventDefault();
+          const message = textarea.value.trim();
+          if (!message || !state.activeSlug) return;
+          const endpoint = resolveEndpoint(state.activeSlug);
+          if (!endpoint) return;
+          form.classList.add('is-sending');
+          setStatus('Sending message…');
+          try {
+            const resp = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ message })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+              throw new Error(data.error || 'Failed to send message');
+            }
+            textarea.value = '';
+            await loadMessages();
+            setStatus('');
+          } catch (err) {
+            setStatus(err.message || 'Unable to send message');
+          } finally {
+            form.classList.remove('is-sending');
+          }
+        });
+      }
+
+      // Initialize active selection
+      if (state.activeSlug && list) {
+        const tile = list.querySelector(`[data-store-slug="${state.activeSlug}"]`);
+        if (tile) {
+          updateChatHeader(tile);
+        }
+        highlightActiveTile();
+        loadMessages();
+        startPolling();
+      }
+    })();
+  </script>
+</body>
+</html>

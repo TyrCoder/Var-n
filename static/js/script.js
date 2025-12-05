@@ -1,7 +1,9 @@
 function hideAllSections() {
     const contentSections = document.querySelectorAll('.content-section');
     const mainContent = document.getElementById('mainContent');
-    contentSections.forEach(section => section.style.display = 'none');
+    if (contentSections && contentSections.length > 0) {
+        contentSections.forEach(section => section.style.display = 'none');
+    }
     if (mainContent) mainContent.style.display = 'block';
 }
 
@@ -51,6 +53,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.querySelector('.overlay');
     const cartCount = document.getElementById('cartCount');
     const cartCountSidebar = document.getElementById('cartCountSidebar');
+  // Cache layout sections for show/hide logic
+  const contentSections = document.querySelectorAll('.content-section');
+  const mainContent = document.getElementById('mainContent');
 
     function toggleMenu(e) {
         if (e) {
@@ -79,21 +84,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('click', function(e) {
-        if (sidebar.classList.contains('open') && 
+        if (sidebar && sidebar.classList.contains('open') && 
             !sidebar.contains(e.target) && 
-            !menuToggle.contains(e.target)) {
+            menuToggle && !menuToggle.contains(e.target)) {
             closeMenu();
         }
     });
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+        if (e.key === 'Escape' && sidebar && sidebar.classList.contains('open')) {
             closeMenu();
         }
     });
 
     function hideAllSections() {
-        contentSections.forEach(section => section.style.display = 'none');
-        mainContent.style.display = 'block';
+        if (contentSections && contentSections.length > 0) {
+            contentSections.forEach(section => section.style.display = 'none');
+        }
+        if (mainContent) {
+            mainContent.style.display = 'block';
+        }
     }
     function showSection(sectionId) {
         hideAllSections();
@@ -101,18 +110,27 @@ document.addEventListener('DOMContentLoaded', function() {
             const section = document.getElementById(sectionId);
             if (section) {
                 section.style.display = 'block';
-                mainContent.style.display = 'none';
+                if (mainContent) {
+                    mainContent.style.display = 'none';
+                }
             }
         }
         if (sidebar) {
             sidebar.classList.remove('open');
-            overlay.classList.remove('open');
-            menuToggle.setAttribute('aria-expanded', 'false');
+            if (overlay) {
+                overlay.classList.remove('open');
+            }
+            if (menuToggle) {
+                menuToggle.setAttribute('aria-expanded', 'false');
+            }
             document.body.style.overflow = '';
         }
     }
 
-    hideAllSections();
+    // Only hide sections if elements exist (for pages with content sections)
+    if (contentSections && contentSections.length > 0) {
+        hideAllSections();
+    }
 
     function toggleMenu() {
         const isOpen = sidebar.classList.contains('open');

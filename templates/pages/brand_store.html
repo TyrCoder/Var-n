@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ brand.store_name }} — Brand Store | Varón</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --charcoal: #0f172a;
+      --ink: #111315;
+      --muted: #6b7280;
+      --linen: #f7f2eb;
+      --sand: #f1e7d3;
+      --cloud: #f8fafc;
+      --card: #ffffff;
+      --accent: #d4a373;
+      --accent-dark: #b37841;
+      --border: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      margin: 0;
+      font-family: 'Commissioner', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fafafa;
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* Top Bar - Matching system design */
+    .site-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 75px;
+      background: #ffffff;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      z-index: 999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand-wordmark {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 600;
+      color: #000000;
+      letter-spacing: 0.03em;
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .brand-wordmark:hover {
+      opacity: 0.7;
+    }
+
+    .back-link {
+      text-decoration: none;
+      color: #000000;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .back-link:hover {
+      background: #f5f5f5;
+      border-color: #d4d4d4;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+
+    main.brand-page {
+      max-width: 1400px;
+      margin: 100px auto 80px;
+      padding: 0 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+    }
+
+    .brand-hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 32px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 48px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+
+    .brand-identity {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    .brand-logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 16px;
+      border: 1px solid #e5e7eb;
+      background: linear-gradient(135deg, #f7f4ee, #ffffff);
+      display: grid;
+      place-items: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 600;
+      color: #0f172a;
+      flex-shrink: 0;
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 15px;
+    }
+
+    .brand-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .brand-description {
+      color: #6b7280;
+      font-size: 15px;
+      line-height: 1.7;
+      max-width: 600px;
+      margin: 14px 0 0;
+    }
+
+    .brand-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 28px;
+    }
+
+    .brand-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 10px;
+      padding: 14px 28px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .brand-action--primary {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    }
+
+    .brand-action--primary:hover {
+      background: #1e293b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+    }
+
+    .brand-action--secondary {
+      background: #fafafa;
+      color: #000000;
+      border: 1px solid #e8e8e8;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .brand-action--secondary:hover {
+      background: #f5f5f5;
+      border-color: #d4d4d4;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+
+    .brand-badges {
+      list-style: none;
+      margin: 28px 0 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+
+    .brand-badges li {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 18px 20px;
+      background: #fafafa;
+      transition: all 0.2s ease;
+    }
+
+    .brand-badges li:hover {
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .brand-badges span {
+      font-size: 11px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 500;
+    }
+
+    .brand-badges strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 24px;
+      font-family: 'Playfair Display', serif;
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .hero-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      background: #fafafa;
+      transition: all 0.2s ease;
+    }
+
+    .hero-card:hover {
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .hero-card h3 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+
+    .hero-card p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #111315;
+    }
+
+    .hero-card small {
+      display: block;
+      margin-top: 14px;
+      color: #6b7280;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .brand-panels {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(320px, 1fr);
+      gap: 32px;
+      align-items: start;
+    }
+
+    .catalog-panel,
+    .chat-panel {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 36px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .section-heading h2 {
+      margin: 8px 0 0;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 4vw, 36px);
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .section-heading .eyebrow {
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 11px;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+
+    .section-status {
+      margin: 8px 0 0;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .section-meta {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 24px;
+    }
+
+    .product-card {
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      border-color: #d4d4d4;
+    }
+
+    .product-card img {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      background: #f4f4f4;
+    }
+
+    .product-card__body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .product-card__title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #111315;
+      line-height: 1.4;
+    }
+
+    .product-card__price {
+      margin: 4px 0 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: #000000;
+    }
+
+    .product-card__meta {
+      font-size: 12px;
+      color: #6b7280;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .empty-state {
+      border: 1px dashed #e5e7eb;
+      border-radius: 12px;
+      padding: 60px 20px;
+      text-align: center;
+      background: #fafafa;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .pagination {
+      margin-top: 36px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pagination-btn,
+    .pagination-page {
+      border: 1px solid #e5e7eb;
+      background: #fafafa;
+      color: #000000;
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      min-width: 100px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .pagination-btn:hover:not(:disabled),
+    .pagination-page:hover:not(:disabled):not(.is-active) {
+      background: #f5f5f5;
+      border-color: #d4d4d4;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-1px);
+    }
+
+    .pagination-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .pagination-page {
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .pagination-page.is-active {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    }
+
+    .pagination-pages {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: sticky;
+      top: 95px;
+    }
+
+    .chat-panel.is-highlighted {
+      box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.15), 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .chat-panel__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #f0f0f0;
+      padding-bottom: 16px;
+    }
+
+    .chat-panel__head p {
+      margin: 0 0 6px 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+
+    .chat-panel__head strong {
+      display: block;
+      font-size: 22px;
+      font-family: 'Playfair Display', serif;
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .chat-pill {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: #0f172a;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .chat-feed {
+      min-height: 300px;
+      max-height: 450px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .chat-placeholder {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+      padding: 60px 16px;
+    }
+
+    .chat-bubble {
+      max-width: 90%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      font-size: 14px;
+      line-height: 1.6;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .chat-bubble strong {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 8px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+
+    .chat-bubble--self {
+      margin-left: auto;
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #0f172a;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    }
+
+    .chat-bubble small {
+      display: block;
+      margin-top: 10px;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .chat-status {
+      min-height: 18px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .chat-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-form textarea {
+      width: 100%;
+      min-height: 100px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      padding: 14px 16px;
+      font-family: 'Commissioner', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .chat-form textarea:focus {
+      outline: none;
+      border-color: #0f172a;
+      box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+    }
+
+    .chat-form button {
+      align-self: flex-end;
+      background: #0f172a;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 28px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    }
+
+    .chat-form button:hover {
+      background: #1e293b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+    }
+
+    .chat-form.is-sending button,
+    .chat-form.is-sending textarea {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .chat-locked {
+      text-align: center;
+      border: 1px dashed #e5e7eb;
+      border-radius: 12px;
+      padding: 32px 20px;
+      background: #fafafa;
+    }
+
+    .chat-locked p {
+      margin: 0 0 18px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .chat-button-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 28px;
+      border-radius: 10px;
+      background: #0f172a;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+    }
+
+    .chat-button-primary:hover {
+      background: #1e293b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+    }
+
+    @media (max-width: 1200px) {
+      main.brand-page {
+        padding: 0 32px;
+        margin: 100px auto 60px;
+      }
+
+      .brand-panels {
+        grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+        gap: 24px;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .site-header {
+        padding: 0 32px;
+      }
+
+      main.brand-page {
+        padding: 0 24px;
+        gap: 36px;
+      }
+
+      .brand-hero {
+        padding: 36px;
+        gap: 24px;
+      }
+
+      .brand-panels {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-panel {
+        position: static;
+      }
+
+      .catalog-panel,
+      .chat-panel {
+        padding: 28px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .site-header {
+        padding: 0 20px;
+        height: 65px;
+      }
+
+      .brand-wordmark {
+        font-size: 22px;
+      }
+
+      main.brand-page {
+        margin: 85px auto 40px;
+        padding: 0 16px;
+        gap: 24px;
+      }
+
+      .brand-hero {
+        padding: 24px;
+        grid-template-columns: 1fr;
+      }
+
+      .brand-identity {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 16px;
+      }
+
+      .catalog-panel,
+      .chat-panel {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a href="{{ url_for('index') }}" class="brand-wordmark">Varón</a>
+    {% set back_destination = url_for('buyer_dashboard') if session.get('logged_in') and session.get('role') == 'buyer' else url_for('index') %}
+    <a href="{{ back_destination }}" class="back-link">← Back to shopping</a>
+  </header>
+
+  <main class="brand-page">
+    <section class="brand-hero">
+      <div>
+        <div class="brand-identity">
+          <div class="brand-logo">
+            {% if brand.logo_url %}
+              <img src="{{ brand.logo_url }}" alt="{{ brand.store_name }} logo">
+            {% else %}
+              <span>{{ brand.store_name[:1]|upper }}</span>
+            {% endif %}
+          </div>
+          <div>
+            <div class="brand-tag">Verified Partner</div>
+            <h1 style="margin:0;font-family:'Playfair Display',serif;font-size:clamp(30px,5vw,44px);">{{ brand.store_name }}</h1>
+            <p class="brand-description">{{ brand.description or 'Craft-focused drops, breathable tailoring, and silhouettes tuned for the Philippine climate—exclusively on Varón.' }}</p>
+          </div>
+        </div>
+        <ul class="brand-badges">
+          <li>
+            <span>Live styles</span>
+            <strong>{{ brand.product_count }}</strong>
+          </li>
+          <li>
+            <span>Customer rating</span>
+            <strong>{{ '%.1f'|format(brand.rating) if brand.rating is not none else '—' }}</strong>
+          </li>
+          <li>
+            <span>Region</span>
+            <strong>{{ brand.island_group or 'Philippines' }}</strong>
+          </li>
+        </ul>
+        <div class="brand-actions">
+          {% if viewer.is_logged_in %}
+            <a class="brand-action brand-action--primary" href="{{ url_for('messaging_page', store_slug=brand.store_slug) }}">
+              Message {{ brand.store_name }}
+            </a>
+          {% else %}
+            <a class="brand-action brand-action--primary" href="{{ url_for('index') }}#login">
+              Message {{ brand.store_name }}
+            </a>
+          {% endif %}
+          <a class="brand-action brand-action--secondary" href="#brandCatalogPanel">Browse catalog</a>
+        </div>
+      </div>
+      <div class="hero-panel">
+        <article class="hero-card">
+          <h3>Ships from</h3>
+          <p>{{ brand.city or 'Philippines' }}{% if brand.province %}, {{ brand.province }}{% endif %}</p>
+          <small>Dispatches within 48 hours for NCR. Regional deliveries follow Varón rider SLA.</small>
+        </article>
+        <article class="hero-card">
+          <h3>Concierge</h3>
+          <p>Need a restock alert, tailoring notes, or fit advice? Use the live chat to reach {{ brand.store_name }} directly.</p>
+          <small>Available daily · 9:00 – 21:00 PHT</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="brand-panels">
+      <div id="brandCatalogPanel" class="catalog-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Featured styles</p>
+            <h2>Signature drops & restocks</h2>
+            <p class="section-status" id="brandPaginationStatus"></p>
+          </div>
+          <div class="section-meta">{{ brand.product_count }} live listings</div>
+        </div>
+
+        {% if products %}
+          <div class="product-grid" id="brandProductGrid">
+            {% for product in products %}
+              <a href="{{ url_for('product_page', product_id=product.id) }}" class="product-card">
+                <img src="{{ product.image_url or 'https://via.placeholder.com/600x800?text=Varon' }}" alt="{{ product.name }}">
+                <div class="product-card__body">
+                  <p class="product-card__title">{{ product.name }}</p>
+                  <p class="product-card__price">₱{{ '{:,.2f}'.format(product.price) }}</p>
+                  <div class="product-card__meta">
+                    <span>★ {{ '%.1f'|format(product.avg_rating) }} ({{ product.review_count }})</span>
+                    <span>{{ product.sold_count }} sold</span>
+                  </div>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+          <div class="pagination" id="brandPagination" aria-label="Brand product pagination">
+            <button class="pagination-btn" type="button" data-direction="prev">← Previous</button>
+            <div class="pagination-pages" id="brandPaginationPages"></div>
+            <button class="pagination-btn" type="button" data-direction="next">Next →</button>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            No live listings yet. Check back soon for the next drop.
+          </div>
+        {% endif %}
+      </div>
+
+      <aside id="brandChatPanel" class="chat-panel" data-brand-chat data-endpoint="{{ url_for('brand_store_messages', store_slug=brand.store_slug) }}" data-logged-in="{{ 'true' if viewer.is_logged_in else 'false' }}" data-brand-name="{{ brand.store_name }}" data-seller-id="{{ brand.id }}" data-store-slug="{{ brand.store_slug }}">
+        <div class="chat-panel__head">
+          <div>
+            <p>Direct line</p>
+            <strong>{{ brand.store_name }}</strong>
+          </div>
+          <span class="chat-pill">9 AM – 9 PM PHT</span>
+        </div>
+
+        {% if viewer.is_logged_in %}
+          <div class="chat-feed" id="brandChatFeed">
+            <div class="chat-placeholder">Loading messages…</div>
+          </div>
+          <div class="chat-status" id="brandChatStatus"></div>
+          <form id="brandChatForm" class="chat-form">
+            <textarea name="message" placeholder="Ask about fit, stock levels, or upcoming releases…" maxlength="2000" required></textarea>
+            <button type="submit">Send message</button>
+          </form>
+        {% else %}
+          <div class="chat-locked">
+            <p>Sign in to message {{ brand.store_name }} directly.</p>
+            <a href="{{ url_for('index') }}#login" class="chat-button-primary">Log in to chat</a>
+          </div>
+        {% endif %}
+      </aside>
+    </section>
+  </main>
+
+{% if products %}
+  <script>
+    (function () {
+      const PAGE_SIZE = 16;
+      const grid = document.getElementById('brandProductGrid');
+      const pagination = document.getElementById('brandPagination');
+      const pagesContainer = document.getElementById('brandPaginationPages');
+      const statusEl = document.getElementById('brandPaginationStatus');
+
+      if (!grid) {
+        return;
+      }
+
+      const cards = Array.from(grid.querySelectorAll('.product-card'));
+      if (!cards.length) {
+        if (statusEl) {
+          statusEl.textContent = 'No live listings at the moment.';
+        }
+        return;
+      }
+
+      const totalPages = Math.ceil(cards.length / PAGE_SIZE);
+      let currentPage = 1;
+
+      function updateStatus() {
+        if (!statusEl) {
+          return;
+        }
+        if (totalPages <= 1) {
+          statusEl.textContent = `Showing all ${cards.length} style${cards.length === 1 ? '' : 's'}`;
+          return;
+        }
+        const start = (currentPage - 1) * PAGE_SIZE + 1;
+        const end = Math.min(currentPage * PAGE_SIZE, cards.length);
+        statusEl.textContent = `Showing ${start}–${end} of ${cards.length} styles`;
+      }
+
+      function updateButtons() {
+        if (!pagesContainer) {
+          return;
+        }
+        Array.from(pagesContainer.children).forEach((button, index) => {
+          const pageNumber = index + 1;
+          button.classList.toggle('is-active', pageNumber === currentPage);
+          button.disabled = pageNumber === currentPage;
+        });
+        const prevBtn = pagination ? pagination.querySelector('[data-direction="prev"]') : null;
+        const nextBtn = pagination ? pagination.querySelector('[data-direction="next"]') : null;
+        if (prevBtn) {
+          prevBtn.disabled = currentPage === 1;
+        }
+        if (nextBtn) {
+          nextBtn.disabled = currentPage === totalPages;
+        }
+      }
+
+      function renderPage() {
+        cards.forEach((card, index) => {
+          const pageIndex = Math.floor(index / PAGE_SIZE) + 1;
+          card.style.display = pageIndex === currentPage ? 'flex' : 'none';
+        });
+        updateButtons();
+        updateStatus();
+      }
+
+      function buildPageButtons() {
+        if (!pagesContainer) {
+          return;
+        }
+        pagesContainer.innerHTML = '';
+        for (let page = 1; page <= totalPages; page++) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'pagination-page';
+          button.textContent = page;
+          button.addEventListener('click', () => {
+            if (currentPage !== page) {
+              currentPage = page;
+              renderPage();
+            }
+          });
+          pagesContainer.appendChild(button);
+        }
+      }
+
+      if (totalPages <= 1) {
+        cards.forEach(card => {
+          card.style.display = 'flex';
+        });
+        updateStatus();
+        if (pagination) {
+          pagination.style.display = 'none';
+        }
+        return;
+      }
+
+      buildPageButtons();
+      if (pagination) {
+        pagination.style.display = 'flex';
+        const prevBtn = pagination.querySelector('[data-direction="prev"]');
+        const nextBtn = pagination.querySelector('[data-direction="next"]');
+        if (prevBtn) {
+          prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+              currentPage -= 1;
+              renderPage();
+            }
+          });
+        }
+        if (nextBtn) {
+          nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+              currentPage += 1;
+              renderPage();
+            }
+          });
+        }
+      }
+
+      renderPage();
+    })();
+  </script>
+{% endif %}
+
+  <script>
+    (function () {
+      const chatCard = document.querySelector('[data-brand-chat]');
+      if (!chatCard) {
+        return;
+      }
+
+      const isLoggedIn = chatCard.dataset.loggedIn === 'true';
+      if (!isLoggedIn) {
+        return;
+      }
+
+      const endpoint = chatCard.dataset.endpoint;
+      const brandName = chatCard.dataset.brandName || 'the seller';
+      const feed = document.getElementById('brandChatFeed');
+      const statusEl = document.getElementById('brandChatStatus');
+      const form = document.getElementById('brandChatForm');
+      const textarea = form ? form.querySelector('textarea') : null;
+      let refreshTimer = null;
+      let isLoading = false;
+
+      const escapeHTML = (value) => {
+        return (value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      };
+
+      const setStatus = (message) => {
+        if (statusEl) {
+          statusEl.textContent = message || '';
+        }
+      };
+
+      const renderMessages = (messages) => {
+        if (!feed) {
+          return;
+        }
+        if (!messages || !messages.length) {
+          feed.innerHTML = '<div class="chat-placeholder">No messages yet. Say hello to begin the conversation.</div>';
+          return;
+        }
+
+        feed.innerHTML = messages.map((msg) => {
+          const bubbleClass = msg.is_self ? 'chat-bubble chat-bubble--self' : 'chat-bubble';
+          const senderLabel = msg.is_self ? 'You' : brandName;
+          const body = escapeHTML(msg.message || '');
+          const time = escapeHTML(msg.display_time || 'Just now');
+          return `
+            <div class="${bubbleClass}">
+              <strong style="display:block;font-size:12px;margin-bottom:6px;letter-spacing:0.08em;text-transform:uppercase;">${escapeHTML(senderLabel)}</strong>
+              <div>${body.replace(/\n/g, '<br>')}</div>
+              <small>${time}</small>
+            </div>
+          `;
+        }).join('');
+        feed.scrollTop = feed.scrollHeight;
+      };
+
+      const fetchMessages = async () => {
+        if (!endpoint || isLoading) {
+          return;
+        }
+        isLoading = true;
+        setStatus('Loading conversation…');
+        try {
+          const response = await fetch(endpoint, { credentials: 'same-origin' });
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Unable to load chat');
+          }
+          renderMessages(data.messages || []);
+          if (!data.messages || !data.messages.length) {
+            setStatus('');
+          } else {
+            setStatus('');
+          }
+        } catch (error) {
+          setStatus(error.message || 'Unable to reach chat server');
+        } finally {
+          isLoading = false;
+        }
+      };
+
+      if (form && textarea) {
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const message = textarea.value.trim();
+          if (!message) {
+            return;
+          }
+          form.classList.add('is-sending');
+          setStatus('Sending message…');
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ message })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || 'Failed to send message');
+            }
+            textarea.value = '';
+            await fetchMessages();
+            setStatus('');
+          } catch (error) {
+            setStatus(error.message || 'Unable to send message');
+          } finally {
+            form.classList.remove('is-sending');
+          }
+        });
+      }
+
+      fetchMessages();
+      refreshTimer = setInterval(fetchMessages, 15000);
+      window.addEventListener('beforeunload', () => {
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

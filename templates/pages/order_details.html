@@ -219,7 +219,7 @@
         <div class="detail-header">
           <div>
             <h1 style="margin:0 0 8px;font-size:28px">Order #{{ order.order_number }}</h1>
-            <p style="margin:0;color:#666">Placed on {{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+            <p style="margin:0;color:#666">Placed on {{ order.created_at|ph_time('%B %d, %Y at %I:%M %p') or 'N/A' }}</p>
           </div>
           {% set status = order.order_status or 'pending' %}
           {% set status_info = status_colors.get(status, status_colors.get('pending')) %}
@@ -371,7 +371,7 @@
             <div class="timeline-line"></div>
             <strong>Order Picked Up</strong>
             <p style="margin:4px 0 0;color:#666;font-size:14px">
-              {% if shipment.shipped_at %}{{ shipment.shipped_at.strftime('%B %d, %Y at %I:%M %p') }}{% else %}In Progress{% endif %}
+              {% if shipment.shipped_at %}{{ shipment.shipped_at|ph_time('%B %d, %Y at %I:%M %p') }}{% else %}In Progress{% endif %}
             </p>
           </div>
           {% else %}
@@ -420,7 +420,7 @@
             <div class="timeline-dot" style="background:#10b981;box-shadow:0 0 0 2px #10b981"></div>
             <strong style="color:#10b981">✓ Delivered</strong>
             <p style="margin:4px 0 0;color:#666;font-size:14px">
-              {% if shipment.delivered_at %}{{ shipment.delivered_at.strftime('%B %d, %Y at %I:%M %p') }}{% endif %}
+              {% if shipment.delivered_at %}{{ shipment.delivered_at|ph_time('%B %d, %Y at %I:%M %p') }}{% endif %}
             </p>
             {% if shipment.delivery_notes %}
             <p style="margin:8px 0 0;color:#666;font-size:13px;font-style:italic">"{{ shipment.delivery_notes }}"</p>
@@ -431,7 +431,7 @@
             <div class="timeline-dot inactive"></div>
             <strong style="color:#999">Delivered</strong>
             <p style="margin:4px 0 0;color:#999;font-size:14px">
-              {% if shipment.estimated_delivery %}Est. {{ shipment.estimated_delivery.strftime('%B %d, %Y') }}{% else %}⏳ Pending rider delivery{% endif %}
+              {% if shipment.estimated_delivery %}Est. {{ shipment.estimated_delivery|ph_time('%B %d, %Y') }}{% else %}⏳ Pending rider delivery{% endif %}
             </p>
           </div>
           {% endif %}
@@ -488,7 +488,7 @@
       <div id="orderReceivedSection" style="margin-top:24px;padding:20px;background:#f0fdf4;border:2px solid #10b981;border-radius:12px;text-align:center">
         {% if order.buyer_received %}
         <div style="color:#166534;font-weight:600">
-          ✅ You confirmed receipt of this order on {{ order.buyer_received_at.strftime('%B %d, %Y at %I:%M %p') if order.buyer_received_at else 'N/A' }}.
+          ✅ You confirmed receipt of this order on {{ order.buyer_received_at|ph_time('%B %d, %Y at %I:%M %p') or 'N/A' }}.
         </div>
         {% else %}
         <p style="margin:0 0 16px;font-size:15px;color:#166534">

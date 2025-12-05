@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="{{ url_for('static', filename='js/timezone.js') }}"></script>
   <style>
     * {
       margin: 0;
@@ -106,10 +107,30 @@
     }
 
     .orders-table td {
-      padding: 20px;
+      padding: 16px 20px;
       border-bottom: 1px solid #f0f0f0;
       color: #0a0a0a;
       font-size: 14px;
+      vertical-align: middle;
+    }
+
+    .orders-table th:nth-child(1),
+    .orders-table td:nth-child(1),
+    .orders-table th:nth-child(2),
+    .orders-table td:nth-child(2) {
+      text-align: left;
+    }
+
+    .orders-table th:nth-child(3),
+    .orders-table td:nth-child(3) {
+      text-align: right;
+    }
+
+    .orders-table th:nth-child(4),
+    .orders-table td:nth-child(4),
+    .orders-table th:nth-child(5),
+    .orders-table td:nth-child(5) {
+      text-align: center;
     }
 
     .orders-table tbody tr {
@@ -631,6 +652,149 @@
       border-color: #000000;
     }
 
+    /* Cancel Reason Modal */
+    .cancel-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1001;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .cancel-modal-content {
+      background: white;
+      padding: 36px;
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      border: 1px solid #e5e7eb;
+    }
+
+    .cancel-modal-content h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: #000000;
+      margin-bottom: 8px;
+    }
+
+    .cancel-modal-subtitle {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .suggestion-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .suggestion-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #0a0a0a;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .suggestion-chip span {
+      font-weight: 600;
+      color: #000000;
+    }
+
+    .suggestion-chip:hover {
+      border-color: #000000;
+      background: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+
+    #cancelReasonInput {
+      width: 100%;
+      min-height: 120px;
+      padding: 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      resize: vertical;
+      font-size: 14px;
+      font-family: 'Commissioner', sans-serif;
+      margin-bottom: 10px;
+      transition: border-color 0.2s ease;
+    }
+
+    #cancelReasonInput:focus {
+      outline: none;
+      border-color: #000000;
+    }
+
+    .cancel-modal-hint {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 18px;
+    }
+
+    .cancel-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .cancel-modal-actions button {
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .cancel-modal-actions .cancel-back-btn {
+      background: #f3f4f6;
+      color: #111827;
+      border: 1px solid #e5e7eb;
+    }
+
+    .cancel-modal-actions .cancel-back-btn:hover {
+      background: #e5e7eb;
+      border-color: #d1d5db;
+    }
+
+    .cancel-modal-actions .cancel-submit-btn {
+      background: #000000;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .cancel-modal-actions .cancel-submit-btn:disabled {
+      background: #9ca3af;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .cancel-modal-actions .cancel-submit-btn:hover:not(:disabled) {
+      background: #1f2937;
+      transform: translateY(-1px);
+    }
+
     @media (max-width: 768px) {
       body {
         padding-top: 60px;
@@ -680,6 +844,14 @@
       .detail-value {
         text-align: left;
         max-width: 100%;
+      }
+
+      .cancel-modal-content {
+        padding: 24px;
+      }
+
+      .suggestion-chips {
+        gap: 8px;
       }
     }
   </style>
@@ -738,10 +910,32 @@
     </div>
   </div>
 
+  <!-- Cancel Reason Modal -->
+  <div id="cancelReasonModal" class="cancel-modal">
+    <div class="cancel-modal-content" onclick="event.stopPropagation();">
+      <h3>Why are you cancelling?</h3>
+      <p class="cancel-modal-subtitle" id="cancelReasonSubtitle">Choose a quick reason or type your own.</p>
+      <div id="cancelSuggestionChips" class="suggestion-chips"></div>
+      <textarea id="cancelReasonInput" placeholder="Tell us a bit more..." maxlength="500"></textarea>
+      <p class="cancel-modal-hint">Minimum 5 characters. Suggestions can be combined with your own notes.</p>
+      <div class="cancel-modal-actions">
+        <button type="button" class="cancel-back-btn" onclick="closeCancelReasonModal()">Back</button>
+        <button type="button" class="cancel-submit-btn" id="cancelReasonSubmitBtn" onclick="submitCancelReason()" disabled>Send Reason</button>
+      </div>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
   <script>
     let allOrders = [];
     const cancellableStatuses = new Set(['pending', 'confirmed']);
+    const CANCEL_REASON_SUGGESTIONS = [
+      'Need to change address',
+      'Need to change payment method',
+      "Don't want the order anymore"
+    ];
+    let cancelReasonResolveFn = null;
+    let cancelReasonStatusContext = '';
 
     const NotificationBridge = {
       success(message) {
@@ -770,7 +964,117 @@
     // Load orders on page load
     document.addEventListener('DOMContentLoaded', () => {
       loadOrders();
+      initializeCancelReasonUI();
     });
+
+    function initializeCancelReasonUI() {
+      const chipsContainer = document.getElementById('cancelSuggestionChips');
+      if (chipsContainer) {
+        chipsContainer.innerHTML = CANCEL_REASON_SUGGESTIONS.map(reason => {
+          const encoded = escapeHtml(reason);
+          return `<button type="button" class="suggestion-chip" data-reason="${encoded}"><span>+</span>${encoded}</button>`;
+        }).join('');
+
+        chipsContainer.addEventListener('click', event => {
+          const chip = event.target.closest('.suggestion-chip');
+          if (chip && chip.dataset.reason) {
+            appendCancellationSuggestion(chip.dataset.reason);
+          }
+        });
+      }
+
+      const textarea = document.getElementById('cancelReasonInput');
+      if (textarea) {
+        textarea.addEventListener('input', handleCancelReasonInput);
+      }
+
+      handleCancelReasonInput();
+    }
+
+    function escapeHtml(text = '') {
+      return text.replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char] || char));
+    }
+
+    function appendCancellationSuggestion(reason) {
+      if (!reason) return;
+      const textarea = document.getElementById('cancelReasonInput');
+      if (!textarea) return;
+      const currentValue = textarea.value.trim();
+      textarea.value = currentValue ? `${textarea.value}${textarea.value.endsWith(' ') ? '' : ' '}${reason}` : reason;
+      textarea.focus();
+      handleCancelReasonInput();
+    }
+
+    function handleCancelReasonInput() {
+      const textarea = document.getElementById('cancelReasonInput');
+      const submitBtn = document.getElementById('cancelReasonSubmitBtn');
+      if (!textarea || !submitBtn) return;
+      submitBtn.disabled = textarea.value.trim().length < 5;
+    }
+
+    function openCancelReasonModal(orderStatus = '') {
+      const modal = document.getElementById('cancelReasonModal');
+      const textarea = document.getElementById('cancelReasonInput');
+      const subtitle = document.getElementById('cancelReasonSubtitle');
+      if (!modal || !textarea) {
+        return false;
+      }
+
+      cancelReasonStatusContext = orderStatus;
+      textarea.value = '';
+      handleCancelReasonInput();
+
+      if (subtitle) {
+        subtitle.textContent = orderStatus === 'confirmed'
+          ? 'Seller already confirmed this order. Share a short note for review.'
+          : 'Choose a quick reason or type your own.';
+      }
+
+      modal.style.display = 'flex';
+      setTimeout(() => textarea.focus(), 100);
+      return true;
+    }
+
+    function hideCancelReasonModal() {
+      const modal = document.getElementById('cancelReasonModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
+    function closeCancelReasonModal() {
+      hideCancelReasonModal();
+      if (typeof cancelReasonResolveFn === 'function') {
+        cancelReasonResolveFn(null);
+        cancelReasonResolveFn = null;
+      }
+    }
+
+    function submitCancelReason() {
+      const textarea = document.getElementById('cancelReasonInput');
+      if (!textarea) {
+        return;
+      }
+
+      const value = textarea.value.trim();
+      if (value.length < 5) {
+        NotificationBridge.error('Please provide at least 5 characters.');
+        return;
+      }
+
+      const reason = value.substring(0, 500);
+      hideCancelReasonModal();
+      if (typeof cancelReasonResolveFn === 'function') {
+        cancelReasonResolveFn(reason);
+        cancelReasonResolveFn = null;
+      }
+    }
 
     function loadOrders() {
       fetch('/api/my-orders')
@@ -869,7 +1173,7 @@
       const actions = [`<button class="track-btn" onclick="showTimeline(${order.id})">📍 Track Order</button>`];
       if (canCancelOrder(order.order_status)) {
         const statusValue = order.order_status || '';
-        const cancelLabel = statusValue === 'confirmed' ? 'Request Cancellation' : 'Cancel Order';
+        const cancelLabel = 'Cancel Order';
         const cancelHint = statusValue === 'confirmed' ? 'Seller approval required' : 'Cancel this order immediately';
         actions.push(`<button class="cancel-btn" title="${cancelHint}" onclick="confirmCancelOrder(${order.id}, '${statusValue}')">${cancelLabel}</button>`);
       }
@@ -906,6 +1210,19 @@
     }
 
     async function promptCancellationReason(orderStatus = '') {
+      const modal = document.getElementById('cancelReasonModal');
+      const textarea = document.getElementById('cancelReasonInput');
+      if (modal && textarea) {
+        return new Promise(resolve => {
+          cancelReasonResolveFn = resolve;
+          openCancelReasonModal(orderStatus);
+        });
+      }
+
+      return fallbackPromptCancellationReason(orderStatus);
+    }
+
+    async function fallbackPromptCancellationReason(orderStatus = '') {
       const requestMessage = orderStatus === 'confirmed'
         ? 'Share a short reason so the seller can review your cancellation request.'
         : 'Please tell us why you want to cancel this order.';
@@ -959,15 +1276,28 @@
 
     function formatDate(dateString) {
       if (!dateString) return 'N/A';
+      if (window.PhilippineTime && typeof window.PhilippineTime.formatDateTime === 'function') {
+        const formatted = window.PhilippineTime.formatDateTime(dateString, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        if (formatted) {
+          return formatted;
+        }
+      }
       const date = new Date(dateString);
-      // Adjust for timezone - assuming server is UTC, convert to local time
-      return date.toLocaleString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
+      return date.toLocaleString('en-PH', {
+        year: 'numeric',
+        month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
+        timeZone: 'Asia/Manila'
       });
     }
 
@@ -1138,11 +1468,15 @@
     window.onclick = function(event) {
       const timelineModal = document.getElementById('timelineModal');
       const ratingModal = document.getElementById('ratingModal');
+      const cancelModal = document.getElementById('cancelReasonModal');
       if (event.target === timelineModal) {
         closeTimeline();
       }
       if (event.target === ratingModal) {
         closeRatingModal();
+      }
+      if (event.target === cancelModal) {
+        closeCancelReasonModal();
       }
     }
 

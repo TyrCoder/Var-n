@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Commissioner:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/timezone.js') }}"></script>
     <style>
       /* Ensure body is flex container for footer positioning */
       body {
@@ -279,6 +280,102 @@
         margin: 4px 0 0;
         font-size: 13px;
         color: #6b7280;
+      }
+
+      .brand-results {
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 20px;
+        background: #fff;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      }
+
+      .brand-results__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        font-size: 14px;
+        color: #4b5563;
+      }
+
+      .brand-results__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .brand-card {
+        border: 1px solid #ededed;
+        border-radius: 16px;
+        padding: 16px;
+        background: #fff;
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+      }
+
+      .brand-card__logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+        display: grid;
+        place-items: center;
+        font-weight: 600;
+        font-size: 18px;
+        font-family: 'Playfair Display', serif;
+        overflow: hidden;
+        background: #f9fafb;
+        flex-shrink: 0;
+      }
+
+      .brand-card__logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .brand-card__body h4 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+
+      .brand-card__body p {
+        margin: 0 0 10px;
+        font-size: 13px;
+        color: #4b5563;
+      }
+
+      .brand-card__eyebrow {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+        margin-bottom: 4px;
+      }
+
+      .brand-card__meta {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 10px;
+      }
+
+      .brand-card__cta {
+        border: none;
+        background: #0a0a0a;
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
       }
 
       #categoriesContainer {
@@ -1386,6 +1483,8 @@
             </div>
           </div>
 
+          <div id="brandMatchesContainer" class="brand-results" style="display:none" aria-live="polite"></div>
+
           <!-- Shop by Category -->
           <div class="browse-category-panel">
             <div class="browse-category-header">
@@ -1660,6 +1759,26 @@
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
 
     <script>
+
+      function formatPHDate(value, options) {
+        if (!value) return 'N/A';
+        if (window.PhilippineTime && typeof window.PhilippineTime.formatDate === 'function') {
+          const formatted = window.PhilippineTime.formatDate(value, options);
+          if (formatted) return formatted;
+        }
+        const date = new Date(value);
+        return date.toLocaleDateString('en-PH', Object.assign({ timeZone: 'Asia/Manila' }, options || {}));
+      }
+
+      function formatPHDateTime(value, options) {
+        if (!value) return 'N/A';
+        if (window.PhilippineTime && typeof window.PhilippineTime.formatDateTime === 'function') {
+          const formatted = window.PhilippineTime.formatDateTime(value, options);
+          if (formatted) return formatted;
+        }
+        const date = new Date(value);
+        return date.toLocaleString('en-PH', Object.assign({ timeZone: 'Asia/Manila' }, options || {}));
+      }
 
       function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
@@ -2151,6 +2270,63 @@
       let browseCategoryFilterIds = [];
       let searchTimeout;
 
+      function escapeHtml(text = '') {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return String(text).replace(/[&<>"']/g, char => map[char] || char);
+      }
+
+      function truncateText(text = '', limit = 140) {
+        if (!text) return '';
+        return text.length > limit ? `${text.slice(0, limit - 3)}...` : text;
+      }
+
+      function renderBrandMatches(brands = [], searchTerm = '') {
+        const container = document.getElementById('brandMatchesContainer');
+        if (!container) return;
+
+        if (!searchTerm || !brands.length) {
+          container.style.display = 'none';
+          container.innerHTML = '';
+          return;
+        }
+
+        const cards = brands.map(brand => {
+          const summary = truncateText(brand.description || 'Explore limited capsules from this Varón partner.', 150);
+          const productCount = Number(brand.product_count || 0);
+          const rating = brand.rating !== null && brand.rating !== undefined ? Number(brand.rating).toFixed(1) : null;
+          const logoMarkup = brand.logo_url
+            ? `<img src="${escapeHtml(brand.logo_url)}" alt="${escapeHtml(brand.store_name || 'Brand')} logo">`
+            : `<span>${escapeHtml((brand.store_name || brand.primary_brand || 'B').charAt(0).toUpperCase())}</span>`;
+          const brandUrl = brand.brand_url || '#';
+
+          return `
+            <article class="brand-card">
+              <div class="brand-card__logo">${logoMarkup}</div>
+              <div class="brand-card__body">
+                <p class="brand-card__eyebrow">Brand store</p>
+                <h4>${escapeHtml(brand.store_name || brand.primary_brand || 'Brand')}</h4>
+                <p>${escapeHtml(summary)}</p>
+                <div class="brand-card__meta">
+                  <span>${productCount} ${productCount === 1 ? 'style' : 'styles'}</span>
+                  ${rating ? `<span>★ ${rating}</span>` : ''}
+                  ${brand.island_group ? `<span>${escapeHtml(brand.island_group)}</span>` : ''}
+                </div>
+                <button type="button" class="brand-card__cta" onclick="window.location.href='${brandUrl}'">Visit store</button>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        container.style.display = 'block';
+        container.innerHTML = `
+          <div class="brand-results__header">
+            <div>Brand matches for "${escapeHtml(searchTerm)}"</div>
+            <span>${brands.length} ${brands.length === 1 ? 'match' : 'matches'}</span>
+          </div>
+          <div class="brand-results__grid">${cards}</div>
+        `;
+      }
+
       function setActiveCategoryButton(targetButton) {
         document.querySelectorAll('#categoriesContainer .category-pill').forEach(btn => btn.classList.remove('active'));
         if (targetButton) {
@@ -2320,6 +2496,8 @@
         fetch(`/api/products?${params.toString()}`)
           .then(response => response.json())
           .then(data => {
+            const brandMatches = Array.isArray(data.brands) ? data.brands : [];
+            renderBrandMatches(brandMatches, search);
             if (data.success && data.products && data.products.length > 0) {
               browsePaginationState.products = data.products;
               browsePaginationState.currentPage = 1;
@@ -2332,6 +2510,7 @@
           })
           .catch(error => {
             console.error('Error loading products:', error);
+            renderBrandMatches([], '');
             browsePaginationState.products = [];
             browsePaginationState.currentPage = 1;
             showBrowseMessage('Error Loading Products', 'Please try again later.');
@@ -2377,7 +2556,7 @@
                 </div>
                 <div style="display:flex;justify-content:space-between">
                   <span style="color:#666">Order Date:</span>
-                  <span style="font-weight:600">${new Date(order.created_at).toLocaleDateString()}</span>
+                  <span style="font-weight:600">${formatPHDate(order.created_at)}</span>
                 </div>
               </div>
             `;
@@ -2617,7 +2796,7 @@
               <div class="order-header">
                 <div class="order-info">
                   <div class="order-number">Order #${order.order_number || order.id}</div>
-                  <div class="order-date">${new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                  <div class="order-date">${formatPHDate(order.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}</div>
                 </div>
                 <span class="order-status-badge" style="background:${statusBadgeColor}20;color:${statusBadgeColor};border:1px solid ${statusBadgeColor}40">
                   ${statusLabel}
@@ -2779,7 +2958,7 @@
         document.getElementById('orderDetailStatus').textContent = statusInfo.label;
         document.getElementById('orderDetailStatus').style.color = statusInfo.color;
         document.getElementById('orderDetailStatus').style.background = statusInfo.bg;
-        document.getElementById('orderDetailDate').textContent = new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        document.getElementById('orderDetailDate').textContent = formatPHDate(order.created_at, { year: 'numeric', month: 'short', day: 'numeric' });
         document.getElementById('orderDetailTotal').textContent = `₱${parseFloat(order.total_amount || 0).toFixed(2)}`;
         document.getElementById('orderDetailPayment').textContent = order.payment_status ? order.payment_status.toUpperCase() : 'PENDING';
 
@@ -2888,9 +3067,9 @@
               <div style="flex:1;padding-top:2px">
                 <div style="font-weight:600;color:${textColor}">${step.label}</div>
                 ${isCompleted && step.key === 'delivered' && shipment.delivered_at ? `
-                  <div style="font-size:13px;color:#666;margin-top:2px">${new Date(shipment.delivered_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                  <div style="font-size:13px;color:#666;margin-top:2px">${formatPHDate(shipment.delivered_at, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                 ` : step.key === 'picked_up' && shipment.shipped_at ? `
-                  <div style="font-size:13px;color:#666;margin-top:2px">${new Date(shipment.shipped_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                  <div style="font-size:13px;color:#666;margin-top:2px">${formatPHDate(shipment.shipped_at, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                 ` : ''}
               </div>
             </div>
