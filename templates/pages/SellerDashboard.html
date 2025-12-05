@@ -317,6 +317,467 @@
         min-width: 220px;
       }
 
+      /* Order status filter grid */
+      .order-status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+
+      .order-status-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px 18px;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+        text-align: left;
+        cursor: pointer;
+        min-height: 120px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        font: inherit;
+      }
+
+      .order-status-card:focus-visible {
+        outline: 2px solid #0a0a0a;
+        outline-offset: 2px;
+      }
+
+      .order-status-card[data-state="active"] {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+        border-color: #0a0a0a;
+        background: #ffffff;
+      }
+
+      .order-status-card[data-state="idle"] {
+        opacity: 0.9;
+      }
+
+      .order-status-card__top {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .order-status-card__emoji {
+        font-size: 24px;
+      }
+
+      .order-status-card__count {
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .order-status-card__label {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .order-status-card__hint {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 0;
+      }
+
+      .order-status-card[data-status="all"] {
+        background: linear-gradient(135deg, #f8fafc, #ffffff);
+      }
+
+      .order-status-card[data-status="pending"] {
+        border-color: rgba(249, 115, 22, 0.35);
+        background: linear-gradient(135deg, #fff7ed, #fffbeb);
+      }
+
+      .order-status-card[data-status="confirmed"] {
+        border-color: rgba(59, 130, 246, 0.35);
+        background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+      }
+
+      .order-status-card[data-status="waiting_for_pickup"] {
+        border-color: rgba(245, 158, 11, 0.35);
+        background: linear-gradient(135deg, #fefce8, #fff7ed);
+      }
+
+      .order-status-card[data-status="released_to_rider"] {
+        border-color: rgba(16, 185, 129, 0.35);
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+      }
+
+      .order-status-card[data-status="delivered"] {
+        border-color: rgba(139, 92, 246, 0.35);
+        background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+      }
+
+      .order-status-card[data-status="pending"] .order-status-card__count,
+      .order-status-card[data-status="pending"] .order-status-card__label {
+        color: #c2410c;
+      }
+
+      .order-status-card[data-status="confirmed"] .order-status-card__count,
+      .order-status-card[data-status="confirmed"] .order-status-card__label {
+        color: #1d4ed8;
+      }
+
+      .order-status-card[data-status="waiting_for_pickup"] .order-status-card__count,
+      .order-status-card[data-status="waiting_for_pickup"] .order-status-card__label {
+        color: #b45309;
+      }
+
+      .order-status-card[data-status="released_to_rider"] .order-status-card__count,
+      .order-status-card[data-status="released_to_rider"] .order-status-card__label {
+        color: #047857;
+      }
+
+      .order-status-card[data-status="delivered"] .order-status-card__count,
+      .order-status-card[data-status="delivered"] .order-status-card__label {
+        color: #5b21b6;
+      }
+
+      .order-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .order-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid #e5e7eb;
+        background: #f8fafc;
+        color: #111827;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .order-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+      }
+
+      .order-action--ghost {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        color: #0f172a;
+      }
+
+      .order-action--info {
+        background: #dbeafe;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+      }
+
+      .order-action--violet {
+        background: #ede9fe;
+        border-color: #ddd6fe;
+        color: #5b21b6;
+      }
+
+      .order-action--success {
+        background: #dcfce7;
+        border-color: #bbf7d0;
+        color: #047857;
+      }
+
+      .order-action--solid {
+        background: #0a0a0a;
+        border-color: #0a0a0a;
+        color: #fff;
+      }
+
+      .order-action-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .order-action-badge--violet {
+        background: #ede9fe;
+        color: #5b21b6;
+      }
+
+      .order-action-badge--success {
+        background: #dcfce7;
+        color: #047857;
+      }
+
+      .orders-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      .orders-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 960px;
+      }
+
+      .orders-table thead th {
+        background: #f9fafb;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        border-bottom: 1px solid var(--line);
+        padding: 12px 16px;
+      }
+
+      .orders-table tbody td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--text);
+      }
+
+      .orders-table__cell {
+        padding: 14px 16px;
+      }
+
+      .orders-table__cell--amount {
+        text-align: right;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .orders-table__cell--view,
+      .orders-table__cell--action {
+        text-align: center;
+        white-space: nowrap;
+        min-width: 140px;
+      }
+
+      .order-view-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 18px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      }
+
+      .order-view-btn:hover {
+        transform: translateY(-1px);
+        border-color: #cbd5f5;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      }
+
+      .dashboard-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 10, 10, 0.65);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 1200;
+      }
+
+      .dashboard-modal__card {
+        background: #ffffff;
+        border-radius: 20px;
+        width: min(820px, 96vw);
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 32px;
+        box-shadow: 0 25px 70px rgba(15, 23, 42, 0.25);
+      }
+
+      .dashboard-modal__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .dashboard-modal__title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0;
+        color: #0f172a;
+      }
+
+      .dashboard-modal__close {
+        border: none;
+        background: #f3f4f6;
+        color: #4b5563;
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        font-size: 20px;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.2s ease;
+      }
+
+      .dashboard-modal__close:hover {
+        background: #e5e7eb;
+        transform: translateY(-1px);
+      }
+
+      .tracking-status-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .tracking-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .tracking-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin-top: 24px;
+      }
+
+      .tracking-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 16px;
+        background: #ffffff;
+      }
+
+      .tracking-card h4 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #94a3b8;
+      }
+
+      .tracking-card p {
+        margin: 4px 0;
+        font-size: 14px;
+        color: #0f172a;
+      }
+
+      .tracking-summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+        font-size: 13px;
+      }
+
+      .tracking-summary-table th,
+      .tracking-summary-table td {
+        padding: 10px 0;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+      }
+
+      .tracking-summary-table th {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #94a3b8;
+      }
+
+      .tracking-timeline {
+        margin-top: 28px;
+      }
+
+      .tracking-timeline__title {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      .tracking-event {
+        display: grid;
+        grid-template-columns: 140px 1fr;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 10px;
+      }
+
+      .tracking-event__time {
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+      }
+
+      .tracking-event__details {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .tracking-event__location {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+      }
+
+      .tracking-event__note {
+        font-size: 12px;
+        color: #475569;
+        margin-top: 4px;
+      }
+
+      .tracking-empty {
+        padding: 24px;
+        border-radius: 14px;
+        border: 1px dashed #cbd5f5;
+        background: #f8fafc;
+        text-align: center;
+        font-size: 13px;
+        color: #64748b;
+      }
+
+      @media (max-width: 900px) {
+        .orders-table {
+          min-width: 720px;
+        }
+
+        .orders-table__cell--view,
+        .orders-table__cell--action {
+          min-width: 120px;
+        }
+      }
+
       .table-toolbar {
         display: flex;
         flex-wrap: wrap;
@@ -858,12 +1319,71 @@
       let pageTemplates = {};
       let pendingAccountSettingsSection = null;
       let allOrders = []; // Global orders array for filtering
-      let currentOrderFilter = 'confirmed'; // Track current filter state
+      let currentOrderFilter = 'all'; // Track current filter state
+      let currentOrderSearchTerm = '';
       let sellerProductsCache = [];
       let currentProductStatusFilter = 'all';
       let currentProductSearchTerm = '';
       let archivedProductsCache = [];
       let currentArchivedSearchTerm = '';
+      const ACCOUNT_SETTINGS_FIELD_IDS = [
+        'store-name',
+        'store-description',
+        'contact-email',
+        'contact-phone',
+        'store-address',
+        'island-group'
+      ];
+      const VALID_ISLAND_GROUPS = ['Luzon', 'Visayas', 'Mindanao'];
+
+      function initializeAccountSettingsFieldGuards() {
+        ACCOUNT_SETTINGS_FIELD_IDS.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (!field || field.dataset.dirtyWatcherBound === 'true') {
+            return;
+          }
+
+          const markDirty = () => {
+            field.dataset.userEdited = 'true';
+          };
+
+          field.addEventListener('input', markDirty);
+          field.addEventListener('change', markDirty);
+          field.dataset.dirtyWatcherBound = 'true';
+        });
+      }
+
+      function resetAccountSettingsDirtyFlags() {
+        ACCOUNT_SETTINGS_FIELD_IDS.forEach(fieldId => {
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.dataset.userEdited = 'false';
+          }
+        });
+      }
+
+      function setAccountSettingsFieldValue(fieldId, value, options = {}) {
+        const { force = false } = options;
+        const field = document.getElementById(fieldId);
+        if (!field) {
+          return;
+        }
+
+        if (!force && field.dataset.userEdited === 'true') {
+          return;
+        }
+
+        const sanitizedValue = value == null ? '' : String(value);
+
+        if (field.tagName === 'SELECT') {
+          const optionExists = Array.from(field.options).some(option => option.value === sanitizedValue);
+          field.value = optionExists ? sanitizedValue : '';
+        } else {
+          field.value = sanitizedValue;
+        }
+
+        field.dataset.userEdited = 'false';
+      }
 
       function formatPHDate(value, options) {
         if (!value) return 'N/A';
@@ -922,7 +1442,7 @@
           });
       }
 
-      const searchCapablePages = new Set(['orders', 'inventory', 'notifications']);
+      const searchCapablePages = new Set();
       const searchPlaceholders = {
         'archived-products': 'Search archived products...',
         'orders': 'Search orders or customers...',
@@ -945,6 +1465,28 @@
         } else {
           searchInput.value = '';
         }
+      }
+
+      function handleOrderSearchInput(event) {
+        currentOrderSearchTerm = (event.target.value || '').trim();
+        filterOrders();
+      }
+
+      function initializeOrderSearchField() {
+        const searchInput = document.getElementById('order-search-input');
+        if (!searchInput) {
+          return;
+        }
+
+        ['input', 'search'].forEach(eventName => {
+          searchInput.removeEventListener(eventName, handleOrderSearchInput);
+        });
+
+        searchInput.value = currentOrderSearchTerm;
+
+        ['input', 'search'].forEach(eventName => {
+          searchInput.addEventListener(eventName, handleOrderSearchInput);
+        });
       }
       
       function loadPage(page) {
@@ -1033,7 +1575,9 @@
                   setTimeout(() => focusAccountSettingsSection(accountSectionToFocus), 200);
                 }
               } else if (page === 'orders') {
-                loadOrders('confirmed');
+                currentOrderSearchTerm = '';
+                initializeOrderSearchField();
+                loadOrders('all');
               } else if (page === 'add-product') {
                 loadCategories();
               }
@@ -1516,39 +2060,73 @@
         'orders': `
           <div class="card">
             <div class="inner">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0;"></h2>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <button style="background: #3b82f6; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;" onclick="loadNotifications()">
-                     Notifications
-                    <span id="notification-badge" style="background: #ef4444; color: white; border-radius: 999px; padding: 2px 6px; font-size: 10px; font-weight: 600; margin-left: 6px; display: none;">0</span>
+              <div class="page-section-header">
+                <div>
+                  <p class="page-section-eyebrow">Order Flow</p>
+                  <p class="page-section-subtitle">Filter, search, and track every customer promise in one place.</p>
+                </div>
+                <div class="page-section-actions">
+                  <input type="search" id="order-search-input" placeholder="Search orders or customers..." autocomplete="off">
+                  <button style="background: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; display:flex; align-items:center; gap:8px;" onclick="loadPage('notifications')">
+                    🔔 Notifications
+                    <span id="notification-badge" style="background: #ef4444; color: white; border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 600; display: none;">0</span>
                   </button>
                 </div>
               </div>
 
-              <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px;">
-                <button class="action-btn" data-filter-btn="all" onclick="filterOrders('all')" style="background: #666; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
-                  📋 All Orders
+              <div class="order-status-grid" role="group" aria-label="Order status filters">
+                <button type="button" class="order-status-card" data-filter-btn="all" data-status="all" data-state="active" aria-pressed="true" onclick="filterOrders('all')">
+                  <div class="order-status-card__top">
+                    <span class="order-status-card__emoji">📋</span>
+                    <span class="order-status-card__count" data-status-count="all">0</span>
+                  </div>
+                  <div class="order-status-card__label">All Orders</div>
+                  <p class="order-status-card__hint">Everything currently in motion</p>
                 </button>
-                <button class="action-btn" data-filter-btn="pending" onclick="filterOrders('pending')" style="background: #ff9800; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
-                  ⏳ Pending <span class="pending-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
+                <button type="button" class="order-status-card" data-filter-btn="pending" data-status="pending" data-state="idle" aria-pressed="false" onclick="filterOrders('pending')">
+                  <div class="order-status-card__top">
+                    <span class="order-status-card__emoji">⏳</span>
+                    <span class="order-status-card__count" data-status-count="pending">0</span>
+                  </div>
+                  <div class="order-status-card__label">Pending</div>
+                  <p class="order-status-card__hint">Awaiting confirmation</p>
                 </button>
-                <button class="action-btn" data-filter-btn="confirmed" onclick="filterOrders('confirmed')" style="background: #2196f3; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
-                  ✔️ Confirmed <span class="confirmed-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
+                <button type="button" class="order-status-card" data-filter-btn="confirmed" data-status="confirmed" data-state="idle" aria-pressed="false" onclick="filterOrders('confirmed')">
+                  <div class="order-status-card__top">
+                    <span class="order-status-card__emoji">✔️</span>
+                    <span class="order-status-card__count" data-status-count="confirmed">0</span>
+                  </div>
+                  <div class="order-status-card__label">Confirmed</div>
+                  <p class="order-status-card__hint">Ready to pack and ship</p>
                 </button>
-                <button class="action-btn" data-filter-btn="waiting_for_pickup" onclick="filterOrders('waiting_for_pickup')" style="background: #f59e0b; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
-                  ⏰ Waiting <span class="waiting-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
+                <button type="button" class="order-status-card" data-filter-btn="waiting_for_pickup" data-status="waiting_for_pickup" data-state="idle" aria-pressed="false" onclick="filterOrders('waiting_for_pickup')">
+                  <div class="order-status-card__top">
+                    <span class="order-status-card__emoji">⏰</span>
+                    <span class="order-status-card__count" data-status-count="waiting_for_pickup">0</span>
+                  </div>
+                  <div class="order-status-card__label">Waiting</div>
+                  <p class="order-status-card__hint">Queued for rider pickup</p>
                 </button>
-                <button class="action-btn" data-filter-btn="released_to_rider" onclick="filterOrders('released_to_rider')" style="background: #10b981; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
-                  🚚 Released <span class="released-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
+                <button type="button" class="order-status-card" data-filter-btn="released_to_rider" data-status="released_to_rider" data-state="idle" aria-pressed="false" onclick="filterOrders('released_to_rider')">
+                  <div class="order-status-card__top">
+                    <span class="order-status-card__emoji">🚚</span>
+                    <span class="order-status-card__count" data-status-count="released_to_rider">0</span>
+                  </div>
+                  <div class="order-status-card__label">Released</div>
+                  <p class="order-status-card__hint">Handoff to riders in progress</p>
                 </button>
-                <button class="action-btn" data-filter-btn="delivered" onclick="filterOrders('delivered')" style="background: #8b5cf6; color: #fff; padding: 8px 16px; font-size: 13px; border: none; border-radius: 6px; cursor: pointer;">
-                  ✅ Delivered <span class="delivered-count" style="margin-left: 4px; background: rgba(255,255,255,0.3); padding: 0 6px; border-radius: 999px; font-size: 11px;">0</span>
+                <button type="button" class="order-status-card" data-filter-btn="delivered" data-status="delivered" data-state="idle" aria-pressed="false" onclick="filterOrders('delivered')">
+                  <div class="order-status-card__top">
+                    <span class="order-status-card__emoji">✅</span>
+                    <span class="order-status-card__count" data-status-count="delivered">0</span>
+                  </div>
+                  <div class="order-status-card__label">Delivered</div>
+                  <p class="order-status-card__hint">Completed drops</p>
                 </button>
               </div>
 
               <div id="orders-list" style="overflow-x: auto;">
-                <p style="color: #999; text-align: center; padding: 40px;">Click a status filter to view orders...</p>
+                <p style="color: #999; text-align: center; padding: 40px;">Use the filters or search field above to surface orders.</p>
               </div>
             </div>
           </div>
@@ -1681,40 +2259,6 @@
                       <option value="Mindanao">🏝️ Mindanao</option>
                     </select>
                     <p style="margin: 8px 0 0; font-size: 12px; color: #666;">Your store will be matched with riders serving this island group</p>
-                  </div>
-                </div>
-
-                <div id="personal-settings-section">
-                  <h3 style="margin: 0 0 16px; color: #0a0a0a; font-size: 16px;">Personal Account</h3>
-                  <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
-                    <p style="margin: 0; color: #666; font-size: 13px;"><strong id="account-username">Loading...</strong></p>
-                    <p style="margin: 8px 0 0; color: #999; font-size: 12px;">Account Email: <strong id="account-email">Loading...</strong></p>
-                  </div>
-
-                  <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Full Name</label>
-                    <input type="text" id="full-name" name="full_name" placeholder="Enter full name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                  </div>
-
-                  <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Phone Number</label>
-                    <input type="text" id="phone-number" name="phone_number" placeholder="Enter phone number" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                  </div>
-
-                  <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">Email Address *</label>
-                    <div style="display: flex; gap: 8px;">
-                      <input type="email" id="email-address" name="email" placeholder="Enter email address" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box;">
-                      <button type="button" id="verify-email-btn" onclick="sendEmailOTP()" class="action-btn" style="background: #3b82f6; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; white-space: nowrap;">Verify Email</button>
-                    </div>
-                    <small style="color: var(--muted); font-size: 12px; margin-top: 4px; display: block;">Click "Verify Email" to send OTP verification code</small>
-                    <div id="otp-verification-section" style="display: none; margin-top: 12px; padding: 12px; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 6px;">
-                      <input type="text" id="otp-code" placeholder="Enter 6-digit OTP code" style="width: 100%; padding: 10px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 8px; box-sizing: border-box;">
-                      <button type="button" id="verify-otp-btn" onclick="verifyEmailOTP()" class="action-btn" style="width: 100%; background: #10b981; color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">Verify OTP</button>
-                    </div>
-                    <div id="email-verified-message" style="display: none; margin-top: 12px; padding: 12px; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; color: #15803d; font-weight: 500;">
-                      ✓ Email verified successfully
-                    </div>
                   </div>
                 </div>
 
@@ -3323,19 +3867,21 @@
         }
 
         let html = `
-          <table style="width:100%; border-collapse: collapse;">
-            <thead>
-              <tr style="background:#f5f5f5; border-bottom: 2px solid #ddd;">
-                <th style="padding:10px; text-align:left; font-weight:600;">Order Number</th>
-                <th style="padding:10px; text-align:left; font-weight:600;">Customer</th>
-                <th style="padding:10px; text-align:left; font-weight:600;">Items</th>
-                <th style="padding:10px; text-align:right; font-weight:600;">Amount</th>
-                <th style="padding:10px; text-align:left; font-weight:600;">Status</th>
-                <th style="padding:10px; text-align:left; font-weight:600;">Date</th>
-                <th style="padding:10px; text-align:center; font-weight:600;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div class="orders-table-wrapper table-scroll">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>Order Number</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>View Order</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
         `;
 
         orders.forEach(order => {
@@ -3369,41 +3915,49 @@
             year: 'numeric'
           });
 
+          const actionMarkup = (() => {
+            if (order.order_status === 'pending') {
+              return '<button class="order-action order-action--info" onclick="confirmOrder(' + order.id + ')">✓ Confirm</button>';
+            } else if (order.order_status === 'confirmed') {
+              return '<button class="order-action order-action--violet" onclick="setToWaitingPickup(' + order.id + ')">⏰ Mark Waiting</button>';
+            } else if (order.order_status === 'waiting_for_pickup') {
+              return '<span class="order-action-badge order-action-badge--violet">⏰ Awaiting Rider</span>';
+            } else if (order.order_status === 'released_to_rider') {
+              return '<button class="order-action order-action--success" onclick="viewDeliveryStatus(' + order.id + ')">📍 Track</button>';
+            } else if (order.order_status === 'shipped') {
+              let btns = '<button class="order-action order-action--success" onclick="viewDeliveryStatus(' + order.id + ')">📍 Track</button>';
+              btns += '<button class="order-action order-action--success" onclick="confirmDelivery(' + order.id + ')">✅ Delivered</button>';
+              return btns;
+            } else if (order.order_status === 'delivered') {
+              return '<span class="order-action-badge order-action-badge--success">✅ Delivered</span>';
+            } else if (order.order_status !== 'cancelled') {
+              return '<button class="order-action order-action--info" onclick="viewDeliveryStatus(' + order.id + ')">📍 Track</button>';
+            }
+            return '<span style="font-size:12px; color:#94a3b8;">—</span>';
+          })();
+
+          const viewButton = `
+            <button class="order-view-btn" onclick="viewOrderDetails(${order.id})">
+              👁️ View Order
+            </button>
+          `;
+
           html += `
             <tr style="border-bottom: 1px solid #eee;" data-order-id="${order.id}" data-order-status="${order.order_status}">
               <td style="padding:10px;"><strong>${order.order_number}</strong></td>
               <td style="padding:10px;">${order.customer_name || 'N/A'}</td>
               <td style="padding:10px;">${order.item_count || 1} item(s)</td>
-              <td style="padding:10px; text-align:right;"><strong>₱${parseFloat(order.total_amount || 0).toFixed(2)}</strong></td>
+              <td class="orders-table__cell orders-table__cell--amount">₱${parseFloat(order.total_amount || 0).toFixed(2)}</td>
               <td style="padding:10px;">
                 <span style="background:${statusBadgeColor}; color:#fff; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">
                   ${statusEmoji} ${order.order_status.replace(/_/g, ' ').toUpperCase()}
                 </span>
               </td>
               <td style="padding:10px; font-size:12px; color:#666;">${orderDate}</td>
-              <td style="padding:10px; text-align:center;">
-                <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;align-items:center">
-                  <button class="action-btn" onclick="viewOrderDetails(${order.id})" style="font-size:12px; padding:4px 8px;">👁️ View</button>
-                  ${(() => {
-                    if (order.order_status === 'pending') {
-                      return '<button class="action-btn" onclick="confirmOrder(' + order.id + ')" style="font-size:12px; padding:4px 8px; background:#2196f3; color:#fff;">✓ Confirm</button>';
-                    } else if (order.order_status === 'confirmed') {
-                      return '<button class="action-btn" onclick="setToWaitingPickup(' + order.id + ')" style="font-size:12px; padding:4px 8px; background:#8b5cf6; color:#fff;">⏸️ Mark Waiting</button>';
-                    } else if (order.order_status === 'waiting_for_pickup') {
-                      return '<span style="background:#8b5cf6;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">⏸️ Awaiting Rider</span>';
-                    } else if (order.order_status === 'released_to_rider' || order.order_status === 'shipped') {
-                      let btns = '<button class="action-btn" onclick="viewDeliveryStatus(' + order.id + ')" style="font-size:12px; padding:4px 8px; background:#10b981; color:#fff;">📍 Track</button>';
-                      if (order.order_status === 'shipped') {
-                        btns += '<button class="action-btn" onclick="confirmDelivery(' + order.id + ')" style="font-size:12px; padding:4px 8px; background:#059669; color:#fff;">✅ Delivered</button>';
-                      }
-                      return btns;
-                    } else if (order.order_status === 'delivered') {
-                      return '<span style="background:#10b981;color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">✅ Delivered</span>';
-                    } else if (order.order_status !== 'cancelled') {
-                      return '<button class="action-btn" onclick="viewDeliveryStatus(' + order.id + ')" style="font-size:12px; padding:4px 8px; background:#3b82f6; color:#fff;">📍 Track</button>';
-                    }
-                    return '';
-                  })()}
+              <td class="orders-table__cell orders-table__cell--view">${viewButton}</td>
+              <td class="orders-table__cell orders-table__cell--action">
+                <div class="order-actions">
+                  ${actionMarkup}
                 </div>
               </td>
             </tr>
@@ -3411,8 +3965,9 @@
         });
 
         html += `
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         `;
 
         container.innerHTML = html;
@@ -3607,37 +4162,85 @@
         }
       }
 
-      // Filter orders by status
+      function ensureTrackOrderModal() {
+        let modal = document.getElementById('track-order-modal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'track-order-modal';
+          modal.className = 'dashboard-modal';
+          modal.innerHTML = `
+            <div class="dashboard-modal__card">
+              <div id="track-order-body"></div>
+            </div>
+          `;
+          modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+              closeTrackOrderModal();
+            }
+          });
+          document.body.appendChild(modal);
+        }
+        return modal;
+      }
+
+      function closeTrackOrderModal() {
+        const modal = document.getElementById('track-order-modal');
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      }
+
+      // Filter orders by status and search term
       function filterOrders(status) {
-        console.log('📋 Filtering orders by status:', status);
-        
-        // Update current filter state
-        currentOrderFilter = status;
-        
-        // Update active button
-        const filterButtons = document.querySelectorAll('[data-filter-btn]');
+        const nextFilter = status || currentOrderFilter || 'all';
+        console.log('📋 Filtering orders by status:', nextFilter, '| search term:', currentOrderSearchTerm);
+
+        currentOrderFilter = nextFilter;
+
+        const filterButtons = document.querySelectorAll('.order-status-card[data-filter-btn]');
         filterButtons.forEach(btn => {
-          btn.style.opacity = '0.7';
-          btn.style.fontWeight = '400';
-          if (btn.getAttribute('data-filter-btn') === status) {
-            btn.style.opacity = '1';
-            btn.style.fontWeight = '600';
-          }
+          const isActive = btn.getAttribute('data-filter-btn') === nextFilter;
+          btn.setAttribute('data-state', isActive ? 'active' : 'idle');
+          btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
 
-        if (status === 'all') {
-          displayOrders(allOrders);
-          return;
+        let filtered = Array.isArray(allOrders) ? allOrders.slice() : [];
+
+        if (nextFilter !== 'all') {
+          filtered = filtered.filter(order => {
+            if (nextFilter === 'release_to_rider') {
+              return order.order_status === 'confirmed' && order.seller_confirmed_rider === true;
+            }
+            return order.order_status === nextFilter;
+          });
         }
 
-        const filtered = allOrders.filter(order => {
-          if (status === 'release_to_rider') {
-            return order.order_status === 'confirmed' && order.seller_confirmed_rider === true;
-          }
-          return order.order_status === status;
-        });
+        const normalizedSearch = (currentOrderSearchTerm || '').toLowerCase();
+        if (normalizedSearch) {
+          filtered = filtered.filter(order => {
+            const searchableFields = [
+              order.order_number,
+              order.customer_name,
+              order.customer_email,
+              order.customer_phone,
+              order.shipping_city,
+              order.shipping_province,
+              order.order_status
+            ].filter(Boolean).map(value => value.toString().toLowerCase());
 
-        console.log(`✅ Filtered ${filtered.length} orders with status: ${status}`);
+            if (Array.isArray(order.items)) {
+              order.items.forEach(item => {
+                if (item && item.product_name) {
+                  searchableFields.push(item.product_name.toLowerCase());
+                }
+              });
+            }
+
+            return searchableFields.some(field => field.includes(normalizedSearch));
+          });
+        }
+
+        console.log(`✅ Filtered ${filtered.length} orders with status: ${nextFilter}`);
         displayOrders(filtered);
       }
 
@@ -3888,8 +4491,6 @@
       // ===== NEW: Notification and Status Tracking Functions =====
 
       function updateStatusCounts() {
-        if (!allOrders || allOrders.length === 0) return;
-
         const counts = {
           pending: 0,
           confirmed: 0,
@@ -3898,38 +4499,23 @@
           delivered: 0
         };
 
-        allOrders.forEach(order => {
-          if (counts.hasOwnProperty(order.order_status)) {
-            counts[order.order_status]++;
-          }
-        });
+        if (Array.isArray(allOrders)) {
+          allOrders.forEach(order => {
+            if (counts.hasOwnProperty(order.order_status)) {
+              counts[order.order_status]++;
+            }
+          });
+        }
 
-        // Update badge elements
-        const pendingBtn = document.querySelector('[data-filter-btn="pending"]');
-        const confirmedBtn = document.querySelector('[data-filter-btn="confirmed"]');
-        const waitingBtn = document.querySelector('[data-filter-btn="waiting_for_pickup"]');
-        const releasedBtn = document.querySelector('[data-filter-btn="released_to_rider"]');
-        const deliveredBtn = document.querySelector('[data-filter-btn="delivered"]');
+        const totalOrders = Array.isArray(allOrders) ? allOrders.length : 0;
+        setOrderStatusCount('all', totalOrders);
+        Object.entries(counts).forEach(([status, value]) => setOrderStatusCount(status, value));
+      }
 
-        if (pendingBtn) {
-          const span = pendingBtn.querySelector('.pending-count');
-          if (span) span.textContent = counts.pending;
-        }
-        if (confirmedBtn) {
-          const span = confirmedBtn.querySelector('.confirmed-count');
-          if (span) span.textContent = counts.confirmed;
-        }
-        if (waitingBtn) {
-          const span = waitingBtn.querySelector('.waiting-count');
-          if (span) span.textContent = counts.waiting_for_pickup;
-        }
-        if (releasedBtn) {
-          const span = releasedBtn.querySelector('.released-count');
-          if (span) span.textContent = counts.released_to_rider;
-        }
-        if (deliveredBtn) {
-          const span = deliveredBtn.querySelector('.delivered-count');
-          if (span) span.textContent = counts.delivered;
+      function setOrderStatusCount(status, value) {
+        const target = document.querySelector(`[data-status-count="${status}"]`);
+        if (target) {
+          target.textContent = value;
         }
       }
 
@@ -4098,7 +4684,7 @@
 
           if (data.success) {
             VaronNotifications.success(data.message || 'Order released for rider pickup');
-            loadOrders('confirmed');
+            loadOrders(currentOrderFilter || 'all');
             loadNotifications();
           } else {
             VaronNotifications.error('Failed to release order: ' + (data.error || 'Unknown error'));
@@ -4176,7 +4762,7 @@
 
           if (data.success) {
             VaronNotifications.success('Order marked as Waiting for Pick Up!');
-            loadOrders('confirmed');
+            loadOrders(currentOrderFilter || 'all');
           } else {
             VaronNotifications.error('Error: ' + (data.error || data.message || 'Unknown error'));
           }
@@ -4195,34 +4781,155 @@
           return;
         }
 
+        const modal = ensureTrackOrderModal();
+        const body = modal.querySelector('#track-order-body');
+        modal.style.display = 'flex';
 
-        const statusMap = {
-          'pending': 'Pending Pickup',
-          'picked_up': 'Picked Up',
-          'in_transit': 'In Transit',
-          'out_for_delivery': 'Out for Delivery',
-          'delivered': 'Delivered',
-          'failed': 'Delivery Failed',
-          'assigned_to_rider': 'Assigned to Rider'
+        const shipmentStatusRaw = (order.shipment_status || order.order_status || 'pending').toString();
+        const orderStatusRaw = (order.order_status || 'pending').toString();
+        const shipmentStatusKey = shipmentStatusRaw.toLowerCase();
+        const shipmentStatusLabel = shipmentStatusRaw.replace(/_/g, ' ').toUpperCase();
+        const orderStatusLabel = orderStatusRaw.replace(/_/g, ' ').toUpperCase();
+
+        const shipmentBadges = {
+          'pending': { bg: '#fef3c7', color: '#92400e', icon: '⏳' },
+          'picked_up': { bg: '#dbeafe', color: '#1d4ed8', icon: '📦' },
+          'in_transit': { bg: '#ede9fe', color: '#5b21b6', icon: '🚚' },
+          'out_for_delivery': { bg: '#dcfce7', color: '#047857', icon: '📍' },
+          'delivered': { bg: '#e0f2fe', color: '#0369a1', icon: '✅' },
+          'failed': { bg: '#fee2e2', color: '#b91c1c', icon: '⚠️' },
+          'assigned_to_rider': { bg: '#fef9c3', color: '#854d0e', icon: '🏍️' }
         };
 
-        const riderName = order.rider_name ? `${order.rider_name}` : 'Assigned Rider';
-        const currentStatus = statusMap[order.shipment_status] || order.shipment_status;
+        const shipmentBadge = shipmentBadges[shipmentStatusKey] || { bg: '#e2e8f0', color: '#0f172a', icon: '📦' };
 
-        const details = `
-      📦 DELIVERY TRACKING
-      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      Order #${order.order_number}
-      Customer: ${order.customer_name || 'N/A'}
+        const shippingCity = order.shipping_city || '';
+        const shippingProvince = order.shipping_province || '';
+        const addressSummary = order.shipping_address_text || [shippingCity, shippingProvince].filter(Boolean).join(', ') || 'Not provided';
+        const recipientName = order.recipient_name || order.customer_name || 'Customer';
+        const recipientPhone = order.recipient_phone || order.customer_phone || 'Not provided';
+        const trackingNumber = order.tracking_number || order.awb_number || order.airway_bill || 'Not assigned';
+        const riderName = order.rider_name || 'Awaiting assignment';
+        const riderPhone = order.rider_phone || order.rider_contact || 'Not provided';
+        const riderVehicle = order.rider_vehicle || order.rider_vehicle_type || 'Not specified';
+        const riderPlate = order.rider_plate_number || order.rider_plate || '—';
+        const etaValue = order.estimated_delivery_at ? formatPHDateTime(order.estimated_delivery_at) : '—';
+        const lastUpdate = order.shipment_status_updated_at
+          ? formatPHDateTime(order.shipment_status_updated_at)
+          : (order.updated_at ? formatPHDateTime(order.updated_at) : '—');
 
-      🚚 Rider: ${riderName}
-      📍 Current Status: ${currentStatus}
-      📍 Delivery to: ${order.shipping_city || ''}, ${order.shipping_province || ''}
+        const trackingUpdatesRaw = order.tracking_updates || order.shipment_updates || order.trackingEvents || [];
+        const trackingUpdates = Array.isArray(trackingUpdatesRaw) ? trackingUpdatesRaw : [];
 
-      ⏰ Order Time: ${formatPHDateTime(order.created_at)}
+        const mappedUpdates = trackingUpdates.map((update, index) => {
+          const safeUpdate = update || {};
+          const timestampRaw = safeUpdate.timestamp || safeUpdate.created_at || safeUpdate.time || safeUpdate.logged_at || null;
+          const parsedTimestamp = timestampRaw ? Date.parse(timestampRaw) : NaN;
+          const fallbackOrder = Date.now() - index;
+          const numericTime = Number.isFinite(parsedTimestamp) ? parsedTimestamp : fallbackOrder;
+          const formattedTime = timestampRaw ? formatPHDateTime(timestampRaw) : `Update ${index + 1}`;
+          const statusText = escapeHtml((safeUpdate.status || safeUpdate.description || `Status update ${index + 1}`).toString());
+          const locationText = escapeHtml(([safeUpdate.location, safeUpdate.city, safeUpdate.province].filter(Boolean).join(', ')) || addressSummary);
+          const noteText = safeUpdate.note || safeUpdate.details || safeUpdate.comment || '';
+
+          return {
+            rawTime: numericTime,
+            time: formattedTime,
+            status: statusText,
+            location: locationText,
+            note: noteText ? escapeHtml(noteText.toString()) : ''
+          };
+        }).sort((a, b) => b.rawTime - a.rawTime);
+
+        const timelineHtml = mappedUpdates.length
+          ? mappedUpdates.map(event => `
+              <div class="tracking-event">
+                <div class="tracking-event__time">${event.time}</div>
+                <div>
+                  <div class="tracking-event__details">${event.status}</div>
+                  <div class="tracking-event__location">📍 ${event.location}</div>
+                  ${event.note ? `<div class="tracking-event__note">${event.note}</div>` : ''}
+                </div>
+              </div>
+            `).join('')
+          : `<p class="tracking-empty">No live tracking updates yet. Current status: <strong>${escapeHtml(shipmentStatusLabel)}</strong>.</p>`;
+
+        body.innerHTML = `
+          <div class="dashboard-modal__header">
+            <div>
+              <p style="margin:0; font-size:12px; letter-spacing:0.08em; color:#94a3b8; text-transform:uppercase;">Track Order</p>
+              <h2 class="dashboard-modal__title">Order #${escapeHtml((order.order_number || orderId).toString())}</h2>
+              <p style="margin:4px 0 0; color:#6b7280; font-size:13px;">Customer: <strong>${escapeHtml(order.customer_name || 'N/A')}</strong></p>
+            </div>
+            <button class="dashboard-modal__close" onclick="closeTrackOrderModal()">×</button>
+          </div>
+
+          <div class="tracking-status-badges">
+            <span class="tracking-badge" style="background:${shipmentBadge.bg}; color:${shipmentBadge.color};">
+              ${shipmentBadge.icon} Shipment: ${escapeHtml(shipmentStatusLabel)}
+            </span>
+            <span class="tracking-badge" style="background:#eef2ff; color:#312e81;">
+              📋 Order: ${escapeHtml(orderStatusLabel)}
+            </span>
+            <span class="tracking-badge" style="background:#f0fdf4; color:#166534;">
+              ⏱️ Last Update: ${escapeHtml(lastUpdate)}
+            </span>
+          </div>
+
+          <div class="tracking-grid">
+            <div class="tracking-card">
+              <h4>Destination</h4>
+              <p><strong>${escapeHtml(recipientName)}</strong></p>
+              <p>${escapeHtml(addressSummary)}</p>
+              <p>📞 ${escapeHtml(recipientPhone)}</p>
+            </div>
+            <div class="tracking-card">
+              <h4>Rider</h4>
+              <p><strong>${escapeHtml(riderName)}</strong></p>
+              <p>📞 ${escapeHtml(riderPhone)}</p>
+              <p>🛵 ${escapeHtml(riderVehicle)}</p>
+              <p>🪪 Plate: ${escapeHtml(riderPlate)}</p>
+            </div>
+            <div class="tracking-card">
+              <h4>Delivery ETA</h4>
+              <p>Estimated Arrival</p>
+              <p style="font-size:18px; font-weight:700; margin-top:4px;">${escapeHtml(etaValue)}</p>
+            </div>
+          </div>
+
+          <div class="tracking-card" style="margin-top:24px;">
+            <h4>Summary</h4>
+            <table class="tracking-summary-table">
+              <tbody>
+                <tr>
+                  <th>Tracking #</th>
+                  <td>${escapeHtml(trackingNumber.toString())}</td>
+                </tr>
+                <tr>
+                  <th>Shipment Status</th>
+                  <td>${escapeHtml(shipmentStatusLabel)}</td>
+                </tr>
+                <tr>
+                  <th>Order Status</th>
+                  <td>${escapeHtml(orderStatusLabel)}</td>
+                </tr>
+                <tr>
+                  <th>Last Update</th>
+                  <td>${escapeHtml(lastUpdate)}</td>
+                </tr>
+                <tr>
+                  <th>Destination</th>
+                  <td>${escapeHtml(addressSummary)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="tracking-timeline">
+            <div class="tracking-timeline__title">Tracking Updates</div>
+            ${timelineHtml}
+          </div>
         `;
-
-        VaronNotifications.info(details.replace(/\n/g, '<br>'));
       }
 
       async function confirmDelivery(orderId) {
@@ -4259,7 +4966,7 @@
 
           if (data.success) {
             VaronNotifications.success('Order marked as delivered!');
-            loadOrders('all');
+            loadOrders(currentOrderFilter || 'all');
             if (typeof fetchOrderCount === 'function') fetchOrderCount();
           } else {
             VaronNotifications.error('Error: ' + (data.error || data.message || 'Unknown error'));
@@ -5346,49 +6053,55 @@
         document.getElementById('top-rated-products').innerHTML = html;
       }
 
-      function loadAccountSettings() {
-        fetch('/seller/account-settings')
+      function loadAccountSettings(options = {}) {
+        const { force = false } = options;
+
+        return fetch('/seller/account-settings')
           .then(response => {
             console.log('Account settings response status:', response.status);
             return response.json();
           })
           .then(data => {
             console.log('Account settings data:', data);
-            if (data.success) {
-              const account = data.account;
-              const brand = data.brand || {};
-
-              document.getElementById('store-name').value = brand.store_name || '';
-              document.getElementById('store-description').value = brand.description || '';
-              document.getElementById('contact-email').value = brand.contact_email || '';
-              document.getElementById('contact-phone').value = brand.contact_phone || '';
-              document.getElementById('store-address').value = brand.address || '';
-              document.getElementById('island-group').value = brand.island_group || 'Luzon';
-
-              document.getElementById('account-username').textContent = account.username || 'User';
-              document.getElementById('account-email').textContent = account.email || '';
-              document.getElementById('full-name').value = account.full_name || '';
-              document.getElementById('phone-number').value = account.phone_number || '';
-              document.getElementById('email-address').value = account.email || '';
-
-
-              document.getElementById('otp-verification-section').style.display = 'none';
-              document.getElementById('email-verified-message').style.display = 'none';
-              document.getElementById('otp-code').value = '';
-            } else {
+            if (!data.success) {
               console.error('Account settings error:', data.error);
-              document.getElementById('account-username').textContent = 'Error: ' + (data.error || 'Unknown error');
+              return false;
             }
+
+            const brand = data.brand || {};
+            const account = data.account || {};
+
+            const brandName = brand.store_name || account.username || account.full_name || '';
+            const contactEmail = brand.contact_email || account.email || '';
+            const contactPhone = brand.contact_phone || account.phone_number || '';
+            const brandDescription = brand.description || '';
+            const storeAddress = brand.address || '';
+            const islandGroupRaw = (brand.island_group || '').trim();
+            const islandGroupValue = VALID_ISLAND_GROUPS.includes(islandGroupRaw) ? islandGroupRaw : 'Luzon';
+
+            setAccountSettingsFieldValue('store-name', brandName, { force });
+            setAccountSettingsFieldValue('store-description', brandDescription, { force });
+            setAccountSettingsFieldValue('contact-email', contactEmail, { force });
+            setAccountSettingsFieldValue('contact-phone', contactPhone, { force });
+            setAccountSettingsFieldValue('store-address', storeAddress, { force });
+            setAccountSettingsFieldValue('island-group', islandGroupValue, { force });
+
+            return true;
           })
           .catch(error => {
             console.error('Error loading account settings:', error);
-            document.getElementById('account-username').textContent = 'Error loading settings';
+            return false;
           });
       }
 
-      function reloadAccountSettings() {
-        loadAccountSettings();
-        alert('✅ Account data refreshed!');
+      async function reloadAccountSettings() {
+        resetAccountSettingsDirtyFlags();
+        const refreshed = await loadAccountSettings({ force: true });
+        if (refreshed) {
+          alert('✅ Account data refreshed!');
+        } else {
+          alert('❌ Unable to refresh account data. Please try again.');
+        }
       }
 
       function setupProfileSettingsForm() {
@@ -5397,6 +6110,8 @@
           console.log('[PROFILE FORM] Not present on current page.');
           return;
         }
+
+        initializeAccountSettingsFieldGuards();
 
         if (profileSettingsForm.dataset.bound === 'true') {
           return;
@@ -5421,7 +6136,7 @@
 
             if (data.success) {
               alert('✅ Profile settings saved successfully!');
-              loadAccountSettings();
+              await loadAccountSettings({ force: true });
             } else {
               alert('❌ Error: ' + (data.error || 'Unknown error'));
             }
@@ -5440,98 +6155,12 @@
       }
 
       function focusAccountSettingsSection(section) {
-        if (!section) return;
-        let target = null;
-        if (section === 'brand') {
-          target = document.getElementById('brand-settings-section');
-        } else if (section === 'account') {
-          target = document.getElementById('personal-settings-section');
-        }
+        const target = document.getElementById('brand-settings-section');
+        if (!target) return;
 
-        if (target) {
-          target.classList.add('section-focus-highlight');
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          setTimeout(() => target.classList.remove('section-focus-highlight'), 1600);
-        }
-      }
-
-      function sendEmailOTP() {
-        const email = document.getElementById('email-address').value.trim();
-        if (!email) {
-          alert('⚠️ Please enter an email address');
-          return;
-        }
-
-        if (!email.includes('@')) {
-          alert('⚠️ Please enter a valid email address');
-          return;
-        }
-
-        const btn = document.getElementById('verify-email-btn');
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-
-        fetch('/send-otp', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({email: email, verification_type: 'email', purpose: 'email_change'})
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            alert('✅ OTP code sent to ' + email);
-            document.getElementById('otp-verification-section').style.display = 'block';
-            document.getElementById('otp-code').focus();
-          } else {
-            alert('❌ Error: ' + (data.message || data.error || 'Could not send OTP'));
-          }
-          btn.disabled = false;
-          btn.textContent = 'Verify Email';
-        })
-        .catch(error => {
-          alert('❌ Error sending OTP: ' + error.message);
-          btn.disabled = false;
-          btn.textContent = 'Verify Email';
-        });
-      }
-
-      function verifyEmailOTP() {
-        const email = document.getElementById('email-address').value.trim();
-        const otp = document.getElementById('otp-code').value.trim();
-
-        if (!otp || otp.length !== 6) {
-          alert('⚠️ Please enter a valid 6-digit OTP code');
-          return;
-        }
-
-        const btn = document.getElementById('verify-otp-btn');
-        btn.disabled = true;
-        btn.textContent = 'Verifying...';
-
-        fetch('/verify-otp', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({email: email, otp_code: otp, purpose: 'email_change'})
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            alert('✅ Email verified successfully!');
-            document.getElementById('otp-verification-section').style.display = 'none';
-            document.getElementById('email-verified-message').style.display = 'block';
-            document.getElementById('verify-email-btn').disabled = true;
-            document.getElementById('verify-email-btn').textContent = '✓ Verified';
-          } else {
-            alert('❌ Error: ' + (data.message || data.error || 'Invalid OTP code'));
-          }
-          btn.disabled = false;
-          btn.textContent = 'Verify OTP';
-        })
-        .catch(error => {
-          alert('❌ Error verifying OTP: ' + error.message);
-          btn.disabled = false;
-          btn.textContent = 'Verify OTP';
-        });
+        target.classList.add('section-focus-highlight');
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => target.classList.remove('section-focus-highlight'), 1600);
       }
 
       async function deletePromotion(promoId) {
@@ -5620,23 +6249,39 @@
         `;
       }
 
-      function initializeProductSearchField(hasProducts = false) {
-        const searchInput = document.getElementById('product-search-input');
+      function configureSectionSearchField({ inputId, enabled, value, handler }) {
+        const searchInput = document.getElementById(inputId);
         if (!searchInput) {
-          return;
+          return null;
         }
 
-        searchInput.removeEventListener('input', handleProductSearchInput);
+        const events = ['input', 'search'];
+        events.forEach(eventName => {
+          searchInput.removeEventListener(eventName, handler);
+        });
 
-        if (!hasProducts) {
+        if (!enabled) {
           searchInput.value = '';
           searchInput.setAttribute('disabled', 'disabled');
-          return;
+          return searchInput;
         }
 
         searchInput.removeAttribute('disabled');
-        searchInput.value = currentProductSearchTerm;
-        searchInput.addEventListener('input', handleProductSearchInput);
+        searchInput.value = value || '';
+        events.forEach(eventName => {
+          searchInput.addEventListener(eventName, handler);
+        });
+
+        return searchInput;
+      }
+
+      function initializeProductSearchField(hasProducts = false) {
+        configureSectionSearchField({
+          inputId: 'product-search-input',
+          enabled: hasProducts,
+          value: currentProductSearchTerm,
+          handler: handleProductSearchInput
+        });
       }
 
       function handleProductSearchInput(event) {
@@ -5645,25 +6290,11 @@
       }
 
       function initializeArchivedSearchField(hasProducts = false) {
-        const searchInput = document.getElementById('archived-search-input');
-        if (!searchInput) {
-          return;
-        }
-
-        ['input', 'search'].forEach(eventName => {
-          searchInput.removeEventListener(eventName, handleArchivedSearchInput);
-        });
-
-        if (!hasProducts) {
-          searchInput.value = '';
-          searchInput.setAttribute('disabled', 'disabled');
-          return;
-        }
-
-        searchInput.removeAttribute('disabled');
-        searchInput.value = currentArchivedSearchTerm;
-        ['input', 'search'].forEach(eventName => {
-          searchInput.addEventListener(eventName, handleArchivedSearchInput);
+        configureSectionSearchField({
+          inputId: 'archived-search-input',
+          enabled: hasProducts,
+          value: currentArchivedSearchTerm,
+          handler: handleArchivedSearchInput
         });
       }
 

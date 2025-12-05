@@ -302,6 +302,15 @@
 				color: #111111;
 			}
 
+			.form-select {
+				appearance: none;
+				background-image: linear-gradient(45deg, transparent 50%, #111111 50%), linear-gradient(135deg, #111111 50%, transparent 50%);
+				background-position: calc(100% - 20px) calc(50% - 4px), calc(100% - 14px) calc(50% - 4px);
+				background-size: 6px 6px, 6px 6px;
+				background-repeat: no-repeat;
+				padding-right: 48px;
+			}
+
 			.input-shell {
 				position: relative;
 			}
@@ -348,6 +357,115 @@
 			.helper-text {
 				font-size: 13px;
 				color: #9e9e9e;
+			}
+
+			.form-group.error label {
+				color: var(--error);
+			}
+
+			.form-group.error .form-input,
+			.form-group.error .form-select {
+				border-color: var(--error);
+				box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+			}
+
+			.error-message {
+				font-size: 12px;
+				color: var(--error);
+				margin-top: 6px;
+			}
+
+			.service-area-card {
+				margin: 24px 0;
+				padding: 20px;
+				border: 1px solid #e5e5e5;
+				border-radius: 20px;
+				background: #fafafa;
+			}
+
+
+			.service-area-card.error {
+				border-color: var(--error);
+				box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
+			}
+
+			.service-area-card .section-error-message {
+				margin-top: 12px;
+				font-size: 12px;
+				color: var(--error);
+			}
+			.province-panel {
+				margin-top: 16px;
+				padding: 16px;
+				border-radius: 16px;
+				border: 1px dashed #d8d8d8;
+				background: #ffffff;
+			}
+
+			.service-area-card .input-shell .input-icon {
+				color: #b0b0b0;
+			}
+
+			.province-header {
+				margin-bottom: 10px;
+				font-size: 13px;
+				color: #555555;
+			}
+
+			.province-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+				gap: 12px;
+			}
+
+			.province-grid label {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				padding: 10px 12px;
+				border: 1px solid #e2e2e2;
+				border-radius: 12px;
+				background: #ffffff;
+				font-size: 14px;
+				font-weight: 500;
+				cursor: pointer;
+				transition: border 0.2s, box-shadow 0.2s;
+			}
+
+			.province-grid input[type="checkbox"] {
+				accent-color: #111111;
+				width: 16px;
+				height: 16px;
+			}
+
+			.province-grid label:hover {
+				border-color: #111111;
+				box-shadow: 0 6px 12px rgba(0,0,0,0.06);
+			}
+
+			.service-area-summary {
+				margin-top: 16px;
+				padding: 10px 12px;
+				border-radius: 12px;
+				background: #f0f0f0;
+				font-size: 13px;
+				color: #555555;
+			}
+
+			.tnc-row.error label {
+				color: var(--error);
+			}
+
+			.tnc-row.error input[type="checkbox"] {
+				outline: 2px solid var(--error);
+				outline-offset: 2px;
+			}
+
+			.tnc-row .section-error-message {
+				width: 100%;
+				margin-top: 8px;
+				font-size: 12px;
+				color: var(--error);
 			}
 
 			.password-shell .form-input {
@@ -598,6 +716,40 @@
 								<span class="helper-text">This helps shoppers and our team understand your assortment.</span>
 							</div>
 
+							<div class="form-group">
+								<label for="sellerAddress">Store address</label>
+								<div class="input-shell">
+									<span class="input-icon">
+										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+									</span>
+									<input id="sellerAddress" name="address" class="form-input" type="text" placeholder="Building, street, city" required />
+								</div>
+								<span class="helper-text">We use this for pickup routing and dashboard defaults.</span>
+							</div>
+
+							<div class="service-area-card" aria-labelledby="seller-service-area-label">
+								<div class="form-group">
+									<label id="seller-service-area-label" for="sellerRegion">Service area</label>
+									<div class="input-shell">
+										<span class="input-icon">
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+										</span>
+										<select id="sellerRegion" name="region" class="form-input form-select" required onchange="toggleSellerRegionProvinces(this.value)">
+											<option value="">Select a region</option>
+											<option value="North Luzon">North Luzon</option>
+											<option value="Central Luzon">Central Luzon</option>
+											<option value="South Luzon">South Luzon</option>
+											<option value="Visayas">Visayas</option>
+											<option value="Mindanao">Mindanao</option>
+										</select>
+									</div>
+									<span class="helper-text">Match your preferred fulfillment zones with our rider network.</span>
+								</div>
+								<div id="sellerProvincesContainer" class="province-panel" style="display:none"></div>
+								<input type="hidden" id="sellerServiceAreaInput" name="service_area" required />
+								<div id="sellerServiceAreaSummary" class="service-area-summary">No service area selected.</div>
+							</div>
+
 							<div class="field-grid">
 								<div class="form-group">
 									<label for="sellerEmail">Email address</label>
@@ -663,46 +815,6 @@
 
 		<script>
 
-			function showNotification(message, type = 'error') {
-				const notification = document.createElement('div');
-				notification.style.cssText = `
-					position: fixed;
-					top: 20px;
-					right: 20px;
-					padding: 16px 24px;
-					background: ${type === 'error' ? '#1f1f1f' : '#4d4d4d'};
-					color: white;
-					border-radius: 8px;
-					box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-					font-size: 14px;
-					font-weight: 500;
-					z-index: 10000;
-					animation: slideIn 0.3s ease;
-					max-width: 400px;
-				`;
-				notification.textContent = message;
-				document.body.appendChild(notification);
-
-				setTimeout(() => {
-					notification.style.animation = 'slideOut 0.3s ease';
-					setTimeout(() => notification.remove(), 300);
-				}, 4000);
-			}
-
-			// Add CSS animations
-			const notifStyle = document.createElement('style');
-			notifStyle.textContent = `
-				@keyframes slideIn {
-					from { transform: translateX(400px); opacity: 0; }
-					to { transform: translateX(0); opacity: 1; }
-				}
-				@keyframes slideOut {
-					from { transform: translateX(0); opacity: 1; }
-					to { transform: translateX(400px); opacity: 0; }
-				}
-			`;
-			document.head.appendChild(notifStyle);
-
 			function togglePasswordVisibility(inputId, buttonId) {
 				const input = document.getElementById(inputId);
 				const icon = document.getElementById(buttonId + 'Icon');
@@ -717,8 +829,139 @@
 				}
 			}
 
+			const SELLER_REGION_PROVINCES = {
+				'North Luzon': ['Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan', 'Baguio City', 'Benguet', 'Abra', 'Kalinga', 'Apayao', 'Mountain Province', 'Cagayan', 'Isabela', 'Nueva Vizcaya', 'Quirino', 'Batanes'],
+				'Central Luzon': ['Pampanga', 'Tarlac', 'Nueva Ecija', 'Zambales', 'Bataan', 'Bulacan', 'Aurora', 'Angeles City', 'Olongapo City', 'San Fernando City'],
+				'South Luzon': ['Laguna', 'Batangas', 'Cavite', 'Rizal', 'Quezon', 'Antipolo City', 'Lucena City', 'Batangas City', 'Lipa City', 'Tagaytay City', 'Calamba City', 'Los Baños', 'Biñan City', 'Cabuyao', 'San Pablo City', 'Albay', 'Camarines Norte', 'Camarines Sur', 'Catanduanes', 'Masbate', 'Sorsogon', 'Marinduque', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan', 'Romblon', 'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 'Marikina', 'Pasay', 'Parañaque', 'Las Piñas', 'Muntinlupa', 'Caloocan', 'Malabon', 'Navotas', 'Valenzuela', 'San Juan'],
+				'Visayas': ['Cebu', 'Cebu City', 'Mandaue City', 'Lapu-Lapu City', 'Talisay City', 'Iloilo', 'Iloilo City', 'Bacolod City', 'Negros Occidental', 'Negros Oriental', 'Bohol', 'Tagbilaran City', 'Dumaguete City', 'Roxas City', 'Kalibo', 'Tacloban City', 'Ormoc City', 'Leyte', 'Samar', 'Eastern Samar', 'Northern Samar', 'Biliran', 'Southern Leyte'],
+				'Mindanao': ['Davao City', 'Davao del Norte', 'Davao del Sur', 'Davao Oriental', 'Davao de Oro', 'Cagayan de Oro City', 'Misamis Oriental', 'Misamis Occidental', 'Iligan City', 'Zamboanga City', 'Zamboanga del Norte', 'Zamboanga del Sur', 'Zamboanga Sibugay', 'General Santos City', 'South Cotabato', 'North Cotabato', 'Sultan Kudarat', 'Butuan City', 'Agusan del Norte', 'Agusan del Sur', 'Surigao del Norte', 'Surigao del Sur', 'Cotabato City', 'Maguindanao', 'Lanao del Norte', 'Lanao del Sur', 'Marawi City', 'Bukidnon', 'Valencia City', 'Malaybalay City']
+			};
+
+			function toggleSellerRegionProvinces(region) {
+				const container = document.getElementById('sellerProvincesContainer');
+				if (!container) return;
+
+				const provinces = SELLER_REGION_PROVINCES[region] || [];
+				container.innerHTML = '';
+
+				if (region && provinces.length) {
+					container.innerHTML = `
+						<div class="province-header">Serve specific provinces/cities in ${region}? (Optional)</div>
+						<div class="province-grid">
+							${provinces.map(province => `
+								<label>
+									<input type="checkbox" name="seller_province" value="${province}" onchange="updateSellerServiceArea()">
+									<span>${province}</span>
+								</label>
+							`).join('')}
+						</div>
+					`;
+					container.style.display = 'block';
+				} else {
+					container.style.display = 'none';
+				}
+
+				updateSellerServiceArea();
+			}
+
+			function updateSellerServiceArea() {
+				const regionSelect = document.getElementById('sellerRegion');
+				const selectedRegion = regionSelect ? regionSelect.value : '';
+				const selectedProvinces = Array.from(document.querySelectorAll('input[name="seller_province"]:checked')).map(cb => cb.value);
+				const serviceAreaInput = document.getElementById('sellerServiceAreaInput');
+				const summary = document.getElementById('sellerServiceAreaSummary');
+
+				const serviceAreas = [];
+				if (selectedRegion) {
+					serviceAreas.push(selectedRegion);
+					if (selectedProvinces.length) {
+						serviceAreas.push(...selectedProvinces);
+					}
+				}
+
+				const combined = serviceAreas.join(',');
+				if (serviceAreaInput) {
+					serviceAreaInput.value = combined;
+					if (!selectedRegion) {
+						serviceAreaInput.setCustomValidity('Please select a service area');
+					} else {
+						serviceAreaInput.setCustomValidity('');
+					}
+				}
+
+				if (summary) {
+					if (!selectedRegion) {
+						summary.textContent = 'No service area selected.';
+					} else if (!selectedProvinces.length) {
+						summary.textContent = `Serving all of ${selectedRegion}.`;
+					} else {
+						summary.textContent = `Serving ${selectedProvinces.length} area${selectedProvinces.length > 1 ? 's' : ''} in ${selectedRegion}.`;
+					}
+				}
+
+				if (selectedRegion) {
+					const serviceCard = document.querySelector('.service-area-card');
+					clearSellerSectionError(serviceCard);
+				}
+			}
+
+			function setSellerFieldError(input, message = 'This field is required') {
+				if (!input) return;
+				const group = input.closest('.form-group');
+				if (!group) return;
+				group.classList.add('error');
+				group.querySelectorAll('.error-message').forEach(msg => msg.remove());
+				const msgEl = document.createElement('div');
+				msgEl.className = 'error-message';
+				msgEl.textContent = message;
+				group.appendChild(msgEl);
+			}
+
+			function clearSellerFieldError(input) {
+				if (!input) return;
+				const group = input.closest('.form-group');
+				if (!group) return;
+				group.classList.remove('error');
+				group.querySelectorAll('.error-message').forEach(msg => msg.remove());
+			}
+
+			function setSellerSectionError(section, message = 'This field is required') {
+				if (!section) return;
+				section.classList.add('error');
+				section.querySelectorAll('.section-error-message').forEach(msg => msg.remove());
+				const msgEl = document.createElement('div');
+				msgEl.className = 'section-error-message';
+				msgEl.textContent = message;
+				section.appendChild(msgEl);
+			}
+
+			function clearSellerSectionError(section) {
+				if (!section) return;
+				section.classList.remove('error');
+				section.querySelectorAll('.section-error-message').forEach(msg => msg.remove());
+			}
+
+			function clearSellerValidationStates() {
+				document.querySelectorAll('#sellerSignup .form-group.error').forEach(group => {
+					group.classList.remove('error');
+					group.querySelectorAll('.error-message').forEach(msg => msg.remove());
+				});
+				const serviceCard = document.querySelector('.service-area-card');
+				const tncRow = document.querySelector('.tnc-row');
+				clearSellerSectionError(serviceCard);
+				clearSellerSectionError(tncRow);
+			}
+
 
 			const sellerPhoneInput = document.getElementById('sellerPhone');
+			const shopNameInput = document.getElementById('shopName');
+			const sellerAddressInput = document.getElementById('sellerAddress');
+			const sellerEmailInput = document.getElementById('sellerEmail');
+			const sellerPasswordInput = document.getElementById('sellerPassword');
+			const sellerConfirmPasswordInput = document.getElementById('sellerConfirmPassword');
+			const serviceAreaCard = document.querySelector('.service-area-card');
+			const tncRow = document.querySelector('.tnc-row');
+			const sellerTncCheckbox = document.getElementById('sellerTnc');
 			sellerPhoneInput.addEventListener('input', function(e) {
 				let value = e.target.value;
 
@@ -739,17 +982,45 @@
 				}
 			});
 
+			const sellerRegionSelect = document.getElementById('sellerRegion');
+			if (sellerRegionSelect) {
+				toggleSellerRegionProvinces(sellerRegionSelect.value || '');
+				sellerRegionSelect.addEventListener('change', () => {
+					const errorDiv = document.getElementById('errorDisplay');
+					if (errorDiv) {
+						errorDiv.style.display = 'none';
+						errorDiv.textContent = '';
+					}
+					clearSellerSectionError(serviceAreaCard);
+				});
+			}
+
+			if (sellerTncCheckbox) {
+				sellerTncCheckbox.addEventListener('change', () => {
+					clearSellerSectionError(tncRow);
+				});
+			}
+
+			document.querySelectorAll('#sellerSignup .form-input, #sellerSignup .form-select').forEach(input => {
+				input.addEventListener('input', () => clearSellerFieldError(input));
+				input.addEventListener('change', () => clearSellerFieldError(input));
+			});
+
 			document.getElementById('sellerSignup').addEventListener('submit', function(e) {
 				e.preventDefault();
 				const form = e.target;
+				updateSellerServiceArea();
 				const formData = new FormData(form);
 
 
-				const email = formData.get('email');
+				const email = (formData.get('email') || '').trim();
 				const password = formData.get('password');
 				const confirmPassword = formData.get('confirm_password');
-				const phone = formData.get('phone');
-				const shopName = formData.get('shop_name');
+				const phone = (formData.get('phone') || '').trim();
+				const shopName = (formData.get('shop_name') || '').trim();
+				const address = (formData.get('address') || '').trim();
+				const region = (formData.get('region') || '').trim();
+				const serviceArea = (formData.get('service_area') || '').trim();
 				const tnc = formData.get('tnc');
 
 
@@ -762,54 +1033,109 @@
 					form.insertBefore(errorDiv, form.firstChild);
 				}
 				errorDiv.style.display = 'none';
+				clearSellerValidationStates();
 
 
-				if (!email || !password || !confirmPassword || !phone || !shopName) {
-					errorDiv.textContent = 'Please complete all required fields.';
-					errorDiv.style.display = 'block';
-					showNotification('Please complete all required fields.', 'error');
-					return;
+				const missingFields = [];
+
+				if (!shopName) {
+					missingFields.push('Brand name');
+					setSellerFieldError(shopNameInput, 'This field is required');
 				}
 
+				if (!phone) {
+					missingFields.push('Contact number');
+					setSellerFieldError(sellerPhoneInput, 'This field is required');
+				}
+
+				if (!address) {
+					missingFields.push('Store address');
+					setSellerFieldError(sellerAddressInput, 'This field is required');
+				}
+
+				if (!email) {
+					missingFields.push('Email address');
+					setSellerFieldError(sellerEmailInput, 'This field is required');
+				}
+
+				if (!password) {
+					missingFields.push('Password');
+					setSellerFieldError(sellerPasswordInput, 'This field is required');
+				}
+
+				if (!confirmPassword) {
+					missingFields.push('Confirm password');
+					setSellerFieldError(sellerConfirmPasswordInput, 'This field is required');
+				}
+
+				if (!region || !serviceArea) {
+					missingFields.push('Service area');
+					setSellerSectionError(serviceAreaCard, 'Please select your service area.');
+				}
 
 				if (!tnc) {
-					errorDiv.textContent = 'You must agree to the Terms & Conditions to continue.';
+					missingFields.push('Terms & Conditions agreement');
+					setSellerSectionError(tncRow, 'You must agree to continue.');
+				}
+
+				if (missingFields.length) {
+					const message = `Missing required fields: ${missingFields.join(', ')}`;
+					errorDiv.textContent = message;
 					errorDiv.style.display = 'block';
-					showNotification('You must agree to the Terms & Conditions to continue.', 'error');
+					if (missingFields.includes('Service area')) {
+						if (sellerRegionSelect) {
+							sellerRegionSelect.focus();
+						}
+						if (serviceAreaCard) {
+							serviceAreaCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						}
+					}
 					return;
 				}
 
 
 				if (!email.includes('@') || !email.includes('.')) {
+					setSellerFieldError(sellerEmailInput, 'Please enter a valid email address.');
 					errorDiv.textContent = 'Please enter a valid email address.';
 					errorDiv.style.display = 'block';
-					showNotification('Please enter a valid email address.', 'error');
 					return;
 				}
 
 
 				const cleanPhone = phone.replace(/[\+\-\s]/g, '');
 				if (!cleanPhone.match(/^\d+$/)) {
+					setSellerFieldError(sellerPhoneInput, 'Please enter a valid phone number.');
 					errorDiv.textContent = 'Please enter a valid phone number.';
 					errorDiv.style.display = 'block';
-					showNotification('Please enter a valid phone number.', 'error');
+					return;
+				}
+
+
+				if (!serviceArea) {
+					setSellerSectionError(serviceAreaCard, 'Please select your service area to continue.');
+					errorDiv.textContent = 'Please select your service area to continue.';
+					errorDiv.style.display = 'block';
+					if (sellerRegionSelect) {
+						sellerRegionSelect.focus();
+					}
 					return;
 				}
 
 
 				if (password !== confirmPassword) {
+					setSellerFieldError(sellerPasswordInput, 'Passwords must match.');
+					setSellerFieldError(sellerConfirmPasswordInput, 'Passwords must match.');
 					errorDiv.textContent = 'Passwords do not match.';
 					errorDiv.style.display = 'block';
-					showNotification('Passwords do not match.', 'error');
 					return;
 				}
 
 
 				const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/;
 				if (!passwordRegex.test(password)) {
+					setSellerFieldError(sellerPasswordInput, 'Use at least 6 characters with letters and numbers.');
 					errorDiv.textContent = 'Password must be at least 6 characters and contain both letters and numbers.';
 					errorDiv.style.display = 'block';
-					showNotification('Password must be at least 6 characters and contain both letters and numbers.', 'error');
 					return;
 				}
 
@@ -827,19 +1153,14 @@
 				.then(response => response.json())
 				.then(data => {
 					if (data.success) {
-						showNotification('✅ Seller account created! Redirecting to verification...', 'success');
+						errorDiv.style.display = 'none';
+						submitBtn.textContent = 'Redirecting...';
 						setTimeout(() => {
 							window.location.href = data.redirect;
-						}, 1500);
+						}, 800);
 					} else {
-
-						if (data.message && (data.message.includes('email') || data.message.includes('Email') || 
-							data.message.includes('phone') || data.message.includes('Phone number'))) {
-							showNotification(data.message, 'error');
-						} else {
-							errorDiv.textContent = data.message;
-							errorDiv.style.display = 'block';
-						}
+						errorDiv.textContent = data.message || 'An error occurred. Please try again.';
+						errorDiv.style.display = 'block';
 						submitBtn.disabled = false;
 						submitBtn.textContent = originalText;
 					}

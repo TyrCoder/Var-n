@@ -395,6 +395,19 @@ CITY_REGION_OVERRIDES = {
 }
 
 
+def map_region_to_island_group(region_label: str) -> str:
+    """Collapse the signup region selection into the dashboard's island options."""
+    if not region_label:
+        return 'Luzon'
+
+    region_lower = region_label.strip().lower()
+    if 'visayas' in region_lower:
+        return 'Visayas'
+    if 'mindanao' in region_lower:
+        return 'Mindanao'
+    return 'Luzon'
+
+
 def normalize_location_piece(value):
     if not value:
         return ''
@@ -3439,11 +3452,22 @@ def signup_seller():
         phone = request.form.get('phone')
         shop_name = request.form.get('shop_name')
         shop_description = request.form.get('shop_description', '')
+        address = (request.form.get('address') or '').strip()
+        region = (request.form.get('region') or '').strip()
+        service_area = (request.form.get('service_area') or '').strip()
         tnc = request.form.get('tnc')
 
 
-        if not all([email, password, phone, shop_name, tnc]):
-            return jsonify({'success': False, 'message': 'All fields are required, including terms acceptance'}), 400
+        if not all([email, password, phone, shop_name, tnc, address, region]):
+            return jsonify({'success': False, 'message': 'All fields are required, including store address and region selection'}), 400
+
+        if not service_area:
+            service_area = region
+
+        if not service_area:
+            return jsonify({'success': False, 'message': 'Please select your service area'}), 400
+
+        island_group = map_region_to_island_group(region)
 
 
         if '@' not in email or '.' not in email:
@@ -3494,6 +3518,10 @@ def signup_seller():
                 'phone': phone,
                 'shop_name': shop_name,
                 'shop_description': shop_description,
+                'address': address,
+                'region': region,
+                'service_area': service_area,
+                'island_group': island_group,
                 'is_existing_user': False,
                 'existing_user_id': None
             }
@@ -10631,10 +10659,21 @@ def verify_otp():
                         if not existing_seller:
 
                             store_slug = pending_seller_signup['shop_name'].lower().replace(' ', '-').replace("'", '')
+                            store_address = (pending_seller_signup.get('address') or '').strip()
+                            region_label = pending_seller_signup.get('region', '')
+                            island_group_value = pending_seller_signup.get('island_group') or map_region_to_island_group(region_label)
 
 
-                            cursor.execute('INSERT INTO sellers (user_id, store_name, store_slug, description, status) VALUES (%s, %s, %s, %s, %s)',
-                                         (user_id, pending_seller_signup['shop_name'], store_slug, pending_seller_signup.get('shop_description', ''), 'approved'))
+                            cursor.execute('''
+                                INSERT INTO sellers (user_id, store_name, store_slug, description, address, island_group, status)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            ''', (user_id,
+                                pending_seller_signup['shop_name'],
+                                store_slug,
+                                pending_seller_signup.get('shop_description', ''),
+                                store_address,
+                                island_group_value,
+                                'approved'))
                             print(f"[VERIFY OTP] Created seller profile with AUTO-APPROVED status for user {user_id}")
 
                         conn.commit()
