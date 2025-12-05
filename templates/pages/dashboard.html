@@ -269,7 +269,8 @@
       const riderDocumentLabels = {
         'government_id': "Driver's License",
         'vehicle_registration': 'Vehicle Registration',
-        'orcr': 'Official Receipt (OR/CR)'
+        'orcr': 'Official Receipt (OR/CR)',
+        'car_photo': 'Vehicle Photo'
       };
 
       function showToast(message, type = 'success') {
@@ -423,11 +424,11 @@
           </div>
           <div id="rider-approve-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1100;align-items:center;justify-content:center">
             <div style="background:#fff;border-radius:12px;padding:24px;max-width:420px;width:90%;text-align:center">
-              <div style="font-size:20px;font-weight:600;margin-bottom:10px">Confirm Rider Approval</div>
-              <p style="color:#666;margin:0 0 20px;line-height:1.5">Approve this rider? They will gain access to delivery tools immediately.</p>
+              <div style="font-size:20px;font-weight:600;margin-bottom:10px">Approve this rider?</div>
+              <p style="color:#666;margin:0 0 20px;line-height:1.5">Confirming will move them to Active Riders and grant access to delivery tools.</p>
               <div style="display:flex;gap:12px;justify-content:center">
                 <button onclick="closeRiderApproveModal()" class="tag" style="background:#e5e7eb;color:#111;border:none;cursor:pointer;padding:10px 18px">Cancel</button>
-                <button onclick="confirmRiderApproval()" class="tag" style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:10px 18px;font-weight:600">Approve Rider</button>
+                <button onclick="confirmRiderApproval()" class="tag" style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:10px 18px;font-weight:600">Confirm</button>
               </div>
             </div>
           </div>
@@ -1403,6 +1404,41 @@
               listContainer.innerHTML = '<p style="color:#ef4444;">Error loading pending riders</p>';
             }
           });
+      }
+
+      function removeRiderRow(riderId) {
+        const listContainer = document.getElementById('pending-riders-list');
+        if (!listContainer) {
+          const badge = document.getElementById('pending-riders-count');
+          if (badge) {
+            badge.textContent = '0';
+          }
+          return;
+        }
+
+        const row = document.getElementById(`rider-${riderId}`);
+        const tbody = row ? row.closest('tbody') : listContainer.querySelector('tbody');
+        if (row) {
+          row.remove();
+        }
+
+        let remaining = 0;
+        if (tbody) {
+          remaining = tbody.querySelectorAll('tr').length;
+        }
+
+        if (remaining === 0) {
+          listContainer.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending riders to verify</p>';
+        }
+
+        const badge = document.getElementById('pending-riders-count');
+        if (badge) {
+          badge.textContent = remaining.toString();
+        }
+
+        if (document.getElementById('active-riders-list')) {
+          loadActiveRiders();
+        }
       }
 
       function viewRiderDetails(riderId) {

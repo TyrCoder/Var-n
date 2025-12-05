@@ -219,7 +219,8 @@ CITY_COORDINATE_HINTS = {
 REQUIRED_RIDER_DOCUMENTS = {
     'government_id': "Driver's License",
     'vehicle_registration': 'Vehicle Registration',
-    'orcr': 'Official Receipt (OR/CR)'
+    'orcr': 'Official Receipt (OR/CR)',
+    'car_photo': 'Vehicle Photo'
 }
 
 APPROVED_RIDER_STATUSES = {'approved', 'active'}
@@ -3321,7 +3322,8 @@ def signup_rider():
             doc_files = {
                 'government_id': request.files.get('document_government_id'),
                 'vehicle_registration': request.files.get('document_vehicle_registration'),
-                'orcr': request.files.get('document_orcr')
+                'orcr': request.files.get('document_orcr'),
+                'car_photo': request.files.get('document_car_photo')
             }
 
             primary_vehicle = (vehicle_types[0] if vehicle_types else '') or ''
@@ -3468,6 +3470,9 @@ def signup_seller():
             return jsonify({'success': False, 'message': 'Please select your service area'}), 400
 
         island_group = map_region_to_island_group(region)
+        store_address = address
+        if region and address and region.lower() not in address.lower():
+            store_address = f"{address}, {region}".strip(', ')
 
 
         if '@' not in email or '.' not in email:
@@ -3490,18 +3495,23 @@ def signup_seller():
             cursor = conn.cursor(dictionary=True)
 
 
-            cursor.execute('SELECT id, email, role FROM users WHERE email = %s', (email,))
+            cursor.execute('SELECT id, email, role, phone FROM users WHERE email = %s', (email,))
             existing_user = cursor.fetchone()
+            is_existing_user = False
+            existing_user_id = None
 
 
             if existing_user:
-                conn.close()
-                return jsonify({'success': False, 'message': 'This email is already registered in the system. Please use a different email address.'}), 400
+                existing_user_id = existing_user['id']
+                if existing_user.get('role') == 'seller':
+                    conn.close()
+                    return jsonify({'success': False, 'message': 'This email is already registered as a seller. Please log in instead.'}), 400
+                is_existing_user = True
 
 
             cursor.execute('SELECT id FROM users WHERE phone = %s', (phone,))
             existing_phone_user = cursor.fetchone()
-            if existing_phone_user:
+            if existing_phone_user and (not is_existing_user or existing_phone_user['id'] != existing_user_id):
                 conn.close()
                 return jsonify({'success': False, 'message': 'This phone number is already registered. Please use a different number.'}), 400
 
@@ -3522,11 +3532,14 @@ def signup_seller():
                 'region': region,
                 'service_area': service_area,
                 'island_group': island_group,
-                'is_existing_user': False,
-                'existing_user_id': None
+                'is_existing_user': is_existing_user,
+                'existing_user_id': existing_user_id
             }
 
-            print(f"[SELLER SIGNUP] Stored in session - Email: {email}, Shop: {shop_name}, Creating new seller account")
+            if is_existing_user:
+                print(f"[SELLER SIGNUP] Stored in session - Email: {email}, Shop: {shop_name}, Upgrading existing user ID {existing_user_id} to seller")
+            else:
+                print(f"[SELLER SIGNUP] Stored in session - Email: {email}, Shop: {shop_name}, Creating new seller account")
             print(f"[SELLER SIGNUP] Session keys: {list(session.keys())}")
 
 
@@ -10635,9 +10648,12 @@ def verify_otp():
 
                         if is_existing_user and existing_user_id:
 
-                            cursor.execute('UPDATE users SET role = %s WHERE id = %s', ('seller', existing_user_id))
+                            updated_phone = (pending_seller_signup.get('phone') or '').strip()
+                            updated_password = pending_seller_signup.get('password')
+                            cursor.execute('UPDATE users SET role = %s, phone = %s, password = %s WHERE id = %s',
+                                           ('seller', updated_phone, updated_password, existing_user_id))
                             user_id = existing_user_id
-                            print(f"[VERIFY OTP] Updated existing user {user_id} to seller role")
+                            print(f"[VERIFY OTP] Updated existing user {user_id} to seller role and refreshed credentials")
                         else:
 
                             name_parts = pending_seller_signup['shop_name'].split(' ', 1)
@@ -11473,7 +11489,7 @@ def ensure_rider_documents_table(cursor):
         CREATE TABLE IF NOT EXISTS rider_documents (
             id INT AUTO_INCREMENT PRIMARY KEY,
             rider_id INT NOT NULL,
-            document_type ENUM('government_id','vehicle_registration','orcr') NOT NULL,
+            document_type ENUM('government_id','vehicle_registration','orcr','car_photo') NOT NULL,
             file_url VARCHAR(500) NOT NULL,
             verified TINYINT(1) DEFAULT 0,
             uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -11487,6 +11503,14 @@ def ensure_rider_documents_table(cursor):
                 ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     ''')
+
+    try:
+        cursor.execute("""
+            ALTER TABLE rider_documents
+            MODIFY COLUMN document_type ENUM('government_id','vehicle_registration','orcr','car_photo') NOT NULL
+        """)
+    except mysql.connector.Error as err:
+        print(f"[DB WARNING] Unable to update rider_documents.document_type enum: {err}")
 
 
 def ensure_rider_review_logs_table(cursor):
@@ -11599,7 +11623,7 @@ def api_rider_upload_document():
     if not session.get('logged_in') or session.get('role') != 'rider':
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
 
-    allowed_types = {'government_id', 'vehicle_registration', 'orcr'}
+    allowed_types = {'government_id', 'vehicle_registration', 'orcr', 'car_photo'}
     document_type = request.form.get('document_type')
 
     if document_type not in allowed_types:

@@ -569,7 +569,7 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
                   <div>
                     <div class="metric">Registration Documents</div>
-                    <div style="font-size:13px;color:#6b7280;margin-top:4px">Upload your driver's license, vehicle registration, and OR/CR for verification.</div>
+                    <div style="font-size:13px;color:#6b7280;margin-top:4px">Upload your driver's license, vehicle registration, OR/CR, and a clear photo of your vehicle for verification.</div>
                   </div>
                   <div class="tag" style="background:#0a0a0a;color:#fff">Secure Uploads</div>
                 </div>
@@ -624,6 +624,23 @@
                       <a class="doc-view-link" href="#" target="_blank" rel="noopener" style="display:none">🔎 View file</a>
                     </div>
                     <input type="file" id="doc-file-orcr" accept="image/*,.pdf" style="display:none" onchange="handleDocumentUpload(event, 'orcr')">
+                  </div>
+
+                  <div class="document-card" data-doc-type="car_photo">
+                    <div class="document-card-header">
+                      <div class="document-icon">🚗</div>
+                      <div>
+                        <div class="document-title">Vehicle Photo</div>
+                        <div class="document-description">Share a recent exterior photo that clearly shows your registered vehicle.</div>
+                      </div>
+                      <span class="doc-status doc-status-missing">Not uploaded</span>
+                    </div>
+                    <div class="doc-upload-status">No file uploaded yet.</div>
+                    <div class="document-card-actions">
+                      <button class="doc-upload-btn" type="button" onclick="triggerDocumentUpload('car_photo')">Upload Vehicle Photo</button>
+                      <a class="doc-view-link" href="#" target="_blank" rel="noopener" style="display:none">🔎 View file</a>
+                    </div>
+                    <input type="file" id="doc-file-car_photo" accept="image/*" style="display:none" onchange="handleDocumentUpload(event, 'car_photo')">
                   </div>
                 </div>
               </div>
@@ -1226,7 +1243,8 @@
       const documentTypeDefinitions = [
         { key: 'government_id', label: "Driver's License" },
         { key: 'vehicle_registration', label: 'Vehicle Registration' },
-        { key: 'orcr', label: 'Official Receipt / CR' }
+        { key: 'orcr', label: 'Official Receipt / CR' },
+        { key: 'car_photo', label: 'Vehicle Photo' }
       ];
 
       function triggerDocumentUpload(docType) {
