@@ -798,13 +798,16 @@
 
       .status-chip {
         border-radius: 999px;
-        border: 1px solid #d1d5db;
-        padding: 6px 12px;
-        background: #fff;
-        font-size: 12px;
+        border: 2px solid #d1d5db;
+        padding: 8px 14px;
+        background: #f3f4f6;
+        font-size: 13px;
         font-weight: 600;
-        cursor: pointer;
+        cursor: not-allowed;
         transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
       }
 
       .status-chip.done {
@@ -812,6 +815,7 @@
         border-color: #10b981;
         color: #15803d;
         cursor: default;
+        box-shadow: 0 2px 6px rgba(16,185,129,0.2);
       }
 
       .status-chip.active {
@@ -819,17 +823,36 @@
         border-color: #3b82f6;
         color: #1d4ed8;
         cursor: default;
+        box-shadow: 0 2px 6px rgba(59,130,246,0.2);
+        animation: pulse 2s infinite;
       }
 
       .status-chip.next {
         background: #fef3c7;
-        border-color: #fbbf24;
+        border-color: #f59e0b;
         color: #92400e;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(245,158,11,0.2);
+      }
+
+      .status-chip.next:hover:not(:disabled) {
+        background: #fde68a;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(245,158,11,0.3);
       }
 
       .status-chip:disabled {
-        opacity: 0.5;
+        opacity: 0.4;
         cursor: not-allowed;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          box-shadow: 0 2px 6px rgba(59,130,246,0.2);
+        }
+        50% {
+          box-shadow: 0 2px 12px rgba(59,130,246,0.4);
+        }
       }
 
       .active-delivery-card .card-actions {
@@ -1051,24 +1074,37 @@
 
       function renderStatusStepper(order) {
         const currentStatus = order.shipment_status || 'pending';
-        const deliveredComplete = currentStatus === 'delivered';
         const currentIndex = riderStatusFlow.findIndex(step => step.key === currentStatus);
         const isPending = currentStatus === 'pending' || currentStatus === 'assigned_to_rider';
+        const isDelivered = currentStatus === 'delivered';
 
-        return riderStatusFlow.map((step, index) => {
-          const isCompleted = deliveredComplete ? true : currentIndex > index;
-          const isCurrent = !deliveredComplete && currentIndex === index;
-          const canAdvanceFromPending = isPending && index === 0;
-          const canAdvance = (!deliveredComplete) && (
-            (isPending && canAdvanceFromPending) ||
-            (currentIndex >= 0 && index === currentIndex + 1)
-          );
-          const shouldDisable = isCompleted || isCurrent || !canAdvance;
-          const stateClass = isCompleted ? 'done' : isCurrent ? 'active' : canAdvance ? 'next' : '';
-          const disabledAttr = shouldDisable ? 'disabled' : '';
-          const handler = shouldDisable ? '' : ` onclick="updateDeliveryStatus(${order.shipment_id}, '${step.key}')"`;
-          return `<button class="status-chip ${stateClass}" ${disabledAttr}${handler}>${step.emoji} ${step.label}</button>`;
-        }).join('');
+        // Show all completed steps as checkmarks
+        let html = '';
+        
+        // Show all completed steps
+        for (let i = 0; i < currentIndex; i++) {
+          const step = riderStatusFlow[i];
+          html += `<button class="status-chip done" disabled style="opacity:1">${step.emoji} ${step.label} ✓</button>`;
+        }
+
+        // Show current active step only if not pending and not delivered
+        if (!isPending && !isDelivered) {
+          const currentStep = riderStatusFlow[currentIndex];
+          html += `<button class="status-chip active" disabled>${currentStep.emoji} ${currentStep.label}</button>`;
+        }
+
+        // Show next button only if not delivered
+        if (!isDelivered && currentIndex < riderStatusFlow.length - 1) {
+          const nextStep = riderStatusFlow[currentIndex + 1];
+          html += `<button class="status-chip next" onclick="updateDeliveryStatus(${order.shipment_id}, '${nextStep.key}')" style="cursor:pointer">→ Advance to ${nextStep.label}</button>`;
+        }
+
+        // Show delivered checkmark if delivered
+        if (isDelivered) {
+          html += `<button class="status-chip done" disabled style="opacity:1">✅ Delivered ✓</button>`;
+        }
+
+        return html;
       }
 
       function renderActiveDeliveryModalContent(deliveries = []) {
@@ -1615,74 +1651,241 @@
 
 
       function acceptOrder(shipmentId) {
-        if (!confirm('Accept this delivery order?')) return;
+        // Show confirmation modal
+        const confirmModal = document.createElement('div');
+        confirmModal.style.cssText = `
+          position: fixed;
+          inset: 0;
+          background: rgba(10,10,10,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 8000;
+          animation: fadeIn 0.2s ease;
+        `;
+        confirmModal.innerHTML = `
+          <div style="background:#fff;border-radius:12px;padding:24px;max-width:380px;width:90%;box-shadow:0 20px 45px rgba(0,0,0,0.25);text-align:center">
+            <div style="font-size:40px;margin-bottom:12px">📦</div>
+            <h2 style="margin:0 0 8px;font-size:20px;color:#0a0a0a">Accept This Order?</h2>
+            <p style="margin:0 0 20px;color:#666;font-size:14px">You'll be assigned to deliver this order and earn commission on completion.</p>
+            <div style="display:flex;gap:10px;justify-content:center">
+              <button id="cancelAcceptBtn" style="padding:10px 20px;border:1px solid #ddd;background:#f3f4f6;color:#0a0a0a;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.2s">Cancel</button>
+              <button id="confirmAcceptBtn" style="padding:10px 20px;border:none;background:#10b981;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.2s">Accept Order</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(confirmModal);
 
-        fetch('/api/rider/accept-order', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ shipment_id: shipmentId })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('Order accepted! You can now start the delivery.');
-            loadAvailableOrders();
-            loadMyActiveDeliveries();
-          } else {
-            alert('Failed to accept order: ' + (data.error || 'Unknown error'));
-          }
-        })
-        .catch(error => {
-          console.error('Error accepting order:', error);
-          alert('Error accepting order. Please try again.');
+        // Cancel button - properly remove the entire modal
+        document.getElementById('cancelAcceptBtn').addEventListener('click', () => {
+          confirmModal.remove();
+        });
+
+        document.getElementById('confirmAcceptBtn').addEventListener('click', () => {
+          confirmModal.remove();
+          
+          // Show loading notification
+          const loadingNotif = document.createElement('div');
+          loadingNotif.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          `;
+          loadingNotif.innerHTML = `<span style="font-size:18px;animation:spin 1s linear infinite">⏳</span>Accepting order...`;
+          document.body.appendChild(loadingNotif);
+
+          fetch('/api/rider/accept-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ shipment_id: shipmentId })
+          })
+          .then(response => response.json())
+          .then(data => {
+            loadingNotif.remove();
+            
+            if (data.success) {
+              showStatusNotification('📦', 'Order Accepted', 'You can now start the delivery!', 'success');
+              setTimeout(() => {
+                loadAvailableOrders();
+                loadMyActiveDeliveries();
+              }, 500);
+            } else {
+              showStatusNotification('❌', 'Failed to Accept', data.error || 'Unknown error', 'error');
+            }
+          })
+          .catch(error => {
+            loadingNotif.remove();
+            console.error('Error accepting order:', error);
+            showStatusNotification('❌', 'Error', 'Connection failed. Please try again.', 'error');
+          });
         });
       }
 
 
+      function showStatusNotification(statusEmoji, statusLabel, message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          padding: 16px 24px;
+          background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+          color: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          font-size: 14px;
+          font-weight: 500;
+          z-index: 9999;
+          animation: slideIn 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          max-width: 400px;
+        `;
+        notification.innerHTML = `<span style="font-size:20px">${statusEmoji}</span><div><strong>${statusLabel}</strong><br/>${message}</div>`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.style.animation = 'slideOut 0.3s ease';
+          setTimeout(() => notification.remove(), 300);
+        }, 4000);
+      }
+
       function updateDeliveryStatus(shipmentId, newStatus) {
         if (!newStatus) return;
 
-        const statusText = newStatus.replace('_', ' ').toUpperCase();
-        if (!confirm(`Update status to ${statusText}?`)) {
+        const statusConfig = {
+          'picked_up': { emoji: '📦', label: 'Picked Up', message: 'You have picked up the order' },
+          'in_transit': { emoji: '🚗', label: 'In Transit', message: 'On the way to delivery location' },
+          'out_for_delivery': { emoji: '🚪', label: 'Out for Delivery', message: 'You have arrived at the delivery location' },
+          'delivered': { emoji: '✅', label: 'Delivered', message: 'Order successfully delivered! 🎉' }
+        };
 
-          event.target.value = '';
-          return;
-        }
+        const config = statusConfig[newStatus] || { emoji: '📋', label: newStatus, message: 'Status updated' };
 
-        fetch('/api/rider/update-delivery-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            shipment_id: shipmentId,
-            status: newStatus
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('Status updated successfully!');
-            if (newStatus === 'delivered') {
-              alert('🎉 Delivery completed! Your earnings have been updated.');
+        // Show confirmation modal instead of browser alert
+        const confirmModal = document.createElement('div');
+        confirmModal.style.cssText = `
+          position: fixed;
+          inset: 0;
+          background: rgba(10,10,10,0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 8000;
+          animation: fadeIn 0.2s ease;
+        `;
+        confirmModal.innerHTML = `
+          <div style="background:#fff;border-radius:12px;padding:24px;max-width:380px;width:90%;box-shadow:0 20px 45px rgba(0,0,0,0.25);text-align:center">
+            <div style="font-size:40px;margin-bottom:12px">${config.emoji}</div>
+            <h2 style="margin:0 0 8px;font-size:20px;color:#0a0a0a">Mark as ${config.label}?</h2>
+            <p style="margin:0 0 20px;color:#666;font-size:14px">${config.message}</p>
+            <div style="display:flex;gap:10px;justify-content:center">
+              <button id="cancelStatusBtn" style="padding:10px 20px;border:1px solid #ddd;background:#f3f4f6;color:#0a0a0a;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.2s">Cancel</button>
+              <button id="confirmStatusBtn" style="padding:10px 20px;border:none;background:#10b981;color:#fff;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.2s">Confirm</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(confirmModal);
 
-              loadMyActiveDeliveries();
-              loadDeliveryHistory();
-            } else {
-              loadMyActiveDeliveries();
-            }
-          } else {
-            alert('Failed to update status: ' + (data.error || 'Unknown error'));
-            event.target.value = '';
-          }
-        })
-        .catch(error => {
-          console.error('Error updating status:', error);
-          alert('Error updating status. Please try again.');
-          event.target.value = '';
+        // Cancel button - properly remove the entire modal
+        document.getElementById('cancelStatusBtn').addEventListener('click', () => {
+          confirmModal.remove();
         });
+
+        document.getElementById('confirmStatusBtn').addEventListener('click', () => {
+          confirmModal.remove();
+          
+          // Show loading state
+          const loadingNotif = document.createElement('div');
+          loadingNotif.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          `;
+          loadingNotif.innerHTML = `<span style="font-size:18px;animation:spin 1s linear infinite">⏳</span>Updating status...`;
+          document.body.appendChild(loadingNotif);
+
+          fetch('/api/rider/update-delivery-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              shipment_id: shipmentId,
+              status: newStatus
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            loadingNotif.remove();
+            
+            if (data.success) {
+              showStatusNotification(config.emoji, config.label, config.message, 'success');
+              
+              // Reload data after a short delay
+              setTimeout(() => {
+                loadMyActiveDeliveries();
+                if (newStatus === 'delivered') {
+                  loadDeliveryHistory();
+                }
+              }, 500);
+            } else {
+              showStatusNotification('❌', 'Error', data.error || 'Failed to update status', 'error');
+            }
+          })
+          .catch(error => {
+            loadingNotif.remove();
+            console.error('Error updating status:', error);
+            showStatusNotification('❌', 'Error', 'Connection failed. Please try again.', 'error');
+          });
+        });
+      }
+
+      // Add CSS animations
+      if (!document.querySelector('style[data-rider-animations]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-rider-animations', '');
+        style.textContent = `
+          @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+          @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `;
+        document.head.appendChild(style);
       }
 
 

@@ -2743,6 +2743,14 @@ def place_order():
 
             cursor.execute('UPDATE products SET sales_count = sales_count + %s WHERE id = %s', (quantity, product_id))
 
+            # Deduct stock from inventory
+            cursor.execute('''
+                UPDATE inventory 
+                SET stock_quantity = stock_quantity - %s 
+                WHERE product_id = %s AND variant_id IS NULL 
+                LIMIT 1
+            ''', (quantity, product_id))
+
 
         if selected_cart_ids:
             placeholders = ','.join(['%s'] * len(selected_cart_ids))
@@ -2977,12 +2985,14 @@ def order_details(order_id):
 
     except Exception as e:
         print(f"[ORDER DETAILS] Error loading order details: {str(e)}")
+        print(f"[ORDER DETAILS] Order ID: {order_id}, User ID: {user_id}, Type of order_id: {type(order_id)}")
         import traceback
         traceback.print_exc()
         if conn:
             conn.close()
-        flash('Error loading order', 'error')
-        return redirect('/indexLoggedIn.html#myOrders')
+        # Don't use flash for this - it causes confusion on login page
+        # Instead, just log and redirect with a query parameter for better UX
+        return redirect(f'/indexLoggedIn.html?error=order_not_found')
 
 @app.route('/order-confirmation/<order_number>')
 def order_confirmation(order_number):
@@ -2992,8 +3002,7 @@ def order_confirmation(order_number):
 
     conn = get_db()
     if not conn:
-        flash('Database connection failed', 'error')
-        return redirect(url_for('buyer_dashboard'))
+        return redirect(url_for('buyer_dashboard') + '?error=db_connection_failed')
 
     try:
         cursor = conn.cursor(dictionary=True)
@@ -3015,8 +3024,7 @@ def order_confirmation(order_number):
         if not order:
             cursor.close()
             conn.close()
-            flash('Order not found', 'error')
-            return redirect(url_for('buyer_dashboard'))
+            return redirect(url_for('buyer_dashboard') + '?error=order_not_found')
 
 
         cursor.execute('''
@@ -3053,13 +3061,19 @@ def order_confirmation(order_number):
 
     except Exception as e:
         print(f"Error loading order confirmation: {str(e)}")
+        print(f"Order number: {order_number}, User ID: {session.get('user_id')}")
+        import traceback
+        traceback.print_exc()
         if conn:
             conn.close()
-        flash('Error loading order', 'error')
-        return redirect(url_for('buyer_dashboard'))
+        return redirect(url_for('buyer_dashboard') + '?error=order_load_failed')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Clear any flash messages on fresh login page load to avoid showing old errors
+    if request.method == 'GET':
+        session.pop('_flashes', None)
+    
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -3444,7 +3458,7 @@ def signup_rider():
 
     return render_template('auth/signupRider.html')
 
-@app.route('/signup/seller', methods=['GET', 'POST'])
+@app.route('/signup/seller', methods=['GET', 'POST']) 
 @app.route('/signupSeller', methods=['GET', 'POST'])
 def signup_seller():
     if request.method == 'POST':

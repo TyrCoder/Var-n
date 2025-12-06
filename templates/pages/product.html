@@ -1679,6 +1679,12 @@
           if (badge) badge.textContent = count;
         }
 
+        // Auto-refresh stock every 10 seconds to show real-time updates
+        setInterval(async () => {
+          await refreshStockMap();
+          updateStockDisplay();
+        }, 10000);
+
         // Initialize stock display for products without variations
         if (!hasColors && !hasSizes) {
           updateStockDisplay();
@@ -2066,6 +2072,26 @@
         checkSelection();
       }
 
+      async function refreshStockMap() {
+        try {
+          const productId = {{ product.id }};
+          const response = await fetch(`/api/product/${productId}/variants`);
+          const data = await response.json();
+          
+          // Rebuild stockMap from fresh data
+          if (data.variants && Array.isArray(data.variants)) {
+            stockMap = {};
+            data.variants.forEach(variant => {
+              const key = `${variant.size || 'One Size'}_${variant.color || 'Standard'}`;
+              stockMap[key] = variant.stock_quantity || 0;
+            });
+            console.log('[DEBUG refreshStockMap] Updated stockMap:', stockMap);
+          }
+        } catch (error) {
+          console.error('[DEBUG refreshStockMap] Error refreshing stock:', error);
+        }
+      }
+
       function updateStockDisplay() {
         const stockStatusEl = document.getElementById('stockStatus');
         const stockQuantityEl = document.getElementById('stockQuantity');
@@ -2354,9 +2380,12 @@
             addButton.disabled = false;
             addButton.textContent = 'Add to Cart';
           }
-          // If added successfully, update badge but stay on product page
+          // If added successfully, update badge and refresh stock
           if (success) {
             try { await VaronCart.updateBadge(); } catch(e) {}
+            // Refresh stock display after successful addition
+            await refreshStockMap();
+            updateStockDisplay();
           }
         } else {
 
