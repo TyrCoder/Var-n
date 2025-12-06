@@ -5,201 +5,414 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Admin Dashboard — Varón</title>
     <style>
-      :root{--bg:#fff;--fg:#0a0a0a;--muted:#777;--accent:#000;--card:#f8f8f8;--line:#efefef}
-      *{box-sizing:border-box}
-      html,body{height:100%}
-      body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;background:#f3f4f6;color:var(--fg)}
-      a{text-decoration:none;color:inherit}
-      /* Layout */
-      .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
-      .sidebar{background:#0a0a0a;color:#fff;padding:18px 14px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:100vh}
-      .logo{display:flex;align-items:center;gap:10px;padding:8px 8px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:10px}
-      .logo .dot{width:10px;height:10px;border-radius:999px;background:#4ade80}
-      .side-group{margin-top:8px}
-      .side-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#bdbdbd;margin:10px 8px 6px}
-      .side-link{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;color:#eaeaea}
-      .side-link.active,.side-link:hover{background:#141414;color:#fff}
-
-      .content{display:flex;flex-direction:column}
-      .topbar{display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid var(--line);padding:10px 16px;position:sticky;top:0;z-index:5}
-      .search{flex:1}
-      .search input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff}
-      .avatar{display:flex;align-items:center;gap:8px;margin-left:auto}
-      .tag{background:#0a0a0a;color:#fff;border-radius:999px;padding:6px 10px;font-size:12px}
-
-      .main{padding:18px 18px 26px}
-      .page-title{font-size:22px;margin:8px 0 14px}
-
-      /* Cards */
-      .grid{display:grid;gap:14px}
-      .grid.stats{grid-template-columns:repeat(4, minmax(180px,1fr))}
-      .card{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 2px 10px rgba(10,10,10,.03)}
-      .card .inner{padding:14px}
-      .metric{font-size:12px;color:var(--muted);margin-bottom:6px}
-      .value{font-size:22px;font-weight:700}
-      .delta{font-size:12px;color:#10b981;margin-left:8px}
-
-      /* Chart placeholders */
-      .grid.two{grid-template-columns:1.4fr 1fr}
-      .chart{height:260px;padding:12px 14px}
-      .bars{display:flex;align-items:flex-end;gap:10px;height:160px;margin-top:8px}
-      .bar{flex:1;background:#0a0a0a;border-radius:6px}
-      .legend{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:8px}
-
-      /* Table */
-      table{width:100%;border-collapse:separate;border-spacing:0}
-      thead th{font-size:12px;color:var(--muted);text-align:left;border-bottom:1px solid var(--line);padding:10px 12px}
-      tbody td{padding:12px;border-bottom:1px solid var(--line)}
-
-      /* Right column widget */
-      .promo{background:#0a0a0a;color:#fff;border-radius:10px;padding:16px;text-align:left}
-
-      @media (max-width:1000px){
-        .app{grid-template-columns:1fr}
-        .sidebar{display:none}
-        .grid.stats{grid-template-columns:repeat(2,1fr)}
-        .grid.two{grid-template-columns:1fr}
+      :root {
+        --bg:#f5f5f5;
+        --panel:#ffffff;
+        --line:#e5e5e5;
+        --text:#0a0a0a;
+        --muted:#6b6b6b;
+        --accent:#141414;
+        --accent-soft:#1f2933;
       }
 
-      .toast-notification{
-        position:fixed;
-        top:24px;
-        right:24px;
-        background:#0a0a0a;
+      * { box-sizing:border-box; }
+
+      body {
+        margin:0;
+        font-family:'Space Grotesk','Segoe UI','Helvetica Neue',sans-serif;
+        background:var(--bg);
+        color:var(--text);
+      }
+
+      a { color:inherit; text-decoration:none; }
+      button { font-family:inherit; }
+
+      .app-shell {
+        display:flex;
+        min-height:100vh;
+        background:var(--bg);
+      }
+
+      .sidebar {
+        width:260px;
+        padding:32px 24px;
+        background:#0f0f0f;
         color:#fff;
+        display:flex;
+        flex-direction:column;
+        gap:32px;
+      }
+
+      .brand-mark {
+        display:inline-flex;
+        padding:10px 14px;
+        border-radius:10px;
+        background:#fff;
+        color:#0f0f0f;
+        font-weight:700;
+        letter-spacing:0.08em;
+      }
+
+      .brand p {
+        margin:12px 0 0;
+        color:#b7b7b7;
+        font-size:14px;
+        line-height:1.4;
+      }
+
+      .nav-links {
+        display:flex;
+        flex-direction:column;
+        gap:8px;
+      }
+
+      .side-link {
+        display:block;
+        border:none;
+        border-radius:10px;
+        padding:10px 14px;
+        text-align:left;
+        background:transparent;
+        color:#d5d5d5;
+        font-size:14px;
+        font-weight:500;
+        cursor:pointer;
+        transition:background 0.2s,color 0.2s;
+      }
+
+      .side-link:hover,
+      .side-link.active {
+        background:rgba(255,255,255,0.12);
+        color:#fff;
+      }
+
+      .logout-btn {
+        margin-top:auto;
+        border:1px solid rgba(255,255,255,0.25);
+        border-radius:10px;
+        padding:12px;
+        background:transparent;
+        color:#fff;
+        font-weight:600;
+        cursor:pointer;
+      }
+
+      .main-area {
+        flex:1;
+        display:flex;
+        flex-direction:column;
+        padding:32px;
+        gap:24px;
+      }
+
+      .topbar {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        flex-wrap:wrap;
+        gap:16px;
+      }
+
+      .eyebrow {
+        margin:0;
+        font-size:12px;
+        letter-spacing:0.24em;
+        text-transform:uppercase;
+        color:var(--muted);
+      }
+
+      .page-title {
+        margin:6px 0 0;
+        font-size:32px;
+        font-weight:700;
+        letter-spacing:-0.02em;
+      }
+
+      .topbar-actions {
+        display:flex;
+        gap:12px;
+      }
+
+      .ghost-btn {
+        border:1px solid var(--line);
+        border-radius:999px;
+        padding:10px 18px;
+        background:var(--panel);
+        color:var(--text);
+        font-weight:600;
+        cursor:pointer;
+      }
+
+      .content-area {
+        display:flex;
+        flex-direction:column;
+        gap:20px;
+      }
+
+      .stats-grid {
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+        gap:16px;
+      }
+
+      .card {
+        background:var(--panel);
+        border-radius:18px;
+        border:1px solid var(--line);
+        box-shadow:0 10px 40px rgba(15,15,15,0.05);
+      }
+
+      .inner {
+        padding:20px;
+      }
+
+      .metric {
+        margin:0;
+        font-size:14px;
+        color:var(--muted);
+        font-weight:600;
+      }
+
+      .value {
+        margin:10px 0 0;
+        font-size:28px;
+        font-weight:700;
+      }
+
+      .hint {
+        margin:8px 0 0;
+        font-size:12px;
+        color:var(--muted);
+      }
+
+      .panel-grid {
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+        gap:16px;
+      }
+
+      .bar-chart {
+        display:flex;
+        align-items:flex-end;
+        gap:12px;
+        height:180px;
+        margin-top:16px;
+      }
+
+      .bar {
+        flex:1;
+        background:linear-gradient(180deg,#111,#3d3d3d);
+        border-radius:10px 10px 6px 6px;
+        position:relative;
+        min-height:24px;
+        transition:height 0.5s ease;
+      }
+
+      .bar span {
+        position:absolute;
+        bottom:-24px;
+        left:50%;
+        transform:translateX(-50%);
+        font-size:12px;
+        color:var(--muted);
+      }
+
+      table {
+        width:100%;
+        border-collapse:collapse;
+      }
+
+      thead th {
+        text-align:left;
+        font-size:12px;
+        text-transform:uppercase;
+        letter-spacing:0.08em;
+        color:var(--muted);
+        padding-bottom:10px;
+      }
+
+      tbody td {
+        padding:12px 8px;
+        border-top:1px solid var(--line);
+        font-size:14px;
+      }
+
+      .tag {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:4px 10px;
+        border-radius:999px;
+        background:#111;
+        color:#fff;
+        font-size:12px;
+        font-weight:600;
+      }
+
+      .growth-list {
+        margin-top:16px;
+        display:flex;
+        flex-direction:column;
+        gap:12px;
+      }
+
+      .toast-notification {
+        position:fixed;
+        bottom:24px;
+        right:24px;
         padding:14px 18px;
         border-radius:10px;
-        box-shadow:0 10px 30px rgba(0,0,0,0.15);
+        background:#0a0a0a;
+        color:#fff;
         opacity:0;
         pointer-events:none;
-        transform:translateY(-10px);
-        transition:opacity .25s ease, transform .25s ease;
+        transform:translateY(20px);
+        transition:opacity 0.3s,transform 0.3s;
         z-index:1200;
-        font-size:14px;
-        max-width:320px;
       }
-      .toast-notification.show{
+
+      .toast-notification.show {
         opacity:1;
-        pointer-events:auto;
         transform:translateY(0);
       }
-      .toast-notification.error{background:#b91c1c;}
-      .toast-notification.success{background:#10b981;}
+
+      .toast-notification.error {
+        background:#ef4444;
+      }
+
+      @media (max-width:900px) {
+        .app-shell { flex-direction:column; }
+        .sidebar { width:100%; flex-direction:row; flex-wrap:wrap; }
+        .nav-links { flex-direction:row; flex-wrap:wrap; }
+        .main-area { padding:24px; }
+      }
     </style>
   </head>
   <body>
-    <div class="app">
-      <!-- Sidebar -->
+    <div class="app-shell">
       <aside class="sidebar">
-        <div class="logo">
-          <div class="dot"></div>
-          <strong>Varón Admin</strong>
+        <div class="brand">
+          <div class="brand-mark">Varón</div>
+          <p>Compact overview of every seller, rider, and order in motion.</p>
         </div>
-        <div class="side-group">
-          <div class="side-title">Menu</div>
-          <a class="side-link active" href="#" data-page="overview">Overview</a>
-          <a class="side-link" href="#" data-page="pending-products">Pending Products <span class="tag" style="background:#ef4444;margin-left:auto;font-size:10px;padding:2px 6px;">{{ pending_products if pending_products else 0 }}</span></a>
-          <a class="side-link" href="#" data-page="pending-promotions" style="background:#1a1a1a;border-left:3px solid #8b5cf6;padding-left:7px">Pending Promotions <span class="tag" style="background:#8b5cf6;margin-left:auto;font-size:10px;padding:2px 6px;" id="pending-promotions-count">0</span></a>
-          <a class="side-link" href="#" data-page="pending-riders">Pending Riders <span class="tag" style="background:#2563eb;margin-left:auto;font-size:10px;padding:2px 6px;" id="pending-riders-count">{{ pending_riders if pending_riders else 0 }}</span></a>
-          <a class="side-link" href="#" data-page="product-edits">Product Edits <span class="tag" style="background:#f59e0b;margin-left:auto;font-size:10px;padding:2px 6px;" id="edits-count">0</span></a>
-          <a class="side-link" href="#" data-page="recovery-requests">Recovery Requests <span class="tag" style="background:#10b981;margin-left:auto;font-size:10px;padding:2px 6px;" id="recovery-count">0</span></a>
-          <a class="side-link" href="#" data-page="product">All Products</a>
-          <a class="side-link" href="#" data-page="customer">Customer</a>
-          <a class="side-link" href="#" data-page="transactions">Transactions</a>
-          <a class="side-link" href="#" data-page="statistics">Statistics</a>
-          <a class="side-link" href="#" data-page="riders">Riders</a>
-          <a class="side-link" href="#" data-page="sellers">Sellers</a>
-          <a class="side-link" href="#" data-page="journal">Journal Management</a>
-        </div>
-        <div class="side-group">
-          <div class="side-title">Support</div>
-          <a class="side-link" href="#" data-page="setting">Setting</a>
-          <a class="side-link" href="#" data-page="help">Help</a>
-        </div>
+        <nav class="nav-links">
+          <a href="#" class="side-link active" data-page="overview">Overview</a>
+          <a href="#" class="side-link" data-page="pending-products">Pending Products</a>
+          <a href="#" class="side-link" data-page="pending-riders">Pending Riders</a>
+          <a href="#" class="side-link" data-page="product-edits">Product Edits</a>
+          <a href="#" class="side-link" data-page="recovery-requests">Recovery Requests</a>
+          <a href="#" class="side-link" data-page="product">Products</a>
+          <a href="#" class="side-link" data-page="customer">Customers</a>
+          <a href="#" class="side-link" data-page="transactions">Transactions</a>
+          <a href="#" class="side-link" data-page="sellers">Active Sellers</a>
+          <a href="#" class="side-link" data-page="riders">Active Riders</a>
+          <a href="#" class="side-link" data-page="statistics">Statistics</a>
+          <a href="#" class="side-link" data-page="setting">System Settings</a>
+          <a href="#" class="side-link" data-page="help">Help & Support</a>
+        </nav>
+        <button type="button" class="logout-btn" onclick="confirmLogout(event)">Logout</button>
       </aside>
-
-      <!-- Content -->
-      <section class="content">
-        <div class="topbar">
-          <div class="page-title">Dashboard</div>
-          <div class="search"><input placeholder="Search anything..."/></div>
-          <div class="avatar">
-            {% if session.logged_in %}
-              <span class="tag">{{ session.email }}</span>
-              <a href="#" onclick="confirmLogout(event)" class="tag" style="background:#efefef;color:#0a0a0a">Logout</a>
-            {% else %}
-              <a href="/login" class="tag">Login</a>
-            {% endif %}
+      <section class="main-area">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Operations center</p>
+            <h1 class="page-title">Dashboard</h1>
           </div>
-        </div>
-
-        <main class="main" id="dashboardContent">
-          <!-- Stat cards -->
-          <div class="grid stats">
-            <div class="card"><div class="inner"><div class="metric">Total Users</div><div class="value">{{ total_users if total_users else 0 }}</div></div></div>
-            <div class="card"><div class="inner"><div class="metric">Total Orders</div><div class="value">{{ total_orders if total_orders else 0 }}</div></div></div>
-            <div class="card"><div class="inner"><div class="metric">Pending Products</div><div class="value">{{ pending_products if pending_products else 0 }} <span class="delta" style="color:#ef4444">{% if pending_products %}Needs Review{% endif %}</span></div></div></div>
-            <div class="card"><div class="inner"><div class="metric">Pending Verifications</div><div class="value">{{ (pending_sellers if pending_sellers else 0) + (pending_riders if pending_riders else 0) }} <span class="delta" style="color:#ef4444">{% if pending_sellers or pending_riders %}Sellers/Riders{% endif %}</span></div></div></div>
+          <div class="topbar-actions">
+            <button type="button" class="ghost-btn" onclick="window.location.reload()">Refresh</button>
+            <a class="ghost-btn" href="/" target="_blank" rel="noopener">View store</a>
           </div>
-
-          <!-- Charts row -->
-          <div class="grid two" style="margin-top:14px">
+        </header>
+        <main class="content-area" id="dashboardContent">
+          <div class="stats-grid">
             <div class="card">
               <div class="inner">
-                <div class="metric">Revenue Growth (PHP)</div>
-                <div class="chart">
-                  <div class="bars">
-                    {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
-                    <div class="bar" data-height="{{ ((weekly_revenue[day] / max_weekly_revenue) * 100)|int if weekly_revenue[day] > 0 else 5 }}"></div>
-                    {% endfor %}
-                  </div>
-                  <div class="legend"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+                <p class="metric">Total Revenue</p>
+                <p class="value">₱0.00</p>
+                <p class="hint">Live data from /admin/statistics</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <p class="metric">Orders Today</p>
+                <p class="value">0</p>
+                <p class="hint">Auto-updates from /admin/recent-orders</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <p class="metric">Active Sellers</p>
+                <p class="value">0</p>
+                <p class="hint">Watch approvals for spikes</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="inner">
+                <p class="metric">Active Riders</p>
+                <p class="value">0</p>
+                <p class="hint">Keep capacity aligned with demand</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="card">
+              <div class="inner">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                  <p class="metric">Customer growth</p>
+                  <span class="hint">Top Philippine regions</span>
+                </div>
+                <div id="overview-customer-growth" class="growth-list">
+                  <p style="color:var(--muted);margin:0">Loading regional data...</p>
                 </div>
               </div>
             </div>
             <div class="card">
               <div class="inner">
-                <div class="metric">Customer Growth (Philippines)</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
-                  <div id="overview-customer-growth">
-                    <p style="text-align:center;color:#999;padding:20px">Loading regional data...</p>
-                  </div>
-                  <div class="promo">
-                    <div style="font-weight:700;margin-bottom:8px">See more detail statistic to analyze your decision</div>
-                    <a href="#" onclick="loadPage('statistics'); return false;" class="tag" style="display:inline-block;background:#fff;color:#0a0a0a;margin-top:8px">See more</a>
-                  </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                  <p class="metric">Sales pulse</p>
+                  <span class="hint">Mini bar snapshot</span>
+                </div>
+                <div class="bar-chart">
+                  <div class="bar" data-height="40"><span>Mon</span></div>
+                  <div class="bar" data-height="65"><span>Tue</span></div>
+                  <div class="bar" data-height="55"><span>Wed</span></div>
+                  <div class="bar" data-height="80"><span>Thu</span></div>
+                  <div class="bar" data-height="60"><span>Fri</span></div>
+                  <div class="bar" data-height="70"><span>Sat</span></div>
+                  <div class="bar" data-height="30"><span>Sun</span></div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Data row -->
-          <div class="grid two" style="margin-top:14px">
-            <div class="card">
-              <div class="inner">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div class="metric">Recent Orders</div>
-                  <a href="#" style="font-size:12px;color:var(--muted)">View detail</a>
-                </div>
-                <div style="overflow:auto">
-                  <table>
-                    <thead><tr><th>Order #</th><th>Buyer</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
-                    <tbody id="recent-orders-list">
-                      <tr><td colspan="5" style="text-align:center;color:#999;padding:20px">Loading orders...</td></tr>
-                    </tbody>
-                  </table>
-                </div>
+          <div class="card">
+            <div class="inner">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                <p class="metric">Recent orders</p>
+                <span class="hint">Last ten placed</span>
+              </div>
+              <div style="overflow:auto;margin-top:12px">
+                <table>
+                  <thead>
+                    <tr><th>Order #</th><th>Buyer</th><th>Date</th><th>Amount</th><th>Status</th></tr>
+                  </thead>
+                  <tbody id="recent-orders-list">
+                    <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Loading orders...</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div class="card">
-              <div class="inner">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div class="metric">Best Selling Product</div>
-                  <a href="#" style="font-size:12px;color:var(--muted)">View more</a>
-                </div>
-                <div id="best-product-container" style="display:flex;gap:14px;align-items:center;margin-top:10px">
-                  <p style="color:#999;text-align:center;width:100%">Loading...</p>
-                </div>
+          </div>
+
+          <div class="card">
+            <div class="inner">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                <p class="metric">Best selling product</p>
+                <a href="#" style="font-size:12px;color:var(--muted)">View catalog</a>
+              </div>
+              <div id="best-product-container" style="display:flex;gap:14px;align-items:center;margin-top:14px">
+                <p style="color:var(--muted);margin:0">Loading...</p>
               </div>
             </div>
           </div>
@@ -369,25 +582,6 @@
             </div>
           </div>
         `,
-        'pending-promotions': `
-          <div class="card">
-            <div class="inner">
-              <h2 style="margin: 0 0 16px;">🎉 Pending Promotions</h2>
-              <p style="color: var(--muted); margin: 0 0 20px;">Review and approve promotions submitted by sellers</p>
-              <div id="pending-promotions-list">Loading pending promotions...</div>
-            </div>
-          </div>
-          <!-- Promotion Details Modal -->
-          <div id="promotion-details-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
-            <div style="background:#fff;border-radius:12px;padding:24px;max-width:800px;width:90%;max-height:85vh;overflow-y:auto">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line)">
-                <h2 style="margin:0;font-size:20px;font-weight:700">🎉 Promotion Details</h2>
-                <button onclick="closePromotionDetailsModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
-              </div>
-              <div id="promotion-details-body">Loading...</div>
-            </div>
-          </div>
-        `,
         'pending-riders': `
           <div class="card">
             <div class="inner">
@@ -533,64 +727,6 @@
                 <button onclick="document.getElementById('detailed-stats-modal').style.display='none'" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
               </div>
               <div id="detailed-stats-body">Loading...</div>
-            </div>
-          </div>
-        `,
-        'journal': `
-          <div class="card">
-            <div class="inner">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-                <h2 style="margin: 0;">📝 Journal Management</h2>
-                <button onclick="openAddJournalModal()" class="tag" style="background:#0a0a0a;cursor:pointer;border:none;padding:10px 16px">+ Add Journal Entry</button>
-              </div>
-              <div id="journal-list">Loading journal entries...</div>
-            </div>
-          </div>
-          <!-- Add/Edit Journal Modal -->
-          <div id="journal-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
-            <div style="background:#fff;border-radius:12px;padding:24px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--line)">
-                <h2 style="margin:0;font-size:20px;font-weight:700" id="journal-modal-title">Add Journal Entry</h2>
-                <button onclick="closeJournalModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;width:32px;height:32px">&times;</button>
-              </div>
-              <form id="journal-form" style="display:flex;flex-direction:column;gap:16px">
-                <div>
-                  <label style="display:block;margin-bottom:8px;font-weight:500">Title</label>
-                  <input type="text" id="journal-title" required style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px">
-                </div>
-                <div>
-                  <label style="display:block;margin-bottom:8px;font-weight:500">Description</label>
-                  <textarea id="journal-description" required rows="4" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;resize:vertical"></textarea>
-                </div>
-                <div>
-                  <label style="display:block;margin-bottom:8px;font-weight:500">Journal Image</label>
-                  <div style="border:2px dashed var(--line);border-radius:6px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;"
-                       onmouseover="this.style.borderColor='#8b5cf6';this.style.background='#faf5ff';"
-                       onmouseout="this.style.borderColor='var(--line)';this.style.background='transparent';"
-                       onclick="document.getElementById('journal-image-input').click()">
-                    <input type="file" id="journal-image-input" accept="image/*" style="display:none;" onchange="previewJournalImage(event)">
-                    <div id="journal-image-preview" style="display:none;">
-                      <img id="journal-preview-img" src="" alt="Preview" style="max-width:100%;max-height:200px;border-radius:6px;">
-                      <button type="button" onclick="removeJournalImage()" style="margin-top:10px;background:#ef4444;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">Remove Image</button>
-                    </div>
-                    <div id="journal-image-placeholder">
-                      <div style="font-size:32px;margin-bottom:8px;">🖼️</div>
-                      <p style="margin:0 0 4px;font-weight:500;color:#333;">Click to upload image</p>
-                      <p style="margin:0;font-size:12px;color:var(--muted);">or drag and drop (PNG, JPG, GIF)</p>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer">
-                    <input type="checkbox" id="journal-is-active" checked style="width:18px;height:18px;cursor:pointer">
-                    <span>Active (visible on homepage)</span>
-                  </label>
-                </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-                  <button type="button" onclick="closeJournalModal()" class="tag" style="background:#f3f4f6;color:#0a0a0a;cursor:pointer;border:none;padding:10px 16px">Cancel</button>
-                  <button type="submit" class="tag" style="background:#0a0a0a;cursor:pointer;border:none;padding:10px 16px;color:#fff">Save</button>
-                </div>
-              </form>
             </div>
           </div>
         `,
@@ -750,8 +886,6 @@
 
           if (page === 'pending-products') {
             loadPendingProducts();
-          } else if (page === 'pending-promotions') {
-            loadPendingPromotions();
           } else if (page === 'pending-riders') {
             loadPendingRiders();
           } else if (page === 'product-edits') {
@@ -762,8 +896,6 @@
             loadActiveSellers();
           } else if (page === 'riders') {
             loadActiveRiders();
-          } else if (page === 'journal') {
-            loadJournalEntries();
           } else if (page === 'product') {
             loadAllProducts();
           } else if (page === 'customer') {
@@ -792,7 +924,6 @@
         const pageNames = {
           'overview': 'Dashboard',
           'pending-products': 'Pending Products',
-          'pending-promotions': 'Pending Promotions',
           'pending-riders': 'Pending Riders',
           'product': 'All Products',
           'customer': 'Customers',
@@ -800,7 +931,6 @@
           'statistics': 'Statistics',
           'riders': 'Active Riders',
           'sellers': 'Active Sellers',
-          'journal': 'Journal Management',
           'setting': 'System Settings',
           'help': 'Help & Support',
           'log': 'Activity Log'
@@ -1003,242 +1133,6 @@
         .catch(error => {
           console.error('Reject error:', error);
           showToast('Error rejecting product: ' + error.message, 'error');
-        });
-      }
-
-      function loadPendingPromotions() {
-        console.log('Loading pending promotions...');
-        fetch('/admin/pending-promotions')
-          .then(response => {
-            console.log('Promotions response:', response);
-            return response.json();
-          })
-          .then(data => {
-            console.log('Promotions data:', data);
-            if (data.promotions && data.promotions.length > 0) {
-              let html = `
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Product</th>
-                      <th>Seller</th>
-                      <th>Discount</th>
-                      <th>Dates</th>
-                      <th>Submitted</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-              `;
-
-              data.promotions.forEach(promo => {
-                const date = new Date(promo.created_at).toLocaleDateString();
-                const startDate = new Date(promo.start_date).toLocaleDateString();
-                const endDate = new Date(promo.end_date).toLocaleDateString();
-                const discountLabel = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
-
-                html += `
-                  <tr id="promotion-${promo.id}">
-                    <td><strong>${promo.code}</strong></td>
-                    <td>
-                      <strong>${promo.product_name}</strong><br>
-                      <small style="color: var(--muted)">₱${parseFloat(promo.product_price).toFixed(2)}</small>
-                    </td>
-                    <td>${promo.store_name}</td>
-                    <td>${discountLabel}</td>
-                    <td>
-                      <small>${startDate} to ${endDate}</small>
-                    </td>
-                    <td>${date}</td>
-                    <td>
-                      <div style="display: flex; gap: 8px;">
-                        <button class="tag" onclick="viewPromotionDetails(${promo.id})" style="background: #3b82f6; cursor: pointer; border: none;">Details</button>
-                        <button class="tag" onclick="approvePromotion(${promo.id})" style="background: #10b981; cursor: pointer; border: none;">Approve</button>
-                        <button class="tag" onclick="rejectPromotion(${promo.id})" style="background: #ef4444; cursor: pointer; border: none;">Reject</button>
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              });
-
-              html += '</tbody></table>';
-              document.getElementById('pending-promotions-list').innerHTML = html;
-
-
-              const badge = document.querySelector('[data-page="pending-promotions"] .tag');
-              if (badge) {
-                badge.textContent = data.promotions.length;
-              }
-            } else {
-              document.getElementById('pending-promotions-list').innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending promotions to review</p>';
-              const badge = document.querySelector('[data-page="pending-promotions"] .tag');
-              if (badge) {
-                badge.textContent = '0';
-              }
-            }
-          })
-          .catch(error => {
-            document.getElementById('pending-promotions-list').innerHTML = '<p style="color:#ef4444;">Error loading pending promotions</p>';
-            console.error('Error:', error);
-          });
-      }
-
-      function viewPromotionDetails(promotionId) {
-        const modal = document.getElementById('promotion-details-modal');
-        const modalBody = document.getElementById('promotion-details-body');
-
-        modal.style.display = 'flex';
-        modalBody.innerHTML = '<p style="text-align:center;padding:40px;">Loading promotion details...</p>';
-
-
-        fetch('/admin/pending-promotions')
-          .then(response => response.json())
-          .then(data => {
-            const promo = data.promotions.find(p => p.id === promotionId);
-            if (promo) {
-              const startDate = new Date(promo.start_date).toLocaleDateString();
-              const endDate = new Date(promo.end_date).toLocaleDateString();
-              const discountLabel = promo.discount_type === 'percentage' ? `${promo.discount_value}%` : `₱${promo.discount_value}`;
-
-              let html = `
-                <div style="display: grid; gap: 16px;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div>
-                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Promotion Code</label>
-                      <div style="font-size: 18px; font-weight: 700;">${promo.code}</div>
-                    </div>
-                    <div>
-                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Discount</label>
-                      <div style="font-size: 18px; font-weight: 700; color: #10b981;">${discountLabel}</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Product</label>
-                    <div>${promo.product_name} (₱${parseFloat(promo.product_price).toFixed(2)})</div>
-                  </div>
-
-                  <div>
-                    <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Brand</label>
-                    <div>${promo.brand || 'N/A'}</div>
-                  </div>
-
-                  <div>
-                    <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Description</label>
-                    <div>${promo.description || 'No description provided'}</div>
-                  </div>
-
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div>
-                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Start Date</label>
-                      <div>${startDate}</div>
-                    </div>
-                    <div>
-                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">End Date</label>
-                      <div>${endDate}</div>
-                    </div>
-                  </div>
-
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div>
-                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Min. Purchase</label>
-                      <div>₱${parseFloat(promo.min_purchase || 0).toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <label style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Usage Limit</label>
-                      <div>${promo.usage_limit || 'Unlimited'}</div>
-                    </div>
-                  </div>
-
-                  <div style="display: flex; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);">
-                    <button onclick="approvePromotion(${promo.id})" class="tag" style="background: #10b981; color: white; cursor: pointer; border: none; padding: 10px 16px; flex: 1;">✓ Approve</button>
-                    <button onclick="rejectPromotion(${promo.id})" class="tag" style="background: #ef4444; color: white; cursor: pointer; border: none; padding: 10px 16px; flex: 1;">✕ Reject</button>
-                  </div>
-                </div>
-              `;
-              modalBody.innerHTML = html;
-            }
-          })
-          .catch(error => {
-            modalBody.innerHTML = '<p style="color:#ef4444;">Error loading promotion details</p>';
-          });
-      }
-
-      function closePromotionDetailsModal() {
-        document.getElementById('promotion-details-modal').style.display = 'none';
-      }
-
-      function approvePromotion(promotionId) {
-        fetch(`/admin/promotion/${promotionId}/approve`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({})
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-
-            closePromotionDetailsModal();
-            document.getElementById(`promotion-${promotionId}`)?.remove();
-
-
-            const badge = document.querySelector('[data-page="pending-promotions"] .tag');
-            if (badge) {
-              const count = parseInt(badge.textContent) - 1;
-              badge.textContent = count > 0 ? count : '0';
-            }
-
-
-            const listContainer = document.getElementById('pending-promotions-list');
-            if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
-              loadPendingPromotions();
-            }
-          }
-        })
-        .catch(error => {
-
-          console.error('Error:', error);
-        });
-      }
-
-      function rejectPromotion(promotionId) {
-        const reason = prompt('Enter rejection reason (will be sent to the seller):');
-        if (reason === null) return;
-
-        fetch(`/admin/promotion/${promotionId}/reject`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ reason: reason || 'No reason provided' })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-
-            closePromotionDetailsModal();
-            document.getElementById(`promotion-${promotionId}`)?.remove();
-
-
-            const badge = document.querySelector('[data-page="pending-promotions"] .tag');
-            if (badge) {
-              const count = parseInt(badge.textContent) - 1;
-              badge.textContent = count > 0 ? count : '0';
-            }
-
-
-            const listContainer = document.getElementById('pending-promotions-list');
-            if (listContainer && listContainer.querySelector('tbody').children.length === 0) {
-              loadPendingPromotions();
-            }
-          }
-        })
-        .catch(error => {
-
-          console.error('Error:', error);
         });
       }
 
@@ -2210,17 +2104,6 @@
         .catch(error => console.error('Error loading recovery count:', error));
 
 
-      fetch('/admin/pending-promotions')
-        .then(response => response.json())
-        .then(data => {
-          const promotionsCount = document.getElementById('pending-promotions-count');
-          if (promotionsCount && data.promotions) {
-            promotionsCount.textContent = data.promotions.length;
-          }
-        })
-        .catch(error => console.error('Error loading promotions count:', error));
-
-
       document.querySelectorAll('.side-link').forEach(link => {
         link.addEventListener('click', (e) => {
           const page = e.currentTarget.getAttribute('data-page');
@@ -2500,104 +2383,6 @@
         closeProductDetailsModal();
         rejectProduct(productId);
       }
-
-
-      function loadJournalEntries() {
-        fetch('/admin/journal-entries')
-          .then(response => response.json())
-          .then(data => {
-            const container = document.getElementById('journal-list');
-            if (data.success && data.entries && data.entries.length > 0) {
-              let html = `
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Title</th>
-                      <th>Image</th>
-                      <th>Created</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-              `;
-
-              data.entries.forEach(entry => {
-                const date = new Date(entry.created_at).toLocaleDateString();
-                html += `
-                  <tr id="journal-row-${entry.id}">
-                    <td><strong>${entry.title}</strong></td>
-                    <td><img src="${entry.image_url || '/static/images/placeholder.svg'}" style="width:60px;height:60px;object-fit:cover;border-radius:6px" alt="${entry.title}"></td>
-                    <td style="color:var(--muted);font-size:13px">${date}</td>
-                    <td><span class="tag" style="background:${entry.is_active ? '#10b981' : '#ef4444'}">${entry.is_active ? 'Active' : 'Inactive'}</span></td>
-                    <td>
-                      <div style="display:flex;gap:8px">
-                        <button class="tag" onclick="editJournalEntry(${entry.id})" style="background:#3b82f6;cursor:pointer;border:none">Edit</button>
-                        <button class="tag" onclick="deleteJournalEntry(${entry.id})" style="background:#ef4444;cursor:pointer;border:none">Delete</button>
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              });
-
-              html += '</tbody></table>';
-              container.innerHTML = html;
-            } else {
-              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px">No journal entries yet. Click "Add Journal Entry" to create one.</p>';
-            }
-          })
-          .catch(error => {
-            document.getElementById('journal-list').innerHTML = '<p style="color:#ef4444">Error loading journal entries</p>';
-          });
-      }
-
-      function openAddJournalModal() {
-        document.getElementById('journal-modal-title').textContent = 'Add Journal Entry';
-        document.getElementById('journal-form').reset();
-        document.getElementById('journal-form').setAttribute('data-entry-id', '');
-        document.getElementById('journal-modal').style.display = 'flex';
-      }
-
-      function editJournalEntry(entryId) {
-        fetch(`/admin/journal-entry/${entryId}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.success && data.entry) {
-              const entry = data.entry;
-              document.getElementById('journal-modal-title').textContent = 'Edit Journal Entry';
-              document.getElementById('journal-title').value = entry.title;
-              document.getElementById('journal-description').value = entry.description || '';
-              document.getElementById('journal-image').value = entry.image_url || '';
-              document.getElementById('journal-link').value = entry.link_url || '';
-              document.getElementById('journal-form').setAttribute('data-entry-id', entryId);
-              document.getElementById('journal-modal').style.display = 'flex';
-            }
-          })
-          .catch(error => alert('Error loading journal entry'));
-      }
-
-      function deleteJournalEntry(entryId) {
-        if (!confirm('Delete this journal entry? This cannot be undone.')) return;
-
-        fetch(`/admin/journal-entry/${entryId}`, { method: 'DELETE' })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              alert('Journal entry deleted');
-              loadJournalEntries();
-            } else {
-              alert('Error: ' + data.error);
-            }
-          })
-          .catch(error => alert('Error deleting entry'));
-      }
-
-      function closeJournalModal() {
-        document.getElementById('journal-modal').style.display = 'none';
-        document.getElementById('journal-form').reset();
-      }
-
-
       function loadAllProducts() {
         fetch('/admin/all-products')
           .then(response => response.json())
@@ -2882,71 +2667,7 @@
 
 
       document.addEventListener('DOMContentLoaded', function() {
-
         loadOverviewCustomerGrowth();
-
-
-      function previewJournalImage(event) {
-        const file = event.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            document.getElementById('journal-image-placeholder').style.display = 'none';
-            document.getElementById('journal-image-preview').style.display = 'block';
-            document.getElementById('journal-preview-img').src = e.target.result;
-          };
-          reader.readAsDataURL(file);
-        }
-      }
-
-      function removeJournalImage() {
-        document.getElementById('journal-image-input').value = '';
-        document.getElementById('journal-image-preview').style.display = 'none';
-        document.getElementById('journal-image-placeholder').style.display = 'block';
-      }
-
-      function closeJournalModal() {
-        document.getElementById('journal-modal').style.display = 'none';
-        document.getElementById('journal-form').reset();
-        document.getElementById('journal-image-input').value = '';
-        document.getElementById('journal-image-preview').style.display = 'none';
-        document.getElementById('journal-image-placeholder').style.display = 'block';
-        document.getElementById('journal-form').setAttribute('data-entry-id', '');
-      }
-
-      const journalForm = document.getElementById('journal-form');
-        if (journalForm) {
-          journalForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const entryId = this.getAttribute('data-entry-id');
-            const formData = new FormData();
-            formData.append('title', document.getElementById('journal-title').value);
-            formData.append('description', document.getElementById('journal-description').value);
-            formData.append('is_active', document.getElementById('journal-is-active').checked ? '1' : '0');
-
-
-            const imageInput = document.getElementById('journal-image-input');
-            if (imageInput && imageInput.files && imageInput.files[0]) {
-              formData.append('image', imageInput.files[0]);
-            }
-
-            const url = entryId ? `/admin/journal-entry/${entryId}` : '/admin/journal-entry';
-            const method = entryId ? 'PUT' : 'POST';
-
-            fetch(url, { method: method, body: formData })
-              .then(response => response.json())
-              .then(data => {
-                if (data.success) {
-                  alert(entryId ? 'Journal entry updated' : 'Journal entry created');
-                  closeJournalModal();
-                  loadJournalEntries();
-                } else {
-                  alert('Error: ' + data.error);
-                }
-              })
-              .catch(error => alert('Error saving journal entry'));
-          });
-        }
       });
 
 

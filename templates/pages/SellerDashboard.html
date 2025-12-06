@@ -2112,7 +2112,7 @@
                     <span class="order-status-card__emoji">🚚</span>
                     <span class="order-status-card__count" data-status-count="released_to_rider">0</span>
                   </div>
-                  <div class="order-status-card__label">Released</div>
+                  <div class="order-status-card__label">Release to rider</div>
                   <p class="order-status-card__hint">Handoff to riders in progress</p>
                 </button>
                 <button type="button" class="order-status-card" data-filter-btn="delivered" data-status="delivered" data-state="idle" aria-pressed="false" onclick="filterOrders('delivered')">
@@ -5129,7 +5129,7 @@
       async function releaseToRiderDelivered(orderId) {
         console.log('🚚 Releasing to rider (delivered status):', orderId);
 
-        const confirmed = await VaronNotifications.confirm('Release to Rider?', {
+        const confirmed = await VaronNotifications.confirm('Release to rider?', {
           confirmText: 'Release',
           cancelText: 'Keep Pending',
           confirmClass: 'confirm'
@@ -5204,7 +5204,7 @@
         const statusLabels = {
           'processing': '🔄 Processing',
           'shipped': '📦 Ready for Pickup',
-          'released_to_rider': '🚚 Release to Rider'
+          'released_to_rider': '🚚 Release to rider'
         };
 
         const confirmed = await VaronNotifications.confirm(
