@@ -968,23 +968,48 @@
 
 							<div class="service-area-card">
 								<div class="form-group">
-									<label for="riderRegion">Select your service area</label>
+									<label for="riderRegion">Complete Address</label>
 									<div class="input-shell">
 										<span class="input-icon">
 											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg>
 										</span>
-										<select id="riderRegion" name="region" class="form-select" required onchange="toggleRegionProvinces(this.value)">
-											<option value="">Select a region</option>
-											<option value="North Luzon">North Luzon</option>
-											<option value="Central Luzon">Central Luzon</option>
-											<option value="South Luzon">South Luzon</option>
-											<option value="Visayas">Visayas</option>
-											<option value="Mindanao">Mindanao</option>
+										<select id="riderRegion" name="region" class="form-select" required></select>
+									</div>
+									<span class="helper-text">PSGC-based selection (Region → Province → City/Municipality → Barangay). Your default service area will be the City/Municipality you select.</span>
+								</div>
+								<div class="field-grid">
+									<div class="form-group">
+										<label for="riderProvince">Province</label>
+										<div class="input-shell">
+											<select id="riderProvince" name="psgc_province_code" class="form-select" required disabled>
+												<option value="">Select province</option>
+											</select>
+										</div>
+									</div>
+									<div class="form-group">
+										<label for="riderCity">City/Municipality</label>
+										<div class="input-shell">
+											<select id="riderCity" name="psgc_city_code" class="form-select" required disabled>
+												<option value="">Select city/municipality</option>
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="riderBarangay">Barangay</label>
+									<div class="input-shell">
+										<select id="riderBarangay" name="psgc_barangay_code" class="form-select" required disabled>
+											<option value="">Select barangay</option>
 										</select>
 									</div>
-									<span class="helper-text">Optional: limit drops to specific provinces or cities.</span>
 								</div>
-								<div id="provincesContainer" style="display:none"></div>
+								<div class="form-group">
+									<label for="riderPostalCode">Postal code</label>
+									<div class="input-shell">
+										<input id="riderPostalCode" name="postal_code" class="form-input" type="text" placeholder="Auto-filled (optional)" />
+									</div>
+									<span class="helper-text">Auto-populated from your PSGC selection.</span>
+								</div>
 								<input type="hidden" id="serviceAreaInput" name="service_area" required />
 							</div>
 
@@ -1130,66 +1155,194 @@
 		}
 	});
 
-	const regionProvinces = {
-		'North Luzon': ['Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan', 'Baguio City', 'Benguet', 'Abra', 'Kalinga', 'Apayao', 'Mountain Province', 'Cagayan', 'Isabela', 'Nueva Vizcaya', 'Quirino', 'Batanes'],
-		'Central Luzon': ['Pampanga', 'Tarlac', 'Nueva Ecija', 'Zambales', 'Bataan', 'Bulacan', 'Aurora', 'Angeles City', 'Olongapo City', 'San Fernando City'],
-		'South Luzon': ['Laguna', 'Batangas', 'Cavite', 'Rizal', 'Quezon', 'Antipolo City', 'Lucena City', 'Batangas City', 'Lipa City', 'Tagaytay City', 'Calamba City', 'Los Baños', 'Biñan City', 'Cabuyao', 'San Pablo City', 'Albay', 'Camarines Norte', 'Camarines Sur', 'Catanduanes', 'Masbate', 'Sorsogon', 'Marinduque', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan', 'Romblon', 'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 'Marikina', 'Pasay', 'Parañaque', 'Las Piñas', 'Muntinlupa', 'Caloocan', 'Malabon', 'Navotas', 'Valenzuela', 'San Juan'],
-		'Visayas': ['Cebu', 'Cebu City', 'Mandaue City', 'Lapu-Lapu City', 'Talisay City', 'Iloilo', 'Iloilo City', 'Bacolod City', 'Negros Occidental', 'Negros Oriental', 'Bohol', 'Tagbilaran City', 'Dumaguete City', 'Roxas City', 'Kalibo', 'Tacloban City', 'Ormoc City', 'Leyte', 'Samar', 'Eastern Samar', 'Northern Samar', 'Biliran', 'Southern Leyte'],
-		'Mindanao': ['Davao City', 'Davao del Norte', 'Davao del Sur', 'Davao Oriental', 'Davao de Oro', 'Cagayan de Oro City', 'Misamis Oriental', 'Misamis Occidental', 'Iligan City', 'Zamboanga City', 'Zamboanga del Norte', 'Zamboanga del Sur', 'Zamboanga Sibugay', 'General Santos City', 'South Cotabato', 'North Cotabato', 'Sultan Kudarat', 'Butuan City', 'Agusan del Norte', 'Agusan del Sur', 'Surigao del Norte', 'Surigao del Sur', 'Cotabato City', 'Maguindanao', 'Lanao del Norte', 'Lanao del Sur', 'Marawi City', 'Bukidnon', 'Valencia City', 'Malaybalay City']
-	};
-
-	window.toggleRegionProvinces = function(region) {
-		const container = document.getElementById('provincesContainer');
-		const provinces = regionProvinces[region] || [];
-		container.innerHTML = '';
-
-		if (region && provinces.length) {
-			container.innerHTML = `
-				<div style="margin-bottom:12px">
-					<label style="font-size:14px;font-weight:600;color:#111111">Serve specific provinces/cities in ${region}? (Optional)</label>
-					<small style="display:block;color:#6b6b6b;font-size:12px;margin-top:4px">Leave unchecked to serve the entire ${region} region. Check specific provinces if you want to limit your service area.</small>
-				</div>
-				<div class="province-grid">
-					${provinces.map(province => `
-						<label>
-							<input type="checkbox" name="province" value="${province}" data-region="${region}" onchange="updateServiceArea()">
-							<span>${province}</span>
-						</label>
-					`).join('')}
-				</div>
-			`;
-			container.style.display = 'block';
-		} else {
-			container.style.display = 'none';
+	async function fetchPsgc(url) {
+		const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+		const data = await response.json();
+		if (!data || data.success === false) {
+			throw new Error((data && data.message) || 'Failed to load PSGC data');
 		}
+		return data.items || [];
+	}
 
-		updateServiceArea();
-	};
+	function setOptions(select, items, placeholder) {
+		if (!select) return;
+		select.innerHTML = '';
+		const ph = document.createElement('option');
+		ph.value = '';
+		ph.textContent = placeholder;
+		select.appendChild(ph);
+		(items || []).forEach(item => {
+			const opt = document.createElement('option');
+			opt.value = item.code;
+			opt.textContent = item.name;
+			select.appendChild(opt);
+		});
+	}
 
-	window.updateServiceArea = function() {
+	function resetSelect(select, placeholder) {
+		setOptions(select, [], placeholder);
+		select.disabled = true;
+		select.value = '';
+	}
+
+	function updateServiceAreaFromCascade() {
 		const regionSelect = document.getElementById('riderRegion');
-		const selectedRegion = regionSelect ? regionSelect.value : '';
-		const selectedProvinces = Array.from(document.querySelectorAll('input[name="province"]:checked')).map(cb => cb.value);
+		const provinceSelect = document.getElementById('riderProvince');
+		const citySelect = document.getElementById('riderCity');
+		const barangaySelect = document.getElementById('riderBarangay');
 		const serviceAreaInput = document.getElementById('serviceAreaInput');
 
-		const serviceAreas = [];
-		if (selectedRegion) {
-			serviceAreas.push(selectedRegion);
-			if (selectedProvinces.length) {
-				serviceAreas.push(...selectedProvinces);
+		const regionName = regionSelect?.selectedOptions?.[0]?.textContent || '';
+		const provinceName = provinceSelect && !provinceSelect.disabled ? (provinceSelect.selectedOptions?.[0]?.textContent || '') : '';
+		const cityName = citySelect?.selectedOptions?.[0]?.textContent || '';
+		const barangayName = barangaySelect?.selectedOptions?.[0]?.textContent || '';
+
+		// IMPORTANT: Rider default Service Area must be the selected City/Municipality.
+		const combined = cityName;
+
+		if (serviceAreaInput) {
+			serviceAreaInput.value = combined;
+			if (!regionSelect?.value || (!provinceSelect?.disabled && !provinceSelect?.value) || !citySelect?.value || !barangaySelect?.value) {
+				serviceAreaInput.setCustomValidity('Please complete your PSGC address selection');
+			} else {
+				serviceAreaInput.setCustomValidity('');
+			}
+		}
+	}
+
+	async function initRiderPsgcCascade() {
+		const regionSelect = document.getElementById('riderRegion');
+		const provinceSelect = document.getElementById('riderProvince');
+		const citySelect = document.getElementById('riderCity');
+		const barangaySelect = document.getElementById('riderBarangay');
+		const postalInput = document.getElementById('riderPostalCode');
+
+		if (!regionSelect || !provinceSelect || !citySelect || !barangaySelect) return;
+				let postalDirty = false;
+				if (postalInput) {
+					postalInput.value = '';
+					postalInput.addEventListener('input', () => {
+						postalDirty = (postalInput.value || '').trim().length > 0;
+					});
+				}
+
+		async function updatePostalCode() {
+			if (!postalInput) return;
+					if (postalDirty) return;
+			const cityCode = (citySelect.value || '').trim();
+			const barangayCode = (barangaySelect.value || '').trim();
+			if (!cityCode || !barangayCode) {
+				postalInput.value = '';
+						postalDirty = false;
+				return;
+			}
+			try {
+				const params = new URLSearchParams({ city_code: cityCode, barangay_code: barangayCode });
+				const resp = await fetch('/api/postal-code?' + params.toString());
+				const data = await resp.json();
+				if (data && data.success && data.postal_code) {
+					postalInput.value = String(data.postal_code);
+							postalDirty = false;
+				} else {
+					postalInput.value = '';
+							postalDirty = false;
+				}
+			} catch (e) {
+				postalInput.value = '';
+						postalDirty = false;
 			}
 		}
 
-		const value = serviceAreas.join(',');
-		if (serviceAreaInput) {
-			serviceAreaInput.value = value;
-			if (selectedRegion) {
-				serviceAreaInput.setCustomValidity('');
-			} else {
-				serviceAreaInput.setCustomValidity('Please select a region');
-			}
+		resetSelect(regionSelect, 'Loading regions...');
+		resetSelect(provinceSelect, 'Select province');
+		resetSelect(citySelect, 'Select city/municipality');
+		resetSelect(barangaySelect, 'Select barangay');
+
+		try {
+			const regions = await fetchPsgc('/api/psgc/regions');
+			setOptions(regionSelect, regions, 'Select a region');
+			regionSelect.disabled = false;
+		} catch (err) {
+			setOptions(regionSelect, [], 'Failed to load regions');
+			regionSelect.disabled = true;
 		}
-	};
+
+		regionSelect.addEventListener('change', async () => {
+			resetSelect(provinceSelect, 'Select province');
+			resetSelect(citySelect, 'Select city/municipality');
+			resetSelect(barangaySelect, 'Select barangay');
+					if (postalInput) {
+						postalInput.value = '';
+						postalDirty = false;
+					}
+			updateServiceAreaFromCascade();
+
+			const regionCode = regionSelect.value;
+			if (!regionCode) return;
+
+			try {
+				const provinces = await fetchPsgc(`/api/psgc/regions/${regionCode}/provinces`);
+				if (provinces.length) {
+					setOptions(provinceSelect, provinces, 'Select province');
+					provinceSelect.disabled = false;
+					provinceSelect.required = true;
+				} else {
+					setOptions(provinceSelect, [], 'No province (select city)');
+					provinceSelect.disabled = true;
+					provinceSelect.required = false;
+					const cities = await fetchPsgc(`/api/psgc/regions/${regionCode}/cities-municipalities`);
+					setOptions(citySelect, cities, 'Select city/municipality');
+					citySelect.disabled = false;
+				}
+			} catch (err) {
+				// ignore
+			}
+		});
+
+		provinceSelect.addEventListener('change', async () => {
+			resetSelect(citySelect, 'Select city/municipality');
+			resetSelect(barangaySelect, 'Select barangay');
+					if (postalInput) {
+						postalInput.value = '';
+						postalDirty = false;
+					}
+			updateServiceAreaFromCascade();
+
+			const provinceCode = provinceSelect.value;
+			if (!provinceCode) return;
+			try {
+				const cities = await fetchPsgc(`/api/psgc/provinces/${provinceCode}/cities-municipalities`);
+				setOptions(citySelect, cities, 'Select city/municipality');
+				citySelect.disabled = false;
+			} catch (err) {
+				// ignore
+			}
+		});
+
+		citySelect.addEventListener('change', async () => {
+			resetSelect(barangaySelect, 'Select barangay');
+					if (postalInput) {
+						postalInput.value = '';
+						postalDirty = false;
+					}
+			updateServiceAreaFromCascade();
+
+			const cityCode = citySelect.value;
+			if (!cityCode) return;
+			try {
+				const barangays = await fetchPsgc(`/api/psgc/cities-municipalities/${cityCode}/barangays`);
+				setOptions(barangaySelect, barangays, 'Select barangay');
+				barangaySelect.disabled = false;
+			} catch (err) {
+				// ignore
+			}
+		});
+
+		barangaySelect.addEventListener('change', () => {
+			updateServiceAreaFromCascade();
+			updatePostalCode();
+		});
+	}
 
 	const vehiclePlateState = {};
 	const vehicleUploadState = {};
@@ -1503,7 +1656,7 @@
 			form.addEventListener('submit', e => {
 				e.preventDefault();
 				clearFieldErrors();
-				updateServiceArea();
+				updateServiceAreaFromCascade();
 				if (errorDiv) {
 					errorDiv.style.display = 'none';
 					errorDiv.textContent = '';
@@ -1520,7 +1673,6 @@
 					const licenseNumber = formData.get('license_number')?.trim();
 					const vehicleTypes = formData.getAll('vehicle_type');
 					const region = formData.get('region');
-					const provinces = Array.from(document.querySelectorAll('input[name="province"]:checked')).map(cb => cb.value);
 					const tnc = formData.get('tnc');
 
 					let hasError = false;
@@ -1596,8 +1748,7 @@
 						ensureBannerMessage('Please select your service area.');
 					}
 
-					const serviceAreas = [region, ...provinces];
-					const finalServiceArea = serviceAreas.filter(Boolean).join(',');
+					const finalServiceArea = (formData.get('service_area') || '').trim();
 					if (finalServiceArea) {
 						formData.set('service_area', finalServiceArea);
 						const serviceAreaInput = document.getElementById('serviceAreaInput');
@@ -1671,7 +1822,7 @@
 		}
 
 		initializeVehicleListeners();
-		updateServiceArea();
+		initRiderPsgcCascade();
 	});
 </script>
 </body>

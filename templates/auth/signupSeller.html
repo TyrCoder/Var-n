@@ -716,38 +716,60 @@
 								<span class="helper-text">This helps shoppers and our team understand your assortment.</span>
 							</div>
 
-							<div class="form-group">
-								<label for="sellerAddress">Store address</label>
-								<div class="input-shell">
-									<span class="input-icon">
-										<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-									</span>
-									<input id="sellerAddress" name="address" class="form-input" type="text" placeholder="Building, street, city" required />
-								</div>
-								<span class="helper-text">We use this for pickup routing and dashboard defaults.</span>
-							</div>
-
-							<div class="service-area-card" aria-labelledby="seller-service-area-label">
+							<div class="service-area-card" aria-labelledby="seller-store-address-label">
 								<div class="form-group">
-									<label id="seller-service-area-label" for="sellerRegion">Service area</label>
+									<label id="seller-store-address-label" for="sellerRegion">Store address</label>
 									<div class="input-shell">
 										<span class="input-icon">
 											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b0b0b0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 										</span>
-										<select id="sellerRegion" name="region" class="form-input form-select" required onchange="toggleSellerRegionProvinces(this.value)">
-											<option value="">Select a region</option>
-											<option value="North Luzon">North Luzon</option>
-											<option value="Central Luzon">Central Luzon</option>
-											<option value="South Luzon">South Luzon</option>
-											<option value="Visayas">Visayas</option>
-											<option value="Mindanao">Mindanao</option>
+										<select id="sellerRegion" name="region" class="form-input form-select" required></select>
+									</div>
+									<span class="helper-text">PSGC-based selection (Region → Province → City/Municipality → Barangay).</span>
+								</div>
+								<div class="field-grid">
+									<div class="form-group">
+										<label for="sellerProvince">Province</label>
+										<div class="input-shell">
+											<select id="sellerProvince" name="psgc_province_code" class="form-input form-select" required disabled>
+												<option value="">Select province</option>
+											</select>
+										</div>
+									</div>
+									<div class="form-group">
+										<label for="sellerCity">City/Municipality</label>
+										<div class="input-shell">
+											<select id="sellerCity" name="psgc_city_code" class="form-input form-select" required disabled>
+												<option value="">Select city/municipality</option>
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="sellerBarangay">Barangay</label>
+									<div class="input-shell">
+										<select id="sellerBarangay" name="psgc_barangay_code" class="form-input form-select" required disabled>
+											<option value="">Select barangay</option>
 										</select>
 									</div>
-									<span class="helper-text">Match your preferred fulfillment zones with our rider network.</span>
 								</div>
-								<div id="sellerProvincesContainer" class="province-panel" style="display:none"></div>
-								<input type="hidden" id="sellerServiceAreaInput" name="service_area" required />
-								<div id="sellerServiceAreaSummary" class="service-area-summary">No service area selected.</div>
+								<div class="form-group">
+									<label for="sellerPostalCode">Postal code</label>
+									<div class="input-shell">
+										<input id="sellerPostalCode" name="postal_code" class="form-input" type="text" placeholder="Auto-filled (optional)" />
+									</div>
+									<span class="helper-text">Auto-populated from your PSGC selection.</span>
+								</div>
+								<div class="form-group">
+									<label for="sellerAddress">Specific address</label>
+									<div class="input-shell">
+										<span class="input-icon">
+											<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+									</span>
+									<input id="sellerAddress" name="address" class="form-input" type="text" placeholder="Building/House No., Street, Subdivision/Unit" required />
+								</div>
+								<span class="helper-text">This will be combined with your PSGC selection to form your complete store address.</span>
+								</div>
 							</div>
 
 							<div class="field-grid">
@@ -829,80 +851,177 @@
 				}
 			}
 
-			const SELLER_REGION_PROVINCES = {
-				'North Luzon': ['Ilocos Norte', 'Ilocos Sur', 'La Union', 'Pangasinan', 'Baguio City', 'Benguet', 'Abra', 'Kalinga', 'Apayao', 'Mountain Province', 'Cagayan', 'Isabela', 'Nueva Vizcaya', 'Quirino', 'Batanes'],
-				'Central Luzon': ['Pampanga', 'Tarlac', 'Nueva Ecija', 'Zambales', 'Bataan', 'Bulacan', 'Aurora', 'Angeles City', 'Olongapo City', 'San Fernando City'],
-				'South Luzon': ['Laguna', 'Batangas', 'Cavite', 'Rizal', 'Quezon', 'Antipolo City', 'Lucena City', 'Batangas City', 'Lipa City', 'Tagaytay City', 'Calamba City', 'Los Baños', 'Biñan City', 'Cabuyao', 'San Pablo City', 'Albay', 'Camarines Norte', 'Camarines Sur', 'Catanduanes', 'Masbate', 'Sorsogon', 'Marinduque', 'Occidental Mindoro', 'Oriental Mindoro', 'Palawan', 'Romblon', 'Manila', 'Quezon City', 'Makati', 'Pasig', 'Taguig', 'Mandaluyong', 'Marikina', 'Pasay', 'Parañaque', 'Las Piñas', 'Muntinlupa', 'Caloocan', 'Malabon', 'Navotas', 'Valenzuela', 'San Juan'],
-				'Visayas': ['Cebu', 'Cebu City', 'Mandaue City', 'Lapu-Lapu City', 'Talisay City', 'Iloilo', 'Iloilo City', 'Bacolod City', 'Negros Occidental', 'Negros Oriental', 'Bohol', 'Tagbilaran City', 'Dumaguete City', 'Roxas City', 'Kalibo', 'Tacloban City', 'Ormoc City', 'Leyte', 'Samar', 'Eastern Samar', 'Northern Samar', 'Biliran', 'Southern Leyte'],
-				'Mindanao': ['Davao City', 'Davao del Norte', 'Davao del Sur', 'Davao Oriental', 'Davao de Oro', 'Cagayan de Oro City', 'Misamis Oriental', 'Misamis Occidental', 'Iligan City', 'Zamboanga City', 'Zamboanga del Norte', 'Zamboanga del Sur', 'Zamboanga Sibugay', 'General Santos City', 'South Cotabato', 'North Cotabato', 'Sultan Kudarat', 'Butuan City', 'Agusan del Norte', 'Agusan del Sur', 'Surigao del Norte', 'Surigao del Sur', 'Cotabato City', 'Maguindanao', 'Lanao del Norte', 'Lanao del Sur', 'Marawi City', 'Bukidnon', 'Valencia City', 'Malaybalay City']
-			};
-
-			function toggleSellerRegionProvinces(region) {
-				const container = document.getElementById('sellerProvincesContainer');
-				if (!container) return;
-
-				const provinces = SELLER_REGION_PROVINCES[region] || [];
-				container.innerHTML = '';
-
-				if (region && provinces.length) {
-					container.innerHTML = `
-						<div class="province-header">Serve specific provinces/cities in ${region}? (Optional)</div>
-						<div class="province-grid">
-							${provinces.map(province => `
-								<label>
-									<input type="checkbox" name="seller_province" value="${province}" onchange="updateSellerServiceArea()">
-									<span>${province}</span>
-								</label>
-							`).join('')}
-						</div>
-					`;
-					container.style.display = 'block';
-				} else {
-					container.style.display = 'none';
+			async function fetchPsgc(url) {
+				const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+				const data = await response.json();
+				if (!data || data.success === false) {
+					throw new Error((data && data.message) || 'Failed to load PSGC data');
 				}
-
-				updateSellerServiceArea();
+				return data.items || [];
 			}
 
-			function updateSellerServiceArea() {
+			function setOptions(select, items, placeholder) {
+				if (!select) return;
+				select.innerHTML = '';
+				const ph = document.createElement('option');
+				ph.value = '';
+				ph.textContent = placeholder;
+				select.appendChild(ph);
+				(items || []).forEach(item => {
+					const opt = document.createElement('option');
+					opt.value = item.code;
+					opt.textContent = item.name;
+					select.appendChild(opt);
+				});
+			}
+
+			function resetSelect(select, placeholder) {
+				setOptions(select, [], placeholder);
+				select.disabled = true;
+				select.value = '';
+			}
+
+			function updateSellerServiceAreaFromCascade() {
+				// Seller accounts do not use a separate Service Area.
+				// Kept as a no-op because the cascade listeners call this.
+			}
+
+			async function initSellerPsgcCascade() {
 				const regionSelect = document.getElementById('sellerRegion');
-				const selectedRegion = regionSelect ? regionSelect.value : '';
-				const selectedProvinces = Array.from(document.querySelectorAll('input[name="seller_province"]:checked')).map(cb => cb.value);
-				const serviceAreaInput = document.getElementById('sellerServiceAreaInput');
-				const summary = document.getElementById('sellerServiceAreaSummary');
+				const provinceSelect = document.getElementById('sellerProvince');
+				const citySelect = document.getElementById('sellerCity');
+				const barangaySelect = document.getElementById('sellerBarangay');
+				const postalInput = document.getElementById('sellerPostalCode');
 
-				const serviceAreas = [];
-				if (selectedRegion) {
-					serviceAreas.push(selectedRegion);
-					if (selectedProvinces.length) {
-						serviceAreas.push(...selectedProvinces);
+				if (!regionSelect || !provinceSelect || !citySelect || !barangaySelect) return;
+				let postalDirty = false;
+				if (postalInput) {
+					postalInput.value = '';
+					postalInput.addEventListener('input', () => {
+						postalDirty = (postalInput.value || '').trim().length > 0;
+					});
+				}
+
+				async function updatePostalCode() {
+					if (!postalInput) return;
+					if (postalDirty) return;
+					const cityCode = (citySelect.value || '').trim();
+					const barangayCode = (barangaySelect.value || '').trim();
+					if (!cityCode || !barangayCode) {
+						postalInput.value = '';
+						postalDirty = false;
+						return;
+					}
+					try {
+						const params = new URLSearchParams({ city_code: cityCode, barangay_code: barangayCode });
+						const resp = await fetch('/api/postal-code?' + params.toString());
+						const data = await resp.json();
+						if (data && data.success && data.postal_code) {
+							postalInput.value = String(data.postal_code);
+							postalDirty = false;
+						} else {
+							postalInput.value = '';
+							postalDirty = false;
+						}
+					} catch (e) {
+						postalInput.value = '';
+						postalDirty = false;
 					}
 				}
 
-				const combined = serviceAreas.join(',');
-				if (serviceAreaInput) {
-					serviceAreaInput.value = combined;
-					if (!selectedRegion) {
-						serviceAreaInput.setCustomValidity('Please select a service area');
-					} else {
-						serviceAreaInput.setCustomValidity('');
-					}
+				resetSelect(regionSelect, 'Loading regions...');
+				resetSelect(provinceSelect, 'Select province');
+				resetSelect(citySelect, 'Select city/municipality');
+				resetSelect(barangaySelect, 'Select barangay');
+
+				try {
+					const regions = await fetchPsgc('/api/psgc/regions');
+					setOptions(regionSelect, regions, 'Select a region');
+					regionSelect.disabled = false;
+				} catch (err) {
+					setOptions(regionSelect, [], 'Failed to load regions');
+					regionSelect.disabled = true;
 				}
 
-				if (summary) {
-					if (!selectedRegion) {
-						summary.textContent = 'No service area selected.';
-					} else if (!selectedProvinces.length) {
-						summary.textContent = `Serving all of ${selectedRegion}.`;
-					} else {
-						summary.textContent = `Serving ${selectedProvinces.length} area${selectedProvinces.length > 1 ? 's' : ''} in ${selectedRegion}.`;
+				regionSelect.addEventListener('change', async () => {
+					resetSelect(provinceSelect, 'Select province');
+					resetSelect(citySelect, 'Select city/municipality');
+					resetSelect(barangaySelect, 'Select barangay');
+					if (postalInput) {
+						postalInput.value = '';
+						postalDirty = false;
 					}
-				}
 
-				if (selectedRegion) {
+					const regionCode = regionSelect.value;
+					if (!regionCode) return;
+
+					try {
+						const provinces = await fetchPsgc(`/api/psgc/regions/${regionCode}/provinces`);
+						if (provinces.length) {
+							setOptions(provinceSelect, provinces, 'Select province');
+							provinceSelect.disabled = false;
+							provinceSelect.required = true;
+						} else {
+							// NCR and similar cases: cities under region
+							setOptions(provinceSelect, [], 'No province (select city)');
+							provinceSelect.disabled = true;
+							provinceSelect.required = false;
+							const cities = await fetchPsgc(`/api/psgc/regions/${regionCode}/cities-municipalities`);
+							setOptions(citySelect, cities, 'Select city/municipality');
+							citySelect.disabled = false;
+						}
+					} catch (err) {
+						// Keep disabled; user will see it cannot continue
+					}
+				});
+
+				provinceSelect.addEventListener('change', async () => {
+					resetSelect(citySelect, 'Select city/municipality');
+					resetSelect(barangaySelect, 'Select barangay');
+					if (postalInput) {
+						postalInput.value = '';
+						postalDirty = false;
+					}
+
+					const provinceCode = provinceSelect.value;
+					if (!provinceCode) return;
+					try {
+						const cities = await fetchPsgc(`/api/psgc/provinces/${provinceCode}/cities-municipalities`);
+						setOptions(citySelect, cities, 'Select city/municipality');
+						citySelect.disabled = false;
+					} catch (err) {
+						// ignore
+					}
+				});
+
+				citySelect.addEventListener('change', async () => {
+					resetSelect(barangaySelect, 'Select barangay');
+					if (postalInput) {
+						postalInput.value = '';
+						postalDirty = false;
+					}
+
+					const cityCode = citySelect.value;
+					if (!cityCode) return;
+					try {
+						const barangays = await fetchPsgc(`/api/psgc/cities-municipalities/${cityCode}/barangays`);
+						setOptions(barangaySelect, barangays, 'Select barangay');
+						barangaySelect.disabled = false;
+					} catch (err) {
+						// ignore
+					}
+				});
+
+				barangaySelect.addEventListener('change', () => {
 					const serviceCard = document.querySelector('.service-area-card');
 					clearSellerSectionError(serviceCard);
-				}
+					updatePostalCode();
+				});
+
+				regionSelect.addEventListener('change', () => {
+					const serviceCard = document.querySelector('.service-area-card');
+					clearSellerSectionError(serviceCard);
+				});
 			}
 
 			function setSellerFieldError(input, message = 'This field is required') {
@@ -984,15 +1103,7 @@
 
 			const sellerRegionSelect = document.getElementById('sellerRegion');
 			if (sellerRegionSelect) {
-				toggleSellerRegionProvinces(sellerRegionSelect.value || '');
-				sellerRegionSelect.addEventListener('change', () => {
-					const errorDiv = document.getElementById('errorDisplay');
-					if (errorDiv) {
-						errorDiv.style.display = 'none';
-						errorDiv.textContent = '';
-					}
-					clearSellerSectionError(serviceAreaCard);
-				});
+				initSellerPsgcCascade();
 			}
 
 			if (sellerTncCheckbox) {
@@ -1009,7 +1120,6 @@
 			document.getElementById('sellerSignup').addEventListener('submit', function(e) {
 				e.preventDefault();
 				const form = e.target;
-				updateSellerServiceArea();
 				const formData = new FormData(form);
 
 
@@ -1020,7 +1130,9 @@
 				const shopName = (formData.get('shop_name') || '').trim();
 				const address = (formData.get('address') || '').trim();
 				const region = (formData.get('region') || '').trim();
-				const serviceArea = (formData.get('service_area') || '').trim();
+				const provinceCode = (formData.get('psgc_province_code') || '').trim();
+				const cityCode = (formData.get('psgc_city_code') || '').trim();
+				const barangayCode = (formData.get('psgc_barangay_code') || '').trim();
 				const tnc = formData.get('tnc');
 
 
@@ -1068,9 +1180,10 @@
 					setSellerFieldError(sellerConfirmPasswordInput, 'This field is required');
 				}
 
-				if (!region || !serviceArea) {
-					missingFields.push('Service area');
-					setSellerSectionError(serviceAreaCard, 'Please select your service area.');
+
+				if (!region || !cityCode || !barangayCode || (!provinceCode && !document.getElementById('sellerProvince')?.disabled && document.getElementById('sellerProvince')?.required)) {
+					missingFields.push('Store address');
+					setSellerSectionError(serviceAreaCard, 'Please complete your PSGC address selection.');
 				}
 
 				if (!tnc) {
@@ -1082,7 +1195,7 @@
 					const message = `Missing required fields: ${missingFields.join(', ')}`;
 					errorDiv.textContent = message;
 					errorDiv.style.display = 'block';
-					if (missingFields.includes('Service area')) {
+					if (missingFields.includes('Store address')) {
 						if (sellerRegionSelect) {
 							sellerRegionSelect.focus();
 						}
@@ -1111,9 +1224,10 @@
 				}
 
 
-				if (!serviceArea) {
-					setSellerSectionError(serviceAreaCard, 'Please select your service area to continue.');
-					errorDiv.textContent = 'Please select your service area to continue.';
+
+				if (!region || !cityCode || !barangayCode) {
+					setSellerSectionError(serviceAreaCard, 'Please complete your PSGC address selection to continue.');
+					errorDiv.textContent = 'Please complete your PSGC address selection to continue.';
 					errorDiv.style.display = 'block';
 					if (sellerRegionSelect) {
 						sellerRegionSelect.focus();

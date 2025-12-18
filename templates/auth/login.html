@@ -492,14 +492,14 @@ h1, h2, h3, h4, h5, h6, .brand {
               </div>
 
               <div class="form-group">
+                <label class="form-label" for="signupPassword">
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
+                  </svg>
+                  Password
+                </label>
                 <div class="password-wrapper">
                   <input class="form-input" id="signupPassword" name="password" type="password" placeholder="Password" required />
-                  <label class="form-label" for="signupPassword">
-                    <svg class="form-icon" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
-                    </svg>
-                    Password
-                  </label>
                   <button type="button" class="toggle-password" onclick="togglePassword('signupPassword', this)" aria-label="Toggle password visibility">
                     <svg viewBox="0 0 24 24">
                       <path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>
@@ -509,14 +509,14 @@ h1, h2, h3, h4, h5, h6, .brand {
               </div>
 
               <div class="form-group">
+                <label class="form-label" for="signupConfirmPassword">
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
+                  </svg>
+                  Confirm Password
+                </label>
                 <div class="password-wrapper">
                   <input class="form-input" id="signupConfirmPassword" name="confirmPassword" type="password" placeholder="Confirm Password" required />
-                  <label class="form-label" for="signupConfirmPassword">
-                    <svg class="form-icon" viewBox="0 0 24 24">
-                      <path fill="currentColor" d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
-                    </svg>
-                    Confirm Password
-                  </label>
                   <button type="button" class="toggle-password" onclick="togglePassword('signupConfirmPassword', this)" aria-label="Toggle password visibility">
                     <svg viewBox="0 0 24 24" width="20" height="20">
                       <path fill="currentColor" d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/>
@@ -527,7 +527,7 @@ h1, h2, h3, h4, h5, h6, .brand {
 
               <!-- Address Section -->
               <div style="margin: 32px 0 8px; padding-top: 24px; border-top: 1px solid #e0e0e0; font-size: 13px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.06em;">
-                Shipping Address (used for checkout)
+                Address
               </div>
 
               <div class="form-group">
@@ -535,9 +535,9 @@ h1, h2, h3, h4, h5, h6, .brand {
                   <svg class="form-icon" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7m0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5"/>
                   </svg>
-                  Street Address
+                  Region
                 </label>
-                <input id="signupStreet" type="text" placeholder="House / Building, Street" autocomplete="address-line1" />
+                <select id="signupRegion" class="form-input" required></select>
               </div>
 
               <div class="form-group">
@@ -545,9 +545,11 @@ h1, h2, h3, h4, h5, h6, .brand {
                   <svg class="form-icon" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7Z"/>
                   </svg>
-                  Barangay (optional)
+                  Province
                 </label>
-                <input id="signupBarangay" type="text" placeholder="Barangay" autocomplete="address-line2" />
+                <select id="signupProvince" class="form-input" disabled>
+                  <option value="">Select province</option>
+                </select>
               </div>
 
               <div class="form-group">
@@ -557,7 +559,9 @@ h1, h2, h3, h4, h5, h6, .brand {
                   </svg>
                   City / Municipality
                 </label>
-                <input id="signupCity" type="text" placeholder="City / Municipality" autocomplete="address-level2" />
+                <select id="signupCity" class="form-input" required disabled>
+                  <option value="">Select city/municipality</option>
+                </select>
               </div>
 
               <div class="form-group">
@@ -565,9 +569,21 @@ h1, h2, h3, h4, h5, h6, .brand {
                   <svg class="form-icon" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M3 5h18v2H3v14H1V3h22v2z"/>
                   </svg>
-                  Province / Region
+                  Barangay
                 </label>
-                <input id="signupProvince" type="text" placeholder="Province / Region" autocomplete="address-level1" />
+                <select id="signupBarangay" class="form-input" required disabled>
+                  <option value="">Select barangay</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <svg class="form-icon" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7m0 9.5A2.5 2.5 0 1 1 14.5 9 2.5 2.5 0 0 1 12 11.5"/>
+                  </svg>
+                  Specific Address
+                </label>
+                <input id="signupStreet" type="text" placeholder="Building/House No., Street, Subdivision/Unit" autocomplete="address-line1" required />
               </div>
 
               <div class="form-group">
@@ -575,9 +591,9 @@ h1, h2, h3, h4, h5, h6, .brand {
                   <svg class="form-icon" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M3 11h18v2H3z"/>
                   </svg>
-                  Postal Code (optional)
+                  Postal Code 
                 </label>
-                <input id="signupPostal" type="text" placeholder="Postal Code" autocomplete="postal-code" />
+                <input id="signupPostal" type="text" placeholder="Auto-filled (optional)" autocomplete="postal-code" />
               </div>
 
               <div class="form-group">
@@ -712,9 +728,10 @@ h1, h2, h3, h4, h5, h6, .brand {
         const lastName = document.getElementById('signupLastName').value;
         const phone = document.getElementById('signupPhone').value;
         const street = document.getElementById('signupStreet').value;
-        const barangay = document.getElementById('signupBarangay').value;
-        const city = document.getElementById('signupCity').value;
-        const province = document.getElementById('signupProvince').value;
+        const regionCode = document.getElementById('signupRegion')?.value || '';
+        const provinceCode = document.getElementById('signupProvince')?.disabled ? '' : (document.getElementById('signupProvince')?.value || '');
+        const cityCode = document.getElementById('signupCity')?.value || '';
+        const barangayCode = document.getElementById('signupBarangay')?.value || '';
         const postal = document.getElementById('signupPostal').value;
         const country = document.getElementById('signupCountry').value || 'Philippines';
         const terms = document.querySelector('input[name="terms"]').checked;
@@ -725,6 +742,11 @@ h1, h2, h3, h4, h5, h6, .brand {
             return;
         }
 
+        if (!regionCode || !cityCode || !barangayCode || !street.trim()) {
+          showError('Please complete your address (Region, City/Municipality, Barangay, and Specific Address).');
+          return;
+        }
+
 
         const formData = new FormData();
         formData.append('email', email);
@@ -733,9 +755,10 @@ h1, h2, h3, h4, h5, h6, .brand {
         formData.append('lastName', lastName);
         formData.append('phone', phone);
         formData.append('street_address', street);
-        formData.append('barangay', barangay);
-        formData.append('city', city);
-        formData.append('province', province);
+        formData.append('region', regionCode);
+        formData.append('psgc_province_code', provinceCode);
+        formData.append('psgc_city_code', cityCode);
+        formData.append('psgc_barangay_code', barangayCode);
         formData.append('postal_code', postal);
         formData.append('country', country);
         formData.append('terms', terms);
@@ -817,6 +840,175 @@ h1, h2, h3, h4, h5, h6, .brand {
           setTimeout(() => notification.remove(), 300);
         }, 4000);
       }
+
+      async function fetchPsgc(url) {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (!data || !data.success) {
+          throw new Error((data && data.message) || 'Failed to load address data');
+        }
+        return data.items || [];
+      }
+
+      function setOptions(select, items, placeholder) {
+        if (!select) return;
+        select.innerHTML = '';
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = placeholder;
+        select.appendChild(ph);
+        (items || []).forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.code;
+          opt.textContent = item.name;
+          select.appendChild(opt);
+        });
+      }
+
+      function resetSelect(select, placeholder) {
+        setOptions(select, [], placeholder);
+        select.disabled = true;
+        select.value = '';
+      }
+
+      async function initBuyerPsgcCascade() {
+        const regionSelect = document.getElementById('signupRegion');
+        const provinceSelect = document.getElementById('signupProvince');
+        const citySelect = document.getElementById('signupCity');
+        const barangaySelect = document.getElementById('signupBarangay');
+        const postalInput = document.getElementById('signupPostal');
+
+        if (!regionSelect || !provinceSelect || !citySelect || !barangaySelect) return;
+
+        let postalDirty = false;
+        if (postalInput) {
+          postalInput.value = '';
+          postalInput.addEventListener('input', () => {
+            postalDirty = (postalInput.value || '').trim().length > 0;
+          });
+        }
+
+        async function updatePostalCode() {
+          if (!postalInput) return;
+          if (postalDirty) return;
+          const cityCode = (citySelect.value || '').trim();
+          const barangayCode = (barangaySelect.value || '').trim();
+
+          if (!cityCode || !barangayCode) {
+            postalInput.value = '';
+            postalDirty = false;
+            return;
+          }
+
+          try {
+            const params = new URLSearchParams({ city_code: cityCode, barangay_code: barangayCode });
+            const resp = await fetch('/api/postal-code?' + params.toString());
+            const data = await resp.json();
+            if (data && data.success && data.postal_code) {
+              postalInput.value = String(data.postal_code);
+              postalDirty = false;
+            } else {
+              postalInput.value = '';
+              postalDirty = false;
+            }
+          } catch (e) {
+            postalInput.value = '';
+            postalDirty = false;
+          }
+        }
+
+        resetSelect(regionSelect, 'Loading regions...');
+        resetSelect(provinceSelect, 'Select province');
+        resetSelect(citySelect, 'Select city/municipality');
+        resetSelect(barangaySelect, 'Select barangay');
+
+        try {
+          const regions = await fetchPsgc('/api/psgc/regions');
+          setOptions(regionSelect, regions, 'Select a region');
+          regionSelect.disabled = false;
+          regionSelect.required = true;
+        } catch (e) {
+          setOptions(regionSelect, [], 'Failed to load regions');
+          regionSelect.disabled = true;
+        }
+
+        regionSelect.addEventListener('change', async () => {
+          resetSelect(provinceSelect, 'Select province');
+          resetSelect(citySelect, 'Select city/municipality');
+          resetSelect(barangaySelect, 'Select barangay');
+          if (postalInput) {
+            postalInput.value = '';
+            postalDirty = false;
+          }
+
+          const regionCode = regionSelect.value;
+          if (!regionCode) return;
+
+          try {
+            const provinces = await fetchPsgc(`/api/psgc/regions/${regionCode}/provinces`);
+            if (provinces.length) {
+              setOptions(provinceSelect, provinces, 'Select province');
+              provinceSelect.disabled = false;
+              provinceSelect.required = true;
+            } else {
+              setOptions(provinceSelect, [], 'No province (select city)');
+              provinceSelect.disabled = true;
+              provinceSelect.required = false;
+              const cities = await fetchPsgc(`/api/psgc/regions/${regionCode}/cities-municipalities`);
+              setOptions(citySelect, cities, 'Select city/municipality');
+              citySelect.disabled = false;
+              citySelect.required = true;
+            }
+          } catch (e) {
+            // ignore
+          }
+        });
+
+        provinceSelect.addEventListener('change', async () => {
+          resetSelect(citySelect, 'Select city/municipality');
+          resetSelect(barangaySelect, 'Select barangay');
+          if (postalInput) {
+            postalInput.value = '';
+            postalDirty = false;
+          }
+          const provinceCode = provinceSelect.value;
+          if (!provinceCode) return;
+          try {
+            const cities = await fetchPsgc(`/api/psgc/provinces/${provinceCode}/cities-municipalities`);
+            setOptions(citySelect, cities, 'Select city/municipality');
+            citySelect.disabled = false;
+            citySelect.required = true;
+          } catch (e) {
+            // ignore
+          }
+        });
+
+        citySelect.addEventListener('change', async () => {
+          resetSelect(barangaySelect, 'Select barangay');
+          if (postalInput) {
+            postalInput.value = '';
+            postalDirty = false;
+          }
+          const cityCode = citySelect.value;
+          if (!cityCode) return;
+          try {
+            const barangays = await fetchPsgc(`/api/psgc/cities-municipalities/${cityCode}/barangays`);
+            setOptions(barangaySelect, barangays, 'Select barangay');
+            barangaySelect.disabled = false;
+            barangaySelect.required = true;
+          } catch (e) {
+            // ignore
+          }
+        });
+
+        barangaySelect.addEventListener('change', async () => {
+          await updatePostalCode();
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        initBuyerPsgcCascade();
+      });
 
       // Add CSS animations
       const style = document.createElement('style');

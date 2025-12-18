@@ -584,6 +584,7 @@
           <a href="#" class="side-link active" data-page="overview">Overview</a>
           <a href="#" class="side-link" data-page="pending-products">Pending Products</a>
           <a href="#" class="side-link" data-page="pending-riders">Pending Riders</a>
+          <a href="#" class="side-link" data-page="pending-buyers">Pending Buyers</a>
           <a href="#" class="side-link" data-page="product-edits">Product Edits</a>
           <a href="#" class="side-link" data-page="recovery-requests">Recovery Requests</a>
           <a href="#" class="side-link" data-page="product">Products</a>
@@ -787,6 +788,9 @@
       </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.8/dist/notiflix-aio-3.2.8.min.js"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+
     <script>
       // Variables to store product ID during confirmation flow
       let pendingApprovalProductId = null;
@@ -939,6 +943,15 @@
                 <button onclick="closeRiderApproveModal()" class="tag" style="background:#e5e7eb;color:#111;border:none;cursor:pointer;padding:10px 18px">Cancel</button>
                 <button onclick="confirmRiderApproval()" class="tag" style="background:#10b981;color:#fff;border:none;cursor:pointer;padding:10px 18px;font-weight:600">Confirm</button>
               </div>
+            </div>
+          </div>
+        `,
+        'pending-buyers': `
+          <div class="card">
+            <div class="inner">
+              <h2 style="margin: 0 0 16px;">🧾 Pending Buyer Registrations</h2>
+              <p style="color: var(--muted); margin: 0 0 20px;">Approve or reject new buyer accounts before they can shop.</p>
+              <div id="pending-buyers-list">Loading pending buyers...</div>
             </div>
           </div>
         `,
@@ -1207,6 +1220,8 @@
             loadPendingProducts();
           } else if (page === 'pending-riders') {
             loadPendingRiders();
+          } else if (page === 'pending-buyers') {
+            loadPendingBuyers();
           } else if (page === 'product-edits') {
             loadProductEdits();
           } else if (page === 'recovery-requests') {
@@ -1244,6 +1259,7 @@
           'overview': 'Dashboard',
           'pending-products': 'Pending Products',
           'pending-riders': 'Pending Riders',
+          'pending-buyers': 'Pending Buyers',
           'product': 'All Products',
           'customer': 'Customers',
           'transactions': 'Transactions',
@@ -1317,6 +1333,89 @@
           .catch(error => {
             document.getElementById('pending-products-list').innerHTML = '<p style="color:#ef4444;">Error loading pending products</p>';
           });
+      }
+
+      function loadPendingBuyers() {
+        fetch('/admin/pending-buyers')
+          .then(r => r.json())
+          .then(data => {
+            const container = document.getElementById('pending-buyers-list');
+            if (!container) return;
+
+            const buyers = (data && data.buyers) ? data.buyers : [];
+            if (!buyers.length) {
+              container.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">No pending buyers to review</p>';
+              return;
+            }
+
+            let html = `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Registered</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+            `;
+
+            buyers.forEach(b => {
+              const name = `${b.first_name || ''} ${b.last_name || ''}`.trim() || '—';
+              const created = b.created_at ? new Date(b.created_at).toLocaleString() : '—';
+              html += `
+                <tr>
+                  <td><strong>${name}</strong></td>
+                  <td>${b.email || '—'}</td>
+                  <td>${b.phone || '—'}</td>
+                  <td>${created}</td>
+                  <td>
+                    <button class="tag" onclick="approveBuyer(${b.id})" style="background:#10b981;cursor:pointer;border:none">Approve</button>
+                    <button class="tag" onclick="rejectBuyer(${b.id})" style="background:#ef4444;cursor:pointer;border:none">Reject</button>
+                  </td>
+                </tr>
+              `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+          })
+          .catch(() => {
+            const container = document.getElementById('pending-buyers-list');
+            if (container) container.innerHTML = '<p style="color:#ef4444;">Error loading pending buyers</p>';
+          });
+      }
+
+      function approveBuyer(buyerId) {
+        if (!confirm('Approve this buyer account?')) return;
+        fetch(`/admin/approve-buyer/${buyerId}`, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data && data.success) {
+              showToast('Buyer approved' + (data.email_sent ? ' (email sent)' : ''), 'success');
+              loadPendingBuyers();
+            } else {
+              showToast((data && (data.error || data.message)) || 'Failed to approve buyer', 'error');
+            }
+          })
+          .catch(() => showToast('Failed to approve buyer', 'error'));
+      }
+
+      function rejectBuyer(buyerId) {
+        if (!confirm('Reject this buyer account?')) return;
+        fetch(`/admin/reject-buyer/${buyerId}`, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data && data.success) {
+              showToast('Buyer rejected' + (data.email_sent ? ' (email sent)' : ''), 'success');
+              loadPendingBuyers();
+            } else {
+              showToast((data && (data.error || data.message)) || 'Failed to reject buyer', 'error');
+            }
+          })
+          .catch(() => showToast('Failed to reject buyer', 'error'));
       }
 
       function approveProduct(productId) {

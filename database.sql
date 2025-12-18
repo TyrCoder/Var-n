@@ -292,6 +292,15 @@ CREATE TABLE IF NOT EXISTS riders (
     license_number VARCHAR(50),
     vehicle_plate VARCHAR(20),
     service_area TEXT,
+    address_region_code VARCHAR(20),
+    address_region_name VARCHAR(150),
+    address_province_code VARCHAR(20),
+    address_province_name VARCHAR(150),
+    address_city_code VARCHAR(20),
+    address_city_name VARCHAR(150),
+    address_barangay_code VARCHAR(20),
+    address_barangay_name VARCHAR(150),
+    default_service_area_city_code VARCHAR(20),
     profile_image VARCHAR(500),
     max_delivery_distance INT DEFAULT 50,
     current_location_lat DECIMAL(10,8),
@@ -305,7 +314,28 @@ CREATE TABLE IF NOT EXISTS riders (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user (user_id),
     INDEX idx_status (status),
-    INDEX idx_available (is_available)
+    INDEX idx_available (is_available),
+    INDEX idx_rider_address_city_code (address_city_code),
+    INDEX idx_rider_default_city_code (default_service_area_city_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- Rider Service Areas (optional multi-area support; default must match address city)
+-- =============================================
+CREATE TABLE IF NOT EXISTS rider_service_areas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rider_id INT NOT NULL,
+    city_code VARCHAR(20) NOT NULL,
+    city_name VARCHAR(150) NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_rider_city (rider_id, city_code),
+    INDEX idx_rider_default (rider_id, is_default),
+    CONSTRAINT fk_rider_service_areas_rider
+        FOREIGN KEY (rider_id)
+        REFERENCES riders(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================

@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
+from functools import wraps
 import os
 import json
 import mysql.connector
@@ -6,6 +7,7 @@ import time
 import secrets
 import shutil
 import html
+import requests
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from decimal import Decimal
@@ -16,11 +18,342 @@ load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'varon-dev-secret')
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'false').strip().lower() == 'true'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+
+# --- PSGC (Philippine Standard Geographic Code) helpers ---
+# We proxy PSGC API calls to keep the UI simple, enforce validation server-side,
+# and avoid CORS issues.
+PSGC_API_BASE_URL = os.getenv('PSGC_API_BASE_URL', 'https://psgc.gitlab.io/api').rstrip('/')
+PSGC_CACHE_TTL_SECONDS = int(os.getenv('PSGC_CACHE_TTL_SECONDS', '21600') or 21600)  # 6h default
+_PSGC_CACHE = {}
+
+
+# --- PSGC → Postal Code helpers ---
+# PSGC API does not include postal codes. We resolve postal codes via a local mapping table.
+POSTAL_CODE_CACHE_TTL_SECONDS = int(os.getenv('POSTAL_CODE_CACHE_TTL_SECONDS', '21600') or 21600)  # 6h default
+_POSTAL_CODE_CACHE = {}
+
+
+# --- Buyer approval helpers ---
+BUYER_APPROVAL_ALLOWED = {'pending', 'approved', 'rejected'}
+
+
+def _normalize_buyer_approval_status(raw_status) -> str:
+    value = (raw_status or '').strip().lower()
+    return value if value in BUYER_APPROVAL_ALLOWED else 'approved'
+
+
+def get_current_buyer_approval_status() -> str:
+    """Return current buyer approval status.
+
+    Non-buyers are treated as approved for the purposes of buyer gating.
+    """
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return 'approved'
+
+    cached = _normalize_buyer_approval_status(session.get('buyer_approval_status'))
+    # If already approved, trust cache. Otherwise refresh from DB so approvals take effect immediately.
+    if cached == 'approved':
+        return cached
+
+    user_id = session.get('user_id')
+    if not user_id:
+        return 'approved'
+
+    conn = get_db()
+    if not conn:
+        return 'approved'
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT buyer_approval_status FROM users WHERE id = %s', (user_id,))
+        row = cursor.fetchone() or {}
+        cursor.close()
+        conn.close()
+        status = _normalize_buyer_approval_status(row.get('buyer_approval_status'))
+        session['buyer_approval_status'] = status
+        session.modified = True
+        return status
+    except Exception:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return 'approved'
+
+
+def buyer_approval_required(view_func):
+    """Require a logged-in buyer account that has been approved."""
+
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if not session.get('logged_in') or session.get('role') != 'buyer':
+            flash('Access denied. Please log in first.', 'error')
+            return redirect(url_for('login'))
+
+        status = get_current_buyer_approval_status()
+        if status == 'approved':
+            return view_func(*args, **kwargs)
+
+        # For page routes, show the status page.
+        return render_template('pages/buyer_pending_approval.html', approval_status=status)
+
+    return wrapper
+
+
+def buyer_approval_required_api():
+    """Guard for API routes: block shopping actions until buyer is approved."""
+    if not session.get('logged_in') or session.get('role') != 'buyer':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    status = get_current_buyer_approval_status()
+    if status == 'approved':
+        return None
+
+    message = 'Your account is pending admin approval. Shopping is disabled until approval is granted.'
+    if status == 'rejected':
+        message = 'Your account was not approved. Shopping is disabled.'
+    return jsonify({'success': False, 'error': message, 'approval_status': status}), 403
+
+
+def _postal_cache_get(cache_key: str):
+    cached = _POSTAL_CODE_CACHE.get(cache_key)
+    if not cached:
+        return None
+    expires_at, payload = cached
+    if expires_at < time.time():
+        _POSTAL_CODE_CACHE.pop(cache_key, None)
+        return None
+    return payload
+
+
+def _postal_cache_set(cache_key: str, payload):
+    _POSTAL_CODE_CACHE[cache_key] = (time.time() + POSTAL_CODE_CACHE_TTL_SECONDS, payload)
+
+
+def lookup_postal_code(psgc_city_code: str, psgc_barangay_code: str = '') -> str:
+    """Return postal code for the PSGC selection.
+
+    Prefers barangay-level mapping when available. Falls back to city-level mapping
+    only when it is unambiguous.
+    """
+    city_code = (psgc_city_code or '').strip()
+    barangay_code = (psgc_barangay_code or '').strip()
+
+    if not city_code and not barangay_code:
+        return ''
+
+    cache_key = f"postal:{city_code}:{barangay_code}"
+    cached = _postal_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    conn = get_db()
+    if not conn:
+        return ''
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        if barangay_code:
+            cursor.execute(
+                "SELECT postal_code FROM psgc_postal_codes WHERE psgc_barangay_code = %s LIMIT 1",
+                (barangay_code,)
+            )
+            row = cursor.fetchone()
+            if row and (row.get('postal_code') or '').strip():
+                postal = (row.get('postal_code') or '').strip()
+                _postal_cache_set(cache_key, postal)
+                return postal
+
+        if city_code:
+            cursor.execute(
+                "SELECT DISTINCT postal_code FROM psgc_postal_codes WHERE psgc_city_code = %s AND postal_code IS NOT NULL AND postal_code != ''",
+                (city_code,)
+            )
+            rows = cursor.fetchall() or []
+            distinct = [str(r.get('postal_code') or '').strip() for r in rows if str(r.get('postal_code') or '').strip()]
+            distinct = sorted(set(distinct))
+            if len(distinct) == 1:
+                _postal_cache_set(cache_key, distinct[0])
+                return distinct[0]
+            if len(distinct) > 1:
+                return ''
+
+        return ''
+    except mysql.connector.Error as err:
+        # Most common cause: mapping table not created yet.
+        return ''
+    finally:
+        try:
+            cursor.close()
+        except Exception:
+            pass
+        conn.close()
+
+
+def _psgc_cache_get(cache_key: str):
+    cached = _PSGC_CACHE.get(cache_key)
+    if not cached:
+        return None
+    expires_at, payload = cached
+    if expires_at < time.time():
+        _PSGC_CACHE.pop(cache_key, None)
+        return None
+    return payload
+
+
+def _psgc_cache_set(cache_key: str, payload):
+    _PSGC_CACHE[cache_key] = (time.time() + PSGC_CACHE_TTL_SECONDS, payload)
+
+
+def _psgc_fetch_list(path: str):
+    """Fetch a PSGC JSON list endpoint and return the decoded array."""
+    path = path.lstrip('/')
+    cache_key = f"psgc:{path}"
+    cached = _psgc_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    url = f"{PSGC_API_BASE_URL}/{path}"
+    resp = requests.get(url, timeout=10)
+    resp.raise_for_status()
+    data = resp.json()
+    if not isinstance(data, list):
+        raise ValueError('Unexpected PSGC response type')
+    _psgc_cache_set(cache_key, data)
+    return data
+
+
+def _psgc_normalize_list(items):
+    """Return a stable `{code,name}` list used by the frontend."""
+    normalized = []
+    for item in items or []:
+        code = str(item.get('code') or '').strip()
+        name = str(item.get('name') or '').strip()
+        if code and name:
+            normalized.append({'code': code, 'name': name})
+    return normalized
+
+
+def _psgc_find_name(items, code: str):
+    code = str(code or '').strip()
+    for item in items or []:
+        if str(item.get('code')) == code:
+            return str(item.get('name') or '').strip()
+    return ''
+
+
+def resolve_psgc_selection(region_code: str, province_code: str, city_code: str, barangay_code: str):
+    """Validate the selected PSGC chain and return resolved names.
+
+    Province is optional for regions that have cities/municipalities directly (e.g., NCR).
+    """
+    region_code = (region_code or '').strip()
+    province_code = (province_code or '').strip()
+    city_code = (city_code or '').strip()
+    barangay_code = (barangay_code or '').strip()
+
+    if not region_code or not city_code or not barangay_code:
+        raise ValueError('Please complete your PSGC address selection.')
+
+    regions = _psgc_fetch_list('regions.json')
+    region_name = _psgc_find_name(regions, region_code)
+    if not region_name:
+        raise ValueError('Invalid region selection.')
+
+    province_name = ''
+    if province_code:
+        provinces = _psgc_fetch_list(f"regions/{region_code}/provinces.json")
+        province_name = _psgc_find_name(provinces, province_code)
+        if not province_name:
+            raise ValueError('Invalid province selection for the chosen region.')
+        cities = _psgc_fetch_list(f"provinces/{province_code}/cities-municipalities.json")
+    else:
+        # Some regions (notably NCR) have cities/municipalities directly under the region.
+        cities = _psgc_fetch_list(f"regions/{region_code}/cities-municipalities.json")
+
+    city_name = _psgc_find_name(cities, city_code)
+    if not city_name:
+        raise ValueError('Invalid city/municipality selection for the chosen parent area.')
+
+    barangays = _psgc_fetch_list(f"cities-municipalities/{city_code}/barangays.json")
+    barangay_name = _psgc_find_name(barangays, barangay_code)
+    if not barangay_name:
+        raise ValueError('Invalid barangay selection for the chosen city/municipality.')
+
+    return {
+        'region_name': region_name,
+        'province_name': province_name,
+        'city_name': city_name,
+        'barangay_name': barangay_name,
+    }
+
+
+@app.route('/api/psgc/regions')
+def api_psgc_regions():
+    try:
+        return jsonify({'success': True, 'items': _psgc_normalize_list(_psgc_fetch_list('regions.json'))})
+    except Exception as err:
+        return jsonify({'success': False, 'message': str(err), 'items': []}), 500
+
+
+@app.route('/api/psgc/regions/<region_code>/provinces')
+def api_psgc_provinces(region_code):
+    try:
+        items = _psgc_fetch_list(f"regions/{region_code}/provinces.json")
+        return jsonify({'success': True, 'items': _psgc_normalize_list(items)})
+    except Exception as err:
+        return jsonify({'success': False, 'message': str(err), 'items': []}), 500
+
+
+@app.route('/api/psgc/regions/<region_code>/cities-municipalities')
+def api_psgc_region_cities(region_code):
+    try:
+        items = _psgc_fetch_list(f"regions/{region_code}/cities-municipalities.json")
+        return jsonify({'success': True, 'items': _psgc_normalize_list(items)})
+    except Exception as err:
+        return jsonify({'success': False, 'message': str(err), 'items': []}), 500
+
+
+@app.route('/api/psgc/provinces/<province_code>/cities-municipalities')
+def api_psgc_cities(province_code):
+    try:
+        items = _psgc_fetch_list(f"provinces/{province_code}/cities-municipalities.json")
+        return jsonify({'success': True, 'items': _psgc_normalize_list(items)})
+    except Exception as err:
+        return jsonify({'success': False, 'message': str(err), 'items': []}), 500
+
+
+@app.route('/api/psgc/cities-municipalities/<city_code>/barangays')
+def api_psgc_barangays(city_code):
+    try:
+        items = _psgc_fetch_list(f"cities-municipalities/{city_code}/barangays.json")
+        return jsonify({'success': True, 'items': _psgc_normalize_list(items)})
+    except Exception as err:
+        return jsonify({'success': False, 'message': str(err), 'items': []}), 500
+
+
+@app.route('/api/postal-code')
+def api_postal_code():
+    city_code = (request.args.get('city_code') or '').strip()
+    barangay_code = (request.args.get('barangay_code') or '').strip()
+
+    if not city_code and not barangay_code:
+        return jsonify({'success': False, 'message': 'Missing city_code or barangay_code'}), 400
+
+    try:
+        postal_code = lookup_postal_code(city_code, barangay_code)
+        return jsonify({'success': True, 'postal_code': postal_code})
+    except ValueError as err:
+        return jsonify({'success': False, 'message': str(err)}), 404
+    except Exception as err:
+        return jsonify({'success': False, 'message': str(err)}), 500
 
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
@@ -526,12 +859,23 @@ def init_db():
             role ENUM('buyer', 'seller', 'admin', 'rider') NOT NULL DEFAULT 'buyer',
             phone VARCHAR(20),
             status ENUM('active', 'inactive', 'pending', 'suspended') DEFAULT 'active',
+            buyer_approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_email (email),
             INDEX idx_role (role),
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+
+        # Buyer approval column (idempotent). Existing buyers are treated as approved when this
+        # feature is introduced to avoid locking out existing accounts.
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'buyer_approval_status'")
+        has_buyer_approval = cursor.fetchone()
+        if not has_buyer_approval:
+            cursor.execute("ALTER TABLE users ADD COLUMN buyer_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'")
+            cursor.execute("UPDATE users SET buyer_approval_status = 'approved' WHERE role = 'buyer'")
+            print("[DB INIT] Added users.buyer_approval_status and backfilled existing buyers to approved")
 
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS categories (
@@ -731,6 +1075,20 @@ def init_db():
             status ENUM('pending', 'approved', 'active', 'inactive', 'suspended') DEFAULT 'pending',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS psgc_postal_codes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            psgc_barangay_code VARCHAR(20) NULL,
+            psgc_city_code VARCHAR(20) NULL,
+            postal_code VARCHAR(20) NOT NULL,
+            source VARCHAR(200) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_barangay (psgc_barangay_code),
+            INDEX idx_city (psgc_city_code),
+            INDEX idx_postal (postal_code)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
 
@@ -1293,6 +1651,10 @@ def admin_create_tables():
 
 @app.route('/')
 def index():
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        if get_current_buyer_approval_status() != 'approved':
+            return redirect(url_for('buyer_dashboard'))
+
     conn = get_db()
     products = []
 
@@ -1346,6 +1708,10 @@ def index():
 
 @app.route('/product/<int:product_id>')
 def product_page(product_id):
+
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        if get_current_buyer_approval_status() != 'approved':
+            return redirect(url_for('buyer_dashboard'))
 
     user_first_name = None
     if session.get('logged_in') and session.get('user_id'):
@@ -1857,6 +2223,11 @@ def brand_store_messages(store_slug):
 
 @app.route('/api/product/<int:product_id>')
 def get_product_detail(product_id):
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        gate = buyer_approval_required_api()
+        if gate is not None:
+            return gate
+
     conn = get_db()
     if not conn:
         return jsonify({'success': False, 'error': 'Database error'})
@@ -1919,6 +2290,11 @@ def get_product_detail(product_id):
 @app.route('/api/product/<int:product_id>/variants', methods=['GET'])
 def get_product_variants(product_id):
     """Get all variants for a product with their IDs"""
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        gate = buyer_approval_required_api()
+        if gate is not None:
+            return gate
+
     conn = get_db()
     if not conn:
         return jsonify({'success': False, 'error': 'Database error'})
@@ -1960,6 +2336,11 @@ def get_product_variants(product_id):
 @app.route('/api/product-reviews/<int:product_id>', methods=['GET'])
 def get_product_reviews(product_id):
     """Get all approved reviews for a product"""
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        gate = buyer_approval_required_api()
+        if gate is not None:
+            return gate
+
     try:
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
@@ -2446,26 +2827,29 @@ def get_rider_reviews(rider_id):
 
 @app.route('/shop')
 def shop():
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        if get_current_buyer_approval_status() != 'approved':
+            return redirect(url_for('buyer_dashboard'))
     return render_template('pages/shop.html')
 
 @app.route('/browse')
 def browse():
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        if get_current_buyer_approval_status() != 'approved':
+            return redirect(url_for('buyer_dashboard'))
     return render_template('pages/browse.html')
 
 @app.route('/checkout')
+@buyer_approval_required
 def checkout():
-
-    if not session.get('logged_in'):
-        flash('Please log in to checkout', 'error')
-        return redirect(url_for('login'))
-
     return render_template('pages/checkout.html')
 
 @app.route('/api/validate-cart', methods=['POST'])
 def validate_cart():
     """API endpoint to validate cart items and fetch current prices from database"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -2541,9 +2925,17 @@ def validate_cart():
 
 @app.route('/api/place-order', methods=['POST'])
 def place_order():
-
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Please log in to place an order'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        # keep existing key name for this endpoint
+        payload, status_code = gate
+        try:
+            data = payload.get_json()
+        except Exception:
+            data = None
+        if isinstance(data, dict) and 'error' in data:
+            return jsonify({'success': False, 'message': data.get('error')}), status_code
+        return gate
 
     conn = None
     cursor = None
@@ -3103,6 +3495,9 @@ def login():
                 session['first_name'] = user.get('first_name', 'User')
                 session['username'] = user.get('first_name', 'User')
 
+                if user['role'] == 'buyer':
+                    session['buyer_approval_status'] = _normalize_buyer_approval_status(user.get('buyer_approval_status'))
+
 
                 if user['role'] == 'admin':
                     return redirect(url_for('dashboard'))
@@ -3136,13 +3531,38 @@ def signup():
         barangay = request.form.get('barangay')
         city = request.form.get('city')
         province = request.form.get('province')
+        psgc_region_code = (request.form.get('region') or '').strip()
+        psgc_province_code = (request.form.get('psgc_province_code') or '').strip()
+        psgc_city_code = (request.form.get('psgc_city_code') or '').strip()
+        psgc_barangay_code = (request.form.get('psgc_barangay_code') or '').strip()
         postal_code = request.form.get('postal_code')
         country = request.form.get('country') or 'Philippines'
         role = request.form.get('role', 'buyer')
         terms = request.form.get('terms')
 
+        # If PSGC fields are present, validate and normalize the address.
+        # Province is optional (e.g., NCR), but city+barangay are required.
+        if psgc_region_code and (psgc_city_code or psgc_barangay_code):
+            try:
+                resolved = resolve_psgc_selection(
+                    psgc_region_code,
+                    psgc_province_code,
+                    psgc_city_code,
+                    psgc_barangay_code
+                )
+                barangay = resolved['barangay_name']
+                city = resolved['city_name']
+                province = (resolved.get('province_name') or '').strip() or resolved['region_name']
+
+                # Postal code is optional; auto-fill when available.
+                postal_code = lookup_postal_code(psgc_city_code, psgc_barangay_code) or (postal_code or '').strip()
+            except Exception as err:
+                return jsonify({'success': False, 'message': str(err)}), 400
+
         if not all([email, password, first_name, last_name, phone, terms]):
             return jsonify({'success': False, 'message': 'All fields are required, including terms acceptance'}), 400
+
+        # Postal code is optional.
 
 
         if '@' not in email or '.' not in email:
@@ -3252,7 +3672,27 @@ def signup_rider():
         vehicle_types = request.form.getlist('vehicle_type')
         region = request.form.get('region')
         service_area = request.form.get('service_area')
+        psgc_region_code = request.form.get('region')
+        psgc_province_code = request.form.get('psgc_province_code')
+        psgc_city_code = request.form.get('psgc_city_code')
+        psgc_barangay_code = request.form.get('psgc_barangay_code')
         tnc = request.form.get('tnc')
+
+        # PSGC address is required for riders; validate the chain server-side.
+        # IMPORTANT: rider default Service Area must be the selected City/Municipality.
+        resolved_psgc = None
+        if psgc_region_code and (psgc_city_code or psgc_barangay_code):
+            try:
+                resolved_psgc = resolve_psgc_selection(
+                    psgc_region_code,
+                    psgc_province_code,
+                    psgc_city_code,
+                    psgc_barangay_code
+                )
+                region = resolved_psgc['region_name']
+                service_area = resolved_psgc['city_name']
+            except Exception as err:
+                return jsonify({'success': False, 'message': str(err)}), 400
 
 
         if not service_area or service_area.strip() == '':
@@ -3407,6 +3847,14 @@ def signup_rider():
                 'vehicle_plate': vehicle_plate,
                 'license_number': license_number,
                 'service_area': service_area,
+                'psgc_region_code': psgc_region_code,
+                'psgc_province_code': psgc_province_code,
+                'psgc_city_code': psgc_city_code,
+                'psgc_barangay_code': psgc_barangay_code,
+                'psgc_region_name': (resolved_psgc or {}).get('region_name', ''),
+                'psgc_province_name': (resolved_psgc or {}).get('province_name', ''),
+                'psgc_city_name': (resolved_psgc or {}).get('city_name', ''),
+                'psgc_barangay_name': (resolved_psgc or {}).get('barangay_name', ''),
                 'upload_token': pending_upload_token,
                 'documents': documents_meta
             }
@@ -3470,23 +3918,49 @@ def signup_seller():
         shop_description = request.form.get('shop_description', '')
         address = (request.form.get('address') or '').strip()
         region = (request.form.get('region') or '').strip()
-        service_area = (request.form.get('service_area') or '').strip()
+        psgc_region_code = (request.form.get('region') or '').strip()
+        psgc_province_code = (request.form.get('psgc_province_code') or '').strip()
+        psgc_city_code = (request.form.get('psgc_city_code') or '').strip()
+        psgc_barangay_code = (request.form.get('psgc_barangay_code') or '').strip()
         tnc = request.form.get('tnc')
+        postal_code = (request.form.get('postal_code') or '').strip()
+
+        resolved_psgc = None
+        if psgc_region_code and (psgc_city_code or psgc_barangay_code):
+            try:
+                resolved_psgc = resolve_psgc_selection(
+                    psgc_region_code,
+                    psgc_province_code,
+                    psgc_city_code,
+                    psgc_barangay_code
+                )
+                region = resolved_psgc['region_name']
+
+                # Postal code is optional; auto-fill when available.
+                postal_code = lookup_postal_code(psgc_city_code, psgc_barangay_code) or postal_code
+            except Exception as err:
+                return jsonify({'success': False, 'message': str(err)}), 400
+
+        if resolved_psgc:
+            # `address` is the specific address (house/building/street/etc.)
+            full_parts = [
+                address,
+                resolved_psgc.get('barangay_name') or '',
+                resolved_psgc.get('city_name') or '',
+                (resolved_psgc.get('province_name') or '').strip() or resolved_psgc.get('region_name') or '',
+                resolved_psgc.get('region_name') or ''
+            ]
+            address = ', '.join([p.strip() for p in full_parts if p and p.strip()])
 
 
-        if not all([email, password, phone, shop_name, tnc, address, region]):
-            return jsonify({'success': False, 'message': 'All fields are required, including store address and region selection'}), 400
+        # Sellers do NOT have a service area; only their physical store address is required.
+        if not all([email, password, phone, shop_name, tnc, address, psgc_region_code, psgc_city_code, psgc_barangay_code]):
+            return jsonify({'success': False, 'message': 'All fields are required, including your PSGC-based store address selection.'}), 400
 
-        if not service_area:
-            service_area = region
-
-        if not service_area:
-            return jsonify({'success': False, 'message': 'Please select your service area'}), 400
+        # Postal code is optional.
 
         island_group = map_region_to_island_group(region)
         store_address = address
-        if region and address and region.lower() not in address.lower():
-            store_address = f"{address}, {region}".strip(', ')
 
 
         if '@' not in email or '.' not in email:
@@ -3544,7 +4018,10 @@ def signup_seller():
                 'shop_description': shop_description,
                 'address': address,
                 'region': region,
-                'service_area': service_area,
+                'postal_code': postal_code,
+                'psgc_city': (resolved_psgc or {}).get('city_name', ''),
+                'psgc_province': (resolved_psgc or {}).get('province_name', ''),
+                'psgc_barangay': (resolved_psgc or {}).get('barangay_name', ''),
                 'island_group': island_group,
                 'is_existing_user': is_existing_user,
                 'existing_user_id': existing_user_id
@@ -4136,6 +4613,148 @@ def send_rider_review_email(rider, action, reason=None):
         return False
 
     return send_email(rider['email'], subject, html_body)
+
+
+def send_buyer_review_email(buyer, action):
+    if not buyer or not buyer.get('email'):
+        return False
+
+    first_name = (buyer.get('first_name') or 'Buyer').strip() or 'Buyer'
+    safe_first_name = html.escape(first_name)
+    support_email = os.getenv('SUPPORT_EMAIL', 'support@varn.com')
+    base_url = request.url_root.rstrip('/')
+    login_link = f"{base_url}/login"
+
+    if action == 'approved':
+        subject = 'Your Varón account is approved'
+        html_body = f"""
+            <h2>Hi {safe_first_name},</h2>
+            <p>Your buyer account has been <strong>approved</strong>. You can now browse products and start shopping.</p>
+            <p><a href=\"{login_link}\">Log in to your account</a> to get started.</p>
+            <p>Thank you,<br>Varón Support Team</p>
+        """
+    elif action == 'rejected':
+        subject = 'Update on your Varón account registration'
+        html_body = f"""
+            <h2>Hi {safe_first_name},</h2>
+            <p>Thank you for registering. After review, your buyer account was <strong>not approved</strong> at this time.</p>
+            <p>If you believe this decision was made in error, please contact {support_email}.</p>
+            <p>Regards,<br>Varón Support Team</p>
+        """
+    else:
+        return False
+
+    return send_email(buyer['email'], subject, html_body)
+
+
+@app.route('/admin/pending-buyers', methods=['GET'])
+def admin_pending_buyers():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT id, first_name, last_name, email, phone, created_at
+            FROM users
+            WHERE role = 'buyer' AND buyer_approval_status = 'pending'
+            ORDER BY created_at DESC
+        ''')
+        buyers = cursor.fetchall() or []
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': True, 'buyers': buyers}), 200
+    except Exception as err:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return jsonify({'error': str(err)}), 500
+
+
+@app.route('/admin/approve-buyer/<int:buyer_user_id>', methods=['POST'])
+def admin_approve_buyer(buyer_user_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+
+    email_sent = False
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT id, first_name, last_name, email
+            FROM users
+            WHERE id = %s AND role = 'buyer'
+            LIMIT 1
+        ''', (buyer_user_id,))
+        buyer = cursor.fetchone()
+
+        if not buyer:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Buyer not found'}), 404
+
+        cursor.execute("UPDATE users SET buyer_approval_status = 'approved' WHERE id = %s", (buyer_user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        email_sent = send_buyer_review_email(buyer, 'approved')
+        return jsonify({'success': True, 'message': 'Buyer approved successfully', 'email_sent': email_sent}), 200
+    except Exception as err:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return jsonify({'error': str(err)}), 500
+
+
+@app.route('/admin/reject-buyer/<int:buyer_user_id>', methods=['POST'])
+def admin_reject_buyer(buyer_user_id):
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'error': 'Access denied'}), 403
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+
+    email_sent = False
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT id, first_name, last_name, email
+            FROM users
+            WHERE id = %s AND role = 'buyer'
+            LIMIT 1
+        ''', (buyer_user_id,))
+        buyer = cursor.fetchone()
+
+        if not buyer:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Buyer not found'}), 404
+
+        cursor.execute("UPDATE users SET buyer_approval_status = 'rejected' WHERE id = %s", (buyer_user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        email_sent = send_buyer_review_email(buyer, 'rejected')
+        return jsonify({'success': True, 'message': 'Buyer rejected', 'email_sent': email_sent}), 200
+    except Exception as err:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return jsonify({'error': str(err)}), 500
 
 @app.route('/admin/approve-rider/<int:rider_id>', methods=['POST'])
 def admin_approve_rider(rider_id):
@@ -7771,6 +8390,11 @@ def check_db_schema():
 @app.route('/api/products')
 def api_products():
     """Get all active products for browsing with optional search and category filter"""
+    if session.get('logged_in') and session.get('role') == 'buyer':
+        gate = buyer_approval_required_api()
+        if gate is not None:
+            return gate
+
     try:
         conn = get_db()
         if not conn:
@@ -8124,8 +8748,9 @@ def api_seller_products(seller_id):
 @app.route('/api/user-orders')
 def api_user_orders():
     """Get orders for logged-in user"""
-    if not session.get('logged_in') or session.get('role') != 'buyer':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     try:
         conn = get_db()
@@ -8161,8 +8786,9 @@ def api_user_orders():
 @app.route('/api/my-orders')
 def api_my_orders():
     """Get orders for logged-in user with shipment status mapping"""
-    if not session.get('logged_in') or session.get('role') != 'buyer':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     try:
         conn = get_db()
@@ -8171,7 +8797,7 @@ def api_my_orders():
 
 
         cursor.execute('''
-            SELECT o.id, o.order_number, o.total_amount, o.order_status, o.created_at,
+            SELECT o.id, o.order_number, o.total_amount, o.order_status, o.payment_status, o.created_at,
                    COALESCE(s.rider_id, o.rider_id) as rider_id,
                    u.first_name, u.email,
                    s.id as shipment_id, s.status as shipment_status, s.delivered_at
@@ -8180,7 +8806,6 @@ def api_my_orders():
             LEFT JOIN shipments s ON o.id = s.order_id
             WHERE o.user_id = %s
             ORDER BY o.created_at DESC
-            LIMIT 50
         ''', (user_id,))
 
         orders = cursor.fetchall()
@@ -8300,8 +8925,9 @@ def api_my_orders():
 @app.route('/api/my-orders/<int:order_id>/cancel', methods=['POST'])
 def api_cancel_my_order(order_id):
     """Allow buyers to cancel their own orders before fulfillment"""
-    if not session.get('logged_in') or session.get('role') != 'buyer':
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -8833,6 +9459,9 @@ def buyer_dashboard():
     if not session.get('logged_in') or session.get('role') != 'buyer':
         flash('Access denied. Please log in first.', 'error')
         return redirect(url_for('login'))
+    status = get_current_buyer_approval_status()
+    if status != 'approved':
+        return render_template('pages/buyer_pending_approval.html', approval_status=status)
     return render_template('pages/indexLoggedIn.html')
 
 @app.route('/cart')
@@ -8840,6 +9469,8 @@ def cart():
     if not session.get('logged_in') or session.get('role') != 'buyer':
         flash('Access denied. Please log in first.', 'error')
         return redirect(url_for('login'))
+    if get_current_buyer_approval_status() != 'approved':
+        return redirect(url_for('buyer_dashboard'))
     return render_template('pages/cart.html')
 
 @app.route('/my-orders')
@@ -8848,6 +9479,9 @@ def my_orders():
     if not session.get('logged_in') or session.get('role') != 'buyer':
         flash('Access denied. Please log in first.', 'error')
         return redirect(url_for('login'))
+
+    if get_current_buyer_approval_status() != 'approved':
+        return redirect(url_for('buyer_dashboard'))
     
     return render_template('pages/my_orders.html')
 
@@ -10512,15 +11146,18 @@ def verify_otp():
                 if conn:
                     try:
                         cursor = conn.cursor(dictionary=True)
+                        role = pending_signup.get('role') or 'buyer'
+                        buyer_approval_status = 'pending' if role == 'buyer' else 'approved'
                         cursor.execute(
-                            'INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES (%s, %s, %s, %s, %s, %s)',
+                            'INSERT INTO users (email, password, first_name, last_name, phone, role, buyer_approval_status) VALUES (%s, %s, %s, %s, %s, %s, %s)',
                             (
                                 pending_signup['email'],
                                 pending_signup['password'],
                                 pending_signup['first_name'],
                                 pending_signup['last_name'],
                                 pending_signup['phone'],
-                                pending_signup['role']
+                                role,
+                                buyer_approval_status
                             )
                         )
                         user_id = cursor.lastrowid
@@ -10584,14 +11221,71 @@ def verify_otp():
                               pending_rider_signup['email'], pending_rider_signup['password'], pending_rider_signup['phone']))
                         user_id = cursor.lastrowid
 
+                        # Enforce PSGC-based address validation and default Service Area behavior.
+                        psgc_region_code = (pending_rider_signup.get('psgc_region_code') or '').strip()
+                        psgc_province_code = (pending_rider_signup.get('psgc_province_code') or '').strip()
+                        psgc_city_code = (pending_rider_signup.get('psgc_city_code') or '').strip()
+                        psgc_barangay_code = (pending_rider_signup.get('psgc_barangay_code') or '').strip()
 
+                        resolved_psgc = None
+                        if psgc_region_code and psgc_city_code and psgc_barangay_code:
+                            resolved_psgc = resolve_psgc_selection(
+                                psgc_region_code,
+                                psgc_province_code,
+                                psgc_city_code,
+                                psgc_barangay_code
+                            )
+
+                        default_city_name = (resolved_psgc or {}).get('city_name') or (pending_rider_signup.get('service_area') or '').strip()
+                        if not default_city_name:
+                            raise ValueError('Missing rider city/municipality for default service area.')
+
+                        # Ensure required schema exists (idempotent).
+                        ensure_rider_psgc_address_columns(cursor)
+                        ensure_rider_service_areas_table(cursor)
+
+
+                        # Rider default service area must always be the City/Municipality from the registered address.
                         cursor.execute('''
-                            INSERT INTO riders (user_id, vehicle_type, license_number, vehicle_plate, service_area)
-                            VALUES (%s, %s, %s, %s, %s)
-                        ''', (user_id, pending_rider_signup.get('vehicle_type', 'motorcycle'), pending_rider_signup['license_number'],
-                              pending_rider_signup.get('vehicle_plate', ''), pending_rider_signup['service_area']))
+                            INSERT INTO riders (
+                                user_id, vehicle_type, license_number, vehicle_plate, service_area,
+                                address_region_code, address_region_name,
+                                address_province_code, address_province_name,
+                                address_city_code, address_city_name,
+                                address_barangay_code, address_barangay_name,
+                                default_service_area_city_code
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ''', (
+                            user_id,
+                            pending_rider_signup.get('vehicle_type', 'motorcycle'),
+                            pending_rider_signup['license_number'],
+                            pending_rider_signup.get('vehicle_plate', ''),
+                            default_city_name,
+                            psgc_region_code or None,
+                            (resolved_psgc or {}).get('region_name') or (pending_rider_signup.get('psgc_region_name') or None),
+                            psgc_province_code or None,
+                            (resolved_psgc or {}).get('province_name') or (pending_rider_signup.get('psgc_province_name') or None),
+                            psgc_city_code or None,
+                            (resolved_psgc or {}).get('city_name') or (pending_rider_signup.get('psgc_city_name') or None),
+                            psgc_barangay_code or None,
+                            (resolved_psgc or {}).get('barangay_name') or (pending_rider_signup.get('psgc_barangay_name') or None),
+                            psgc_city_code or None
+                        ))
 
                         rider_id = cursor.lastrowid
+
+                        # Seed normalized service areas (optional feature). Default must match registered city.
+                        if psgc_city_code and ((resolved_psgc or {}).get('city_name') or pending_rider_signup.get('psgc_city_name')):
+                            cursor.execute('''
+                                INSERT INTO rider_service_areas (rider_id, city_code, city_name, is_default)
+                                VALUES (%s, %s, %s, 1)
+                                ON DUPLICATE KEY UPDATE city_name = VALUES(city_name), is_default = 1
+                            ''', (
+                                rider_id,
+                                psgc_city_code,
+                                (resolved_psgc or {}).get('city_name') or pending_rider_signup.get('psgc_city_name')
+                            ))
 
                         documents_meta = pending_rider_signup.get('documents') or {}
                         upload_token = pending_rider_signup.get('upload_token')
@@ -10692,16 +11386,20 @@ def verify_otp():
                             store_address = (pending_seller_signup.get('address') or '').strip()
                             region_label = pending_seller_signup.get('region', '')
                             island_group_value = pending_seller_signup.get('island_group') or map_region_to_island_group(region_label)
+                            seller_postal_code = (pending_seller_signup.get('postal_code') or '').strip() or None
 
 
                             cursor.execute('''
-                                INSERT INTO sellers (user_id, store_name, store_slug, description, address, island_group, status)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                INSERT INTO sellers (user_id, store_name, store_slug, description, address, city, province, postal_code, island_group, status)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             ''', (user_id,
                                 pending_seller_signup['shop_name'],
                                 store_slug,
                                 pending_seller_signup.get('shop_description', ''),
                                 store_address,
+                                (pending_seller_signup.get('psgc_city') or '').strip() or None,
+                                (pending_seller_signup.get('psgc_province') or '').strip() or None,
+                                seller_postal_code,
                                 island_group_value,
                                 'approved'))
                             print(f"[VERIFY OTP] Created seller profile with AUTO-APPROVED status for user {user_id}")
@@ -10805,8 +11503,9 @@ def resend_otp():
 @app.route('/api/cart/add', methods=['POST'])
 def api_add_to_cart():
     """Add item to server-side cart in database"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -10857,8 +11556,9 @@ def api_add_to_cart():
 @app.route('/api/cart/get', methods=['GET'])
 def api_get_cart():
     """Get cart items from database and return unique product count for badge"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in', 'unique_count': 0}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -10891,8 +11591,9 @@ def api_get_cart():
 @app.route('/api/cart/selection', methods=['GET', 'POST'])
 def api_cart_selection():
     """Persist and retrieve the buyer's checkout selection"""
-    if not session.get('logged_in') or session.get('role') != 'buyer':
-        return jsonify({'success': False, 'error': 'Not authorized'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -10964,8 +11665,9 @@ def api_cart_selection():
 @app.route('/api/cart/update', methods=['POST'])
 def api_update_cart():
     """Update cart item quantity"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -10998,8 +11700,9 @@ def api_update_cart():
 @app.route('/api/cart/remove', methods=['POST'])
 def api_remove_from_cart():
     """Remove item from cart"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -11026,8 +11729,9 @@ def api_remove_from_cart():
 @app.route('/api/cart/clear', methods=['POST'])
 def api_clear_cart():
     """Clear all cart items"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    gate = buyer_approval_required_api()
+    if gate is not None:
+        return gate
 
     conn = get_db()
     if not conn:
@@ -11525,6 +12229,76 @@ def ensure_rider_documents_table(cursor):
         """)
     except mysql.connector.Error as err:
         print(f"[DB WARNING] Unable to update rider_documents.document_type enum: {err}")
+
+
+def ensure_rider_psgc_address_columns(cursor):
+    """Ensure `riders` has PSGC address columns used for rider registration.
+
+    This keeps the app resilient even if the SQL migration hasn't been run yet.
+    """
+    ensure_table_engine(cursor, 'riders')
+    cursor.execute(
+        """
+        SELECT COLUMN_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'riders'
+        """,
+        (DB_CONFIG['database'],)
+    )
+    existing = {row['COLUMN_NAME'] if isinstance(row, dict) else row[0] for row in cursor.fetchall()}
+
+    def add_column(col_sql: str):
+        cursor.execute(f"ALTER TABLE riders ADD COLUMN {col_sql}")
+
+    if 'address_region_code' not in existing:
+        add_column("address_region_code VARCHAR(20) NULL AFTER service_area")
+    if 'address_region_name' not in existing:
+        add_column("address_region_name VARCHAR(150) NULL AFTER address_region_code")
+    if 'address_province_code' not in existing:
+        add_column("address_province_code VARCHAR(20) NULL AFTER address_region_name")
+    if 'address_province_name' not in existing:
+        add_column("address_province_name VARCHAR(150) NULL AFTER address_province_code")
+    if 'address_city_code' not in existing:
+        add_column("address_city_code VARCHAR(20) NULL AFTER address_province_name")
+    if 'address_city_name' not in existing:
+        add_column("address_city_name VARCHAR(150) NULL AFTER address_city_code")
+    if 'address_barangay_code' not in existing:
+        add_column("address_barangay_code VARCHAR(20) NULL AFTER address_city_name")
+    if 'address_barangay_name' not in existing:
+        add_column("address_barangay_name VARCHAR(150) NULL AFTER address_barangay_code")
+    if 'default_service_area_city_code' not in existing:
+        add_column("default_service_area_city_code VARCHAR(20) NULL AFTER address_barangay_name")
+
+    # Best-effort indexes; ignore if they already exist
+    try:
+        cursor.execute("ALTER TABLE riders ADD INDEX idx_rider_address_city_code (address_city_code)")
+    except mysql.connector.Error:
+        pass
+    try:
+        cursor.execute("ALTER TABLE riders ADD INDEX idx_rider_default_city_code (default_service_area_city_code)")
+    except mysql.connector.Error:
+        pass
+
+
+def ensure_rider_service_areas_table(cursor):
+    ensure_table_engine(cursor, 'riders')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rider_service_areas (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            rider_id INT NOT NULL,
+            city_code VARCHAR(20) NOT NULL,
+            city_name VARCHAR(150) NOT NULL,
+            is_default BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_rider_city (rider_id, city_code),
+            INDEX idx_rider_default (rider_id, is_default),
+            CONSTRAINT fk_rider_service_areas_rider
+                FOREIGN KEY (rider_id)
+                REFERENCES riders(id)
+                ON DELETE CASCADE
+                ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ''')
 
 
 def ensure_rider_review_logs_table(cursor):

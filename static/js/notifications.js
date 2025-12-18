@@ -1,26 +1,75 @@
 /**
  * Varón Custom Notification System
- * Replaces browser alerts, confirms, and prompts with styled notifications
+ * Replaces browser alerts, confirms, and prompts with styled notifications.
+ *
+ * If Notiflix is available globally (loaded before this script), VaronNotifications
+ * will route Notify/Confirm/Prompt calls through Notiflix.
  */
+
+const __varonHasNotiflix = () => {
+  return (
+    typeof window !== 'undefined' &&
+    window.Notiflix &&
+    window.Notiflix.Notify &&
+    window.Notiflix.Confirm
+  );
+};
+
+const __varonToPlainText = (value) => {
+  if (value == null) return '';
+  if (typeof value === 'string') {
+    // If a caller passes HTML (e.g. <br>), try to degrade gracefully.
+    return value
+      .replace(/<br\s*\/?\s*>/gi, '\n')
+      .replace(/<[^>]*>/g, '')
+      .trim();
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch (e) {
+    return String(value);
+  }
+};
 
 const VaronNotifications = {
   // Show success notification
   success(message, duration = 3000) {
+    if (__varonHasNotiflix()) {
+      window.Notiflix.Notify.success(__varonToPlainText(message), { timeout: duration });
+      return;
+    }
+
     this._show(message, 'success', duration);
   },
 
   // Show error notification
   error(message, duration = 4000) {
+    if (__varonHasNotiflix()) {
+      window.Notiflix.Notify.failure(__varonToPlainText(message), { timeout: duration });
+      return;
+    }
+
     this._show(message, 'error', duration);
   },
 
   // Show info notification
   info(message, duration = 3000) {
+    if (__varonHasNotiflix()) {
+      window.Notiflix.Notify.info(__varonToPlainText(message), { timeout: duration });
+      return;
+    }
+
     this._show(message, 'info', duration);
   },
 
   // Show warning notification
   warning(message, duration = 3000) {
+    if (__varonHasNotiflix()) {
+      window.Notiflix.Notify.warning(__varonToPlainText(message), { timeout: duration });
+      return;
+    }
+
     this._show(message, 'warning', duration);
   },
 
@@ -34,6 +83,18 @@ const VaronNotifications = {
         confirmClass = 'confirm',
         type = 'confirm'
       } = options;
+
+      if (__varonHasNotiflix()) {
+        window.Notiflix.Confirm.show(
+          title,
+          __varonToPlainText(message),
+          confirmText,
+          cancelText,
+          () => resolve(true),
+          () => resolve(false)
+        );
+        return;
+      }
 
       const modal = this._createModal(title, message, type, {
         confirmText,
@@ -65,6 +126,20 @@ const VaronNotifications = {
         cancelText = 'Cancel',
         inputType = 'text'
       } = options;
+
+      if (__varonHasNotiflix()) {
+        // Notiflix prompt supports only text-like input; ignore inputType/placeholder.
+        window.Notiflix.Confirm.prompt(
+          title,
+          __varonToPlainText(message),
+          defaultValue == null ? '' : String(defaultValue),
+          confirmText,
+          cancelText,
+          (clientAnswer) => resolve(clientAnswer),
+          () => resolve(null)
+        );
+        return;
+      }
 
       const modal = this._createPromptModal(title, message, {
         defaultValue,
@@ -227,9 +302,10 @@ const VaronNotifications = {
   }
 };
 
-// Add styles dynamically
-const style = document.createElement('style');
-style.textContent = `
+// Add styles dynamically (fallback UI only)
+if (!__varonHasNotiflix()) {
+  const style = document.createElement('style');
+  style.textContent = `
   .varon-notification-container {
     position: fixed;
     top: 90px;
@@ -524,7 +600,8 @@ style.textContent = `
   }
 `;
 
-document.head.appendChild(style);
+  document.head.appendChild(style);
+}
 
 // Export for global use
 window.VaronNotifications = VaronNotifications;
@@ -543,7 +620,7 @@ if (!window.__varonAlertsPatched) {
   };
 
   const formatMessage = (value) => {
-    const raw = typeof value === 'string' ? value : JSON.stringify(value);
+    const raw = typeof value === 'string' ? value : __varonToPlainText(value);
     return {
       raw,
       html: raw.replace(/\n/g, '<br>')
@@ -553,6 +630,7 @@ if (!window.__varonAlertsPatched) {
   window.alert = (value) => {
     const { raw, html } = formatMessage(value);
     const type = detectTypeFromMessage(raw);
-    VaronNotifications[type](html);
+    // Notiflix is text-based; prefer raw. Fallback UI supports basic HTML.
+    VaronNotifications[type](__varonHasNotiflix() ? raw : html);
   };
 }
