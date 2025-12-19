@@ -376,7 +376,9 @@ def get_db(dictionary=False):
             user=DB_CONFIG['user'],
             password=DB_CONFIG['password'],
             database=DB_CONFIG['database'],
-            port=DB_CONFIG['port']
+            port=DB_CONFIG['port'],
+            # Avoid mysql-connector C-extension crashes on some Windows setups.
+            use_pure=True,
         )
         if dictionary:
             return conn, conn.cursor(dictionary=True)
@@ -846,7 +848,12 @@ def get_delivery_region(city, province):
 
 def init_db():
     try:
-        conn = mysql.connector.connect(host=DB_CONFIG['host'], user=DB_CONFIG['user'], password=DB_CONFIG['password'])
+        conn = mysql.connector.connect(
+            host=DB_CONFIG['host'],
+            user=DB_CONFIG['user'],
+            password=DB_CONFIG['password'],
+            use_pure=True,
+        )
         cursor = conn.cursor(dictionary=True)
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
         cursor.execute(f"USE {DB_CONFIG['database']}")
@@ -877,6 +884,59 @@ def init_db():
             cursor.execute("ALTER TABLE users ADD COLUMN buyer_approval_status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending'")
             cursor.execute("UPDATE users SET buyer_approval_status = 'approved' WHERE role = 'buyer'")
             print("[DB INIT] Added users.buyer_approval_status and backfilled existing buyers to approved")
+
+
+        # Account restriction/ban controls (idempotent).
+        # - account_status: active | restricted | banned
+        # - restriction_until: optional expiry for temporary suspensions
+        # - session_version: increment to invalidate all active sessions
+        try:
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'account_status'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN account_status ENUM('active','restricted','banned') NOT NULL DEFAULT 'active' AFTER status")
+                try:
+                    cursor.execute("CREATE INDEX idx_account_status ON users(account_status)")
+                except Exception:
+                    pass
+                print("[DB INIT] Added users.account_status")
+        except Exception as e:
+            print(f"[DB INIT] Unable to ensure users.account_status: {e}")
+
+        for col_sql, label in [
+            ("ALTER TABLE users ADD COLUMN restriction_until DATETIME NULL AFTER account_status", "users.restriction_until"),
+            ("ALTER TABLE users ADD COLUMN restriction_reason VARCHAR(255) NULL AFTER restriction_until", "users.restriction_reason"),
+            ("ALTER TABLE users ADD COLUMN account_status_updated_at TIMESTAMP NULL AFTER restriction_reason", "users.account_status_updated_at"),
+            ("ALTER TABLE users ADD COLUMN account_status_updated_by INT NULL AFTER account_status_updated_at", "users.account_status_updated_by"),
+            ("ALTER TABLE users ADD COLUMN session_version INT NOT NULL DEFAULT 0 AFTER account_status_updated_by", "users.session_version"),
+        ]:
+            try:
+                col_name = label.split('.')[-1]
+                cursor.execute(f"SHOW COLUMNS FROM users LIKE '{col_name}'")
+                if not cursor.fetchone():
+                    cursor.execute(col_sql)
+                    print(f"[DB INIT] Added {label}")
+            except Exception as e:
+                print(f"[DB INIT] Unable to ensure {label}: {e}")
+
+        # Audit log for restrictions/bans/unbans.
+        try:
+            cursor.execute('''CREATE TABLE IF NOT EXISTS account_access_audit (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                target_user_id INT NOT NULL,
+                target_role VARCHAR(32) NULL,
+                previous_status VARCHAR(32) NULL,
+                new_status VARCHAR(32) NOT NULL,
+                reason VARCHAR(255) NULL,
+                notes TEXT NULL,
+                restriction_until DATETIME NULL,
+                acted_by INT NULL,
+                acted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ip_address VARCHAR(45) NULL,
+                INDEX idx_target_user (target_user_id),
+                INDEX idx_acted_at (acted_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        except Exception as e:
+            print(f"[DB INIT] Unable to ensure account_access_audit: {e}")
 
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS categories (
@@ -1459,7 +1519,8 @@ def init_db():
         # admin_commission_withdrawal_orders to prevent double-claiming.
         try:
             cursor.execute("SHOW INDEX FROM admin_commission_withdrawals WHERE Key_name = 'uniq_range'")
-            if cursor.fetchone():
+            rows = cursor.fetchall() or []
+            if rows:
                 cursor.execute('ALTER TABLE admin_commission_withdrawals DROP INDEX uniq_range')
                 print('[DB INIT] Dropped admin_commission_withdrawals.uniq_range to allow multiple withdrawals per date range')
         except Exception as e:
@@ -1545,6 +1606,9 @@ def ensure_db_initialized():
                 host=DB_CONFIG['host'],
                 user=DB_CONFIG['user'],
                 password=DB_CONFIG['password']
+                ,
+                # Avoid mysql-connector C-extension crashes on some Windows setups.
+                use_pure=True
             )
             cursor = conn.cursor(dictionary=True)
             cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
@@ -1566,6 +1630,29 @@ def ensure_db_initialized():
 def before_request():
     """Initialize database before first request"""
     ensure_db_initialized()
+    blocked = enforce_account_access_if_needed()
+    if blocked is not None:
+        return blocked
+
+
+@app.route('/restricted', methods=['GET'])
+def account_restricted():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
+    access_row = _get_user_access_row(int(user_id)) if user_id else None
+    if not access_row:
+        session.clear()
+        return redirect(url_for('login'))
+
+    status = (access_row.get('account_status') or 'active').lower()
+    if status != 'restricted':
+        return redirect(url_for('index'))
+
+    until = access_row.get('restriction_until')
+    reason = access_row.get('restriction_reason')
+    return render_template('pages/account_restricted.html', restriction_until=until, reason=reason)
 
 @app.route('/admin/create-tables', methods=['POST'])
 def admin_create_tables():
@@ -2109,38 +2196,225 @@ def _require_role(required_role: str):
     return True
 
 
+def _truthy_env(value: str | None):
+    return str(value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _should_enforce_account_access():
+    """Skip enforcement for endpoints that must remain reachable."""
+    endpoint = (request.endpoint or '').strip()
+    path = (request.path or '').strip()
+    if endpoint in {'static', 'login', 'signup', 'logout', 'account_restricted'}:
+        return False
+    if path.startswith('/static/'):
+        return False
+    return True
+
+
+def _get_user_access_row(user_id: int):
+    conn = get_db()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('''
+            SELECT id, email, role,
+                   COALESCE(account_status, 'active') AS account_status,
+                   restriction_until,
+                   restriction_reason,
+                   COALESCE(session_version, 0) AS session_version
+            FROM users
+            WHERE id = %s
+        ''', (user_id,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return row
+    except Exception:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return None
+
+
+def _maybe_auto_unrestrict(user_id: int, access_row: dict):
+    """If restriction_until has expired, flip user back to active."""
+    try:
+        status = (access_row.get('account_status') or 'active').lower()
+        until = access_row.get('restriction_until')
+        if status != 'restricted' or not until:
+            return access_row
+
+        now = datetime.utcnow()
+        if isinstance(until, datetime) and until <= now:
+            conn = get_db()
+            if not conn:
+                return access_row
+            try:
+                cur = conn.cursor(dictionary=True)
+                cur.execute('''
+                    UPDATE users
+                    SET account_status = 'active',
+                        restriction_until = NULL,
+                        restriction_reason = NULL,
+                        account_status_updated_at = NOW(),
+                        account_status_updated_by = NULL
+                    WHERE id = %s
+                ''', (user_id,))
+                conn.commit()
+                cur.close()
+                conn.close()
+                access_row['account_status'] = 'active'
+                access_row['restriction_until'] = None
+                access_row['restriction_reason'] = None
+            except Exception:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+        return access_row
+    except Exception:
+        return access_row
+
+
+def _handle_access_block(status: str):
+    is_api = (request.path or '').startswith('/api/')
+    if is_api:
+        if status == 'banned':
+            return jsonify({'success': False, 'error': 'Account banned'}), 403
+        return jsonify({'success': False, 'error': 'Account restricted'}), 403
+
+    if status == 'banned':
+        flash('Your account has been banned. Please contact support.', 'error')
+        return redirect(url_for('login'))
+
+    return redirect(url_for('account_restricted'))
+
+
+def enforce_account_access_if_needed():
+    if not session.get('logged_in'):
+        return None
+    if not _should_enforce_account_access():
+        return None
+
+    user_id = session.get('user_id')
+    if not user_id:
+        session.clear()
+        return redirect(url_for('login'))
+
+    access_row = _get_user_access_row(int(user_id))
+    if not access_row:
+        session.clear()
+        return redirect(url_for('login'))
+
+    access_row = _maybe_auto_unrestrict(int(user_id), access_row)
+
+    # Invalidate sessions when session_version changes.
+    current_version = int(access_row.get('session_version') or 0)
+    session_version = int(session.get('session_version') or 0)
+    if session_version != current_version:
+        session.clear()
+        if (request.path or '').startswith('/api/'):
+            return jsonify({'success': False, 'error': 'Session expired'}), 401
+        flash('Your session has expired. Please log in again.', 'error')
+        return redirect(url_for('login'))
+
+    status = (access_row.get('account_status') or 'active').lower()
+    if status in {'restricted', 'banned'}:
+        if status == 'banned':
+            session.clear()
+        return _handle_access_block(status)
+
+    return None
+
+
+def _notify_account_access_change(email: str, new_status: str, reason: str | None, restriction_until: datetime | None):
+    """Optional email notifications for restriction/ban events."""
+    if not email:
+        return False
+    if not _truthy_env(os.getenv('ENABLE_ACCOUNT_STATUS_EMAIL')):
+        return False
+    subject = f"Account status update: {new_status.title()}"
+    until_line = ''
+    try:
+        if restriction_until:
+            until_line = f"<p><strong>Restriction until:</strong> {restriction_until}</p>"
+    except Exception:
+        until_line = ''
+    reason_line = f"<p><strong>Reason:</strong> {reason}</p>" if reason else ''
+    html = f"""
+    <div style='font-family: Arial, sans-serif; line-height: 1.6;'>
+      <h2>Account Status Updated</h2>
+      <p>Your account status is now: <strong>{new_status.title()}</strong>.</p>
+      {until_line}
+      {reason_line}
+      <p>If you believe this is a mistake, please contact support.</p>
+    </div>
+    """
+    try:
+        return bool(send_email(email, subject, html))
+    except Exception:
+        return False
+
+
 def ensure_admin_commission_tables(cursor):
     """Idempotently ensure commission withdrawal tables exist for legacy DBs."""
-    cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawals (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        start_date DATE NOT NULL,
-        end_date DATE NOT NULL,
-        amount DECIMAL(12,2) NOT NULL,
-        claimed_by INT NULL,
-        claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        notes VARCHAR(255),
-        INDEX idx_claimed_at (claimed_at),
-        FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+    # Some deployments use MyISAM or have missing FK targets; create tables in a
+    # tolerant way so reporting can still function.
+    try:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawals (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            amount DECIMAL(12,2) NOT NULL,
+            claimed_by INT NULL,
+            claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            notes VARCHAR(255),
+            INDEX idx_claimed_at (claimed_at),
+            FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+    except Exception:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawals (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            amount DECIMAL(12,2) NOT NULL,
+            claimed_by INT NULL,
+            claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            notes VARCHAR(255),
+            INDEX idx_claimed_at (claimed_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
     # Drop old uniq_range constraint if present.
     try:
         cursor.execute("SHOW INDEX FROM admin_commission_withdrawals WHERE Key_name = 'uniq_range'")
-        if cursor.fetchone():
+        rows = cursor.fetchall() or []
+        if rows:
             cursor.execute('ALTER TABLE admin_commission_withdrawals DROP INDEX uniq_range')
     except Exception:
         pass
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawal_orders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        withdrawal_id INT NOT NULL,
-        order_id INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uniq_order (order_id),
-        INDEX idx_withdrawal (withdrawal_id),
-        FOREIGN KEY (withdrawal_id) REFERENCES admin_commission_withdrawals(id) ON DELETE CASCADE,
-        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+    try:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawal_orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            withdrawal_id INT NOT NULL,
+            order_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_order (order_id),
+            INDEX idx_withdrawal (withdrawal_id),
+            FOREIGN KEY (withdrawal_id) REFERENCES admin_commission_withdrawals(id) ON DELETE CASCADE,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+    except Exception:
+        cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawal_orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            withdrawal_id INT NOT NULL,
+            order_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_order (order_id),
+            INDEX idx_withdrawal (withdrawal_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
 
 def _get_table_columns(cursor, table_name: str):
@@ -2189,7 +2463,8 @@ def ensure_admin_commission_ledger_tables(cursor):
         if 'order_completed_at' not in cols:
             cursor.execute('ALTER TABLE admin_commission_ledger ADD COLUMN order_completed_at TIMESTAMP NULL AFTER order_created_at')
         cursor.execute("SHOW INDEX FROM admin_commission_ledger WHERE Key_name = 'idx_order_completed_at'")
-        if not cursor.fetchone():
+        rows = cursor.fetchall() or []
+        if not rows:
             cursor.execute('CREATE INDEX idx_order_completed_at ON admin_commission_ledger(order_completed_at)')
     except Exception:
         pass
@@ -2502,6 +2777,11 @@ def admin_commission_report():
         ensure_admin_commission_tables(cursor)
         ensure_admin_commission_ledger_tables(cursor)
         reconciled = backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
+        # Persist reconciliation inserts for subsequent report loads.
+        try:
+            conn.commit()
+        except Exception:
+            pass
         if reconciled:
             flash(f'Reconciled {reconciled} missing completed transactions into the Commission Report.', 'success')
 
@@ -2642,6 +2922,10 @@ def api_admin_commission_report():
         ensure_admin_commission_tables(cursor)
         ensure_admin_commission_ledger_tables(cursor)
         reconciled = backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
+        try:
+            conn.commit()
+        except Exception:
+            pass
 
         cursor.execute('''
             SELECT
@@ -2948,6 +3232,324 @@ def api_admin_record_commission_withdrawal():
             'success': False,
             'error': 'Unable to record withdrawal (some orders may already be claimed).'
         }), 409
+
+
+@app.route('/admin/account-access', methods=['GET', 'POST'])
+def admin_account_access():
+    """Admin UI to restrict/ban/unban accounts with audit logging."""
+    if not _require_role('admin'):
+        return redirect(url_for('login'))
+
+    q = (request.values.get('q') or '').strip()
+    page = _safe_int(request.values.get('page')) or 1
+    if page < 1:
+        page = 1
+    page_size = 15
+
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('dashboard'))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        # Apply status change (legacy/non-JS fallback).
+        if request.method == 'POST':
+            target_user_id = _safe_int(request.form.get('user_id'))
+            new_status = (request.form.get('new_status') or '').strip().lower()
+            reason = (request.form.get('reason') or '').strip() or None
+            notes = (request.form.get('notes') or '').strip() or None
+            duration_days = _safe_int(request.form.get('duration_days'))
+
+            if not target_user_id or new_status not in {'active', 'restricted', 'banned'}:
+                flash('Invalid action.', 'error')
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_account_access', q=q, page=page))
+
+            if new_status in {'restricted', 'banned'} and not reason:
+                flash('Reason is required for restricting or banning an account.', 'error')
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_account_access', q=q, page=page))
+
+            cursor.execute('''
+                SELECT id, email, role,
+                       COALESCE(account_status, 'active') AS account_status,
+                       restriction_until,
+                       restriction_reason,
+                       COALESCE(session_version, 0) AS session_version
+                FROM users
+                WHERE id = %s
+            ''', (target_user_id,))
+            target = cursor.fetchone()
+            if not target:
+                flash('User not found.', 'error')
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_account_access', q=q, page=page))
+
+            if (target.get('role') or '').lower() == 'admin':
+                flash('Admin accounts cannot be modified here.', 'error')
+                cursor.close()
+                conn.close()
+                return redirect(url_for('admin_account_access', q=q, page=page))
+
+            restriction_until = None
+            if new_status == 'restricted' and duration_days and duration_days > 0:
+                restriction_until = datetime.utcnow() + timedelta(days=duration_days)
+
+            previous_status = (target.get('account_status') or 'active').lower()
+            acted_by = session.get('user_id')
+
+            cursor.execute('''
+                UPDATE users
+                SET account_status = %s,
+                    restriction_until = %s,
+                    restriction_reason = %s,
+                    account_status_updated_at = NOW(),
+                    account_status_updated_by = %s,
+                    session_version = COALESCE(session_version, 0) + 1
+                WHERE id = %s
+            ''', (new_status, restriction_until, reason, acted_by, target_user_id))
+
+            cursor.execute('''
+                INSERT INTO account_access_audit (
+                    target_user_id,
+                    target_role,
+                    previous_status,
+                    new_status,
+                    reason,
+                    notes,
+                    restriction_until,
+                    acted_by,
+                    ip_address
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                target_user_id,
+                target.get('role'),
+                previous_status,
+                new_status,
+                reason,
+                notes,
+                restriction_until,
+                acted_by,
+                request.remote_addr
+            ))
+
+            conn.commit()
+            _notify_account_access_change(target.get('email') or '', new_status, reason, restriction_until)
+
+            flash(f"Updated {target.get('email')} to {new_status}.", 'success')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('admin_account_access', q=q, page=page))
+
+        # List users.
+        params = ['buyer', 'seller', 'rider']
+        where = ["role IN (%s, %s, %s)"]
+        if q:
+            where.append("(email LIKE %s OR first_name LIKE %s OR last_name LIKE %s)")
+            like = f"%{q}%"
+            params.extend([like, like, like])
+
+        # Total count for pagination.
+        count_sql = "SELECT COUNT(*) AS total FROM users"
+        if where:
+            count_sql += " WHERE " + " AND ".join(where)
+        cursor.execute(count_sql, tuple(params))
+        total_count = (cursor.fetchone() or {}).get('total') or 0
+        total_pages = max(1, (int(total_count) + page_size - 1) // page_size)
+        if page > total_pages:
+            page = total_pages
+        offset = (page - 1) * page_size
+
+        sql = """
+            SELECT id, first_name, last_name, email, role,
+                   COALESCE(account_status, 'active') AS account_status,
+                   restriction_until,
+                   restriction_reason,
+                   account_status_updated_at
+            FROM users
+        """
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY updated_at DESC, id DESC LIMIT %s OFFSET %s"
+
+        cursor.execute(sql, tuple(params + [page_size, offset]))
+        users = cursor.fetchall() or []
+
+        cursor.execute('''
+            SELECT a.id, a.acted_at, a.target_user_id, a.target_role, a.previous_status, a.new_status,
+                   a.reason, a.restriction_until, u.email AS acted_by_email, tu.email AS target_email
+            FROM account_access_audit a
+            LEFT JOIN users u ON u.id = a.acted_by
+            LEFT JOIN users tu ON tu.id = a.target_user_id
+            ORDER BY a.acted_at DESC, a.id DESC
+            LIMIT 25
+        ''')
+        audits = cursor.fetchall() or []
+
+        cursor.close()
+        conn.close()
+
+        return render_template(
+            'pages/admin_account_access.html',
+            q=q,
+            users=users,
+            audits=audits,
+            page=page,
+            page_size=page_size,
+            total_count=int(total_count),
+            total_pages=int(total_pages),
+        )
+
+    except Exception as err:
+        print(f"[ERROR] admin_account_access: {err}")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        flash('Unable to load account access page right now.', 'error')
+        return redirect(url_for('dashboard'))
+
+
+@app.route('/admin/account-access/action', methods=['POST'])
+def admin_account_access_action():
+    """JSON endpoint for restricting/banning/unbanning accounts (admin only)."""
+    if not _require_role('admin'):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    payload = request.get_json(silent=True) or {}
+    # Also support form-encoded POST as a fallback.
+    if not payload and request.form:
+        payload = request.form.to_dict(flat=True)
+
+    target_user_id = _safe_int(payload.get('user_id'))
+    new_status = (payload.get('new_status') or '').strip().lower()
+    reason = (payload.get('reason') or '').strip() or None
+    notes = (payload.get('notes') or '').strip() or None
+    duration_days = _safe_int(payload.get('duration_days'))
+
+    if not target_user_id or new_status not in {'active', 'restricted', 'banned'}:
+        return jsonify({'success': False, 'error': 'Invalid action.'}), 400
+
+    if new_status in {'restricted', 'banned'} and not reason:
+        return jsonify({'success': False, 'error': 'Reason is required.'}), 400
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute('''
+            SELECT id, email, role,
+                   COALESCE(account_status, 'active') AS account_status,
+                   restriction_until,
+                   restriction_reason,
+                   COALESCE(session_version, 0) AS session_version
+            FROM users
+            WHERE id = %s
+        ''', (target_user_id,))
+        target = cursor.fetchone()
+        if not target:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'User not found.'}), 404
+
+        # Do not allow restricting/banning admin accounts.
+        if (target.get('role') or '').lower() == 'admin':
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Admin accounts cannot be modified here.'}), 403
+
+        restriction_until = None
+        if new_status == 'restricted' and duration_days and duration_days > 0:
+            restriction_until = datetime.utcnow() + timedelta(days=duration_days)
+
+        previous_status = (target.get('account_status') or 'active').lower()
+        acted_by = session.get('user_id')
+
+        cursor.execute('''
+            UPDATE users
+            SET account_status = %s,
+                restriction_until = %s,
+                restriction_reason = %s,
+                account_status_updated_at = NOW(),
+                account_status_updated_by = %s,
+                session_version = COALESCE(session_version, 0) + 1
+            WHERE id = %s
+        ''', (new_status, restriction_until, reason, acted_by, target_user_id))
+
+        cursor.execute('''
+            INSERT INTO account_access_audit (
+                target_user_id,
+                target_role,
+                previous_status,
+                new_status,
+                reason,
+                notes,
+                restriction_until,
+                acted_by,
+                ip_address
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            target_user_id,
+            target.get('role'),
+            previous_status,
+            new_status,
+            reason,
+            notes,
+            restriction_until,
+            acted_by,
+            request.remote_addr
+        ))
+
+        conn.commit()
+        _notify_account_access_change(target.get('email') or '', new_status, reason, restriction_until)
+
+        cursor.execute('''
+            SELECT id, email, role,
+                   COALESCE(account_status, 'active') AS account_status,
+                   restriction_until,
+                   restriction_reason,
+                   account_status_updated_at
+            FROM users
+            WHERE id = %s
+            LIMIT 1
+        ''', (target_user_id,))
+        updated = cursor.fetchone() or {}
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': updated.get('id'),
+                'email': updated.get('email'),
+                'role': updated.get('role'),
+                'account_status': updated.get('account_status') or 'active',
+                'restriction_reason': updated.get('restriction_reason'),
+                'restriction_until': isoformat_ph(updated.get('restriction_until')),
+                'account_status_updated_at': isoformat_ph(updated.get('account_status_updated_at')),
+            }
+        })
+
+    except Exception as err:
+        print(f"[ERROR] admin_account_access_action: {err}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': 'Failed to update account.'}), 500
 
 
 def _resolve_chat_buyer_id(viewer_role, viewer_id, brand_owner_id, provided_buyer_id):
@@ -4388,10 +4990,36 @@ def login():
             cursor = conn.cursor(dictionary=True)
             cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
             user = cursor.fetchone()
-            cursor.close()
-            conn.close()
 
             if user and verify_user_password(user.get('password'), password):
+                # Account access control
+                account_status = (user.get('account_status') or 'active').lower()
+                restriction_until = user.get('restriction_until')
+
+                # Auto-unrestrict if restriction period has ended.
+                try:
+                    if account_status == 'restricted' and restriction_until and isinstance(restriction_until, datetime):
+                        if restriction_until <= datetime.utcnow():
+                            cursor.execute('''
+                                UPDATE users
+                                SET account_status = 'active',
+                                    restriction_until = NULL,
+                                    restriction_reason = NULL,
+                                    account_status_updated_at = NOW(),
+                                    account_status_updated_by = NULL
+                                WHERE id = %s
+                            ''', (user.get('id'),))
+                            conn.commit()
+                            account_status = 'active'
+                except Exception:
+                    pass
+
+                if account_status == 'banned':
+                    cursor.close()
+                    conn.close()
+                    flash('Your account has been banned. Please contact support.', 'error')
+                    return render_template('auth/login.html')
+
                 session.clear()
                 session['logged_in'] = True
                 session['user_id'] = user['id']
@@ -4399,10 +5027,17 @@ def login():
                 session['role'] = user['role']
                 session['first_name'] = user.get('first_name', 'User')
                 session['username'] = user.get('first_name', 'User')
+                session['session_version'] = int(user.get('session_version') or 0)
 
                 if user['role'] == 'buyer':
                     session['buyer_approval_status'] = _normalize_buyer_approval_status(user.get('buyer_approval_status'))
 
+
+                cursor.close()
+                conn.close()
+
+                if account_status == 'restricted':
+                    return redirect(url_for('account_restricted'))
 
                 if user['role'] == 'admin':
                     return redirect(url_for('dashboard'))
@@ -4415,10 +5050,17 @@ def login():
                 else:
                     return redirect(url_for('index'))
 
+            cursor.close()
+            conn.close()
+
             flash('Invalid email or password', 'error')
             return render_template('auth/login.html')
 
         except Exception as err:
+            try:
+                conn.close()
+            except Exception:
+                pass
             flash(f'Login error: {str(err)}', 'error')
             return render_template('auth/login.html')
 

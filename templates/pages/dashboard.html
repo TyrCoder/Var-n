@@ -573,32 +573,9 @@
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar">
-        <div class="logo">
-          <span class="dot"></span>
-          <span>Varón</span>
-        </div>
-        <p class="sidebar-note">Admin command deck for approvals, compliance, and fulfillment oversight.</p>
-        <p class="side-title">Workflow</p>
-        <nav class="nav-links">
-          <a href="#" class="side-link active" data-page="overview">Overview</a>
-          <a href="#" class="side-link" data-page="pending-products">Pending Products</a>
-          <a href="#" class="side-link" data-page="pending-riders">Pending Riders</a>
-          <a href="#" class="side-link" data-page="pending-buyers">Pending Buyers</a>
-          <a href="#" class="side-link" data-page="product-edits">Product Edits</a>
-          <a href="#" class="side-link" data-page="recovery-requests">Recovery Requests</a>
-          <a href="#" class="side-link" data-page="product">Products</a>
-          <a href="#" class="side-link" data-page="customer">Customers</a>
-          <a href="#" class="side-link" data-page="transactions">Transactions</a>
-          <a href="#" class="side-link" data-page="sellers">Active Sellers</a>
-          <a href="#" class="side-link" data-page="riders">Active Riders</a>
-          <a href="#" class="side-link" data-page="statistics">Statistics</a>
-          <a href="/admin/commission-report" class="side-link" onclick="window.location.href='/admin/commission-report'; return false;">Sales &amp; Commission<br>Report</a>
-          <a href="#" class="side-link" data-page="setting">System Settings</a>
-          <a href="#" class="side-link" data-page="help">Help & Support</a>
-        </nav>
-        <button type="button" class="logout-btn" onclick="confirmLogout(event)">Logout</button>
-      </aside>
+      {% set active_page = 'overview' %}
+      {% set is_dashboard = true %}
+      {% include 'partials/admin_sidebar.html' %}
       <section class="main-area">
         <header class="topbar">
           <div class="topbar-heading">

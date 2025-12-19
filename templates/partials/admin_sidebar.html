@@ -1,0 +1,38 @@
+{# Shared Admin Sidebar (used across admin pages) #}
+{# Expected context:
+   - active_page: string (e.g., 'overview', 'commission', 'account-access')
+   - is_dashboard: bool (true only for dashboard SPA sections)
+#}
+{% set _active = active_page or '' %}
+{% set _is_dashboard = true if is_dashboard else false %}
+
+<aside class="sidebar{% if _active in ['commission'] %} no-print{% endif %}">
+  <div class="logo">
+    <span class="dot"></span>
+    <span>Varón</span>
+  </div>
+  <p class="sidebar-note">Admin command deck for approvals, compliance, and fulfillment oversight.</p>
+  <p class="side-title">Workflow</p>
+  <nav class="nav-links">
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'overview' %} active{% endif %}" data-page="overview">Overview</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'pending-products' %} active{% endif %}" data-page="pending-products">Pending Products</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'pending-riders' %} active{% endif %}" data-page="pending-riders">Pending Riders</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'pending-buyers' %} active{% endif %}" data-page="pending-buyers">Pending Buyers</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'product-edits' %} active{% endif %}" data-page="product-edits">Product Edits</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'recovery-requests' %} active{% endif %}" data-page="recovery-requests">Recovery Requests</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'product' %} active{% endif %}" data-page="product">Products</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'customer' %} active{% endif %}" data-page="customer">Customers</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'transactions' %} active{% endif %}" data-page="transactions">Transactions</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'sellers' %} active{% endif %}" data-page="sellers">Active Sellers</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'riders' %} active{% endif %}" data-page="riders">Active Riders</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'statistics' %} active{% endif %}" data-page="statistics">Statistics</a>
+
+    <a href="/admin/commission-report" class="side-link{% if _active == 'commission' %} active{% endif %}">Sales &amp; Commission<br>Report</a>
+    <a href="/admin/account-access" class="side-link{% if _active == 'account-access' %} active{% endif %}">Account Access Control</a>
+
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'setting' %} active{% endif %}" data-page="setting">System Settings</a>
+    <a href="{% if _is_dashboard %}#{% else %}/dashboard{% endif %}" class="side-link{% if _active == 'help' %} active{% endif %}" data-page="help">Help &amp; Support</a>
+  </nav>
+
+  <a class="logout-btn logout-link" href="/logout">Logout</a>
+</aside>

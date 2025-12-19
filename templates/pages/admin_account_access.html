@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Account Access Control — Varón</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-3.2.7.min.css">
+    <style>
+      :root {
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --line: #e5e7eb;
+        --text: #0a0a0a;
+        --muted: #6b7280;
+        --accent: #0a0a0a;
+        --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        --danger: #dc2626;
+        --warning: #f97316;
+        --success: #16a34a;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 60%, #f3f4f6 100%);
+        color: var(--text);
+        min-height: 100vh;
+      }
+
+      h1, h2 {
+        font-family: 'Playfair Display', 'Inter', serif;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        background: var(--accent);
+        padding: 32px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        box-shadow: 16px 0 35px rgba(0,0,0,0.35);
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+      }
+
+      .sidebar::-webkit-scrollbar { width: 6px; }
+      .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+        border-radius: 999px;
+      }
+
+      .sidebar::-webkit-scrollbar { width: 6px; }
+      .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+        border-radius: 999px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #fff;
+      }
+
+      .logo .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #22d3ee;
+        box-shadow: 0 0 12px rgba(34,211,238,0.8);
+      }
+
+      .sidebar-note {
+        margin: 0;
+        color: rgba(255,255,255,0.65);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .sidebar-note {
+        margin: 0;
+        color: rgba(255,255,255,0.65);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .side-title {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.4);
+        margin: 18px 0 8px;
+      }
+
+      .side-link {
+        display: flex;
+        align-items: center;
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: transparent;
+        color: rgba(255,255,255,0.65);
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.2s, color 0.2s, transform 0.2s;
+      }
+
+      .side-link:hover,
+      .side-link.active {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        transform: translateX(4px);
+      }
+
+      .logout-link {
+        margin-top: auto;
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 12px;
+        padding: 12px;
+        background: transparent;
+        color: #fff;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-align: center;
+      }
+
+      .logout-link:hover { background: rgba(255,255,255,0.08); }
+
+      .main-area {
+        padding: 36px 48px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(243,244,246,0.95));
+        min-height: 100vh;
+      }
+
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 0 60px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .title { font-size: 24px; }
+      .subtitle { color: var(--muted); font-size: 13px; }
+
+      .btn {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: var(--accent);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn.secondary { background: #fff; color: var(--text); }
+
+      .panel {
+        margin-top: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 16px 18px;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .panel-title {
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .panel-meta {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 0;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+      }
+
+      .flash {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+      input[type="text"], input[type="number"], select, textarea {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+        min-width: 180px;
+      }
+
+      textarea { min-width: 280px; min-height: 42px; }
+
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 14px 14px; border-bottom: 1px solid var(--line); font-size: 14px; vertical-align: top; background: #fff; }
+      th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+      tbody tr:hover td { background: rgba(0,0,0,0.02); }
+
+      .user-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .user-name { font-weight: 800; color: var(--text); }
+      .user-email { color: var(--muted); font-size: 13px; }
+
+      .type-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: capitalize;
+        color: var(--text);
+        background: rgba(0,0,0,0.02);
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.active { color: var(--success); }
+      .badge.restricted { color: var(--warning); }
+      .badge.banned { color: var(--danger); }
+
+      .status-sub {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .btn.small {
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+      }
+
+      .btn.danger { background: var(--danger); border-color: rgba(220,38,38,0.35); }
+      .btn.warning { background: var(--warning); border-color: rgba(249,115,22,0.35); }
+
+      .edit-row {
+        display: none;
+        gap: 12px;
+        padding: 14px;
+        background: rgba(0,0,0,0.02);
+        border-top: 1px solid var(--line);
+      }
+
+      .edit-row.open { display: grid; grid-template-columns: 140px 1fr 120px 1fr auto; align-items: end; }
+      .edit-row textarea { min-width: 0; width: 100%; }
+      .edit-row input[type="number"],
+      .edit-row select,
+      .edit-row input[type="text"],
+      .edit-row textarea { min-width: 0; width: 100%; }
+
+      .edit-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: flex-end;
+      }
+
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .pager {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .pager a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--text);
+        font-weight: 700;
+        min-width: 92px;
+      }
+
+      .pager a[aria-disabled="true"] {
+        opacity: 0.45;
+        pointer-events: none;
+      }
+
+      .pager .page-indicator {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .row-actions {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width:1080px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .sidebar { position: relative; height: auto; }
+        .main-area { padding: 28px; }
+      }
+
+      @media (max-width:720px) {
+        .topbar { flex-direction: column; align-items: flex-start; }
+        .main-area { padding: 20px; }
+        .edit-row.open { grid-template-columns: 1fr; }
+        .pager a { min-width: 120px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      {% set active_page = 'account-access' %}
+      {% set is_dashboard = false %}
+      {% include 'partials/admin_sidebar.html' %}
+
+      <section class="main-area">
+        <div class="wrap">
+          <div class="topbar">
+            <div>
+              <h1 class="title">Account Access Control</h1>
+              <div class="subtitle">Restrict (temporary) or ban (long-term) accounts across buyers, sellers, and riders.</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <a class="btn secondary" href="/dashboard">Back to Admin Dashboard</a>
+            </div>
+          </div>
+
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="panel-title">Accounts</p>
+                <p class="panel-meta">Total: <strong>{{ total_count }}</strong> • Page <strong>{{ page }}</strong> of <strong>{{ total_pages }}</strong></p>
+              </div>
+              <form method="GET" action="/admin/account-access" style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+                <div>
+                  <label for="q">Search (email / name)</label>
+                  <input id="q" name="q" type="text" value="{{ q }}" placeholder="e.g. user@email.com">
+                </div>
+                <div>
+                  <input type="hidden" name="page" value="1">
+                  <button class="btn" type="submit">Search</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="min-width:220px;">Account Name</th>
+                    <th style="min-width:240px;">Email</th>
+                    <th style="min-width:140px;">Account Type</th>
+                    <th style="min-width:220px;">Status</th>
+                    <th style="min-width:260px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if users and users|length > 0 %}
+                    {% for u in users %}
+                      <tr id="user-row-{{ u.id }}" data-user-id="{{ u.id }}" data-status="{{ u.account_status }}">
+                        <td>
+                          <div class="user-cell">
+                            <div class="user-name">{{ (u.first_name or '') }} {{ (u.last_name or '') }}</div>
+                            <div class="user-email">ID {{ u.id }}</div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="user-cell">
+                            <div class="user-name">{{ u.email }}</div>
+                            <div class="user-email">—</div>
+                          </div>
+                        </td>
+                        <td><span class="type-pill">{{ u.role }}</span></td>
+                        <td>
+                          <span class="badge {{ u.account_status }}" id="status-badge-{{ u.id }}">{{ u.account_status }}</span>
+                          <div class="status-sub" id="status-sub-{{ u.id }}">
+                            {% if u.account_status == 'restricted' %}
+                              <div>Until: <span id="restriction-until-{{ u.id }}">{{ u.restriction_until or '—' }}</span></div>
+                              <div>Reason: <span id="restriction-reason-{{ u.id }}">{{ u.restriction_reason or '—' }}</span></div>
+                            {% elif u.account_status == 'banned' %}
+                              <div>Reason: <span id="restriction-reason-{{ u.id }}">{{ u.restriction_reason or '—' }}</span></div>
+                            {% else %}
+                              <span class="subtitle">—</span>
+                            {% endif %}
+                          </div>
+                        </td>
+                        <td>
+                          <div class="actions">
+                            <button class="btn small warning" type="button" onclick="openEditRow({{ u.id }}, 'restricted')">Restrict</button>
+                            <button class="btn small danger" type="button" onclick="openEditRow({{ u.id }}, 'banned')">Ban</button>
+                            <button class="btn small secondary" type="button" onclick="openEditRow({{ u.id }}, null)">Edit</button>
+                            <button class="btn small" type="button" onclick="setActive({{ u.id }})">Activate</button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colspan="5" style="padding:0; border-bottom:1px solid var(--line);">
+                          <div class="edit-row" id="edit-row-{{ u.id }}">
+                            <div>
+                              <label>Status</label>
+                              <select id="edit-status-{{ u.id }}">
+                                <option value="active">active</option>
+                                <option value="restricted">restricted</option>
+                                <option value="banned">banned</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label>Reason (required for restrict/ban)</label>
+                              <input id="edit-reason-{{ u.id }}" type="text" placeholder="Enter reason" value="{{ u.restriction_reason or '' }}">
+                            </div>
+                            <div>
+                              <label>Duration (days)</label>
+                              <input id="edit-duration-{{ u.id }}" type="number" placeholder="optional" min="1" step="1">
+                            </div>
+                            <div>
+                              <label>Notes</label>
+                              <textarea id="edit-notes-{{ u.id }}" placeholder="optional"></textarea>
+                            </div>
+                            <div class="edit-actions">
+                              <button class="btn secondary" type="button" onclick="closeEditRow({{ u.id }})">Cancel</button>
+                              <button class="btn" type="button" onclick="submitEdit({{ u.id }})">Save</button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  {% else %}
+                    <tr><td colspan="5" class="subtitle">No users found.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <div class="panel-meta">
+                {% set start_i = ((page - 1) * page_size) + 1 if total_count > 0 else 0 %}
+                {% set end_i = (page * page_size) if (page * page_size) < total_count else total_count %}
+                Showing <strong>{{ start_i }}</strong>–<strong>{{ end_i }}</strong> of <strong>{{ total_count }}</strong>
+              </div>
+              <div class="pager">
+                {% set prev_page = page - 1 %}
+                {% set next_page = page + 1 %}
+                <a href="{{ url_for('admin_account_access', q=q, page=prev_page) }}" aria-disabled="{{ 'true' if page <= 1 else 'false' }}">Previous</a>
+                <span class="page-indicator">Page {{ page }} / {{ total_pages }}</span>
+                <a href="{{ url_for('admin_account_access', q=q, page=next_page) }}" aria-disabled="{{ 'true' if page >= total_pages else 'false' }}">Next</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2 style="font-size: 18px; margin-bottom: 8px;">Recent Access Actions</h2>
+            <div class="subtitle">Audit log of restrictions, bans, and unbans.</div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Target</th>
+                  <th>Change</th>
+                  <th>Reason</th>
+                  <th>Until</th>
+                  <th>By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% if audits and audits|length > 0 %}
+                  {% for a in audits %}
+                    <tr>
+                      <td>{{ a.acted_at }}</td>
+                      <td>
+                        <div style="font-weight:700;">{{ a.target_email or ('User ' ~ a.target_user_id) }}</div>
+                        <div class="subtitle">{{ a.target_role or '—' }}</div>
+                      </td>
+                      <td>{{ a.previous_status or '—' }} → {{ a.new_status }}</td>
+                      <td>{{ a.reason or '—' }}</td>
+                      <td>{{ a.restriction_until or '—' }}</td>
+                      <td>{{ a.acted_by_email or '—' }}</td>
+                    </tr>
+                  {% endfor %}
+                {% else %}
+                  <tr>
+                    <td colspan="6" class="subtitle">No audit records yet.</td>
+                  </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-3.2.7.min.js"></script>
+    <script>
+      Notiflix.Notify.init({ position: 'right-top', distance: '16px' });
+      Notiflix.Loading.init({ svgColor: '#0a0a0a' });
+
+      const ACTION_URL = '/admin/account-access/action';
+
+      function openEditRow(userId, presetStatus) {
+        const row = document.getElementById('edit-row-' + userId);
+        const statusSelect = document.getElementById('edit-status-' + userId);
+        const reasonInput = document.getElementById('edit-reason-' + userId);
+        if (!row || !statusSelect) return;
+
+        document.querySelectorAll('.edit-row.open').forEach(el => {
+          if (el !== row) el.classList.remove('open');
+        });
+
+        const currentStatus = (document.getElementById('user-row-' + userId)?.dataset?.status || 'active');
+        statusSelect.value = presetStatus || currentStatus;
+        row.classList.add('open');
+
+        if (presetStatus === 'restricted' || presetStatus === 'banned') {
+          setTimeout(() => reasonInput?.focus(), 0);
+        }
+      }
+
+      function closeEditRow(userId) {
+        const row = document.getElementById('edit-row-' + userId);
+        if (row) row.classList.remove('open');
+      }
+
+      function setActive(userId) {
+        Notiflix.Confirm.show(
+          'Confirm',
+          'Set this account back to active?',
+          'Yes',
+          'Cancel',
+          () => performUpdate(userId, { new_status: 'active', reason: '' }),
+          () => {}
+        );
+      }
+
+      function submitEdit(userId) {
+        const status = (document.getElementById('edit-status-' + userId)?.value || '').trim();
+        const reason = (document.getElementById('edit-reason-' + userId)?.value || '').trim();
+        const durationDaysRaw = (document.getElementById('edit-duration-' + userId)?.value || '').trim();
+        const notes = (document.getElementById('edit-notes-' + userId)?.value || '').trim();
+        const duration_days = durationDaysRaw ? parseInt(durationDaysRaw, 10) : null;
+
+        if ((status === 'restricted' || status === 'banned') && !reason) {
+          Notiflix.Notify.failure('Reason is required for restrict/ban.');
+          return;
+        }
+
+        const confirmText = status === 'active'
+          ? 'Set this account to active?'
+          : status === 'restricted'
+            ? 'Restrict this account?'
+            : 'Ban this account?';
+
+        Notiflix.Confirm.show(
+          'Confirm',
+          confirmText,
+          'Proceed',
+          'Cancel',
+          () => performUpdate(userId, { new_status: status, reason, duration_days, notes }),
+          () => {}
+        );
+      }
+
+      async function performUpdate(userId, { new_status, reason, duration_days, notes }) {
+        Notiflix.Loading.standard('Updating...');
+        try {
+          const res = await fetch(ACTION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, new_status, reason, duration_days, notes })
+          });
+
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            throw new Error(data.error || 'Failed to update account');
+          }
+
+          applyRowUpdate(userId, data.user);
+          closeEditRow(userId);
+          Notiflix.Notify.success('Account updated successfully.');
+        } catch (err) {
+          Notiflix.Notify.failure(err?.message || 'Failed to update account');
+        } finally {
+          Notiflix.Loading.remove();
+        }
+      }
+
+      function applyRowUpdate(userId, user) {
+        const row = document.getElementById('user-row-' + userId);
+        const badge = document.getElementById('status-badge-' + userId);
+        const sub = document.getElementById('status-sub-' + userId);
+        const status = (user?.account_status || 'active').toLowerCase();
+
+        if (row) row.dataset.status = status;
+
+        if (badge) {
+          badge.classList.remove('active', 'restricted', 'banned');
+          badge.classList.add(status);
+          badge.textContent = status;
+        }
+
+        if (sub) {
+          if (status === 'restricted') {
+            sub.innerHTML = `
+              <div>Until: <span id="restriction-until-${userId}">${user?.restriction_until || '—'}</span></div>
+              <div>Reason: <span id="restriction-reason-${userId}">${user?.restriction_reason || '—'}</span></div>
+            `;
+          } else if (status === 'banned') {
+            sub.innerHTML = `
+              <div>Reason: <span id="restriction-reason-${userId}">${user?.restriction_reason || '—'}</span></div>
+            `;
+          } else {
+            sub.innerHTML = '<span class="subtitle">—</span>';
+          }
+        }
+      }
+
+      // Convert server flashes to Notiflix notifications and hide the banners.
+      (function showFlash() {
+        const banners = document.querySelectorAll('.flash');
+        banners.forEach(b => {
+          const msg = (b.textContent || '').trim();
+          if (!msg) return;
+          if (b.classList.contains('success')) Notiflix.Notify.success(msg);
+          else Notiflix.Notify.failure(msg);
+          b.style.display = 'none';
+        });
+      })();
+    </script>
+  </body>
+</html>

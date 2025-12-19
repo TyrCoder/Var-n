@@ -276,32 +276,9 @@
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar no-print">
-        <div class="logo">
-          <span class="dot"></span>
-          <span>Varón</span>
-        </div>
-        <p class="sidebar-note">Admin command deck for approvals, compliance, and fulfillment oversight.</p>
-        <p class="side-title">Workflow</p>
-        <nav class="nav-links">
-          <a href="/dashboard" class="side-link">Overview</a>
-          <a href="/dashboard" class="side-link">Pending Products</a>
-          <a href="/dashboard" class="side-link">Pending Riders</a>
-          <a href="/dashboard" class="side-link">Pending Buyers</a>
-          <a href="/dashboard" class="side-link">Product Edits</a>
-          <a href="/dashboard" class="side-link">Recovery Requests</a>
-          <a href="/dashboard" class="side-link">Products</a>
-          <a href="/dashboard" class="side-link">Customers</a>
-          <a href="/dashboard" class="side-link">Transactions</a>
-          <a href="/dashboard" class="side-link">Active Sellers</a>
-          <a href="/dashboard" class="side-link">Active Riders</a>
-          <a href="/dashboard" class="side-link">Statistics</a>
-          <a href="/admin/commission-report" class="side-link active">Sales &amp; Commission<br>Report</a>
-          <a href="/dashboard" class="side-link">System Settings</a>
-          <a href="/dashboard" class="side-link">Help &amp; Support</a>
-        </nav>
-        <a class="logout-link" href="/logout">Logout</a>
-      </aside>
+      {% set active_page = 'commission' %}
+      {% set is_dashboard = false %}
+      {% include 'partials/admin_sidebar.html' %}
 
       <section class="main-area">
         <div class="wrap">
@@ -359,10 +336,10 @@
         </div>
 
         <div class="no-print" style="display:flex; gap:12px; align-items:center; margin-top: 14px;">
-          <form method="POST" action="/admin/commission-report/withdraw" style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+          <form id="withdrawForm" method="POST" action="/admin/commission-report/withdraw" style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
             <input type="hidden" name="start_date" value="{{ start_date }}">
             <input type="hidden" name="end_date" value="{{ end_date }}">
-            <button class="btn" type="submit">Record Withdrawal (Unclaimed Only)</button>
+            <button id="withdrawBtn" class="btn" type="submit">Record Withdrawal (Unclaimed Only)</button>
           </form>
         </div>
 
@@ -447,5 +424,34 @@
         </div>
       </section>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-aio-3.2.7.min.js"></script>
+    <script>
+      (function () {
+        const form = document.getElementById('withdrawForm');
+        if (!form || typeof Notiflix === 'undefined') return;
+
+        const button = document.getElementById('withdrawBtn');
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+
+          Notiflix.Confirm.show(
+            'Confirm Withdrawal',
+            'Record withdrawal for unclaimed commissions in this date range?',
+            'Yes, record',
+            'Cancel',
+            function okCb() {
+              if (button) button.disabled = true;
+              Notiflix.Loading.standard('Recording withdrawal...');
+              form.submit();
+            },
+            function cancelCb() {
+              // do nothing
+            }
+          );
+        });
+      })();
+    </script>
   </body>
 </html>
