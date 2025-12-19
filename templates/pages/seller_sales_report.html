@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sales & Commission Report — Varón</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --line: #e5e7eb;
+        --text: #0a0a0a;
+        --muted: #6b7280;
+        --accent: #0a0a0a;
+        --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        --success: #16a34a;
+        --danger: #dc2626;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 60%, #f3f4f6 100%);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.6;
+      }
+
+      h1, h2, h3 {
+        font-family: 'Playfair Display', 'Inter', serif;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      /* Match SellerDashboard shell layout */
+      .app {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        min-height: 100vh;
+        background: transparent;
+        color: var(--text);
+      }
+
+      .sidebar {
+        background: #0a0a0a;
+        padding: 28px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        box-shadow: 16px 0 35px rgba(0, 0, 0, 0.35);
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+      }
+
+      .sidebar::-webkit-scrollbar { width: 6px; }
+      .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #fff;
+      }
+
+      .logo .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #22d3ee;
+        box-shadow: 0 0 12px rgba(34, 211, 238, 0.8);
+      }
+
+      .side-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .side-title {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+      }
+
+      .side-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        color: rgba(255, 255, 255, 0.7);
+        transition: background 0.2s ease, transform 0.2s ease;
+        font-weight: 500;
+      }
+
+      .side-link.active,
+      .side-link:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        transform: translateX(4px);
+      }
+
+      .content {
+        padding: 36px 48px;
+        background: var(--bg);
+        min-height: 100vh;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 22px;
+        box-shadow: var(--shadow);
+      }
+
+      .page-title {
+        font-size: 26px;
+        font-weight: 600;
+      }
+
+      .subtitle { color: var(--muted); font-size: 13px; }
+
+      .topbar-right {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 22px 0 60px;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: var(--accent);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn.secondary {
+        background: #fff;
+        color: var(--text);
+      }
+
+      .panel {
+        margin-top: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 16px 18px;
+      }
+
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: end;
+      }
+
+      label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+      input[type="date"] {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+        min-width: 160px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 14px;
+        background: #fff;
+      }
+
+      .card .k { color: var(--muted); font-size: 12px; }
+      .card .v { font-size: 20px; font-weight: 700; margin-top: 4px; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 12px 10px;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+        vertical-align: top;
+      }
+
+      th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .flash {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .flash.error { border-color: rgba(220, 38, 38, 0.35); }
+      .flash.success { border-color: rgba(22, 163, 74, 0.35); }
+
+      @media print {
+        .no-print { display: none !important; }
+        body { background: #fff; }
+        .sidebar { display: none !important; }
+        .content { padding: 0; background: #fff; }
+        .topbar, .panel { box-shadow: none; }
+      }
+
+      @media (max-width:1080px) {
+        .app { grid-template-columns: 1fr; }
+        .sidebar { position: relative; height: auto; }
+        .content { padding: 28px; }
+      }
+
+      @media (max-width:720px) {
+        .topbar { flex-direction: column; align-items: flex-start; }
+        .content { padding: 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar no-print">
+        <div class="logo">
+          <div class="dot"></div>
+          <strong>Seller Dashboard</strong>
+        </div>
+
+        <div class="side-group">
+          <div class="side-title">Store Management</div>
+          <a class="side-link" href="/seller-dashboard">Overview</a>
+          <a class="side-link" href="/seller-dashboard">Products</a>
+          <a class="side-link" href="/seller-dashboard" style="padding-left: 24px; font-size: 14px;">+ Add Product</a>
+          <a class="side-link" href="/seller-dashboard">Archived Products</a>
+          <a class="side-link" href="/seller-dashboard">Orders</a>
+          <a class="side-link" href="/seller-dashboard">Inventory</a>
+          <a class="side-link" href="/seller-dashboard">Customer Reviews</a>
+          <a class="side-link" href="/seller-dashboard">Notifications</a>
+        </div>
+
+        <div class="side-group">
+          <div class="side-title">Analytics</div>
+          <a class="side-link" href="/seller-dashboard">Sales Analytics</a>
+          <a class="side-link" href="/seller-dashboard">Performance</a>
+          <a class="side-link active" href="/seller/sales-report">Sales &amp; Commission Report</a>
+        </div>
+
+        <div class="side-group">
+          <div class="side-title">Settings</div>
+          <a class="side-link" href="/seller-dashboard">Account</a>
+        </div>
+
+        <a class="side-link" style="margin-top:auto; border: 1px solid rgba(255,255,255,0.25); justify-content:center;" href="/logout">Logout</a>
+      </aside>
+
+      <section class="content">
+        <div class="topbar">
+          <div>
+            <div class="page-title">Sales &amp; Commission Report</div>
+            <div class="subtitle">Brand: {{ seller.store_name if seller else 'Your Brand' }}</div>
+          </div>
+          <div class="topbar-right no-print">
+            <a class="btn secondary" href="/seller-dashboard">Back to Dashboard</a>
+            <button class="btn" type="button" onclick="window.print()">Export PDF</button>
+          </div>
+        </div>
+
+        <div class="wrap">
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="panel no-print">
+        <form method="GET" action="/seller/sales-report">
+          <div class="filters">
+            <div>
+              <label for="start_date">Start date</label>
+              <input id="start_date" name="start_date" type="date" value="{{ start_date }}" required>
+            </div>
+            <div>
+              <label for="end_date">End date</label>
+              <input id="end_date" name="end_date" type="date" value="{{ end_date }}" required>
+            </div>
+            <div>
+              <button class="btn" type="submit">Apply</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="subtitle">Date range: <strong>{{ start_date }}</strong> to <strong>{{ end_date }}</strong> • Status: <strong>delivered</strong> • Commission rate: <strong>{{ commission_rate }}%</strong></div>
+
+        <div class="cards">
+          <div class="card">
+            <div class="k">Subtotal</div>
+            <div class="v">₱{{ '%.2f'|format(totals.subtotal) }}</div>
+          </div>
+          <div class="card">
+            <div class="k">Admin Commission</div>
+            <div class="v">₱{{ '%.2f'|format(totals.commission) }}</div>
+          </div>
+          <div class="card">
+            <div class="k">Seller Net Earnings</div>
+            <div class="v">₱{{ '%.2f'|format(totals.net) }}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Date</th>
+              <th>Product</th>
+              <th style="text-align:right;">Qty</th>
+              <th style="text-align:right;">Unit Price</th>
+              <th style="text-align:right;">Subtotal</th>
+              <th style="text-align:right;">Admin Commission</th>
+              <th style="text-align:right;">Seller Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if items and items|length > 0 %}
+              {% for row in items %}
+                <tr>
+                  <td>
+                    <div style="font-weight:700;">#{{ row.order_number }}</div>
+                    <div class="subtitle">{{ row.order_id }}</div>
+                  </td>
+                  <td>{{ row.created_at_display }}</td>
+                  <td>{{ row.product_name }}</td>
+                  <td style="text-align:right;">{{ row.quantity }}</td>
+                  <td style="text-align:right;">₱{{ '%.2f'|format(row.unit_price) }}</td>
+                  <td style="text-align:right;">₱{{ '%.2f'|format(row.subtotal) }}</td>
+                  <td style="text-align:right;">₱{{ '%.2f'|format(row.commission) }}</td>
+                  <td style="text-align:right;">₱{{ '%.2f'|format(row.net) }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="8" class="subtitle">No delivered sales in this date range.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

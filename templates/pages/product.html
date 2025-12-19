@@ -1441,8 +1441,9 @@
           <div id="stockStatus" class="stock-status" style="display:none;">
             <span>✓ In Stock</span>
           </div>
-          <div id="stockQuantity" style="display:none;padding:12px 16px;background:#f3f4f6;border-radius:8px;border:1px solid #e5e7eb;margin:16px 0;font-size:14px;font-weight:600;color:#374151;">
-            <span id="stockQuantityText"></span>
+          <!-- Always-visible exact stock count (variant-aware) -->
+          <div id="stockQuantity" style="display:block;padding:12px 16px;background:#f3f4f6;border-radius:8px;border:1px solid #e5e7eb;margin:16px 0;font-size:14px;font-weight:600;color:#374151;">
+            <span id="stockQuantityText">Stock available: —</span>
           </div>
 
           <div class="selection-group">
@@ -1806,7 +1807,29 @@
 
       // Store all available sizes
       const allSizes = {{ sizes|tojson|safe }};
-      const stockMap = {{ stock_map|tojson|safe }};
+      // NOTE: must be mutable because we refresh it from the API
+      let stockMap = {{ stock_map|tojson|safe }};
+
+      function getTotalStock() {
+        try {
+          return Object.values(stockMap || {}).reduce((sum, value) => sum + (parseInt(value, 10) || 0), 0);
+        } catch (e) {
+          return 0;
+        }
+      }
+
+      function getSelectedVariantStock() {
+        // If we can't uniquely identify a variant yet, return null so UI can show total stock.
+        const needsColor = hasColors;
+        const needsSize = hasSizes;
+        const colorOk = !needsColor || selectedColor;
+        const sizeOk = !needsSize || selectedSize;
+        if (!(colorOk && sizeOk)) return null;
+
+        const key = `${selectedSize || 'One Size'}_${selectedColor || 'Standard'}`;
+        const stock = stockMap?.[key];
+        return parseInt(stock, 10) || 0;
+      }
 
       // Function to sort sizes from smallest to largest
       function sortSizes(sizes) {
@@ -1835,28 +1858,34 @@
       function checkLowStock() {
         const lowStockIndicator = document.getElementById('lowStockIndicator');
         if (!lowStockIndicator) return;
-        
-        let minStock = Infinity;
-        
-        // Get minimum stock from all variants
-        Object.values(stockMap).forEach(stock => {
-          if (stock < minStock) {
-            minStock = stock;
-          }
-        });
-        
-        // Show indicator if stock is 10 or below
-        if (minStock <= 10 && minStock > 0) {
-          document.getElementById('lowStockCount').textContent = minStock;
-          lowStockIndicator.classList.add('show');
-        } else if (minStock <= 0) {
-          // Show out of stock
+
+        const stocks = Object.values(stockMap || {}).map(v => parseInt(v, 10) || 0);
+        const totalStock = stocks.reduce((sum, v) => sum + v, 0);
+
+        // Only show "out of stock" if the entire product has no stock across all variants.
+        if (totalStock <= 0) {
           document.getElementById('lowStockCount').textContent = '0';
           lowStockIndicator.innerHTML = '<span style="font-size: 18px;">🚫</span><span>This item is currently <strong>out of stock</strong></span>';
           lowStockIndicator.classList.add('show');
           lowStockIndicator.style.color = '#dc2626';
           lowStockIndicator.style.borderColor = '#fecaca';
           lowStockIndicator.style.background = '#fee2e2';
+          return;
+        }
+
+        // Low-stock alert is optional: use the minimum *positive* stock so a single 0-stock variant
+        // doesn't incorrectly show "out of stock" or skew the warning.
+        const positiveStocks = stocks.filter(v => v > 0);
+        const minPositive = positiveStocks.length ? Math.min(...positiveStocks) : 0;
+
+        if (minPositive > 0 && minPositive <= 10) {
+          lowStockIndicator.innerHTML = '<span style="font-size: 18px;">⚠️</span><span>Only <strong id="lowStockCount"></strong> items left in stock</span>';
+          document.getElementById('lowStockCount').textContent = minPositive;
+          lowStockIndicator.classList.add('show');
+          // Reset default low-stock styling
+          lowStockIndicator.style.color = '#ea580c';
+          lowStockIndicator.style.borderColor = '#fed7aa';
+          lowStockIndicator.style.background = '#fff7ed';
         } else {
           lowStockIndicator.classList.remove('show');
         }
@@ -2081,11 +2110,17 @@
           
           // Rebuild stockMap from fresh data
           if (data.variants && Array.isArray(data.variants)) {
-            stockMap = {};
+            // If API returns no variants, keep existing stockMap (covers non-variant products).
+            if (data.variants.length === 0) {
+              return;
+            }
+            const nextStockMap = {};
             data.variants.forEach(variant => {
               const key = `${variant.size || 'One Size'}_${variant.color || 'Standard'}`;
-              stockMap[key] = variant.stock_quantity || 0;
+              const qty = (variant.stock_quantity ?? variant.available_quantity ?? variant.stock ?? 0);
+              nextStockMap[key] = parseInt(qty, 10) || 0;
             });
+            stockMap = nextStockMap;
             console.log('[DEBUG refreshStockMap] Updated stockMap:', stockMap);
           }
         } catch (error) {
@@ -2098,45 +2133,63 @@
         const stockQuantityEl = document.getElementById('stockQuantity');
         const stockQuantityText = document.getElementById('stockQuantityText');
 
-        // Get current stock based on selected variant
-        let currentStock = 0;
-        
-        // Build key to match the stock_map format from backend: size_color
-        const key = `${selectedSize}_${selectedColor}`;
-        let stock = stockMap[key];
-        
-        console.log('[DEBUG updateStock] key:', key, 'stock:', stock);
-        console.log('[DEBUG updateStock] stockMap:', stockMap);
-        
-        // Fallback: try to find stock by any key if not found
-        if (stock === undefined) {
-          // Try alternate format
-          const altKey = `${selectedSize || 'One Size'}_${selectedColor || 'Standard'}`;
-          stock = stockMap[altKey];
-          console.log('[DEBUG updateStock] Trying altKey:', altKey, 'stock:', stock);
-        }
-        
-        // If still not found, try to get any available stock from map
-        if (stock === undefined) {
-          stock = Object.values(stockMap)[0];
-          console.log('[DEBUG updateStock] Using first value from stockMap:', stock);
-        }
-        
-        currentStock = parseInt(stock) || 0;
-        console.log('[DEBUG updateStock] Final currentStock:', currentStock);
+        const variantStock = getSelectedVariantStock();
+        const totalStock = getTotalStock();
+        const effectiveStock = variantStock === null ? totalStock : variantStock;
 
-        // Display stock information
-        if (currentStock > 0 && currentStock <= 5) {
+        const missingParts = [];
+        if (hasSizes && !selectedSize) missingParts.push(isGroomingProduct ? 'volume' : 'size');
+        if (hasColors && !selectedColor) missingParts.push('color');
+
+        // Always show the numeric stock count to users.
+        if (stockQuantityEl) stockQuantityEl.style.display = 'block';
+        if (stockQuantityText) {
+          if (variantStock === null && (hasColors || hasSizes)) {
+            // Prompt user to choose required variant options to see exact stock.
+            const prompt = missingParts.length > 0
+              ? `Select ${missingParts.join('/')} to see stock`
+              : 'Select size/color to see stock';
+            stockQuantityText.textContent = `Stock available: — (${prompt})`;
+          } else {
+            stockQuantityText.textContent = `Stock available: ${effectiveStock}`;
+          }
+        }
+
+        // Optional visual alert (badge) — used only as an alert.
+        if (!stockStatusEl) return;
+
+        // If variant isn't selected yet, don't show out-of-stock/low-stock badge
+        // because we don't know which specific variant the buyer wants.
+        if (variantStock === null && (hasColors || hasSizes)) {
+          stockStatusEl.style.display = 'none';
+          return;
+        }
+
+        if (effectiveStock <= 0) {
           stockStatusEl.style.display = 'flex';
-          stockQuantityEl.style.display = 'block';
-          stockQuantityText.textContent = `Only ${currentStock} left in stock`;
           stockStatusEl.style.background = '#fee2e2';
           stockStatusEl.style.borderColor = '#fecaca';
           stockStatusEl.style.color = '#dc2626';
-          stockStatusEl.innerHTML = '<span style="color:#dc2626;">⚠️ Low Stock</span>';
+          stockStatusEl.innerHTML = '<span style="color:#dc2626;">🚫 Out of Stock</span>';
+        } else if (effectiveStock <= 5) {
+          stockStatusEl.style.display = 'flex';
+          stockStatusEl.style.background = '#fff7ed';
+          stockStatusEl.style.borderColor = '#fed7aa';
+          stockStatusEl.style.color = '#b45309';
+          stockStatusEl.innerHTML = '<span style="color:#b45309;">⚠️ Low Stock</span>';
         } else {
           stockStatusEl.style.display = 'none';
-          stockQuantityEl.style.display = 'none';
+        }
+      }
+
+      async function refreshStockAndUpdateUI() {
+        await refreshStockMap();
+        updateStockDisplay();
+        // Keep low-stock callout in sync (optional alert)
+        try { checkLowStock(); } catch (e) {}
+        // If a color is selected, refresh available sizes (stock-aware)
+        if (hasColors && selectedColor) {
+          try { updateSizesForColor(selectedColor); } catch (e) {}
         }
       }
 
@@ -2171,17 +2224,15 @@
           const currentValue = parseInt(input.value) || 1;
           const newValue = currentValue + 1;
           
-          // Check stock if variations are selected
-          if ((hasColors && selectedColor) || (hasSizes && selectedSize)) {
-            const key = `${selectedSize}_${selectedColor}`;
-            const stock = stockMap[key] || 0;
-            
-            if (newValue > stock) {
-              showStockWarning(stock);
+          // Enforce stock limits only when selection is complete (variant stock is known)
+          const selectionComplete = (!hasColors || selectedColor) && (!hasSizes || selectedSize);
+          if (selectionComplete) {
+            const availableStock = getSelectedVariantStock();
+            if (availableStock !== null && newValue > availableStock) {
+              showStockWarning(availableStock);
               return;
-            } else {
-              hideStockWarning();
             }
+            hideStockWarning();
           }
           
           input.value = newValue;
@@ -2288,7 +2339,7 @@
 
         // Check stock availability
         // Build key to match the stock_map format from backend: size_color
-        const key = `${selectedSize}_${selectedColor}`;
+        const key = `${selectedSize || 'One Size'}_${selectedColor || 'Standard'}`;
         let stock = stockMap[key];
         
         console.log('[DEBUG addToCart] stockMap:', stockMap);
@@ -2406,6 +2457,25 @@
 
 
       checkSelection();
+
+      // Initial stock render + lightweight real-time refresh.
+      // This keeps the visible stock count current after orders/cancellations/restocks.
+      (function initStockRealtime() {
+        try { updateStockDisplay(); } catch (e) {}
+
+        // Refresh when the user returns to the tab/window
+        window.addEventListener('focus', () => { refreshStockAndUpdateUI(); });
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) refreshStockAndUpdateUI();
+        });
+
+        // Poll while visible (simple “real-time” without websockets)
+        setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            refreshStockAndUpdateUI();
+          }
+        }, 20000);
+      })();
 
 
       function confirmLogout(event) {
@@ -2548,10 +2618,14 @@
           }
 
           if (window.VaronCart) {
-              const success = await VaronCart.update(cartId, newQuantity);
-              if (success) {
-                  await renderCartItems();
-              }
+            const result = await VaronCart.update(cartId, newQuantity);
+            if (result && result.success) {
+              await renderCartItems();
+            } else {
+              const msg = (result && result.error) ? result.error : 'Unable to update cart.';
+              try { VaronCart.showMessage(msg, 'error'); } catch (e) { alert(msg); }
+              await renderCartItems();
+            }
           }
       }
 

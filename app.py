@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
 from functools import wraps
+from datetime import datetime, date
 import os
 import json
 import mysql.connector
@@ -1440,6 +1441,43 @@ def init_db():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
 
 
+        cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawals (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            amount DECIMAL(12,2) NOT NULL,
+            claimed_by INT NULL,
+            claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            notes VARCHAR(255),
+            INDEX idx_claimed_at (claimed_at),
+            FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+        # Older versions of this feature used a UNIQUE (start_date, end_date) constraint,
+        # which blocks additional withdrawals when new delivered orders appear later.
+        # Keep withdrawals append-only and rely on per-order uniqueness in
+        # admin_commission_withdrawal_orders to prevent double-claiming.
+        try:
+            cursor.execute("SHOW INDEX FROM admin_commission_withdrawals WHERE Key_name = 'uniq_range'")
+            if cursor.fetchone():
+                cursor.execute('ALTER TABLE admin_commission_withdrawals DROP INDEX uniq_range')
+                print('[DB INIT] Dropped admin_commission_withdrawals.uniq_range to allow multiple withdrawals per date range')
+        except Exception as e:
+            print(f"[DB INIT] Unable to drop admin_commission_withdrawals.uniq_range: {e}")
+
+
+        cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawal_orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            withdrawal_id INT NOT NULL,
+            order_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_order (order_id),
+            INDEX idx_withdrawal (withdrawal_id),
+            FOREIGN KEY (withdrawal_id) REFERENCES admin_commission_withdrawals(id) ON DELETE CASCADE,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+
         try:
             cursor.execute("SHOW TABLES LIKE 'coupons'")
             if cursor.fetchone():
@@ -1786,7 +1824,7 @@ def product_page(product_id):
                 cursor.execute('''
                     SELECT size, color, stock_quantity
                     FROM product_variants
-                    WHERE product_id = %s
+                    WHERE product_id = %s AND is_active = 1
                     ORDER BY size, color
                 ''', (product_id,))
 
@@ -2046,6 +2084,872 @@ def _safe_int(value):
         return None
 
 
+def _safe_date_ymd(value: str):
+    """Parse YYYY-MM-DD safely; returns ISO string or None."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.strptime(value.strip(), '%Y-%m-%d').date()
+        return parsed.isoformat()
+    except Exception:
+        return None
+
+
+def _default_date_range(days: int = 30):
+    today = date.today()
+    start = (today.toordinal() - days)
+    start_date = date.fromordinal(start)
+    return start_date.isoformat(), today.isoformat()
+
+
+def _require_role(required_role: str):
+    if not session.get('logged_in') or session.get('role') != required_role:
+        flash('Access denied. Please log in first.', 'error')
+        return False
+    return True
+
+
+def ensure_admin_commission_tables(cursor):
+    """Idempotently ensure commission withdrawal tables exist for legacy DBs."""
+    cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawals (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        amount DECIMAL(12,2) NOT NULL,
+        claimed_by INT NULL,
+        claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes VARCHAR(255),
+        INDEX idx_claimed_at (claimed_at),
+        FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+    # Drop old uniq_range constraint if present.
+    try:
+        cursor.execute("SHOW INDEX FROM admin_commission_withdrawals WHERE Key_name = 'uniq_range'")
+        if cursor.fetchone():
+            cursor.execute('ALTER TABLE admin_commission_withdrawals DROP INDEX uniq_range')
+    except Exception:
+        pass
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawal_orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        withdrawal_id INT NOT NULL,
+        order_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_order (order_id),
+        INDEX idx_withdrawal (withdrawal_id),
+        FOREIGN KEY (withdrawal_id) REFERENCES admin_commission_withdrawals(id) ON DELETE CASCADE,
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+
+def _get_table_columns(cursor, table_name: str):
+    try:
+        cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+        rows = cursor.fetchall() or []
+        return {str(r.get('Field') or '').lower() for r in rows if r.get('Field')}
+    except Exception:
+        return set()
+
+
+def _pick_existing_column(columns_lower: set, candidates: list[str]):
+    for candidate in candidates:
+        if candidate.lower() in columns_lower:
+            return candidate
+    return None
+
+
+def ensure_admin_commission_ledger_tables(cursor):
+    """Ledger persists per-item commissions so reporting/withdrawals are fully audit-ready."""
+    cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_ledger (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_id INT NOT NULL,
+        order_number VARCHAR(64) NULL,
+        order_created_at TIMESTAMP NULL,
+        order_completed_at TIMESTAMP NULL,
+        order_status VARCHAR(32) NULL,
+        seller_id INT NOT NULL,
+        order_item_id INT NOT NULL,
+        product_name VARCHAR(255) NULL,
+        quantity INT NOT NULL DEFAULT 0,
+        item_subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        commission_rate DECIMAL(7,3) NOT NULL DEFAULT 0.000,
+        commission_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_order_item (order_item_id),
+        INDEX idx_order_created_at (order_created_at),
+        INDEX idx_order_completed_at (order_completed_at),
+        INDEX idx_seller_id (seller_id),
+        INDEX idx_order_id (order_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
+    # Schema upgrades for existing DBs.
+    try:
+        cols = _get_table_columns(cursor, 'admin_commission_ledger')
+        if 'order_completed_at' not in cols:
+            cursor.execute('ALTER TABLE admin_commission_ledger ADD COLUMN order_completed_at TIMESTAMP NULL AFTER order_created_at')
+        cursor.execute("SHOW INDEX FROM admin_commission_ledger WHERE Key_name = 'idx_order_completed_at'")
+        if not cursor.fetchone():
+            cursor.execute('CREATE INDEX idx_order_completed_at ON admin_commission_ledger(order_completed_at)')
+    except Exception:
+        pass
+
+
+def backfill_admin_commission_ledger(cursor, start_date: str | None = None, end_date: str | None = None, order_id: int | None = None):
+    """Insert missing ledger rows for completed/delivered orders (schema-tolerant).
+
+    Uses an order *completion* timestamp for date filtering/reporting where possible
+    (shipments.delivered_at -> orders.updated_at -> orders.created_at).
+    """
+    ensure_admin_commission_ledger_tables(cursor)
+
+    orders_cols = _get_table_columns(cursor, 'orders')
+    items_cols = _get_table_columns(cursor, 'order_items')
+    shipments_cols = _get_table_columns(cursor, 'shipments')
+
+    status_col = _pick_existing_column(orders_cols, ['order_status', 'status']) or 'order_status'
+    created_col = _pick_existing_column(orders_cols, ['created_at', 'order_date', 'date_created']) or 'created_at'
+    updated_col = _pick_existing_column(orders_cols, ['updated_at', 'date_updated'])
+    order_number_col = _pick_existing_column(orders_cols, ['order_number', 'reference', 'order_ref'])
+
+    qty_col = _pick_existing_column(items_cols, ['quantity', 'qty']) or 'quantity'
+    subtotal_col = _pick_existing_column(items_cols, ['subtotal', 'total', 'total_price', 'line_total']) or 'subtotal'
+    product_name_col = _pick_existing_column(items_cols, ['product_name', 'name', 'title'])
+
+    # Base filter: orders that represent finalized delivery/receipt.
+    finalized_statuses = ('delivered', 'completed')
+
+    where = [f"o.{status_col} IN (%s, %s)"]
+    params: list = [finalized_statuses[0], finalized_statuses[1]]
+
+    use_shipments_delivered_at = 'delivered_at' in shipments_cols
+    if use_shipments_delivered_at:
+        completed_expr = f"COALESCE(sh.delivered_at, o.{updated_col}, o.{created_col})" if updated_col else f"COALESCE(sh.delivered_at, o.{created_col})"
+        shipments_join = "LEFT JOIN shipments sh ON sh.order_id = o.id"
+    else:
+        completed_expr = f"COALESCE(o.{updated_col}, o.{created_col})" if updated_col else f"o.{created_col}"
+        shipments_join = ""
+
+    if order_id is not None:
+        where.append("o.id = %s")
+        params.append(order_id)
+    elif start_date and end_date:
+        where.append(f"DATE({completed_expr}) BETWEEN %s AND %s")
+        params.extend([start_date, end_date])
+
+    order_number_select = f"o.{order_number_col} AS order_number" if order_number_col else "CAST(o.id AS CHAR) AS order_number"
+    product_name_select = f"oi.{product_name_col} AS product_name" if product_name_col else "NULL AS product_name"
+
+    # Only insert rows not already in ledger.
+    cursor.execute(f'''
+        INSERT INTO admin_commission_ledger (
+            order_id,
+            order_number,
+            order_created_at,
+            order_completed_at,
+            order_status,
+            seller_id,
+            order_item_id,
+            product_name,
+            quantity,
+            item_subtotal,
+            commission_rate,
+            commission_amount
+        )
+        SELECT
+            o.id AS order_id,
+            {order_number_select},
+            o.{created_col} AS order_created_at,
+            {completed_expr} AS order_completed_at,
+            o.{status_col} AS order_status,
+            o.seller_id AS seller_id,
+            oi.id AS order_item_id,
+            {product_name_select},
+            COALESCE(oi.{qty_col}, 0) AS quantity,
+            COALESCE(oi.{subtotal_col}, 0) AS item_subtotal,
+            COALESCE(s.commission_rate, 0) AS commission_rate,
+            (COALESCE(oi.{subtotal_col}, 0) * COALESCE(s.commission_rate, 0)) / 100.0 AS commission_amount
+        FROM orders o
+        {shipments_join}
+        JOIN order_items oi ON oi.order_id = o.id
+        JOIN sellers s ON s.id = o.seller_id
+        LEFT JOIN admin_commission_ledger l ON l.order_item_id = oi.id
+        WHERE {' AND '.join(where)}
+          AND l.order_item_id IS NULL
+    ''', tuple(params))
+
+    try:
+        inserted = int(cursor.rowcount or 0)
+    except Exception:
+        inserted = 0
+    return inserted
+
+
+@app.route('/seller/sales-report', methods=['GET'])
+def seller_sales_report():
+    if not _require_role('seller'):
+        return redirect(url_for('login'))
+
+    start_default, end_default = _default_date_range(30)
+    start_date = _safe_date_ymd(request.args.get('start_date')) or start_default
+    end_date = _safe_date_ymd(request.args.get('end_date')) or end_default
+
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('seller_dashboard'))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+
+        cursor.execute('SELECT id, store_name, commission_rate FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        if not seller:
+            cursor.close()
+            conn.close()
+            flash('Seller not found', 'error')
+            return redirect(url_for('seller_dashboard'))
+
+        seller_id = seller['id']
+        commission_rate = float(seller.get('commission_rate') or 0)
+
+        cursor.execute('''
+            SELECT
+                o.id AS order_id,
+                o.order_number,
+                o.created_at,
+                oi.product_name,
+                oi.quantity,
+                oi.unit_price,
+                oi.subtotal AS item_subtotal
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+            WHERE o.seller_id = %s
+              AND o.order_status = 'delivered'
+              AND DATE(o.created_at) BETWEEN %s AND %s
+            ORDER BY o.created_at DESC, o.id DESC, oi.id ASC
+        ''', (seller_id, start_date, end_date))
+        rows = cursor.fetchall() or []
+
+        items = []
+        subtotal_total = 0.0
+        commission_total = 0.0
+
+        for row in rows:
+            item_subtotal = float(row.get('item_subtotal') or 0)
+            item_commission = (item_subtotal * commission_rate) / 100.0
+            item_net = item_subtotal - item_commission
+            subtotal_total += item_subtotal
+            commission_total += item_commission
+
+            created_at = row.get('created_at')
+            items.append({
+                'order_id': row.get('order_id'),
+                'order_number': row.get('order_number'),
+                'created_at_display': format_ph_time(created_at, '%b %d, %Y %I:%M %p') if created_at else '',
+                'product_name': row.get('product_name'),
+                'quantity': int(row.get('quantity') or 0),
+                'unit_price': float(row.get('unit_price') or 0),
+                'subtotal': item_subtotal,
+                'commission': item_commission,
+                'net': item_net,
+            })
+
+        cursor.close()
+        conn.close()
+
+        totals = {
+            'subtotal': subtotal_total,
+            'commission': commission_total,
+            'net': subtotal_total - commission_total,
+        }
+
+        return render_template(
+            'pages/seller_sales_report.html',
+            seller=seller,
+            start_date=start_date,
+            end_date=end_date,
+            commission_rate=commission_rate,
+            items=items,
+            totals=totals,
+        )
+
+    except Exception as err:
+        print(f"[ERROR] seller_sales_report: {err}")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        flash('Unable to load report right now.', 'error')
+        return redirect(url_for('seller_dashboard'))
+
+
+@app.route('/api/seller/sales-report', methods=['GET'])
+def api_seller_sales_report():
+    if not session.get('logged_in') or session.get('role') != 'seller':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    start_default, end_default = _default_date_range(30)
+    start_date = _safe_date_ymd(request.args.get('start_date')) or start_default
+    end_date = _safe_date_ymd(request.args.get('end_date')) or end_default
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        user_id = session.get('user_id')
+
+        cursor.execute('SELECT id, store_name, commission_rate FROM sellers WHERE user_id = %s', (user_id,))
+        seller = cursor.fetchone()
+        if not seller:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Seller not found'}), 404
+
+        seller_id = seller['id']
+        commission_rate = float(seller.get('commission_rate') or 0)
+
+        cursor.execute('''
+            SELECT
+                o.id AS order_id,
+                o.order_number,
+                o.created_at,
+                oi.product_name,
+                oi.quantity,
+                oi.unit_price,
+                oi.subtotal AS item_subtotal
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+            WHERE o.seller_id = %s
+              AND o.order_status = 'delivered'
+              AND DATE(o.created_at) BETWEEN %s AND %s
+            ORDER BY o.created_at DESC, o.id DESC, oi.id ASC
+        ''', (seller_id, start_date, end_date))
+        rows = cursor.fetchall() or []
+
+        items = []
+        subtotal_total = 0.0
+        commission_total = 0.0
+
+        for row in rows:
+            item_subtotal = float(row.get('item_subtotal') or 0)
+            item_commission = (item_subtotal * commission_rate) / 100.0
+            item_net = item_subtotal - item_commission
+            subtotal_total += item_subtotal
+            commission_total += item_commission
+            created_at = row.get('created_at')
+            items.append({
+                'order_id': row.get('order_id'),
+                'order_number': row.get('order_number'),
+                'created_at': isoformat_ph(created_at) if created_at else None,
+                'product_name': row.get('product_name'),
+                'quantity': int(row.get('quantity') or 0),
+                'unit_price': float(row.get('unit_price') or 0),
+                'subtotal': item_subtotal,
+                'commission': item_commission,
+                'net': item_net,
+            })
+
+        cursor.close()
+        conn.close()
+
+        totals = {
+            'subtotal': subtotal_total,
+            'commission': commission_total,
+            'net': subtotal_total - commission_total,
+        }
+
+        return jsonify({
+            'success': True,
+            'start_date': start_date,
+            'end_date': end_date,
+            'seller': {
+                'id': seller_id,
+                'store_name': seller.get('store_name'),
+                'commission_rate': commission_rate,
+            },
+            'totals': totals,
+            'items': items,
+        }), 200
+    except Exception as err:
+        print(f"[ERROR] api_seller_sales_report: {err}")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': 'Unable to load report right now.'}), 500
+
+
+@app.route('/admin/commission-report', methods=['GET'])
+def admin_commission_report():
+    if not _require_role('admin'):
+        return redirect(url_for('login'))
+
+    start_default, end_default = _default_date_range(30)
+    start_date = _safe_date_ymd(request.args.get('start_date')) or start_default
+    end_date = _safe_date_ymd(request.args.get('end_date')) or end_default
+
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('dashboard'))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_admin_commission_tables(cursor)
+        ensure_admin_commission_ledger_tables(cursor)
+        reconciled = backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
+        if reconciled:
+            flash(f'Reconciled {reconciled} missing completed transactions into the Commission Report.', 'success')
+
+        cursor.execute('''
+            SELECT
+                l.order_id,
+                l.order_number,
+                l.order_created_at,
+                l.order_completed_at,
+                l.order_status,
+                l.order_item_id,
+                l.product_name,
+                l.quantity,
+                l.item_subtotal,
+                l.commission_rate,
+                l.commission_amount
+            FROM admin_commission_ledger l
+            WHERE DATE(COALESCE(l.order_completed_at, l.order_created_at)) BETWEEN %s AND %s
+              AND l.order_status IN ('delivered', 'completed')
+            ORDER BY COALESCE(l.order_completed_at, l.order_created_at) DESC, l.order_id DESC, l.order_item_id ASC
+        ''', (start_date, end_date))
+        item_rows = cursor.fetchall() or []
+
+        order_totals = {}
+        total_sales = 0.0
+        total_commission = 0.0
+        for r in item_rows:
+            order_id = r.get('order_id')
+            item_subtotal = float(r.get('item_subtotal') or 0)
+            item_commission = float(r.get('commission_amount') or 0)
+            total_sales += item_subtotal
+            total_commission += item_commission
+            if order_id not in order_totals:
+                order_totals[order_id] = 0.0
+            order_totals[order_id] += item_commission
+
+        cursor.execute('''
+            SELECT wo.order_id, w.claimed_at
+            FROM admin_commission_withdrawal_orders wo
+            JOIN admin_commission_withdrawals w ON w.id = wo.withdrawal_id
+        ''')
+        claim_rows = cursor.fetchall() or []
+        claimed_by_order = {row.get('order_id'): row.get('claimed_at') for row in claim_rows if row.get('order_id')}
+
+        items = []
+        for r in item_rows:
+            order_id = r.get('order_id')
+            completed_at = r.get('order_completed_at') or r.get('order_created_at')
+            item_commission = float(r.get('commission_amount') or 0)
+            claimed_at = claimed_by_order.get(order_id)
+            items.append({
+                'order_id': order_id,
+                'order_number': r.get('order_number'),
+                'date_display': format_ph_time(completed_at, '%b %d, %Y %I:%M %p') if completed_at else '',
+                'product_name': r.get('product_name'),
+                'quantity': int(r.get('quantity') or 0),
+                'commission': item_commission,
+                'order_total_commission': float(order_totals.get(order_id) or 0),
+                'claimed': bool(claimed_at),
+                'claimed_at_display': format_ph_time(claimed_at, '%b %d, %Y %I:%M %p') if claimed_at else '',
+            })
+
+        cursor.execute('''
+            SELECT w.id, w.start_date, w.end_date, w.amount, w.claimed_at, u.email AS claimed_by_email
+            FROM admin_commission_withdrawals w
+            LEFT JOIN users u ON u.id = w.claimed_by
+            ORDER BY w.claimed_at DESC, w.id DESC
+            LIMIT 25
+        ''')
+        withdrawal_rows = cursor.fetchall() or []
+        withdrawals = []
+        for w in withdrawal_rows:
+            claimed_at = w.get('claimed_at')
+            withdrawals.append({
+                'id': w.get('id'),
+                'start_date': (w.get('start_date') or '').isoformat() if hasattr(w.get('start_date'), 'isoformat') else str(w.get('start_date') or ''),
+                'end_date': (w.get('end_date') or '').isoformat() if hasattr(w.get('end_date'), 'isoformat') else str(w.get('end_date') or ''),
+                'amount': float(w.get('amount') or 0),
+                'claimed_at_display': format_ph_time(claimed_at, '%b %d, %Y %I:%M %p') if claimed_at else '',
+                'claimed_by_email': w.get('claimed_by_email'),
+            })
+
+        cursor.close()
+        conn.close()
+
+        totals = {
+            'sales': total_sales,
+            'commission': total_commission,
+            'net_to_sellers': total_sales - total_commission,
+        }
+
+        return render_template(
+            'pages/admin_commission_report.html',
+            start_date=start_date,
+            end_date=end_date,
+            totals=totals,
+            items=items,
+            withdrawals=withdrawals,
+        )
+
+    except Exception as err:
+        print(f"[ERROR] admin_commission_report: {err}")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        flash('Unable to load report right now.', 'error')
+        return render_template(
+            'pages/admin_commission_report.html',
+            start_date=start_date,
+            end_date=end_date,
+            totals={'sales': 0.0, 'commission': 0.0, 'net_to_sellers': 0.0},
+            items=[],
+            withdrawals=[],
+        ), 500
+
+
+@app.route('/admin_commission_report.html', methods=['GET'])
+def admin_commission_report_compat():
+    return redirect(url_for('admin_commission_report'))
+
+
+@app.route('/api/admin/commission-report', methods=['GET'])
+def api_admin_commission_report():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    start_default, end_default = _default_date_range(30)
+    start_date = _safe_date_ymd(request.args.get('start_date')) or start_default
+    end_date = _safe_date_ymd(request.args.get('end_date')) or end_default
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_admin_commission_tables(cursor)
+        ensure_admin_commission_ledger_tables(cursor)
+        reconciled = backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
+
+        cursor.execute('''
+            SELECT
+                l.order_id,
+                l.order_number,
+                l.order_created_at,
+                l.order_completed_at,
+                l.order_status,
+                l.order_item_id,
+                l.product_name,
+                l.quantity,
+                l.item_subtotal,
+                l.commission_rate,
+                l.commission_amount
+            FROM admin_commission_ledger l
+            WHERE DATE(COALESCE(l.order_completed_at, l.order_created_at)) BETWEEN %s AND %s
+              AND l.order_status IN ('delivered', 'completed')
+            ORDER BY COALESCE(l.order_completed_at, l.order_created_at) DESC, l.order_id DESC, l.order_item_id ASC
+        ''', (start_date, end_date))
+        item_rows = cursor.fetchall() or []
+
+        order_totals = {}
+        total_sales = 0.0
+        total_commission = 0.0
+        for r in item_rows:
+            order_id = r.get('order_id')
+            item_subtotal = float(r.get('item_subtotal') or 0)
+            item_commission = float(r.get('commission_amount') or 0)
+            total_sales += item_subtotal
+            total_commission += item_commission
+            if order_id not in order_totals:
+                order_totals[order_id] = 0.0
+            order_totals[order_id] += item_commission
+
+        cursor.execute('''
+            SELECT wo.order_id, w.claimed_at
+            FROM admin_commission_withdrawal_orders wo
+            JOIN admin_commission_withdrawals w ON w.id = wo.withdrawal_id
+        ''')
+        claim_rows = cursor.fetchall() or []
+        claimed_by_order = {row.get('order_id'): row.get('claimed_at') for row in claim_rows if row.get('order_id')}
+
+        items = []
+        for r in item_rows:
+            order_id = r.get('order_id')
+            completed_at = r.get('order_completed_at') or r.get('order_created_at')
+            item_commission = float(r.get('commission_amount') or 0)
+            claimed_at = claimed_by_order.get(order_id)
+            items.append({
+                'order_id': order_id,
+                'order_number': r.get('order_number'),
+                'date': isoformat_ph(completed_at) if completed_at else None,
+                'product_name': r.get('product_name'),
+                'quantity': int(r.get('quantity') or 0),
+                'commission': item_commission,
+                'order_total_commission': float(order_totals.get(order_id) or 0),
+                'claimed': bool(claimed_at),
+                'claimed_at': isoformat_ph(claimed_at) if claimed_at else None,
+            })
+
+        cursor.execute('''
+            SELECT w.id, w.start_date, w.end_date, w.amount, w.claimed_at, u.email AS claimed_by_email
+            FROM admin_commission_withdrawals w
+            LEFT JOIN users u ON u.id = w.claimed_by
+            ORDER BY w.claimed_at DESC, w.id DESC
+            LIMIT 25
+        ''')
+        withdrawal_rows = cursor.fetchall() or []
+        withdrawals = []
+        for w in withdrawal_rows:
+            claimed_at = w.get('claimed_at')
+            withdrawals.append({
+                'id': w.get('id'),
+                'start_date': (w.get('start_date') or '').isoformat() if hasattr(w.get('start_date'), 'isoformat') else str(w.get('start_date') or ''),
+                'end_date': (w.get('end_date') or '').isoformat() if hasattr(w.get('end_date'), 'isoformat') else str(w.get('end_date') or ''),
+                'amount': float(w.get('amount') or 0),
+                'claimed_at': isoformat_ph(claimed_at) if claimed_at else None,
+                'claimed_by_email': w.get('claimed_by_email'),
+            })
+
+        cursor.close()
+        conn.close()
+
+        totals = {
+            'sales': total_sales,
+            'commission': total_commission,
+            'net_to_sellers': total_sales - total_commission,
+        }
+
+        return jsonify({
+            'success': True,
+            'start_date': start_date,
+            'end_date': end_date,
+            'reconciled': int(reconciled or 0),
+            'totals': totals,
+            'items': items,
+            'withdrawals': withdrawals,
+        }), 200
+
+    except Exception as err:
+        print(f"[ERROR] api_admin_commission_report: {err}")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return jsonify({'success': False, 'error': 'Unable to load report right now.'}), 500
+
+
+@app.route('/admin/commission-report/withdraw', methods=['POST'])
+def admin_record_commission_withdrawal():
+    if not _require_role('admin'):
+        return redirect(url_for('login'))
+
+    start_date = _safe_date_ymd(request.form.get('start_date'))
+    end_date = _safe_date_ymd(request.form.get('end_date'))
+    if not start_date or not end_date:
+        flash('Invalid date range for withdrawal.', 'error')
+        return redirect(url_for('admin_commission_report'))
+
+    conn = get_db()
+    if not conn:
+        flash('Database error', 'error')
+        return redirect(url_for('admin_commission_report', start_date=start_date, end_date=end_date))
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_admin_commission_tables(cursor)
+        ensure_admin_commission_ledger_tables(cursor)
+        backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
+        claimed_by = session.get('user_id')
+
+        cursor.execute('''
+            SELECT l.order_id,
+                   COALESCE(SUM(l.commission_amount), 0) AS order_commission
+            FROM admin_commission_ledger l
+            LEFT JOIN admin_commission_withdrawal_orders wo ON wo.order_id = l.order_id
+                        WHERE DATE(COALESCE(l.order_completed_at, l.order_created_at)) BETWEEN %s AND %s
+              AND l.order_status IN ('delivered', 'completed')
+              AND wo.order_id IS NULL
+            GROUP BY l.order_id
+            HAVING order_commission > 0
+        ''', (start_date, end_date))
+        unclaimed_orders = cursor.fetchall() or []
+        if not unclaimed_orders:
+            cursor.close()
+            conn.close()
+            flash('No unclaimed commissions found for this date range.', 'error')
+            return redirect(url_for('admin_commission_report', start_date=start_date, end_date=end_date))
+
+        order_ids = [row['order_id'] for row in unclaimed_orders if row.get('order_id')]
+        if not order_ids:
+            cursor.close()
+            conn.close()
+            flash('No unclaimed commissions found for this date range.', 'error')
+            return redirect(url_for('admin_commission_report', start_date=start_date, end_date=end_date))
+
+        amount = 0.0
+        for row in unclaimed_orders:
+            amount += float(row.get('order_commission') or 0)
+
+        if amount <= 0:
+            cursor.close()
+            conn.close()
+            flash('Nothing to withdraw for the selected date range.', 'error')
+            return redirect(url_for('admin_commission_report', start_date=start_date, end_date=end_date))
+
+        cursor.execute('''
+            INSERT INTO admin_commission_withdrawals (start_date, end_date, amount, claimed_by)
+            VALUES (%s, %s, %s, %s)
+        ''', (start_date, end_date, amount, claimed_by))
+        withdrawal_id = cursor.lastrowid
+
+        placeholders = ','.join(['%s'] * len(order_ids))
+        cursor.execute(f'''
+            INSERT INTO admin_commission_withdrawal_orders (withdrawal_id, order_id)
+            SELECT %s AS withdrawal_id, l.order_id
+            FROM (
+                SELECT DISTINCT order_id
+                FROM admin_commission_ledger
+                WHERE order_id IN ({placeholders})
+            ) l
+            LEFT JOIN admin_commission_withdrawal_orders wo ON wo.order_id = l.order_id
+            WHERE wo.order_id IS NULL
+        ''', tuple([withdrawal_id] + order_ids))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash('Withdrawal recorded successfully.', 'success')
+        return redirect(url_for('admin_commission_report', start_date=start_date, end_date=end_date))
+    except Exception as err:
+        print(f"[ERROR] admin_record_commission_withdrawal: {err}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+        flash('Unable to record withdrawal (some orders may already be claimed).', 'error')
+        return redirect(url_for('admin_commission_report', start_date=start_date, end_date=end_date))
+
+
+@app.route('/api/admin/commission-report/withdraw', methods=['POST'])
+def api_admin_record_commission_withdrawal():
+    if not session.get('logged_in') or session.get('role') != 'admin':
+        return jsonify({'success': False, 'error': 'Access denied'}), 403
+
+    payload = request.get_json(silent=True) or {}
+    start_date = _safe_date_ymd(payload.get('start_date'))
+    end_date = _safe_date_ymd(payload.get('end_date'))
+
+    if not start_date or not end_date:
+        return jsonify({'success': False, 'error': 'Invalid date range'}), 400
+
+    # Ignore client-supplied amount; compute from unclaimed commissions server-side.
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        ensure_admin_commission_tables(cursor)
+        ensure_admin_commission_ledger_tables(cursor)
+        backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
+        claimed_by = session.get('user_id')
+
+        cursor.execute('''
+            SELECT l.order_id,
+                   COALESCE(SUM(l.commission_amount), 0) AS order_commission
+            FROM admin_commission_ledger l
+            LEFT JOIN admin_commission_withdrawal_orders wo ON wo.order_id = l.order_id
+            WHERE DATE(COALESCE(l.order_completed_at, l.order_created_at)) BETWEEN %s AND %s
+              AND l.order_status IN ('delivered', 'completed')
+              AND wo.order_id IS NULL
+            GROUP BY l.order_id
+            HAVING order_commission > 0
+        ''', (start_date, end_date))
+        unclaimed_orders = cursor.fetchall() or []
+
+        order_ids = [row['order_id'] for row in unclaimed_orders if row.get('order_id')]
+        if not order_ids:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'No unclaimed commissions found for this date range.'}), 409
+
+        amount = 0.0
+        for row in unclaimed_orders:
+            amount += float(row.get('order_commission') or 0)
+
+        if amount <= 0:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Nothing to withdraw for the selected date range.'}), 409
+
+        cursor.execute('''
+            INSERT INTO admin_commission_withdrawals (start_date, end_date, amount, claimed_by)
+            VALUES (%s, %s, %s, %s)
+        ''', (start_date, end_date, amount, claimed_by))
+        withdrawal_id = cursor.lastrowid
+
+        placeholders = ','.join(['%s'] * len(order_ids))
+        cursor.execute(f'''
+            INSERT INTO admin_commission_withdrawal_orders (withdrawal_id, order_id)
+            SELECT %s AS withdrawal_id, l.order_id
+            FROM (
+                SELECT DISTINCT order_id
+                FROM admin_commission_ledger
+                WHERE order_id IN ({placeholders})
+            ) l
+            LEFT JOIN admin_commission_withdrawal_orders wo ON wo.order_id = l.order_id
+            WHERE wo.order_id IS NULL
+        ''', tuple([withdrawal_id] + order_ids))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'withdrawal': {
+                'id': withdrawal_id,
+                'start_date': start_date,
+                'end_date': end_date,
+                'amount': amount,
+            }
+        }), 201
+
+    except Exception as err:
+        print(f"[ERROR] api_admin_record_commission_withdrawal: {err}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+        # Most common error here is UNIQUE constraint on order_id (double-claim prevention)
+        return jsonify({
+            'success': False,
+            'error': 'Unable to record withdrawal (some orders may already be claimed).'
+        }), 409
+
+
 def _resolve_chat_buyer_id(viewer_role, viewer_id, brand_owner_id, provided_buyer_id):
     normalized_role = (viewer_role or '').lower()
     if normalized_role == 'buyer':
@@ -2303,7 +3207,7 @@ def get_product_variants(product_id):
         cursor = conn.cursor(dictionary=True)
 
         cursor.execute('''
-            SELECT id, size, color
+            SELECT id, size, color, stock_quantity
             FROM product_variants
             WHERE product_id = %s AND is_active = 1
             ORDER BY size, color
@@ -2320,7 +3224,8 @@ def get_product_variants(product_id):
                 variants_list.append({
                     'id': v.get('id'),
                     'size': v.get('size'),
-                    'color': v.get('color')
+                    'color': v.get('color'),
+                    'stock_quantity': int(v.get('stock_quantity') or 0)
                 })
 
         return jsonify({'success': True, 'variants': variants_list})
@@ -9248,6 +10153,13 @@ def api_complete_order():
             WHERE id = %s
         ''', (order_id,))
 
+        # Persist commission transactions for audit-ready reporting.
+        try:
+            ensure_admin_commission_ledger_tables(cursor)
+            backfill_admin_commission_ledger(cursor, order_id=int(order_id))
+        except Exception as ledger_err:
+            print(f"[WARN] commission ledger record failed for order {order_id}: {ledger_err}")
+
         conn.commit()
         cursor.close()
         conn.close()
@@ -11674,23 +12586,57 @@ def api_update_cart():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         user_id = session.get('user_id')
         cart_id = data.get('cart_id')
-        quantity = int(data.get('quantity', 1))
+
+        try:
+            cart_id = int(cart_id)
+        except (TypeError, ValueError):
+            conn.close()
+            return jsonify({'success': False, 'error': 'Invalid cart item.'}), 400
+
+        try:
+            quantity = int(data.get('quantity', 1))
+        except (TypeError, ValueError):
+            quantity = 1
+
+        # Quantity must be at least 1; removal is handled by /api/cart/remove
+        if quantity < 1:
+            quantity = 1
+
+        # Validate against available stock (variant stock if present; otherwise inventory aggregate)
+        stock_limit = None
+        adjusted = False
+        cart_items = fetch_cart_items_for_user(conn, user_id, [cart_id])
+        if not cart_items:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Cart item not found.'}), 404
+
+        stock_limit = cart_items[0].get('available_stock')
+        if stock_limit is not None:
+            try:
+                stock_limit = int(stock_limit)
+            except (TypeError, ValueError):
+                stock_limit = None
+
+        if stock_limit is not None:
+            if stock_limit <= 0:
+                conn.close()
+                return jsonify({'success': False, 'error': 'This item is currently out of stock.', 'max_allowed': 0}), 409
+            if quantity > stock_limit:
+                quantity = stock_limit
+                adjusted = True
 
         cursor = conn.cursor(dictionary=True)
 
-        if quantity <= 0:
-            cursor.execute('DELETE FROM cart WHERE id = %s AND user_id = %s', (cart_id, user_id))
-        else:
-            cursor.execute('UPDATE cart SET quantity = %s WHERE id = %s AND user_id = %s', (quantity, cart_id, user_id))
+        cursor.execute('UPDATE cart SET quantity = %s WHERE id = %s AND user_id = %s', (quantity, cart_id, user_id))
 
         conn.commit()
         cursor.close()
         conn.close()
 
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'quantity': quantity, 'adjusted': adjusted, 'max_allowed': stock_limit})
     except Exception as e:
         print(f"Error updating cart: {e}")
         if conn:

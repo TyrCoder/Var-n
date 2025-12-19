@@ -1200,7 +1200,10 @@
         const brandLabel = getBrandLabel(item);
         const brandKey = getBrandKey(brandLabel);
         const disableIncrease = availableStock !== null ? quantity >= availableStock : false;
+        const disableDecrease = quantity <= 1;
+        const decreaseTo = disableDecrease ? 1 : (quantity - 1);
         const safeName = escapeHtml(item.name || 'Product');
+        const maxAttr = availableStock !== null && availableStock > 0 ? `max="${availableStock}"` : '';
 
         return `
           <div class="cart-item" data-cart-id="${cartId}" data-brand="${brandKey}">
@@ -1219,8 +1222,20 @@
             <div class="cart-item-variants">${variantMarkup}</div>
             <div class="cart-item-price">${formatCurrency(price)}</div>
             <div class="quantity-control">
-              <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity - 1})">−</button>
-              <input type="number" class="qty-input" value="${quantity}" readonly>
+              <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${decreaseTo})" ${disableDecrease ? 'disabled' : ''}>−</button>
+              <input
+                type="number"
+                class="qty-input"
+                value="${quantity}"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                ${maxAttr}
+                data-action="qty-input"
+                data-cart-id="${cartId}"
+                aria-label="Quantity"
+              >
               <button class="qty-btn" onclick="updateCartQuantity(${cartId}, ${quantity + 1})" ${disableIncrease ? 'disabled' : ''}>+</button>
             </div>
             <div class="cart-item-total">${formatCurrency(itemTotal)}</div>
@@ -1302,7 +1317,7 @@
         cartContent.innerHTML = `
           <div class="cart-header">
             <h1>Shopping Cart</h1>
-            <div class="cart-header-stats">${totalProducts} ${totalProducts === 1 ? 'product' : 'products'} · ${totalUnits} ${totalUnits === 1 ? 'item' : 'items'}</div>
+            <div class="cart-header-stats" id="cartHeaderStats">${totalProducts} ${totalProducts === 1 ? 'product' : 'products'} · ${totalUnits} ${totalUnits === 1 ? 'item' : 'items'}</div>
           </div>
           <div class="cart-container">
             <div class="cart-items">
@@ -1321,8 +1336,8 @@
             <div class="cart-summary">
               <h2>Order Summary</h2>
               <div class="summary-row">
-                <span>Subtotal (${summary.totalItems} ${summary.totalItems === 1 ? 'item' : 'items'})</span>
-                <span>${formatCurrency(summary.subtotal)}</span>
+                <span id="summarySubtotalLabel">Subtotal (${summary.totalItems} ${summary.totalItems === 1 ? 'item' : 'items'})</span>
+                <span id="summarySubtotal">${formatCurrency(summary.subtotal)}</span>
               </div>
               <div class="summary-row">
                 <span>Shipping Fee</span>
@@ -1330,16 +1345,206 @@
               </div>
               <div class="summary-row total">
                 <span>Total</span>
-                <span>${formatCurrency(summary.subtotal)}</span>
+                <span id="summaryTotal">${formatCurrency(summary.subtotal)}</span>
               </div>
-              <ul class="summary-breakdown">${summary.listHtml}</ul>
-              <button class="checkout-btn" onclick="proceedToCheckout()" ${summary.hasSelection ? '' : 'disabled'}>Proceed to Checkout</button>
+              <ul class="summary-breakdown" id="summaryBreakdown">${summary.listHtml}</ul>
+              <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()" ${summary.hasSelection ? '' : 'disabled'}>Proceed to Checkout</button>
               <a href="{{ url_for('buyer_dashboard') }}" class="continue-shopping">← Continue Shopping</a>
             </div>
           </div>
         `;
 
         bindCartSelectionEvents(items);
+        bindCartQuantityEvents();
+      }
+
+      function showCartValidation(message, type = 'warning') {
+        if (window.VaronCart && typeof window.VaronCart.showMessage === 'function') {
+          window.VaronCart.showMessage(message, type);
+          return;
+        }
+        alert(message);
+      }
+
+      function normalizeQuantity(value) {
+        const raw = String(value ?? '').trim();
+        if (!raw) return null;
+        const digitsOnly = raw.replace(/[^0-9]/g, '');
+        if (!digitsOnly) return null;
+        const parsed = parseInt(digitsOnly, 10);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function updateCartHeaderAndSummaryUI() {
+        const totalProducts = currentCartItems.length;
+        const totalUnits = currentCartItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+        const headerStats = document.getElementById('cartHeaderStats');
+        if (headerStats) {
+          headerStats.textContent = `${totalProducts} ${totalProducts === 1 ? 'product' : 'products'} · ${totalUnits} ${totalUnits === 1 ? 'item' : 'items'}`;
+        }
+
+        const summary = buildSummary(currentCartItems);
+        const subtotalLabel = document.getElementById('summarySubtotalLabel');
+        const subtotalEl = document.getElementById('summarySubtotal');
+        const totalEl = document.getElementById('summaryTotal');
+        const breakdownEl = document.getElementById('summaryBreakdown');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+
+        if (subtotalLabel) subtotalLabel.textContent = `Subtotal (${summary.totalItems} ${summary.totalItems === 1 ? 'item' : 'items'})`;
+        if (subtotalEl) subtotalEl.textContent = formatCurrency(summary.subtotal);
+        if (totalEl) totalEl.textContent = formatCurrency(summary.subtotal);
+        if (breakdownEl) breakdownEl.innerHTML = summary.listHtml;
+        if (checkoutBtn) checkoutBtn.disabled = !summary.hasSelection;
+      }
+
+      function updateCartRowUI(cartId) {
+        const id = Number(cartId);
+        const item = currentCartItems.find(row => Number(row.cart_id) === id);
+        const rowEl = document.querySelector(`.cart-item[data-cart-id="${id}"]`);
+        if (!item || !rowEl) return;
+
+        const quantity = Number(item.quantity) || 1;
+        const availableStock = getAvailableStock(item);
+        const price = Number(item.price) || 0;
+
+        const qtyInput = rowEl.querySelector('input.qty-input');
+        if (qtyInput && String(qtyInput.value) !== String(quantity)) {
+          qtyInput.value = String(quantity);
+        }
+
+        const pill = rowEl.querySelector('.quantity-pill');
+        if (pill) pill.textContent = `x${quantity}`;
+
+        const totalEl = rowEl.querySelector('.cart-item-total');
+        if (totalEl) totalEl.textContent = formatCurrency(price * quantity);
+
+        const btns = rowEl.querySelectorAll('button.qty-btn');
+        const minusBtn = btns && btns.length ? btns[0] : null;
+        const plusBtn = btns && btns.length > 1 ? btns[1] : null;
+
+        if (minusBtn) {
+          minusBtn.disabled = quantity <= 1;
+          minusBtn.setAttribute('onclick', `updateCartQuantity(${id}, ${Math.max(1, quantity - 1)})`);
+        }
+        if (plusBtn) {
+          const disableIncrease = availableStock !== null ? quantity >= availableStock : false;
+          plusBtn.disabled = disableIncrease;
+          plusBtn.setAttribute('onclick', `updateCartQuantity(${id}, ${quantity + 1})`);
+        }
+      }
+
+      const pendingQtyTimers = new Map();
+
+      function bindCartQuantityEvents() {
+        document.querySelectorAll('input[data-action="qty-input"]').forEach(input => {
+          input.addEventListener('keydown', (e) => {
+            // Block non-numeric inputs for type=number fields
+            if (['e', 'E', '+', '-', '.'].includes(e.key)) {
+              e.preventDefault();
+            }
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              input.blur();
+            }
+          });
+
+          input.addEventListener('input', () => {
+            const cartId = Number(input.dataset.cartId);
+            if (!Number.isFinite(cartId)) return;
+
+            const parsed = normalizeQuantity(input.value);
+            const item = currentCartItems.find(row => Number(row.cart_id) === cartId);
+            const stockLimit = item ? getAvailableStock(item) : null;
+            let nextQty = parsed === null ? 1 : parsed;
+            if (nextQty < 1) nextQty = 1;
+            if (stockLimit !== null && stockLimit > 0 && nextQty > stockLimit) {
+              nextQty = stockLimit;
+            }
+
+            // Update UI immediately (subtotal + totals) while typing
+            if (item) {
+              item.quantity = nextQty;
+              updateCartRowUI(cartId);
+              updateCartHeaderAndSummaryUI();
+            }
+
+            // Debounced server update
+            const existing = pendingQtyTimers.get(cartId);
+            if (existing) clearTimeout(existing);
+            pendingQtyTimers.set(cartId, setTimeout(() => {
+              commitCartQty(cartId, nextQty, { showClampMessage: false });
+            }, 450));
+          });
+
+          input.addEventListener('blur', () => {
+            const cartId = Number(input.dataset.cartId);
+            if (!Number.isFinite(cartId)) return;
+
+            const parsed = normalizeQuantity(input.value);
+            const item = currentCartItems.find(row => Number(row.cart_id) === cartId);
+            const stockLimit = item ? getAvailableStock(item) : null;
+            let nextQty = parsed === null ? 1 : parsed;
+            if (nextQty < 1) nextQty = 1;
+            let clamped = false;
+            if (stockLimit !== null && stockLimit > 0 && nextQty > stockLimit) {
+              nextQty = stockLimit;
+              clamped = true;
+            }
+
+            // Ensure UI reflects final normalized value
+            if (item) {
+              item.quantity = nextQty;
+              updateCartRowUI(cartId);
+              updateCartHeaderAndSummaryUI();
+            }
+
+            // Immediate commit on blur
+            const existing = pendingQtyTimers.get(cartId);
+            if (existing) clearTimeout(existing);
+            commitCartQty(cartId, nextQty, { showClampMessage: clamped, stockLimit });
+          });
+        });
+      }
+
+      async function commitCartQty(cartId, quantity, options = {}) {
+        if (!window.VaronCart) return;
+
+        const item = currentCartItems.find(row => Number(row.cart_id) === Number(cartId));
+        const stockLimit = options.stockLimit ?? (item ? getAvailableStock(item) : null);
+
+        if (stockLimit !== null && stockLimit > 0 && quantity > stockLimit) {
+          quantity = stockLimit;
+        }
+
+        const result = await VaronCart.update(cartId, quantity);
+        if (!result || !result.success) {
+          const maxAllowed = result && typeof result.max_allowed === 'number' ? result.max_allowed : null;
+          if (maxAllowed !== null && maxAllowed > 0) {
+            showCartValidation(`Only ${maxAllowed} pcs available for this item. Quantity was adjusted.`, 'warning');
+            if (item) {
+              item.quantity = maxAllowed;
+              updateCartRowUI(cartId);
+              updateCartHeaderAndSummaryUI();
+            }
+          } else {
+            showCartValidation((result && result.error) ? result.error : 'Unable to update cart right now.', 'error');
+          }
+          return;
+        }
+
+        const finalQty = Number(result.quantity) || quantity;
+        if (item) {
+          item.quantity = finalQty;
+          updateCartRowUI(cartId);
+          updateCartHeaderAndSummaryUI();
+        }
+
+        if (options.showClampMessage) {
+          const maxAllowed = (stockLimit !== null && stockLimit > 0) ? stockLimit : (result.max_allowed ?? null);
+          if (maxAllowed) {
+            showCartValidation(`Only ${maxAllowed} pcs available for this item. Quantity was adjusted to the maximum allowed.`, 'warning');
+          }
+        }
       }
 
       function bindCartSelectionEvents(items) {
@@ -1400,28 +1605,26 @@
 
 
       async function updateCartQuantity(cartId, newQuantity) {
-        if (newQuantity < 1) {
-          await removeCartItem(cartId);
-          return;
-        }
+        let qty = Number(newQuantity);
+        if (!Number.isFinite(qty)) qty = 1;
+        qty = Math.max(1, Math.floor(qty));
 
         const targetItem = currentCartItems.find(item => Number(item.cart_id) === Number(cartId));
         const stockLimit = targetItem ? getAvailableStock(targetItem) : null;
-        if (stockLimit !== null && newQuantity > stockLimit) {
-          if (window.VaronCart && typeof window.VaronCart.showMessage === 'function') {
-            window.VaronCart.showMessage(`Only ${stockLimit} pcs available for this item.`, 'warning');
-          } else {
-            alert(`Only ${stockLimit} pcs available for this item.`);
-          }
-          return;
+        if (stockLimit !== null && stockLimit > 0 && qty > stockLimit) {
+          qty = stockLimit;
+          showCartValidation(`Only ${stockLimit} pcs available for this item. Quantity was adjusted to the maximum allowed.`, 'warning');
         }
 
-        if (window.VaronCart) {
-          const success = await VaronCart.update(cartId, newQuantity);
-          if (success) {
-            await loadCartPage();
-          }
+        // Update UI immediately
+        if (targetItem) {
+          targetItem.quantity = qty;
+          updateCartRowUI(cartId);
+          updateCartHeaderAndSummaryUI();
         }
+
+        // Persist to server
+        await commitCartQty(cartId, qty, { showClampMessage: false, stockLimit });
       }
 
 

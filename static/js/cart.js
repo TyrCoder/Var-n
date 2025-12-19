@@ -125,12 +125,12 @@ const VaronCart = {
       
       if (data.success) {
         await this.updateBadge();
-        return true;
+        return data;
       }
-      return false;
+      return data;
     } catch (error) {
       console.error('Error updating cart:', error);
-      return false;
+      return { success: false, error: 'Unable to update cart right now.' };
     }
   },
   

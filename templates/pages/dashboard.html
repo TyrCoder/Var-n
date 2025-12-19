@@ -593,6 +593,7 @@
           <a href="#" class="side-link" data-page="sellers">Active Sellers</a>
           <a href="#" class="side-link" data-page="riders">Active Riders</a>
           <a href="#" class="side-link" data-page="statistics">Statistics</a>
+          <a href="/admin/commission-report" class="side-link" onclick="window.location.href='/admin/commission-report'; return false;">Sales &amp; Commission<br>Report</a>
           <a href="#" class="side-link" data-page="setting">System Settings</a>
           <a href="#" class="side-link" data-page="help">Help & Support</a>
         </nav>
@@ -1211,6 +1212,7 @@
           window.location.reload();
           return;
         }
+
 
         if (pageTemplates[page]) {
           content.innerHTML = pageTemplates[page];
@@ -2531,6 +2533,17 @@
           }
         });
       });
+
+      const commissionReportLink = document.querySelector('.side-link[href="/admin/commission-report"]');
+      if (commissionReportLink) {
+        commissionReportLink.addEventListener('click', (e) => {
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+            return;
+          }
+          e.preventDefault();
+          window.location.href = commissionReportLink.getAttribute('href');
+        });
+      }
 
 
       function loadRecentOrders() {

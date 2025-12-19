@@ -1121,6 +1121,7 @@
           <div class="side-title">Analytics</div>
           <a class="side-link" href="#" data-page="sales">Sales Analytics</a>
           <a class="side-link" href="#" data-page="performance">Performance</a>
+          <a class="side-link" href="/seller/sales-report">Sales &amp; Commission Report</a>
         </div>
         <div class="side-group">
           <div class="side-title">Settings</div>
@@ -7361,15 +7362,15 @@
          * @param {Element} link - The clicked link element
          */
         handleLinkClick(event, link) {
-          event.preventDefault();
-          
           const page = link.getAttribute('data-page');
           const targetSection = link.dataset.section || null;
           
           if (!page) {
-            console.warn('⚠️ No data-page attribute on link', link);
+            // Allow normal navigation for external links.
             return;
           }
+
+          event.preventDefault();
 
           if (targetSection && page === 'account-settings') {
             pendingAccountSettingsSection = targetSection;

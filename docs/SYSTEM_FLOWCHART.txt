@@ -1,0 +1,625 @@
+Var-n — Comprehensive System Flowchart (Admin / Buyer / Seller / Rider)
+
+This TXT file includes:
+1) An ASCII flowchart (boxes/diamonds/arrows) that reads like a flowchart in plain text.
+2) A Mermaid version (below) that you can paste into a Mermaid renderer.
+
+====================================================================
+ASCII FLOWCHART (PLAIN TEXT)
+====================================================================
+
+LEGEND
+  +-----+  Process / action
+  /-----\  Decision / validation (Yes/No branches)
+  (DB)    Data store / persisted record
+  [ROLE]  Role performing the step
+
+--------------------------------------------------------------------
+[A] REGISTRATION + LOGIN + APPROVAL
+--------------------------------------------------------------------
+
+  +---------------------------+
+  | START: User visits Var-n   |
+  +---------------------------+
+               |
+               v
+     /-------------------------\
+    <  Has an account already?  >
+     \-------------------------/
+         | Yes                      | No
+         v                          v
+  +-------------------+      +-------------------+
+  | [ANY] Login        |      | [ANY] Sign Up     |
+  +-------------------+      +-------------------+
+         |                          |
+         |                          v
+         |                 /----------------------\
+         |                <  Choose user role?     >
+         |                 \----------------------/
+         |                   | Buyer | Seller | Rider
+         |                   v       v        v
+         |          +----------------+  +----------------------+  +---------------------+
+         |          | [BUYER] Create |  | [SELLER] Create user |  | [RIDER] Create user |
+         |          | user (pending) |  | + store (pending)    |  | + profile (pending) |
+         |          +----------------+  +----------------------+  +---------------------+
+         |                    \             |              /
+         |                     \            |             /
+         |                      v           v            v
+         |              +----------------------------------------+
+         |              | [ADMIN] Review pending accounts        |
+         |              | (buyers / sellers / riders)            |
+         |              +----------------------------------------+
+         |                               |
+         |                               v
+         |                     /---------------------\
+         |                    <  Approve account?     >
+         |                     \---------------------/
+         |                        | No         | Yes
+         |                        v            v
+         |               +----------------+   +----------------------------------+
+         |               | [ADMIN] Reject |   | [ADMIN] Approve                  |
+         |               | + reason/notify|  | enable role access                |
+         |               +----------------+   +----------------------------------+
+         |                                             |
+         v                                             v
+  +-------------------+                        /---------------------\
+  | [ANY] Session set  |                       <  Role after login?   >
+  | (logged_in, role)  |                        \---------------------/
+  +-------------------+                          | Buyer | Seller | Rider | Admin
+                                                 v       v        v       v
+                                            (go to B) (go to C) (go to D) (go to E)
+
+
+--------------------------------------------------------------------
+[B] BUYER: SHOPPING -> CART -> CHECKOUT -> PLACE ORDER
+--------------------------------------------------------------------
+
+  +----------------------------------+
+  | [BUYER] Browse / Shop / Product  |
+  +----------------------------------+
+               |
+               v
+     /------------------------------------\
+    <  Buyer approval status = approved?   >
+     \------------------------------------/
+         | No                                      | Yes
+         v                                         v
+  +------------------------------+        +-----------------------------+
+  | [BUYER] Block shopping/      |        | [BUYER] View product details|
+  | checkout; show pending notice|        +-----------------------------+
+  +------------------------------+                     |
+                                                       v
+                                     /--------------------------------\
+                                    <  Variant required & selected?    >
+                                     \--------------------------------/
+                                         | No                  | Yes
+                                         v                     v
+                            +---------------------------+  +---------------------------+
+                            | [BUYER] Prompt: select    |  | [BUYER] Show exact stock  |
+                            | size/color to see stock   |  | + validate qty            |
+                            +---------------------------+  +---------------------------+
+                                                                    |
+                                                                    v
+                                                          +------------------+
+                                                          | [BUYER] Add cart |
+                                                          +------------------+
+                                                                    |
+                                                                    v
+                                                           (DB) cart rows
+                                                                    |
+                                                                    v
+                                                          +---------------------------+
+                                                          | [BUYER] Edit cart qty     |
+                                                          | (manual typing + clamp)   |
+                                                          +---------------------------+
+                                                                    |
+                                                                    v
+                                                /------------------------------------\
+                                               <  Qty valid and <= available stock?  >
+                                                \------------------------------------/
+                                                   | No                      | Yes
+                                                   v                         v
+                                  +--------------------------------+   +---------------------+
+                                  | [SYSTEM] Reject/clamp + message|   | [BUYER] Checkout    |
+                                  +--------------------------------+   +---------------------+
+                                                                               |
+                                                                               v
+                                                               +-----------------------------+
+                                                               | [SYSTEM] Validate cart      |
+                                                               | server-side (availability)  |
+                                                               +-----------------------------+
+                                                                               |
+                                                                               v
+                                                             /--------------------------------\
+                                                            <  All items available & valid?   >
+                                                             \--------------------------------/
+                                                                  | No                 | Yes
+                                                                  v                    v
+                                                 +------------------------------+   +----------------------+
+                                                 | [SYSTEM] Return errors        |   | [BUYER] Place Order  |
+                                                 | (adjust cart / retry)         |   +----------------------+
+                                                 +------------------------------+              |
+                                                                                               v
+                                                                               (DB) orders + order_items
+                                                                               (DB) shipments (pending)
+                                                                               (DB) transactions (pending)
+                                                                                               |
+                                                                                               v
+                                                                              +--------------------------------+
+                                                                              | [SYSTEM] Order status = pending |
+                                                                              +--------------------------------+
+                                                                                               |
+                                                                                               v
+                                                                                          (go to C)
+
+
+--------------------------------------------------------------------
+[C] SELLER: CONFIRM -> INVENTORY DEDUCT -> FULFILL -> RELEASE TO RIDER
+--------------------------------------------------------------------
+
+  +------------------------------+
+  | [SELLER] View incoming orders|
+  +------------------------------+
+               |
+               v
+     /--------------------------\
+    <  Confirm this order?       >
+     \--------------------------/
+         | No                         | Yes
+         v                            v
+  +-------------------------+   +------------------------------------+
+  | [SYSTEM] Remains pending|   | [SYSTEM] Validate stock for all     |
+  | (buyer may cancel early)|   | order items (per product/variant)   |
+  +-------------------------+   +------------------------------------+
+                                        |
+                                        v
+                         /------------------------------------\
+                        <  Sufficient stock for every item?    >
+                         \------------------------------------/
+                             | No                       | Yes
+                             v                          v
+              +--------------------------------+  +-----------------------------------+
+              | [SYSTEM] Reject confirmation   |  | [SYSTEM] Deduct inventory          |
+              | "Insufficient stock"           |  | (DB) inventory / variant stock     |
+              +--------------------------------+  +-----------------------------------+
+                                                            |
+                                                            v
+                                             +----------------------------------+
+                                             | [SYSTEM] Set order_status=confirmed|
+                                             +----------------------------------+
+                                                            |
+                                                            v
+                                             +----------------------------------+
+                                             | [SELLER] Update status: processing|
+                                             | / shipped / release_to_rider       |
+                                             +----------------------------------+
+                                                            |
+                                                            v
+                                             +----------------------------------+
+                                             | [SELLER] Release to Rider         |
+                                             | assign rider or open availability |
+                                             +----------------------------------+
+                                                            |
+                                                            v
+                                   (DB) shipments: assigned_to_rider + seller_confirmed
+                                   (DB) orders: order_status=released_to_rider
+                                                            |
+                                                            v
+                                                         (go to D)
+
+
+--------------------------------------------------------------------
+[D] RIDER: ACCEPT -> PICKUP APPROVAL -> DELIVERY STATUS -> DELIVERED
+--------------------------------------------------------------------
+
+  +----------------------------------+
+  | [RIDER] See available shipments   |
+  +----------------------------------+
+               |
+               v
+     /----------------------------\
+    <  Accept this shipment?       >
+     \----------------------------/
+         | No                        | Yes
+         v                           v
+  +----------------------+    +------------------------------------+
+  | [RIDER] Ignore/list  |    | [SYSTEM] Set shipment=picked_up      |
+  +----------------------+    | assign rider_id; update order status |
+                              +------------------------------------+
+                                               |
+                                               v
+                              /-------------------------------------\
+                             <  Seller pickup approval required?     >
+                              \-------------------------------------/
+                                  | Yes                      | No
+                                  v                         v
+                   +--------------------------------+   +--------------------------------+
+                   | [RIDER] Request pickup approval|   | [RIDER] Start delivery updates |
+                   +--------------------------------+   +--------------------------------+
+                                  |
+                                  v
+                       /----------------------------\
+                      <  Seller approves pickup?    >
+                       \----------------------------/
+                           | No               | Yes
+                           v                  v
+      +--------------------------------+   +------------------------------------+
+      | [SYSTEM] shipment->pending     |   | [SYSTEM] shipment->approved         |
+      | order may revert to pending    |   | seller_confirmed=true               |
+      +--------------------------------+   +------------------------------------+
+                                                   |
+                                                   v
+                                  +------------------------------------+
+                                  | [RIDER] Update delivery status      |
+                                  | picked_up -> in_transit -> out_for_ |
+                                  | delivery -> delivered               |
+                                  +------------------------------------+
+                                                   |
+                                                   v
+                                  /------------------------------------\
+                                 <  Status valid + seller_confirmed?   >
+                                  \------------------------------------/
+                                       | No                     | Yes
+                                       v                        v
+                      +-------------------------------+   +-------------------------------+
+                      | [SYSTEM] Reject update        |   | (DB) shipments.status updated |
+                      | (validation/unauthorized)     |   | timestamps updated            |
+                      +-------------------------------+   +-------------------------------+
+                                                                     |
+                                                                     v
+                                                   /--------------------------------\
+                                                  <  New status == delivered?        >
+                                                   \--------------------------------/
+                                                        | No               | Yes
+                                                        v                  v
+                                             (loop updates)     +------------------------------+
+                                                              | [SYSTEM] orders.order_status  |
+                                                              | = delivered                   |
+                                                              +------------------------------+
+                                                                         |
+                                                                         v
+                                                              +------------------------------+
+                                                              | [SYSTEM] Record rider earnings|
+                                                              | (DB) rider_transactions +      |
+                                                              | riders totals                 |
+                                                              +------------------------------+
+                                                                         |
+                                                                         v
+                                                                      (go to E)
+
+
+--------------------------------------------------------------------
+[E] BUYER POST-DELIVERY + REVIEWS + COMMISSION + REPORTING
+--------------------------------------------------------------------
+
+  +----------------------------------+
+  | [BUYER] View My Orders / Tracking|
+  +----------------------------------+
+               |
+               v
+     /------------------------------\
+    <  Confirm received/accepted?    >
+     \------------------------------/
+         | No                        | Yes
+         v                           v
+  +-------------------------+   +----------------------------------+
+  | [BUYER] Do nothing yet  |   | [SYSTEM] Set order_status=completed|
+  +-------------------------+   +----------------------------------+
+                                               |
+                                               v
+                            +-------------------------------------------+
+                            | [SYSTEM] Persist admin commission ledger  |
+                            | (DB) admin_commission_ledger (per item)   |
+                            +-------------------------------------------+
+                                               |
+                                               v
+     /----------------------------------------------\
+    <  Buyer submits product review / rider rating?   >
+     \----------------------------------------------/
+         | No                                    | Yes
+         v                                       v
+  +-------------------------+       +----------------------------------+
+  | (continue normal usage) |       | (DB) reviews / rider_ratings     |
+  +-------------------------+       +----------------------------------+
+
+  +----------------------------------+
+  | [ADMIN] Commission Reporting      |
+  +----------------------------------+
+               |
+               v
+  +----------------------------------------------+
+  | [ADMIN] Choose date range -> report loads     |
+  | backfills ledger for range (if missing)       |
+  +----------------------------------------------+
+               |
+               v
+  +----------------------------------------------+
+  | [ADMIN] Totals + item rows + claimed/unclaimed|
+  +----------------------------------------------+
+               |
+               v
+     /--------------------------------\
+    <  Record Withdrawal (unclaimed)?  >
+     \--------------------------------/
+         | No                      | Yes
+         v                         v
+  +----------------------+  +------------------------------------------+
+  | done / export print  |  | (DB) withdrawals + link orders as claimed |
+  +----------------------+  +------------------------------------------+
+
+
+====================================================================
+COMPREHENSIVE FLOWCHART (MERMAID) - OPTIONAL RENDERABLE VERSION
+====================================================================
+
+flowchart TD
+
+%% =====================
+%% LEGEND / NOTATION
+%% =====================
+%% Rounded boxes = process/action
+%% Diamonds = decision/validation
+%% Cylinders = data stores (DB tables / persisted ledgers)
+
+%% =====================
+%% SHARED START: USER ENTRY
+%% =====================
+A0([User visits site]) --> A1{Has account?}
+A1 -- No --> A2([Sign Up])
+A1 -- Yes --> A3([Login])
+
+A2 --> A2R{Role selected?}
+A2R -- Buyer --> SU_B([Create Buyer User])
+A2R -- Seller --> SU_S([Create Seller User + Store Profile])
+A2R -- Rider --> SU_R([Create Rider User + Rider Profile])
+
+A3 --> SESS[(Session: logged_in + role + user_id)]
+
+%% =====================
+%% ACCOUNT APPROVAL (ROLE-GATED ACCESS)
+%% =====================
+SU_B --> BSTAT{Buyer approval status = approved?}
+BSTAT -- No --> BPEND([Buyer Dashboard: pending approval notice])
+BSTAT -- Yes --> BHOME([Buyer can Shop/Browse/Checkout])
+
+SU_S --> SSTAT{Seller status = approved/active?}
+SSTAT -- No --> SPEND([Seller Dashboard: pending approval notice])
+SSTAT -- Yes --> SDASH([Seller Dashboard])
+
+SU_R --> RSTAT{Rider status = approved?}
+RSTAT -- No --> RPEND([Rider Dashboard: pending approval notice])
+RSTAT -- Yes --> RDASH([Rider Dashboard])
+
+%% Admin review/approval loop
+BPEND --> ADM0([Admin Dashboard])
+SPEND --> ADM0
+RPEND --> ADM0
+
+ADM0 --> ADM1([View Pending Buyers/Sellers/Riders])
+ADM1 --> ADM2{Approve or Reject?}
+ADM2 -- Approve --> ADM3([Update account status = approved])
+ADM2 -- Reject --> ADM4([Update account status = rejected + reason])
+ADM3 --> BHOME
+ADM3 --> SDASH
+ADM3 --> RDASH
+ADM4 --> A0
+
+%% =====================
+%% STORE / PRODUCT LIFECYCLE (SELLER + ADMIN)
+%% =====================
+SDASH --> P0([Seller: Add Product / Edit Product])
+P0 --> P1([Create/Update Product + Variants])
+P1 --> P2{Requires admin approval?}
+P2 -- Yes (pending) --> PADM([Admin: Pending Products / Pending Edits])
+P2 -- No (auto-approved) --> PLIVE([Product listed in Shop])
+
+PADM --> PADM2{Approve or Reject?}
+PADM2 -- Approve --> PLIVE
+PADM2 -- Reject --> PREJ([Seller sees Rejected Products + reason])
+
+SDASH --> INV0([Seller: Inventory Management])
+INV0 --> INV1([Restock / Update Stock (per product or variant)])
+INV1 --> D_INV[(inventory / product_variants stock)]
+
+%% =====================
+%% SHOPPING / CART (BUYER)
+%% =====================
+BHOME --> SH0([Shop/Browse Products])
+SH0 --> SH1([View Product Details + Variant Selection])
+SH1 --> SH2{Variant selected if required?}
+SH2 -- No --> SH2A([UI prompt: select size/color to see stock])
+SH2 -- Yes --> SH3([Show exact stock; validate qty])
+
+SH3 --> CART0([Add to Cart])
+CART0 --> CARTDB[(cart)]
+CARTDB --> CART1([Cart page: manual qty input])
+CART1 --> CART2{Qty valid and <= stock?}
+CART2 -- No --> CART2A([Clamp/Reject; show validation message])
+CART2 -- Yes --> CK0([Proceed to Checkout])
+
+CK0 --> CK1([Validate Cart server-side])
+CK1 --> CK2{All items available?}
+CK2 -- No --> CK2A([Return errors; ask buyer to adjust cart])
+CK2 -- Yes --> CK3([Place Order])
+
+%% =====================
+%% ORDER CREATION + PAYMENT
+%% =====================
+CK3 --> O0([Create orders + order_items])
+O0 --> D_O[(orders)]
+O0 --> D_OI[(order_items)]
+
+O0 --> PAY0{Payment method?}
+PAY0 -- Cash on Delivery --> PAYCOD([Create transaction status=pending; payment collected on delivery])
+PAY0 -- Online Payment --> PAYON([Create transaction status=pending; send payment instructions/link])
+
+PAYCOD --> D_TX[(transactions)]
+PAYON --> D_TX
+
+O0 --> SHIP0([Create shipment status=pending])
+SHIP0 --> D_S[(shipments)]
+
+%% IMPORTANT: fulfillment gating (inventory)
+O0 --> OSTAT([Order status = pending])
+
+%% =====================
+%% SELLER FULFILLMENT + INVENTORY DEDUCTION
+%% =====================
+OSTAT --> SO0([Seller views Orders])
+SO0 --> SO1{Confirm Order?}
+SO1 -- No --> SO1A([Order remains pending; buyer may cancel if allowed])
+SO1 -- Yes --> SO2([Seller Confirm Order])
+
+SO2 --> SO3{Sufficient stock for all items?}
+SO3 -- No --> SO3A([Reject confirmation; return error "Insufficient stock"]) 
+SO3 -- Yes --> SO4([Deduct inventory for order items])
+SO4 --> D_INV
+SO4 --> SO5([Set order_status=confirmed; log status change; notify])
+
+SO5 --> SO6([Seller updates status: processing / shipped])
+SO6 --> OPROG([Order progresses toward delivery])
+
+%% Buyer cancellation path (simplified)
+SO1A --> BCAN{Buyer cancels within allowed statuses?}
+BCAN -- No --> OPROG
+BCAN -- Yes --> BCAN2([Set order_status=cancelled; record reason])
+BCAN2 --> SOREST{Was inventory deducted already?}
+SOREST -- Yes --> REST([Restore inventory for order items])
+SOREST -- No --> NOREST([No inventory restore needed])
+REST --> D_INV
+
+%% =====================
+%% RIDER ASSIGNMENT + APPROVALS
+%% =====================
+OPROG --> REL0([Seller releases order for delivery])
+REL0 --> REL1([Assign rider or open to available riders])
+REL1 --> D_S
+REL1 --> REL2([Set shipment status=assigned_to_rider; seller_confirmed=true])
+REL2 --> REL3([Set order_status=released_to_rider])
+
+REL3 --> RAV0([Rider: View Available Orders])
+RAV0 --> RACC{Rider accepts shipment?}
+RACC -- No --> RAV0
+RACC -- Yes --> RACC2([Shipment status=picked_up; rider_id set])
+RACC2 --> D_S
+
+%% Seller pickup approval gate (present in system)
+RACC2 --> SPICK([Rider requests pickup approval])
+SPICK --> SPICKD{Seller approves pickup?}
+SPICKD -- Reject --> SPICKR([Shipment back to pending; order back to pending])
+SPICKD -- Approve --> SPICKA([Shipment status=approved; seller_confirmed=true])
+SPICKR --> D_S
+SPICKA --> D_S
+
+%% =====================
+%% DELIVERY STATUS UPDATES (RIDER)
+%% =====================
+SPICKA --> RDEL0([Rider updates delivery status])
+RDEL0 --> RDEL1{Valid status transition?}
+RDEL1 -- No --> RDEL1A([Reject; return validation error])
+RDEL1 -- Yes --> RDEL2([Update shipments.status + timestamps])
+RDEL2 --> D_S
+
+RDEL2 --> RDEL3{New status == delivered?}
+RDEL3 -- No --> RDEL0
+RDEL3 -- Yes --> RDEL4([Set orders.order_status=delivered])
+RDEL4 --> D_O
+RDEL4 --> RDEL5([Record rider earnings transaction; update rider totals])
+RDEL5 --> D_RT[(rider_transactions / riders earnings)]
+
+%% =====================
+%% POST-DELIVERY (BUYER): COMPLETE / RETURN / REVIEWS
+%% =====================
+RDEL4 --> BORD0([Buyer views My Orders / Tracking])
+BORD0 --> BORD1{Buyer confirms received?}
+BORD1 -- No --> BORD0
+BORD1 -- Yes --> BCOMP([Order complete (accepted)])
+BCOMP --> BCOMP2([Set order_status=completed])
+BCOMP2 --> D_O
+
+BORD0 --> BRET{Buyer requests return?}
+BRET -- Yes --> BRET2([Create return request / update status])
+BRET -- No --> BREV0
+
+BREV0 --> BREV1{Can review? (delivered/completed + not yet reviewed)}
+BREV1 -- No --> BREV1A([Reject review submission])
+BREV1 -- Yes --> BREV2([Submit product review / rider rating])
+
+BREV2 --> D_REV[(reviews / rider_ratings)]
+BREV2 --> SREV0([Seller reviews moderation queue])
+SREV0 --> SREV1{Approve review?}
+SREV1 -- Reject --> SREV2([Reject review])
+SREV1 -- Approve --> SREV3([Publish review])
+
+%% =====================
+%% COMMISSION (ADMIN) — LEDGER + REPORTING + WITHDRAWALS
+%% =====================
+%% Ledger entries are persisted per order-item for audit-ready reporting.
+BCOMP2 --> LED0([Backfill/Insert commission ledger rows for this order])
+RDEL4 --> LED0
+LED0 --> D_LED[(admin_commission_ledger)]
+
+ADM0 --> REP0([Admin Commission Report: choose date range])
+REP0 --> REP1([Backfill ledger rows for date range])
+REP1 --> D_LED
+REP1 --> REP2([Compute totals + item rows + claimed/unclaimed])
+REP2 --> D_WO[(admin_commission_withdrawals + withdrawal_orders)]
+REP2 --> REP3([Render HTML report + JSON API])
+
+REP3 --> WD0{Record Withdrawal (unclaimed only)?}
+WD0 -- No --> REP3
+WD0 -- Yes --> WD1([Compute unclaimed amount from ledger])
+WD1 --> WD2([Insert withdrawal record + link orders as claimed])
+WD2 --> D_WO
+WD2 --> REP3
+
+%% =====================
+%% SELLER REPORTING
+%% =====================
+SDASH --> SREP0([Seller Sales & Commission Report: date range])
+SREP0 --> SREP1([Query delivered/completed orders + items])
+SREP1 --> D_O
+SREP1 --> D_OI
+SREP1 --> SREP2([Compute seller totals: gross, admin commission, net])
+
+%% =====================
+%% DATA STORES (grouped for readability)
+%% =====================
+subgraph DB[Primary Data Stores]
+  D_O
+  D_OI
+  D_INV
+  D_S
+  D_TX
+  CARTDB
+  D_REV
+end
+
+subgraph Accounting[Accounting / Reporting Stores]
+  D_LED
+  D_WO
+  D_RT
+end
+
+subgraph Auth[Auth / Session]
+  SESS
+end
+
+
+====================================================================
+NOTES ON DECISION POINTS & VALIDATIONS
+====================================================================
+
+- Role gating: most role pages and APIs validate session.logged_in + session.role.
+- Buyer approval gating: buyer must be approved to access shopping/checkout.
+- Order placement validations: server validates cart and rejects if invalid/unavailable.
+- Inventory:
+  - Stock is validated when seller confirms the order, then inventory is deducted.
+  - Inventory is restored on cancellation where applicable.
+  - Stock may exist at product-level or variant-level.
+- Delivery lifecycle:
+  - Rider status updates validate allowed statuses; shipments update timestamps.
+  - On delivered, orders.order_status becomes delivered and rider earnings are recorded.
+- Commission:
+  - Commission is persisted to admin_commission_ledger (per order item).
+  - Withdrawals mark orders as claimed via admin_commission_withdrawal_orders.

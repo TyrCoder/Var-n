@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Commission Report — Varón</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #f3f4f6;
+        --surface: #ffffff;
+        --line: #e5e7eb;
+        --text: #0a0a0a;
+        --muted: #6b7280;
+        --accent: #0a0a0a;
+        --shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 60%, #f3f4f6 100%);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.6;
+      }
+
+      h1, h2, h3 {
+        font-family: 'Playfair Display', 'Inter', serif;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        min-height: 100vh;
+        background: transparent;
+      }
+
+      .sidebar {
+        background: var(--accent);
+        padding: 32px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        box-shadow: 16px 0 35px rgba(0,0,0,0.35);
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+      }
+
+      .sidebar::-webkit-scrollbar { width: 6px; }
+      .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+        border-radius: 999px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #fff;
+      }
+
+      .logo .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #22d3ee;
+        box-shadow: 0 0 12px rgba(34,211,238,0.8);
+      }
+
+      .sidebar-note {
+        margin: 0;
+        color: rgba(255,255,255,0.65);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .side-title {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.4);
+        margin: 18px 0 8px;
+      }
+
+      .side-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 12px;
+        text-align: left;
+        background: transparent;
+        color: rgba(255,255,255,0.65);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, transform 0.2s;
+      }
+
+      .side-link:hover,
+      .side-link.active {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        transform: translateX(4px);
+      }
+
+      .logout-link {
+        margin-top: auto;
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 12px;
+        padding: 12px;
+        background: transparent;
+        color: #fff;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-align: center;
+      }
+
+      .logout-link:hover { background: rgba(255,255,255,0.08); }
+
+      .main-area {
+        padding: 36px 48px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.8), rgba(243,244,246,0.95));
+        min-height: 100vh;
+      }
+
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 0 60px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .title { font-size: 24px; }
+      .subtitle { color: var(--muted); font-size: 13px; }
+
+      .btn {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: var(--accent);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn.secondary {
+        background: #fff;
+        color: var(--text);
+      }
+
+      .panel {
+        margin-top: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+        padding: 16px 18px;
+      }
+
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: end;
+      }
+
+      label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+      input[type="date"] {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+        min-width: 160px;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 14px;
+        background: #fff;
+      }
+
+      .card .k { color: var(--muted); font-size: 12px; }
+      .card .v { font-size: 20px; font-weight: 700; margin-top: 4px; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 12px 10px;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+        vertical-align: top;
+      }
+
+      th {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .flash {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: #fff;
+      }
+
+      @media print {
+        .no-print { display: none !important; }
+        .sidebar { display: none !important; }
+        body { background: #fff; }
+        .topbar, .panel { box-shadow: none; }
+      }
+
+      @media (max-width:1080px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .sidebar { position: relative; height: auto; flex-direction: row; flex-wrap: wrap; }
+        .main-area { padding: 28px; }
+      }
+
+      @media (max-width:720px) {
+        .topbar { flex-direction: column; align-items: flex-start; }
+        .main-area { padding: 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar no-print">
+        <div class="logo">
+          <span class="dot"></span>
+          <span>Varón</span>
+        </div>
+        <p class="sidebar-note">Admin command deck for approvals, compliance, and fulfillment oversight.</p>
+        <p class="side-title">Workflow</p>
+        <nav class="nav-links">
+          <a href="/dashboard" class="side-link">Overview</a>
+          <a href="/dashboard" class="side-link">Pending Products</a>
+          <a href="/dashboard" class="side-link">Pending Riders</a>
+          <a href="/dashboard" class="side-link">Pending Buyers</a>
+          <a href="/dashboard" class="side-link">Product Edits</a>
+          <a href="/dashboard" class="side-link">Recovery Requests</a>
+          <a href="/dashboard" class="side-link">Products</a>
+          <a href="/dashboard" class="side-link">Customers</a>
+          <a href="/dashboard" class="side-link">Transactions</a>
+          <a href="/dashboard" class="side-link">Active Sellers</a>
+          <a href="/dashboard" class="side-link">Active Riders</a>
+          <a href="/dashboard" class="side-link">Statistics</a>
+          <a href="/admin/commission-report" class="side-link active">Sales &amp; Commission<br>Report</a>
+          <a href="/dashboard" class="side-link">System Settings</a>
+          <a href="/dashboard" class="side-link">Help &amp; Support</a>
+        </nav>
+        <a class="logout-link" href="/logout">Logout</a>
+      </aside>
+
+      <section class="main-area">
+        <div class="wrap">
+          <div class="topbar">
+            <div>
+              <h1 class="title">Admin Commission Report</h1>
+              <div class="subtitle">Date range: <strong>{{ start_date }}</strong> to <strong>{{ end_date }}</strong> • Status: <strong>delivered</strong></div>
+            </div>
+            <div class="no-print" style="display:flex; gap:10px; align-items:center;">
+              <a class="btn secondary" href="/dashboard">Back to Admin Dashboard</a>
+              <button class="btn" type="button" onclick="window.print()">Export PDF</button>
+            </div>
+          </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="panel no-print">
+        <form method="GET" action="/admin/commission-report">
+          <div class="filters">
+            <div>
+              <label for="start_date">Start date</label>
+              <input id="start_date" name="start_date" type="date" value="{{ start_date }}" required>
+            </div>
+            <div>
+              <label for="end_date">End date</label>
+              <input id="end_date" name="end_date" type="date" value="{{ end_date }}" required>
+            </div>
+            <div>
+              <button class="btn" type="submit">Apply</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+          <div class="panel">
+        <div class="cards">
+          <div class="card">
+            <div class="k">Gross Sales (Delivered)</div>
+            <div class="v">₱{{ '%.2f'|format(totals.sales) }}</div>
+          </div>
+          <div class="card">
+            <div class="k">Total Admin Commission</div>
+            <div class="v">₱{{ '%.2f'|format(totals.commission) }}</div>
+          </div>
+          <div class="card">
+            <div class="k">Net To Sellers</div>
+            <div class="v">₱{{ '%.2f'|format(totals.net_to_sellers) }}</div>
+          </div>
+        </div>
+
+        <div class="no-print" style="display:flex; gap:12px; align-items:center; margin-top: 14px;">
+          <form method="POST" action="/admin/commission-report/withdraw" style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+            <input type="hidden" name="start_date" value="{{ start_date }}">
+            <input type="hidden" name="end_date" value="{{ end_date }}">
+            <button class="btn" type="submit">Record Withdrawal (Unclaimed Only)</button>
+          </form>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Order ID</th>
+              <th>Product</th>
+              <th style="text-align:right;">Qty</th>
+              <th style="text-align:right;">Commission</th>
+              <th style="text-align:right;">Order Total Commission</th>
+              <th>Status</th>
+              <th>Withdrawal Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if items and items|length > 0 %}
+              {% for r in items %}
+                <tr>
+                  <td>{{ r.date_display }}</td>
+                  <td>
+                    <div style="font-weight:700;">#{{ r.order_number }}</div>
+                    <div class="subtitle">{{ r.order_id }}</div>
+                  </td>
+                  <td>{{ r.product_name }}</td>
+                  <td style="text-align:right;">{{ r.quantity }}</td>
+                  <td style="text-align:right;">₱{{ '%.2f'|format(r.commission) }}</td>
+                  <td style="text-align:right;">₱{{ '%.2f'|format(r.order_total_commission) }}</td>
+                  <td>
+                    {% if r.claimed %}
+                      <span class="subtitle" style="font-weight:700;">Claimed</span>
+                    {% else %}
+                      <span class="subtitle" style="font-weight:700;">Unclaimed</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ r.claimed_at_display if r.claimed else '—' }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="8" class="subtitle">No delivered sales in this date range.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+          <div class="panel">
+        <h2 style="font-size: 18px; margin-bottom: 8px;">Withdrawal History</h2>
+        <div class="subtitle">Records the exact withdrawal date/time and amount claimed.</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Claimed At</th>
+              <th>Start</th>
+              <th>End</th>
+              <th style="text-align:right;">Amount</th>
+              <th>Claimed By</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if withdrawals and withdrawals|length > 0 %}
+              {% for w in withdrawals %}
+                <tr>
+                  <td>{{ w.claimed_at_display }}</td>
+                  <td>{{ w.start_date }}</td>
+                  <td>{{ w.end_date }}</td>
+                  <td style="text-align:right;">₱{{ '%.2f'|format(w.amount) }}</td>
+                  <td>{{ w.claimed_by_email or '—' }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="subtitle">No withdrawals recorded yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>
