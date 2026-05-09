@@ -13988,6 +13988,102 @@ def api_rider_update_delivery_status():
             conn.close()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@app.route('/api/rider/proof-of-delivery', methods=['POST'])
+def api_rider_proof_of_delivery():
+    """Upload proof of delivery photo and mark shipment as delivered."""
+    if not session.get('logged_in') or session.get('role') != 'rider':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    shipment_id = request.form.get('shipment_id')
+    notes = request.form.get('notes', '').strip()
+    photo = request.files.get('photo')
+
+    if not shipment_id:
+        return jsonify({'success': False, 'error': 'Missing shipment_id'}), 400
+    if not photo or photo.filename == '':
+        return jsonify({'success': False, 'error': 'Delivery photo is required'}), 400
+
+    allowed_ext = {'jpg', 'jpeg', 'png', 'webp', 'heic'}
+    ext = photo.filename.rsplit('.', 1)[-1].lower() if '.' in photo.filename else ''
+    if ext not in allowed_ext:
+        return jsonify({'success': False, 'error': 'Invalid file type. Use JPG, PNG or WEBP.'}), 400
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+    try:
+        import os, time
+        from werkzeug.utils import secure_filename
+
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        user_id = session.get('user_id')
+
+        cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
+        rider = cursor.fetchone()
+        if not rider:
+            return jsonify({'success': False, 'error': 'Rider not found'}), 404
+        rider_id = rider['id']
+
+        cursor.execute('SELECT id, order_id FROM shipments WHERE id = %s AND rider_id = %s', (shipment_id, rider_id))
+        shipment = cursor.fetchone()
+        if not shipment:
+            return jsonify({'success': False, 'error': 'Shipment not found or unauthorized'}), 404
+
+        # Save photo
+        upload_dir = os.path.join('static', 'uploads', 'proof_of_delivery')
+        os.makedirs(upload_dir, exist_ok=True)
+        safe_name = secure_filename(photo.filename)
+        timestamp = int(time.time() * 1000)
+        stored_name = f"pod_{shipment_id}_{timestamp}_{safe_name}"
+        photo.save(os.path.join(upload_dir, stored_name))
+        file_url = f"/static/uploads/proof_of_delivery/{stored_name}"
+
+        # Ensure columns exist
+        cursor.execute("ALTER TABLE shipments ADD COLUMN IF NOT EXISTS proof_of_delivery_url VARCHAR(500)")
+        cursor.execute("ALTER TABLE shipments ADD COLUMN IF NOT EXISTS proof_of_delivery_notes TEXT")
+        cursor.execute("ALTER TABLE shipments ADD COLUMN IF NOT EXISTS proof_of_delivery_at TIMESTAMP")
+
+        # Mark delivered + save POD
+        cursor.execute('''
+            UPDATE shipments
+            SET status = 'delivered',
+                delivered_at = NOW(),
+                proof_of_delivery_url = %s,
+                proof_of_delivery_notes = %s,
+                proof_of_delivery_at = NOW()
+            WHERE id = %s AND rider_id = %s
+        ''', (file_url, notes or None, shipment_id, rider_id))
+
+        # Update order status
+        order_id = shipment['order_id']
+        cursor.execute("UPDATE orders SET order_status = 'delivered', updated_at = NOW() WHERE id = %s", (order_id,))
+
+        # Rider earnings (15%)
+        cursor.execute('SELECT total_amount FROM orders WHERE id = %s', (order_id,))
+        order = cursor.fetchone()
+        if order:
+            earning = float(order['total_amount']) * 0.15
+            cursor.execute('''
+                INSERT INTO rider_transactions (rider_id, order_id, shipment_id, earning_amount, commission_rate, status, completed_at)
+                VALUES (%s, %s, %s, %s, 15.00, 'completed', NOW())
+                ON CONFLICT DO NOTHING
+            ''', (rider_id, order_id, shipment_id, earning))
+            cursor.execute('UPDATE riders SET total_deliveries = total_deliveries + 1, earnings = earnings + %s WHERE id = %s', (earning, rider_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'file_url': file_url, 'message': 'Delivery confirmed with proof!'})
+    except Exception as e:
+        print(f"[ERROR] proof-of-delivery: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/forgot-password', methods=['POST'])
 def forgot_password():
     """Send OTP to email for password reset"""

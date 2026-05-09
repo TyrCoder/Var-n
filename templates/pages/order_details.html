@@ -422,8 +422,20 @@
             <p style="margin:4px 0 0;color:#666;font-size:14px">
               {% if shipment.delivered_at %}{{ shipment.delivered_at|ph_time('%B %d, %Y at %I:%M %p') }}{% endif %}
             </p>
-            {% if shipment.delivery_notes %}
+            {% if shipment.proof_of_delivery_notes %}
+            <p style="margin:8px 0 0;color:#666;font-size:13px;font-style:italic">"{{ shipment.proof_of_delivery_notes }}"</p>
+            {% elif shipment.delivery_notes %}
             <p style="margin:8px 0 0;color:#666;font-size:13px;font-style:italic">"{{ shipment.delivery_notes }}"</p>
+            {% endif %}
+            {% if shipment.proof_of_delivery_url %}
+            <div style="margin-top:12px">
+              <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Proof of Delivery</p>
+              <a href="{{ shipment.proof_of_delivery_url }}" target="_blank" rel="noopener">
+                <img src="{{ shipment.proof_of_delivery_url }}" alt="Proof of delivery photo"
+                     style="max-width:220px;max-height:180px;border-radius:8px;object-fit:cover;border:2px solid #e5e7eb;cursor:zoom-in;transition:opacity 0.2s"
+                     onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" />
+              </a>
+            </div>
             {% endif %}
           </div>
           {% else %}
