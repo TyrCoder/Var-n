@@ -390,6 +390,22 @@ with app.app_context():
         print("[DB INIT] Tables may already exist on Supabase - this is expected")
 
 
+def get_db():
+    """
+    Compatibility function: Returns raw psycopg2 connection from SQLAlchemy pool.
+    This allows existing raw SQL code to work while we migrate to ORM.
+    """
+    try:
+        # Use SQLAlchemy's connection pool instead of creating raw connections
+        with db.engine.connect() as connection:
+            # We need to return a real psycopg2 connection, not SQLAlchemy's proxy
+            # So we extract the underlying psycopg2 connection
+            return connection.connection
+    except Exception as err:
+        print(f"[DB ERROR] Failed to get database connection: {err}")
+        return None
+
+
 def convert_decimals_to_float(value):
     """Recursively convert Decimal objects within nested structures to floats."""
     if isinstance(value, list):
