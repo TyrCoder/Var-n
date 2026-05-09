@@ -1110,15 +1110,20 @@
               await VaronCart.updateBadge();
             }
 
-            const orderNumber = result.order_number || 'your order';
-            VaronNotifications.success(
-              `✅ Order Confirmed!<br><br><strong>Order Number:</strong> ${orderNumber}<br>Your order is now confirmed. Waiting for a rider to accept and deliver it.<br><br>Redirecting you to your order confirmation page...`,
-              0
-            );
+            const orderNumber = result.order_number || '';
 
-            setTimeout(() => {
-              window.location.href = `/order-confirmation/${result.order_number}`;
-            }, 1800);
+            if (paymentMethod === 'cod') {
+              VaronNotifications.success(
+                `✅ Order Confirmed!<br><br><strong>Order Number:</strong> ${orderNumber}<br>Your order is now confirmed. Waiting for a rider to accept and deliver it.<br><br>Redirecting you to your order confirmation page...`,
+                0
+              );
+              setTimeout(() => {
+                window.location.href = `/order-confirmation/${orderNumber}`;
+              }, 1800);
+            } else {
+              // Redirect to mock payment page
+              window.location.href = `/payment/${orderNumber}?method=${paymentMethod}`;
+            }
           } else {
             VaronNotifications.error('Error confirming order: ' + (result.message || 'Unknown error'));
           }

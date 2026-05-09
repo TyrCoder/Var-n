@@ -4250,6 +4250,90 @@ def order_confirmation(order_number):
             conn.close()
         return redirect(url_for('buyer_dashboard') + '?error=order_load_failed')
 
+
+@app.route('/payment/<order_number>')
+def mock_payment_page(order_number):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+
+    method = request.args.get('method', 'gcash')
+    if method not in ('gcash', 'paymaya', 'card'):
+        method = 'gcash'
+
+    conn = get_db()
+    if not conn:
+        return redirect(url_for('buyer_dashboard'))
+    try:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute(
+            'SELECT order_number, total_amount, payment_status FROM orders WHERE order_number = %s AND user_id = %s',
+            (order_number, session.get('user_id'))
+        )
+        order = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if not order:
+            return redirect(url_for('buyer_dashboard'))
+        if order['payment_status'] == 'paid':
+            return redirect(url_for('order_confirmation', order_number=order_number))
+        return render_template(
+            'pages/mock_payment.html',
+            order_number=order_number,
+            total=float(order['total_amount']),
+            method=method
+        )
+    except Exception as e:
+        print(f"[ERROR] mock_payment_page: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return redirect(url_for('buyer_dashboard'))
+
+
+@app.route('/api/payment/confirm', methods=['POST'])
+def api_payment_confirm():
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+
+    data = request.get_json(silent=True) or {}
+    order_number = data.get('order_number', '').strip()
+    method = data.get('method', 'gcash')
+
+    if not order_number:
+        return jsonify({'success': False, 'error': 'Missing order number'}), 400
+
+    conn = get_db()
+    if not conn:
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+    try:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute(
+            'SELECT id, payment_status FROM orders WHERE order_number = %s AND user_id = %s',
+            (order_number, session.get('user_id'))
+        )
+        order = cursor.fetchone()
+        if not order:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Order not found'}), 404
+
+        method_label = {'gcash': 'GCash', 'paymaya': 'Maya', 'card': 'Card Payment'}.get(method, 'Online Payment')
+        cursor.execute(
+            "UPDATE orders SET payment_status = 'paid', payment_method = %s, updated_at = NOW() WHERE id = %s",
+            (method_label, order['id'])
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"[ERROR] api_payment_confirm: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # Clear any flash messages on fresh login page load to avoid showing old errors
