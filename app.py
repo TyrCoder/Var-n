@@ -28,59 +28,46 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # SQLAlchemy Configuration for Supabase PostgreSQL
-# Properly encode password to handle special characters like @
-DB_USER = os.getenv('DB_USER', 'postgres')
-DB_PASSWORD = os.getenv('DB_PASSWORD', '')
-DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_NAME = os.getenv('DB_NAME', 'postgres')
+# Supports DATABASE_URL env var (Render standard) or individual DB_* vars
 
-# CRITICAL: Force pgBouncer pooler port for Supabase to avoid IPv6 issues on Render
-# Always use 6543 for Supabase connections, NOT 5432
-if DB_HOST and 'supabase' in DB_HOST.lower():
-    # Supabase: Use pgBouncer pooler port (6543) - more stable for cross-region
-    DB_PORT = '6543'
-    print("[DB CONFIG] Detected Supabase host - forcing pgBouncer pooler port 6543")
-else:
-    # Local or other hosts: Use configured port or default to 5432
-    DB_PORT = os.getenv('DB_PORT', '5432')
+DATABASE_URL = os.getenv('DATABASE_URL', '')
 
-# URL encode password to handle special characters (@ symbol must become %40)
-# This is critical because @ is the delimiter between credentials and host
-if DB_PASSWORD:
-    # Replace @ with %40 in the password
-    safe_password = DB_PASSWORD.replace('@', '%40')
-    encoded_password = quote_plus(safe_password)
+if DATABASE_URL:
+    # Render / Supabase may provide postgres:// — SQLAlchemy needs postgresql://
+    DATABASE_URI = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    # Ensure sslmode=require for remote connections
+    if 'sslmode' not in DATABASE_URI:
+        DATABASE_URI += ('&' if '?' in DATABASE_URI else '?') + 'sslmode=require'
+    print(f"[DB CONFIG] Using DATABASE_URL from environment")
 else:
-    encoded_password = ''
+    DB_USER = os.getenv('DB_USER', 'postgres')
+    DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+    DB_HOST = os.getenv('DB_HOST', 'localhost')
+    DB_NAME = os.getenv('DB_NAME', 'postgres')
+    DB_PORT = os.getenv('DB_PORT', '6543' if 'supabase' in os.getenv('DB_HOST', '').lower() else '5432')
 
-# Build connection URI with proper SSL settings for Supabase
-if DB_HOST and DB_HOST != 'localhost':
-    # Remote connection (Supabase) - use SSL
-    DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
-else:
-    # Local connection - no SSL
-    DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    # quote_plus already encodes @ as %40 — no manual replace needed
+    encoded_password = quote_plus(DB_PASSWORD) if DB_PASSWORD else ''
+
+    if DB_HOST and DB_HOST != 'localhost':
+        DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+    else:
+        DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+    print(f"[DB CONFIG] Host: {DB_HOST}, User: {DB_USER}, Port: {DB_PORT}, DB: {DB_NAME}")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
 app.config['SQLALCHEMY_ECHO'] = os.getenv('SQLALCHEMY_ECHO', 'false').lower() == 'true'
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 3,  # Smaller pool for pgBouncer
-    'pool_recycle': 600,  # Recycle connections every 10 minutes (pgBouncer timeout)
-    'pool_pre_ping': True,  # Test connections before using them
+    'pool_size': 3,
+    'pool_recycle': 600,
+    'pool_pre_ping': True,
     'max_overflow': 5,
     'connect_args': {
-        'connect_timeout': 15,  # Longer timeout for cross-region connections
+        'connect_timeout': 15,
         'application_name': 'var-n-ecommerce'
     }
 }
-
-# Log database configuration (without password)
-print(f"[DB CONFIG] Using PostgreSQL connection pooler (pgBouncer)")
-print(f"[DB CONFIG] Host: {DB_HOST}")
-print(f"[DB CONFIG] User: {DB_USER}")
-print(f"[DB CONFIG] Database: {DB_NAME}")
-print(f"[DB CONFIG] Port: {DB_PORT} (pgBouncer pooler)")
-print(f"[DB CONFIG] Connection string: postgresql://***@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
 
 # Initialize SQLAlchemy
 db.init_app(app)
