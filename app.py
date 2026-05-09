@@ -32,8 +32,17 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 DB_USER = os.getenv('DB_USER', 'postgres')
 DB_PASSWORD = os.getenv('DB_PASSWORD', '')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = os.getenv('DB_PORT', '6543')  # Use connection pooler (pgBouncer) port for better IPv6 handling
 DB_NAME = os.getenv('DB_NAME', 'postgres')
+
+# CRITICAL: Force pgBouncer pooler port for Supabase to avoid IPv6 issues on Render
+# Always use 6543 for Supabase connections, NOT 5432
+if DB_HOST and 'supabase' in DB_HOST.lower():
+    # Supabase: Use pgBouncer pooler port (6543) - more stable for cross-region
+    DB_PORT = '6543'
+    print("[DB CONFIG] Detected Supabase host - forcing pgBouncer pooler port 6543")
+else:
+    # Local or other hosts: Use configured port or default to 5432
+    DB_PORT = os.getenv('DB_PORT', '5432')
 
 # URL encode password to handle special characters (@ symbol must become %40)
 # This is critical because @ is the delimiter between credentials and host
@@ -46,8 +55,7 @@ else:
 
 # Build connection URI with proper SSL settings for Supabase
 if DB_HOST and DB_HOST != 'localhost':
-    # Remote connection (Supabase) - use pgBouncer pooler on port 6543 to avoid IPv6 issues
-    # pgBouncer is more stable for cross-region connections like Render to Supabase
+    # Remote connection (Supabase) - use SSL
     DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
 else:
     # Local connection - no SSL
@@ -71,8 +79,8 @@ print(f"[DB CONFIG] Using PostgreSQL connection pooler (pgBouncer)")
 print(f"[DB CONFIG] Host: {DB_HOST}")
 print(f"[DB CONFIG] User: {DB_USER}")
 print(f"[DB CONFIG] Database: {DB_NAME}")
-print(f"[DB CONFIG] Port: {DB_PORT} (connection pooler)")
-print(f"[DB CONFIG] Connection string format: postgresql://***@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
+print(f"[DB CONFIG] Port: {DB_PORT} (pgBouncer pooler)")
+print(f"[DB CONFIG] Connection string: postgresql://***@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
 
 # Initialize SQLAlchemy
 db.init_app(app)
