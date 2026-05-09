@@ -908,45 +908,40 @@ def admin_create_tables():
 
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS otp_verifications (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             email VARCHAR(190),
             phone VARCHAR(20),
             otp_code VARCHAR(10) NOT NULL,
-            otp_type ENUM('email', 'sms') NOT NULL DEFAULT 'email',
-            purpose ENUM('registration', 'login', 'password_reset', 'verification', 'email_change', 'phone_verification') NOT NULL DEFAULT 'registration',
+            otp_type VARCHAR(10) NOT NULL DEFAULT 'email',
+            purpose VARCHAR(50) NOT NULL DEFAULT 'registration',
             expires_at TIMESTAMP NOT NULL,
             used_at TIMESTAMP NULL,
             attempts INT DEFAULT 0,
             ip_address VARCHAR(45),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_email (email),
-            INDEX idx_phone (phone),
-            INDEX idx_code (otp_code),
-            INDEX idx_expires (expires_at),
-            INDEX idx_purpose (purpose)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )''')
         messages.append("OTP verifications table created/verified")
 
 
         try:
-            cursor.execute("SHOW COLUMNS FROM otp_verifications LIKE 'phone'")
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='otp_verifications' AND column_name='phone'")
             if not cursor.fetchone():
-                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN phone VARCHAR(20) AFTER email")
+                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN phone VARCHAR(20)")
                 messages.append("Added missing 'phone' column")
         except Exception as e:
             messages.append(f"Phone column check: {str(e)}")
 
         try:
-            cursor.execute("SHOW COLUMNS FROM otp_verifications LIKE 'used_at'")
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='otp_verifications' AND column_name='used_at'")
             if not cursor.fetchone():
-                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN used_at TIMESTAMP NULL AFTER expires_at")
+                cursor.execute("ALTER TABLE otp_verifications ADD COLUMN used_at TIMESTAMP NULL")
                 messages.append("Added missing 'used_at' column")
         except Exception as e:
             messages.append(f"Used_at column check: {str(e)}")
 
 
         try:
-            cursor.execute("SHOW INDEX FROM otp_verifications WHERE Key_name = 'idx_phone'")
+            cursor.execute("SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='otp_verifications' AND indexname='idx_phone'")
             if not cursor.fetchone():
                 cursor.execute("CREATE INDEX idx_phone ON otp_verifications(phone)")
                 messages.append("Added missing 'idx_phone' index")
@@ -955,7 +950,7 @@ def admin_create_tables():
 
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS rider_ratings (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             rider_id INT NOT NULL,
             user_id INT NOT NULL,
             order_id INT,
@@ -966,31 +961,26 @@ def admin_create_tables():
             FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
-            FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE SET NULL,
-            INDEX idx_rider (rider_id),
-            INDEX idx_user (user_id),
-            INDEX idx_created (created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+            FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE SET NULL
+        )''')
         messages.append("Rider ratings table created/verified")
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS journal_entries (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             title VARCHAR(200) NOT NULL,
             description TEXT,
             image_url VARCHAR(500),
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_by INT,
-            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-            INDEX idx_active (is_active),
-            INDEX idx_created (created_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        )''')
         messages.append("Journal entries table created/verified")
 
 
         try:
-            cursor.execute("SHOW COLUMNS FROM journal_entries LIKE 'link_url'")
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='journal_entries' AND column_name='link_url'")
             if cursor.fetchone():
                 cursor.execute('ALTER TABLE journal_entries DROP COLUMN link_url')
                 messages.append("Removed legacy link_url column from journal_entries")
@@ -1602,64 +1592,63 @@ def ensure_admin_commission_tables(cursor):
     # tolerant way so reporting can still function.
     try:
         cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawals (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             start_date DATE NOT NULL,
             end_date DATE NOT NULL,
             amount DECIMAL(12,2) NOT NULL,
             claimed_by INT NULL,
             claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             notes VARCHAR(255),
-            INDEX idx_claimed_at (claimed_at),
             FOREIGN KEY (claimed_by) REFERENCES users(id) ON DELETE SET NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        )''')
     except Exception:
         cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawals (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             start_date DATE NOT NULL,
             end_date DATE NOT NULL,
             amount DECIMAL(12,2) NOT NULL,
             claimed_by INT NULL,
             claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            notes VARCHAR(255),
-            INDEX idx_claimed_at (claimed_at)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+            notes VARCHAR(255)
+        )''')
 
     # Drop old uniq_range constraint if present.
     try:
-        cursor.execute("SHOW INDEX FROM admin_commission_withdrawals WHERE Key_name = 'uniq_range'")
+        cursor.execute("SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='admin_commission_withdrawals' AND indexname='uniq_range'")
         rows = cursor.fetchall() or []
         if rows:
-            cursor.execute('ALTER TABLE admin_commission_withdrawals DROP INDEX uniq_range')
+            cursor.execute('DROP INDEX IF EXISTS uniq_range')
     except Exception:
         pass
 
     try:
         cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawal_orders (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             withdrawal_id INT NOT NULL,
             order_id INT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_order (order_id),
-            INDEX idx_withdrawal (withdrawal_id),
+            CONSTRAINT uniq_order UNIQUE (order_id),
             FOREIGN KEY (withdrawal_id) REFERENCES admin_commission_withdrawals(id) ON DELETE CASCADE,
             FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        )''')
     except Exception:
         cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_withdrawal_orders (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             withdrawal_id INT NOT NULL,
             order_id INT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_order (order_id),
-            INDEX idx_withdrawal (withdrawal_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+            CONSTRAINT uniq_order UNIQUE (order_id)
+        )''')
 
 
 def _get_table_columns(cursor, table_name: str):
     try:
-        cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+        cursor.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s",
+            (table_name,)
+        )
         rows = cursor.fetchall() or []
-        return {str(r.get('Field') or '').lower() for r in rows if r.get('Field')}
+        return {str(r.get('column_name') or '').lower() for r in rows if r.get('column_name')}
     except Exception:
         return set()
 
@@ -1674,7 +1663,7 @@ def _pick_existing_column(columns_lower: set, candidates: list[str]):
 def ensure_admin_commission_ledger_tables(cursor):
     """Ledger persists per-item commissions so reporting/withdrawals are fully audit-ready."""
     cursor.execute('''CREATE TABLE IF NOT EXISTS admin_commission_ledger (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         order_id INT NOT NULL,
         order_number VARCHAR(64) NULL,
         order_created_at TIMESTAMP NULL,
@@ -1688,22 +1677,18 @@ def ensure_admin_commission_ledger_tables(cursor):
         commission_rate DECIMAL(7,3) NOT NULL DEFAULT 0.000,
         commission_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
         recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uniq_order_item (order_item_id),
-        INDEX idx_order_created_at (order_created_at),
-        INDEX idx_order_completed_at (order_completed_at),
-        INDEX idx_seller_id (seller_id),
-        INDEX idx_order_id (order_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+        CONSTRAINT uniq_order_item UNIQUE (order_item_id)
+    )''')
 
     # Schema upgrades for existing DBs.
     try:
         cols = _get_table_columns(cursor, 'admin_commission_ledger')
         if 'order_completed_at' not in cols:
-            cursor.execute('ALTER TABLE admin_commission_ledger ADD COLUMN order_completed_at TIMESTAMP NULL AFTER order_created_at')
-        cursor.execute("SHOW INDEX FROM admin_commission_ledger WHERE Key_name = 'idx_order_completed_at'")
+            cursor.execute('ALTER TABLE admin_commission_ledger ADD COLUMN IF NOT EXISTS order_completed_at TIMESTAMP NULL')
+        cursor.execute("SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='admin_commission_ledger' AND indexname='idx_order_completed_at'")
         rows = cursor.fetchall() or []
         if not rows:
-            cursor.execute('CREATE INDEX idx_order_completed_at ON admin_commission_ledger(order_completed_at)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_order_completed_at ON admin_commission_ledger(order_completed_at)')
     except Exception:
         pass
 
@@ -4014,7 +3999,7 @@ def order_details(order_id):
 
         # Ensure approval_status column exists (for databases that missed the migration)
         try:
-            cursor.execute("SHOW COLUMNS FROM products LIKE 'approval_status'")
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='approval_status'")
             if not cursor.fetchone():
                 cursor.execute('''
                     ALTER TABLE products
@@ -4912,13 +4897,13 @@ def dashboard():
 
         cursor.execute('''
             SELECT
-                DAYNAME(created_at) as day_name,
-                DAYOFWEEK(created_at) as day_num,
+                TRIM(TO_CHAR(created_at, 'Day')) as day_name,
+                EXTRACT(DOW FROM created_at)::int as day_num,
                 COALESCE(SUM(total_amount), 0) as daily_revenue
             FROM orders
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+            WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'
             AND payment_status = 'paid'
-            GROUP BY DATE(created_at), DAYNAME(created_at), DAYOFWEEK(created_at)
+            GROUP BY DATE(created_at), TRIM(TO_CHAR(created_at, 'Day')), EXTRACT(DOW FROM created_at)
             ORDER BY DATE(created_at)
         ''')
         weekly_revenue_raw = cursor.fetchall()
@@ -6559,7 +6544,7 @@ def seller_dashboard():
         cursor.execute('''
             SELECT o.order_number, o.total_amount, o.order_status, o.created_at,
                    u.first_name, u.last_name,
-                   (SELECT GROUP_CONCAT(oi.product_name SEPARATOR ', ')
+                   (SELECT STRING_AGG(oi.product_name, ', ')
                     FROM order_items oi WHERE oi.order_id = o.id) as products
             FROM orders o
             JOIN users u ON o.user_id = u.id
@@ -6572,7 +6557,7 @@ def seller_dashboard():
         cursor.execute('''
             SELECT COALESCE(SUM(total_amount), 0) as today_sales
             FROM orders
-            WHERE seller_id = %s AND DATE(created_at) = CURDATE()
+            WHERE seller_id = %s AND DATE(created_at) = CURRENT_DATE
             AND order_status != 'cancelled'
         ''', (seller_id,))
         result = cursor.fetchone()
@@ -6597,13 +6582,13 @@ def seller_dashboard():
 
         cursor.execute('''
             SELECT
-                DAYNAME(created_at) as day_name,
+                TRIM(TO_CHAR(created_at, 'Day')) as day_name,
                 COALESCE(SUM(total_amount), 0) as daily_sales
             FROM orders
             WHERE seller_id = %s
-            AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+            AND created_at >= CURRENT_DATE - INTERVAL '6 days'
             AND order_status != 'cancelled'
-            GROUP BY DATE(created_at), DAYNAME(created_at)
+            GROUP BY DATE(created_at), TRIM(TO_CHAR(created_at, 'Day'))
             ORDER BY DATE(created_at)
         ''', (seller_id,))
         weekly_sales_raw = cursor.fetchall()
@@ -6688,7 +6673,7 @@ def rider_dashboard():
             JOIN orders o ON s.order_id = o.id
             WHERE s.rider_id = %s
             AND s.status = 'delivered'
-            AND DATE(s.delivered_at) = CURDATE()
+            AND DATE(s.delivered_at) = CURRENT_DATE
         ''', (rider['id'] if rider else None,))
         today_stats = cursor.fetchone()
 
@@ -7925,7 +7910,7 @@ def seller_sales_analytics():
             JOIN order_items oi ON o.id = oi.order_id
             JOIN products p ON oi.product_id = p.id
             WHERE p.seller_id = %s
-            AND o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND o.created_at >= NOW() - INTERVAL '30 days'
             AND o.order_status NOT IN ('cancelled', 'failed')
         ''', (seller['id'],))
 
@@ -7942,7 +7927,7 @@ def seller_sales_analytics():
             JOIN products p ON oi.product_id = p.id
             JOIN orders o ON oi.order_id = o.id
             WHERE p.seller_id = %s
-            AND o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND o.created_at >= NOW() - INTERVAL '30 days'
             AND o.order_status NOT IN ('cancelled', 'failed')
             GROUP BY p.id, p.name
             ORDER BY quantity_sold DESC
@@ -8910,24 +8895,20 @@ def seller_edit_product():
 
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS product_edits (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 product_id INT NOT NULL,
                 seller_id INT NOT NULL,
                 field_name VARCHAR(100) NOT NULL,
                 old_value TEXT,
                 new_value TEXT,
-                status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+                status VARCHAR(20) DEFAULT 'pending',
                 admin_notes TEXT,
                 requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 reviewed_at TIMESTAMP NULL,
                 reviewed_by INT NULL,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-                FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
-                INDEX idx_product (product_id),
-                INDEX idx_status (status),
-                INDEX idx_seller (seller_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        ''')
+                FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE
+            )''')
 
 
         cursor.execute('''
@@ -8936,13 +8917,13 @@ def seller_edit_product():
             WHERE TABLE_SCHEMA = %s
             AND TABLE_NAME = 'products'
             AND COLUMN_NAME = 'edit_status'
-        ''', (DB_CONFIG['database'],))
+        ''', ('public',))
 
         result = cursor.fetchone()
         if result['count'] == 0:
             cursor.execute('''
                 ALTER TABLE products
-                ADD COLUMN edit_status ENUM('none', 'pending', 'approved', 'rejected') DEFAULT 'none'
+                ADD COLUMN IF NOT EXISTS edit_status VARCHAR(20) DEFAULT 'none'
             ''')
 
 
@@ -9114,7 +9095,7 @@ def api_user_profile_navbar():
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
-        cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='profile_image'")
         has_profile_image = cursor.fetchone()
 
         if has_profile_image:
@@ -9149,7 +9130,7 @@ def check_db_schema():
             return jsonify({'success': False, 'error': 'DB connection failed'}), 500
 
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cursor.execute("SHOW COLUMNS FROM coupons LIKE 'product_id'")
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='coupons' AND column_name='product_id'")
         result = cursor.fetchone()
 
         cursor.close()
@@ -10289,7 +10270,7 @@ def account_details():
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
-        cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='profile_image'")
         has_profile_image = cursor.fetchone()
 
         if has_profile_image:
@@ -10302,9 +10283,9 @@ def account_details():
             user['profile_image'] = None
 
 
-        cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='email_verified'")
         has_email_verified = cursor.fetchone()
-        cursor.execute('SHOW COLUMNS FROM users LIKE "phone_verified"')
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='phone_verified'")
         has_phone_verified = cursor.fetchone()
 
 
@@ -10385,7 +10366,7 @@ def upload_profile_picture():
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
-        cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='profile_image'")
         has_column = cursor.fetchone()
         if not has_column:
             cursor.execute('ALTER TABLE users ADD COLUMN profile_image VARCHAR(500)')
@@ -10523,7 +10504,7 @@ def verify_email_change():
 
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='email_verified'")
             has_column = cursor.fetchone()
             if not has_column:
                 cursor.execute('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE')
@@ -10601,9 +10582,9 @@ def update_account():
             return jsonify({'success': False, 'message': 'Email is already taken'}), 400
 
 
-        cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='email_verified'")
         has_email_verified = cursor.fetchone()
-        cursor.execute('SHOW COLUMNS FROM users LIKE "phone_verified"')
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='phone_verified'")
         has_phone_verified = cursor.fetchone()
 
 
@@ -10772,7 +10753,7 @@ def verify_phone_otp():
 
             cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-            cursor.execute('SHOW COLUMNS FROM users LIKE "phone_verified"')
+            cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='users' AND column_name='phone_verified'")
             has_column = cursor.fetchone()
             if not has_column:
                 cursor.execute('ALTER TABLE users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE')
@@ -10919,8 +10900,8 @@ def seller_orders():
                 CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                 SUM(oi.quantity) as item_count,
                 SUM(oi.subtotal) as seller_total_amount,
-                IFNULL(s.status, 'pending') as shipment_status,
-                IFNULL(s.rider_id, 0) as shipment_rider_id,
+                COALESCE(s.status, 'pending') as shipment_status,
+                COALESCE(s.rider_id, 0) as shipment_rider_id,
                 s.id as shipment_id,
                 a.city as shipping_city,
                 a.province as shipping_province,
@@ -12801,23 +12782,23 @@ def api_rider_available_orders():
 
         cursor.execute('''
             SELECT o.id, o.order_number, o.user_id, o.total_amount, o.order_status, o.created_at,
-                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', IFNULL(a.postal_code, '')) as delivery_address,
+                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', COALESCE(a.postal_code, '')) as delivery_address,
                    a.province as delivery_province,
                    a.postal_code as delivery_postal_code,
                    a.city as delivery_city,
                    CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                    u.phone as customer_phone,
                    u.email,
-                   IFNULL(s.id, 0) as shipment_id,
-                   IFNULL(s.status, 'pending') as shipment_status,
-                   IFNULL(s.seller_confirmed, FALSE) as seller_confirmed,
-                   IFNULL(s.rider_id, 0) as assigned_rider_id
+                   COALESCE(s.id, 0) as shipment_id,
+                   COALESCE(s.status, 'pending') as shipment_status,
+                   COALESCE(s.seller_confirmed, FALSE) as seller_confirmed,
+                   COALESCE(s.rider_id, 0) as assigned_rider_id
             FROM orders o
             JOIN users u ON o.user_id = u.id
             JOIN addresses a ON o.shipping_address_id = a.id
             LEFT JOIN shipments s ON s.order_id = o.id
             WHERE o.order_status = 'waiting_for_pickup'
-            AND IFNULL(s.rider_id, 0) = 0
+            AND COALESCE(s.rider_id, 0) = 0
             ORDER BY o.created_at DESC
         ''')
 
@@ -12944,7 +12925,7 @@ def api_rider_active_deliveries():
 
         cursor.execute('''
             SELECT o.id, o.order_number, o.user_id, o.total_amount, o.order_status, o.created_at,
-                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', IFNULL(a.postal_code, '')) as delivery_address,
+                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', COALESCE(a.postal_code, '')) as delivery_address,
                    u.first_name, u.last_name, u.email, u.phone as customer_phone,
                    CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                    s.id as shipment_id, s.status as shipment_status,
@@ -13028,33 +13009,22 @@ def api_rider_active_deliveries():
 
 
 def ensure_rider_documents_table(cursor):
-    ensure_table_engine(cursor, 'riders')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS rider_documents (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             rider_id INT NOT NULL,
-            document_type ENUM('government_id','vehicle_registration','orcr','car_photo') NOT NULL,
+            document_type VARCHAR(30) NOT NULL,
             file_url VARCHAR(500) NOT NULL,
-            verified TINYINT(1) DEFAULT 0,
+            verified SMALLINT DEFAULT 0,
             uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_rider_doc (rider_id, document_type),
-            INDEX idx_rider_id (rider_id),
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT uniq_rider_doc UNIQUE (rider_id, document_type),
             CONSTRAINT fk_rider_documents_rider
                 FOREIGN KEY (rider_id)
                 REFERENCES riders(id)
                 ON DELETE CASCADE
-                ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        )
     ''')
-
-    try:
-        cursor.execute("""
-            ALTER TABLE rider_documents
-            MODIFY COLUMN document_type ENUM('government_id','vehicle_registration','orcr','car_photo') NOT NULL
-        """)
-    except psycopg2.Error as err:
-        print(f"[DB WARNING] Unable to update rider_documents.document_type enum: {err}")
 
 
 def ensure_rider_psgc_address_columns(cursor):
@@ -13062,83 +13032,74 @@ def ensure_rider_psgc_address_columns(cursor):
 
     This keeps the app resilient even if the SQL migration hasn't been run yet.
     """
-    ensure_table_engine(cursor, 'riders')
     cursor.execute(
-        """
-        SELECT COLUMN_NAME
-        FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'riders'
-        """,
-        (DB_CONFIG['database'],)
+        "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'riders'"
     )
-    existing = {row['COLUMN_NAME'] if isinstance(row, dict) else row[0] for row in cursor.fetchall()}
+    existing = {(row['column_name'] if isinstance(row, dict) else row[0]).lower() for row in cursor.fetchall()}
 
     def add_column(col_sql: str):
-        cursor.execute(f"ALTER TABLE riders ADD COLUMN {col_sql}")
+        cursor.execute(f"ALTER TABLE riders ADD COLUMN IF NOT EXISTS {col_sql}")
 
     if 'address_region_code' not in existing:
-        add_column("address_region_code VARCHAR(20) NULL AFTER service_area")
+        add_column("address_region_code VARCHAR(20) NULL")
     if 'address_region_name' not in existing:
-        add_column("address_region_name VARCHAR(150) NULL AFTER address_region_code")
+        add_column("address_region_name VARCHAR(150) NULL")
     if 'address_province_code' not in existing:
-        add_column("address_province_code VARCHAR(20) NULL AFTER address_region_name")
+        add_column("address_province_code VARCHAR(20) NULL")
     if 'address_province_name' not in existing:
-        add_column("address_province_name VARCHAR(150) NULL AFTER address_province_code")
+        add_column("address_province_name VARCHAR(150) NULL")
     if 'address_city_code' not in existing:
-        add_column("address_city_code VARCHAR(20) NULL AFTER address_province_name")
+        add_column("address_city_code VARCHAR(20) NULL")
     if 'address_city_name' not in existing:
-        add_column("address_city_name VARCHAR(150) NULL AFTER address_city_code")
+        add_column("address_city_name VARCHAR(150) NULL")
     if 'address_barangay_code' not in existing:
-        add_column("address_barangay_code VARCHAR(20) NULL AFTER address_city_name")
+        add_column("address_barangay_code VARCHAR(20) NULL")
     if 'address_barangay_name' not in existing:
-        add_column("address_barangay_name VARCHAR(150) NULL AFTER address_barangay_code")
+        add_column("address_barangay_name VARCHAR(150) NULL")
     if 'default_service_area_city_code' not in existing:
-        add_column("default_service_area_city_code VARCHAR(20) NULL AFTER address_barangay_name")
+        add_column("default_service_area_city_code VARCHAR(20) NULL")
 
-    # Best-effort indexes; ignore if they already exist
+    # Best-effort indexes
     try:
-        cursor.execute("ALTER TABLE riders ADD INDEX idx_rider_address_city_code (address_city_code)")
-    except psycopg2.Error:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rider_address_city_code ON riders(address_city_code)")
+    except Exception:
         pass
     try:
-        cursor.execute("ALTER TABLE riders ADD INDEX idx_rider_default_city_code (default_service_area_city_code)")
-    except psycopg2.Error:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rider_default_city_code ON riders(default_service_area_city_code)")
+    except Exception:
         pass
 
 
 def ensure_rider_service_areas_table(cursor):
-    ensure_table_engine(cursor, 'riders')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS rider_service_areas (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             rider_id INT NOT NULL,
             city_code VARCHAR(20) NOT NULL,
             city_name VARCHAR(150) NOT NULL,
             is_default BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY uniq_rider_city (rider_id, city_code),
-            INDEX idx_rider_default (rider_id, is_default),
+            CONSTRAINT uniq_rider_city UNIQUE (rider_id, city_code),
             CONSTRAINT fk_rider_service_areas_rider
                 FOREIGN KEY (rider_id)
                 REFERENCES riders(id)
                 ON DELETE CASCADE
-                ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        )
     ''')
 
 
 def ensure_rider_review_logs_table(cursor):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS rider_review_logs (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id SERIAL PRIMARY KEY,
             rider_id INT NOT NULL,
             admin_id INT,
-            action ENUM('approved', 'rejected') NOT NULL,
+            action VARCHAR(20) NOT NULL,
             reason TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
             FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        )
     ''')
 
 
@@ -13331,7 +13292,7 @@ def api_rider_delivery_history():
 
         cursor.execute('''
             SELECT o.id, o.order_number, o.user_id, o.total_amount, o.order_status, o.created_at,
-                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', IFNULL(a.postal_code, '')) as delivery_address,
+                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', COALESCE(a.postal_code, '')) as delivery_address,
                    u.first_name, u.last_name, u.email, u.phone as customer_phone,
                    CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                    s.id as shipment_id, s.status as shipment_status, s.delivered_at,
@@ -13397,7 +13358,7 @@ def api_rider_shipment_details(shipment_id):
                    o.order_number, o.total_amount, u.first_name, u.last_name,
                    CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                    a.street_address, a.city, a.province, a.postal_code,
-                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', IFNULL(a.postal_code, '')) as delivery_address
+                   CONCAT(a.street_address, ', ', a.city, ', ', a.province, ' ', COALESCE(a.postal_code, '')) as delivery_address
             FROM shipments s
             JOIN orders o ON s.order_id = o.id
             JOIN users u ON o.user_id = u.id
@@ -13451,7 +13412,7 @@ def api_rider_earnings():
             SELECT COALESCE(SUM(earning_amount), 0) as today_earnings
             FROM rider_transactions
             WHERE rider_id = %s AND status = 'completed'
-            AND DATE(completed_at) = CURDATE()
+            AND DATE(completed_at) = CURRENT_DATE
         ''', (rider_id,))
         today_data = cursor.fetchone()
         today_earnings = float(today_data['today_earnings']) if today_data else 0
@@ -13461,7 +13422,7 @@ def api_rider_earnings():
             SELECT COALESCE(SUM(earning_amount), 0) as weekly_earnings
             FROM rider_transactions
             WHERE rider_id = %s AND status = 'completed'
-            AND completed_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            AND completed_at >= CURRENT_DATE - INTERVAL '7 days'
         ''', (rider_id,))
         weekly_data = cursor.fetchone()
         weekly_earnings = float(weekly_data['weekly_earnings']) if weekly_data else 0
@@ -13471,8 +13432,8 @@ def api_rider_earnings():
             SELECT COALESCE(SUM(earning_amount), 0) as monthly_earnings
             FROM rider_transactions
             WHERE rider_id = %s AND status = 'completed'
-            AND YEAR(completed_at) = YEAR(CURDATE())
-            AND MONTH(completed_at) = MONTH(CURDATE())
+            AND EXTRACT(YEAR FROM completed_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM completed_at) = EXTRACT(MONTH FROM CURRENT_DATE)
         ''', (rider_id,))
         monthly_data = cursor.fetchone()
         monthly_earnings = float(monthly_data['monthly_earnings']) if monthly_data else 0
@@ -15420,8 +15381,8 @@ def get_orders_by_status(status):
                 CONCAT(u.first_name, ' ', u.last_name) as customer_name,
                 u.email as customer_email,
                 (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count,
-                IFNULL(s.status, 'pending') as shipment_status,
-                IFNULL(s.rider_id, 0) as rider_id,
+                COALESCE(s.status, 'pending') as shipment_status,
+                COALESCE(s.rider_id, 0) as rider_id,
                 a.city as shipping_city,
                 a.province as shipping_province
             FROM orders o
