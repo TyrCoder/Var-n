@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory, jsonify
+from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime, date
 import os
@@ -4295,9 +4296,18 @@ def api_payment_confirm():
     if not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
 
-    data = request.get_json(silent=True) or {}
-    order_number = data.get('order_number', '').strip()
-    method = data.get('method', 'gcash')
+    # Support both JSON (Maya/Card) and FormData (GCash with proof file)
+    if request.content_type and 'multipart' in request.content_type:
+        order_number = (request.form.get('order_number') or '').strip()
+        method = request.form.get('method', 'gcash')
+        proof_file = request.files.get('proof')
+        reference_number = (request.form.get('reference_number') or '').strip()
+    else:
+        data = request.get_json(silent=True) or {}
+        order_number = data.get('order_number', '').strip()
+        method = data.get('method', 'gcash')
+        proof_file = None
+        reference_number = ''
 
     if not order_number:
         return jsonify({'success': False, 'error': 'Missing order number'}), 400
@@ -4306,7 +4316,14 @@ def api_payment_confirm():
     if not conn:
         return jsonify({'success': False, 'error': 'Database error'}), 500
     try:
+        import time as _time
+
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        # Ensure payment columns exist
+        cursor.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_proof_url VARCHAR(500)")
+        cursor.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(100)")
+
         cursor.execute(
             'SELECT id, payment_status FROM orders WHERE order_number = %s AND user_id = %s',
             (order_number, session.get('user_id'))
@@ -4317,10 +4334,25 @@ def api_payment_confirm():
             conn.close()
             return jsonify({'success': False, 'error': 'Order not found'}), 404
 
+        # Save proof screenshot if provided
+        proof_url = None
+        if proof_file and proof_file.filename:
+            allowed = {'jpg', 'jpeg', 'png', 'webp', 'heic'}
+            ext = proof_file.filename.rsplit('.', 1)[-1].lower() if '.' in proof_file.filename else 'jpg'
+            if ext in allowed:
+                upload_dir = os.path.join('static', 'uploads', 'payment_proofs')
+                os.makedirs(upload_dir, exist_ok=True)
+                ts = int(_time.time() * 1000)
+                stored = f"proof_{order_number}_{ts}.{ext}"
+                proof_file.save(os.path.join(upload_dir, stored))
+                proof_url = f"/static/uploads/payment_proofs/{stored}"
+
         method_label = {'gcash': 'GCash', 'paymaya': 'Maya', 'card': 'Card Payment'}.get(method, 'Online Payment')
         cursor.execute(
-            "UPDATE orders SET payment_status = 'paid', payment_method = %s, updated_at = NOW() WHERE id = %s",
-            (method_label, order['id'])
+            """UPDATE orders SET payment_status = 'paid', payment_method = %s,
+               payment_proof_url = %s, payment_reference = %s, updated_at = NOW()
+               WHERE id = %s""",
+            (method_label, proof_url, reference_number or None, order['id'])
         )
         conn.commit()
         cursor.close()

@@ -241,6 +241,25 @@
           <span class="info-value" style="color:{% if order.payment_status == 'paid' %}#10b981{% else %}#f59e0b{% endif %}">{{ order.payment_status.upper() }}</span>
         </div>
 
+        {% if order.payment_reference %}
+        <div class="info-row">
+          <span class="info-label">GCash Reference No.</span>
+          <span class="info-value" style="font-family:monospace;letter-spacing:0.05em;color:#374151">{{ order.payment_reference }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.payment_proof_url %}
+        <div style="margin-top:12px">
+          <p style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Proof of Payment</p>
+          <a href="{{ order.payment_proof_url }}" target="_blank" rel="noopener">
+            <img src="{{ order.payment_proof_url }}" alt="Payment proof"
+                 style="max-width:200px;max-height:160px;border-radius:8px;object-fit:contain;border:2px solid #e5e7eb;cursor:zoom-in;transition:opacity 0.2s"
+                 onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'" />
+          </a>
+          <p style="font-size:11px;color:#9ca3af;margin-top:4px">Tap to view full size</p>
+        </div>
+        {% endif %}
+
         <!-- Confirm Order Button (only shows for pending orders) -->
         {% if order.order_status == 'pending' %}
         <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f3f4f6">
