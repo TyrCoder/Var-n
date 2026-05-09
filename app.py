@@ -2135,7 +2135,7 @@ def messaging_page():
                 })
 
         active_slug = None
-        if store_slug and any(c['store_slug'] == store_slug for c in conversations):
+        if store_slug and any(c['store_sl ug'] == store_slug for c in conversations):
             active_slug = store_slug
         elif conversations:
             active_slug = conversations[0]['store_slug']
