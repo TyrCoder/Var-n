@@ -362,8 +362,14 @@ DB_CONFIG = {
     'user': os.getenv('DB_USER', 'root'),
     'password': os.getenv('DB_PASSWORD', ''),
     'database': os.getenv('DB_NAME', 'varon'),
-    'port': int(os.getenv('DB_PORT', '3306') or 3306)
+    'port': int(os.getenv('DB_PORT', '5432') or 5432)
 }
+
+# Log database configuration (without password)
+print(f"[DB CONFIG] Host: {DB_CONFIG['host']}")
+print(f"[DB CONFIG] User: {DB_CONFIG['user']}")
+print(f"[DB CONFIG] Database: {DB_CONFIG['database']}")
+print(f"[DB CONFIG] Port: {DB_CONFIG['port']}")
 
 UTC_ZONE = timezone.utc
 PH_TIMEZONE = timezone(timedelta(hours=8))
@@ -383,8 +389,14 @@ def get_db(dictionary=False):
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             return conn, cursor
         return conn
+    except psycopg2.OperationalError as err:
+        print(f"[DB ERROR] Could not connect to {DB_CONFIG['host']}:{DB_CONFIG['port']} - {err}")
+        return None
     except psycopg2.Error as err:
         print(f"[DB ERROR] Connection failed: {err}")
+        return None
+    except Exception as err:
+        print(f"[DB ERROR] Unexpected error: {err}")
         return None
 
 def ensure_table_engine(cursor, table_name, engine='InnoDB'):
