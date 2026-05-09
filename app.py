@@ -1029,11 +1029,11 @@ def index():
                     COALESCE(SUM(oi.quantity), 0) as sold_count
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
-                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
                 LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
                 LEFT JOIN order_items oi ON p.id = oi.product_id
                 LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
-                WHERE p.is_active = 1
+                WHERE p.is_active::int = 1
                 GROUP BY p.id, p.name, p.price, p.slug, c.name, c.slug, pi.image_url
                 ORDER BY p.created_at DESC
                 LIMIT 20
@@ -1110,13 +1110,13 @@ def product_page(product_id):
                     COALESCE(SUM(oi.quantity), 0) as sold_count
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
-                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
                 LEFT JOIN sellers s ON p.seller_id = s.id
                 LEFT JOIN users u ON s.user_id = u.id
                 LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
                 LEFT JOIN order_items oi ON p.id = oi.product_id
                 LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
-                WHERE p.id = %s AND p.is_active = 1
+                WHERE p.id = %s AND p.is_active::int = 1
                 AND (p.archive_status IS NULL OR p.archive_status = 'active')
                 GROUP BY p.id, p.name, p.description, p.price, p.brand, p.seller_id, 
                          c.name, pi.image_url, s.store_name, u.first_name
@@ -1139,7 +1139,7 @@ def product_page(product_id):
                 cursor.execute('''
                     SELECT size, color, stock_quantity
                     FROM product_variants
-                    WHERE product_id = %s AND is_active = 1
+                    WHERE product_id = %s AND is_active::int = 1
                     ORDER BY size, color
                 ''', (product_id,))
 
@@ -1230,12 +1230,12 @@ def brand_store_page(store_slug):
                 COALESCE(SUM(oi.quantity), 0) as sold_count,
                 MAX(p.created_at) as created_at
             FROM products p
-            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
             LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
             LEFT JOIN order_items oi ON p.id = oi.product_id
             LEFT JOIN orders o ON o.id = oi.order_id AND o.order_status IN ('delivered', 'completed')
             WHERE p.seller_id = %s
-              AND p.is_active = 1
+              AND p.is_active::int = 1
               AND (p.archive_status IS NULL OR p.archive_status = 'active')
             GROUP BY p.id, p.name, p.description, p.price, p.brand, pi.image_url
             ORDER BY created_at DESC
@@ -2976,8 +2976,8 @@ def get_product_detail(product_id):
                 pi.image_url
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
-            WHERE p.id = %s AND p.is_active = 1
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
+            WHERE p.id = %s AND p.is_active::int = 1
             AND (p.archive_status IS NULL OR p.archive_status = 'active')
         ''', (product_id,))
 
@@ -3034,7 +3034,7 @@ def get_product_variants(product_id):
         cursor.execute('''
             SELECT id, size, color, stock_quantity
             FROM product_variants
-            WHERE product_id = %s AND is_active = 1
+            WHERE product_id = %s AND is_active::int = 1
             ORDER BY size, color
         ''', (product_id,))
 
@@ -3612,10 +3612,10 @@ def validate_cart():
                     s.store_name as seller_name,
                     s.id as seller_id
                 FROM products p
-                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+                LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
                 LEFT JOIN inventory i ON p.id = i.product_id
                 JOIN sellers s ON p.seller_id = s.id
-                WHERE p.id = %s AND p.is_active = 1
+                WHERE p.id = %s AND p.is_active::int = 1
                 AND (p.archive_status IS NULL OR p.archive_status = 'active')
             ''', (product_id,))
 
@@ -4048,7 +4048,7 @@ def order_details(order_id):
                    COALESCE(pi_primary.image_url, pi_any.image_url) as image_url
             FROM order_items oi
             LEFT JOIN products p ON oi.product_id = p.id
-            LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary = 1
+            LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary::int = 1
             LEFT JOIN product_images pi_any ON p.id = pi_any.product_id
             WHERE oi.order_id = %s
             GROUP BY oi.id, oi.product_id
@@ -4154,7 +4154,7 @@ def order_confirmation(order_number):
                    COALESCE(pi_primary.image_url, pi_any.image_url) as image_url
             FROM order_items oi
             LEFT JOIN products p ON oi.product_id = p.id
-            LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary = 1
+            LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary::int = 1
             LEFT JOIN product_images pi_any ON p.id = pi_any.product_id
             WHERE oi.order_id = %s
             GROUP BY oi.id, oi.product_id
@@ -5090,7 +5090,7 @@ def admin_approve_product(product_id):
             return jsonify({'error': 'Product not found'}), 404
 
         # Approve product
-        cursor.execute('UPDATE products SET is_active = 1, approval_status = %s WHERE id = %s', ('approved', product_id,))
+        cursor.execute('UPDATE products SET is_active = TRUE, approval_status = %s WHERE id = %s', ('approved', product_id,))
 
         # Create notification for seller
         cursor.execute('''
@@ -6170,7 +6170,7 @@ def api_journal_entries():
         cursor.execute('''
             SELECT id, title, description, image_url, created_at
             FROM journal_entries
-            WHERE is_active = 1
+            WHERE is_active::int = 1
             ORDER BY created_at DESC
             LIMIT 6
         ''')
@@ -6195,7 +6195,7 @@ def admin_all_products():
         cursor.execute('''
             SELECT p.id, p.name, p.price, s.store_name,
                    COALESCE(SUM(pv.stock_quantity), 0) as stock,
-                   CASE WHEN p.is_active = 1 THEN 'Active' ELSE 'Inactive' END as status
+                   CASE WHEN p.is_active::int = 1 THEN 'Active' ELSE 'Inactive' END as status
             FROM products p
             JOIN sellers s ON p.seller_id = s.id
             LEFT JOIN product_variants pv ON p.id = pv.product_id
@@ -6293,7 +6293,7 @@ def admin_statistics():
         active_users = result['total'] if result else 0
 
 
-        cursor.execute('SELECT COUNT(*) as total FROM products WHERE is_active = 1 AND (archive_status IS NULL OR archive_status = "active")')
+        cursor.execute("SELECT COUNT(*) as total FROM products WHERE is_active::int = 1 AND (archive_status IS NULL OR archive_status = 'active')")
         result = cursor.fetchone()
         active_products = result['total'] if result else 0
 
@@ -6326,7 +6326,7 @@ def admin_active_sellers():
                    COUNT(p.id) as product_count
             FROM sellers s
             JOIN users u ON s.user_id = u.id
-            LEFT JOIN products p ON s.id = p.seller_id AND p.is_active = 1
+            LEFT JOIN products p ON s.id = p.seller_id AND p.is_active::int = 1
             GROUP BY s.id
             ORDER BY s.created_at DESC
             LIMIT 100
@@ -6574,7 +6574,7 @@ def seller_dashboard():
         cursor.execute('''
             SELECT p.id, p.name, p.sales_count
             FROM products p
-            WHERE p.seller_id = %s AND p.is_active = 1
+            WHERE p.seller_id = %s AND p.is_active::int = 1
             ORDER BY p.sales_count DESC
             LIMIT 3
         ''', (seller_id,))
@@ -6604,7 +6604,7 @@ def seller_dashboard():
         if max_weekly_sales == 0:
             max_weekly_sales = 1
 
-        cursor.execute('SELECT id, name, slug FROM categories WHERE is_active = 1 ORDER BY name')
+        cursor.execute('SELECT id, name, slug FROM categories WHERE is_active::int = 1 ORDER BY name')
         categories = cursor.fetchall()
 
         cursor.close()
@@ -7236,7 +7236,7 @@ def fetch_cart_items_for_user(conn, user_id, cart_ids=None):
         placeholders = ','.join(['%s'] * len(unique_product_ids))
         image_cursor.execute(f'''
             SELECT product_id,
-                   MAX(CASE WHEN is_primary = 1 THEN image_url END) AS primary_image,
+                   MAX(CASE WHEN is_primary::int = 1 THEN image_url END) AS primary_image,
                    MIN(image_url) AS fallback_image
             FROM product_images
             WHERE product_id IN ({placeholders})
@@ -8306,7 +8306,7 @@ def seller_add_product():
             return jsonify({'error': 'Category is required'}), 400
 
 
-        cursor.execute('SELECT id, slug, name FROM categories WHERE id = %s AND is_active = 1', (category_id,))
+        cursor.execute('SELECT id, slug, name FROM categories WHERE id = %s AND is_active::int = 1', (category_id,))
         category = cursor.fetchone()
         if not category:
             return jsonify({'error': 'Invalid category selected'}), 400
@@ -8844,7 +8844,7 @@ def seller_get_product(product_id):
         ''', (product_id,))
         variants = cursor.fetchall()
 
-        cursor.execute('SELECT id, name FROM categories WHERE is_active = 1 ORDER BY name')
+        cursor.execute('SELECT id, name FROM categories WHERE is_active::int = 1 ORDER BY name')
         categories = cursor.fetchall()
 
         cursor.close()
@@ -9199,7 +9199,7 @@ def api_products():
                 cursor.execute(f"""
                     SELECT id
                     FROM categories
-                    WHERE parent_id IN ({parent_placeholders}) AND is_active = 1
+                    WHERE parent_id IN ({parent_placeholders}) AND is_active::int = 1
                 """, tuple(parent_ids))
                 child_rows = cursor.fetchall()
                 for child in child_rows:
@@ -9221,12 +9221,12 @@ def api_products():
                 COUNT(DISTINCT r.id) as review_count,
                 COALESCE(SUM(oi.quantity), 0) as sold_count
             FROM products p
-            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
             LEFT JOIN order_items oi ON p.id = oi.product_id
             LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
-            WHERE p.is_active = 1
+            WHERE p.is_active::int = 1
             AND (p.archive_status IS NULL OR p.archive_status = 'active')
         """
 
@@ -9286,7 +9286,7 @@ def api_products():
                         code
                     FROM promotions
                     WHERE product_id = %s
-                    AND is_active = 1
+                    AND is_active::int = 1
                     AND is_approved = 1
                     AND start_date <= NOW()
                     AND end_date >= NOW()
@@ -9339,7 +9339,7 @@ def api_products():
                         s.rating,
                         s.total_sales,
                         COALESCE(COUNT(DISTINCT CASE
-                            WHEN p.is_active = 1 AND (p.archive_status IS NULL OR p.archive_status = 'active') THEN p.id
+                            WHEN p.is_active::int = 1 AND (p.archive_status IS NULL OR p.archive_status = 'active') THEN p.id
                         END), 0) AS product_count,
                         MAX(p.brand) AS primary_brand
                     FROM sellers s
@@ -9391,7 +9391,7 @@ def api_categories():
         cursor.execute("""
             SELECT id, name, slug, category_type, is_active, parent_id
             FROM categories
-            WHERE is_active = 1 AND parent_id IS NULL
+            WHERE is_active::int = 1 AND parent_id IS NULL
             ORDER BY id ASC
         """)
         parent_categories = cursor.fetchall()
@@ -9403,7 +9403,7 @@ def api_categories():
             cursor.execute("""
                 SELECT id, name, slug, category_type, parent_id
                 FROM categories
-                WHERE is_active = 1 AND parent_id = %s
+                WHERE is_active::int = 1 AND parent_id = %s
                 ORDER BY id ASC
             """, (parent['id'],))
             children = cursor.fetchall()
@@ -9489,9 +9489,9 @@ def api_seller_products(seller_id):
                    pi.image_url, p.seller_id, p.is_active,
                    c.name as category
             FROM products p
-            LEFT JOIN product_images pi ON (p.id = pi.product_id AND pi.is_primary = 1)
+            LEFT JOIN product_images pi ON (p.id = pi.product_id AND pi.is_primary::int = 1)
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.seller_id = %s AND p.is_active = 1
+            WHERE p.seller_id = %s AND p.is_active::int = 1
             ORDER BY p.created_at DESC
             LIMIT 50
         ''', (seller_id,))
@@ -9630,7 +9630,7 @@ def api_my_orders():
                        COALESCE(pi_primary.image_url, pi_any.image_url) as image_url
                 FROM order_items oi
                 LEFT JOIN products p ON oi.product_id = p.id
-                LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary = 1
+                LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary::int = 1
                 LEFT JOIN product_images pi_any ON p.id = pi_any.product_id
                 WHERE oi.order_id = %s
                 GROUP BY oi.id, oi.product_id
@@ -10156,7 +10156,7 @@ def api_order_details(order_id):
                    COALESCE(pi_primary.image_url, pi_any.image_url) as image_url
             FROM order_items oi
             LEFT JOIN products p ON oi.product_id = p.id
-            LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary = 1
+            LEFT JOIN product_images pi_primary ON p.id = pi_primary.product_id AND pi_primary.is_primary::int = 1
             LEFT JOIN product_images pi_any ON p.id = pi_any.product_id
             WHERE oi.order_id = %s
             GROUP BY oi.id, oi.product_id
@@ -10831,10 +10831,10 @@ def admin_best_product():
             SELECT p.id, p.name, pi.image_url, s.store_name,
                    COUNT(oi.id) as order_count
             FROM products p
-            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
             LEFT JOIN sellers s ON p.seller_id = s.id
             LEFT JOIN order_items oi ON p.id = oi.product_id
-            WHERE p.is_active = 1
+            WHERE p.is_active::int = 1
             GROUP BY p.id, p.name, pi.image_url, s.store_name
             ORDER BY order_count DESC
             LIMIT 1
@@ -11043,7 +11043,7 @@ def seller_order_details(order_id):
             FROM order_items oi
             JOIN products p ON oi.product_id = p.id
             LEFT JOIN product_images pi_primary
-                ON oi.product_id = pi_primary.product_id AND pi_primary.is_primary = 1
+                ON oi.product_id = pi_primary.product_id AND pi_primary.is_primary::int = 1
             LEFT JOIN (
                 SELECT product_id, MIN(image_url) AS image_url
                 FROM product_images
