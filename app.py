@@ -768,6 +768,36 @@ def normalize_location_piece(value):
     return str(value).strip().lower()
 
 
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """Return straight-line distance in km between two lat/lon points."""
+    import math
+    R = 6371.0
+    d_lat = math.radians(lat2 - lat1)
+    d_lon = math.radians(lon2 - lon1)
+    a = math.sin(d_lat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def calculate_shipping_fee(buyer_city, buyer_province, seller_city, seller_province):
+    """
+    Compute shipping fee using Haversine distance.
+    Rate: ₱30 base + ₱10/km beyond 5 km (road estimate = straight-line × 1.3).
+    Minimum is always ₱30.
+    """
+    buyer_coords = infer_coordinates_from_hints(buyer_city, buyer_province)
+    seller_coords = infer_coordinates_from_hints(seller_city, seller_province)
+
+    if buyer_coords and seller_coords:
+        straight_km = haversine_distance(seller_coords[0], seller_coords[1], buyer_coords[0], buyer_coords[1])
+        road_km = straight_km * 1.3
+        extra_km = max(0, road_km - 5)
+        fee = 30.0 + (extra_km * 10.0)
+    else:
+        fee = 30.0
+
+    return round(fee, 2)
+
+
 def infer_coordinates_from_hints(city, province):
     norm_city = normalize_location_piece(city)
     norm_province = normalize_location_piece(province)
@@ -3652,6 +3682,38 @@ def validate_cart():
         if conn:
             conn.close()
         return jsonify({'success': False, 'error': 'Failed to validate cart'}), 500
+
+@app.route('/api/calculate-shipping', methods=['POST'])
+def api_calculate_shipping():
+    """Return shipping fee based on buyer and seller city/province using Haversine."""
+    data = request.get_json(silent=True) or {}
+    buyer_city = (data.get('buyer_city') or '').strip()
+    buyer_province = (data.get('buyer_province') or '').strip()
+
+    # Try to get seller location from DB; fall back to a default if not found
+    seller_city = (data.get('seller_city') or '').strip()
+    seller_province = (data.get('seller_province') or '').strip()
+
+    if not seller_city and not seller_province:
+        conn = get_db()
+        if conn:
+            try:
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cursor.execute("SELECT city, province FROM sellers WHERE status = 'active' LIMIT 1")
+                row = cursor.fetchone()
+                if row:
+                    seller_city = row['city'] or ''
+                    seller_province = row['province'] or ''
+                cursor.close()
+                conn.close()
+            except Exception:
+                if conn:
+                    conn.rollback()
+                    conn.close()
+
+    fee = calculate_shipping_fee(buyer_city, buyer_province, seller_city, seller_province)
+    return jsonify({'success': True, 'shipping_fee': fee})
+
 
 @app.route('/api/place-order', methods=['POST'])
 def place_order():

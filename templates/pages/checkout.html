@@ -677,7 +677,7 @@
           </div>
           <div class="summary-row">
             <span>Shipping</span>
-            <span id="shipping">₱100.00</span>
+            <span id="shipping">₱30.00</span>
           </div>
           <div class="summary-row total">
             <span>Total</span>
@@ -802,6 +802,7 @@
 
       // Store default address globally
       let defaultAddress = null;
+      let computedShippingFee = 30.00;
       let checkoutSelectedItems = [];
       let checkoutSelectedCartIds = [];
       let checkoutSelectionLoaded = false;
@@ -917,10 +918,9 @@
           }).join('');
 
           orderItems.innerHTML = itemsHtml;
-          const shipping = 100.00;
-          const total = subtotal + shipping;
+          const total = subtotal + computedShippingFee;
           subtotalEl.textContent = `₱${subtotal.toFixed(2)}`;
-          shippingEl.textContent = `₱${shipping.toFixed(2)}`;
+          shippingEl.textContent = `₱${computedShippingFee.toFixed(2)}`;
           totalEl.textContent = `₱${total.toFixed(2)}`;
 
         } catch (error) {
@@ -929,6 +929,30 @@
         }
       }
 
+
+      async function fetchAndApplyShippingFee(buyerCity, buyerProvince) {
+        try {
+          const res = await fetch('/api/calculate-shipping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buyer_city: buyerCity, buyer_province: buyerProvince })
+          });
+          const data = await res.json();
+          if (data.success) {
+            computedShippingFee = parseFloat(data.shipping_fee);
+            const shippingEl = document.getElementById('shipping');
+            const totalEl = document.getElementById('total');
+            const subtotalEl = document.getElementById('subtotal');
+            if (shippingEl) shippingEl.textContent = `₱${computedShippingFee.toFixed(2)}`;
+            if (totalEl && subtotalEl) {
+              const sub = parseFloat(subtotalEl.textContent.replace('₱', '')) || 0;
+              totalEl.textContent = `₱${(sub + computedShippingFee).toFixed(2)}`;
+            }
+          }
+        } catch (e) {
+          console.warn('Could not fetch shipping fee, using default ₱30', e);
+        }
+      }
 
       async function loadDefaultAddress() {
         try {
@@ -940,7 +964,8 @@
             
             if (defaultAddr) {
               defaultAddress = defaultAddr;
-              
+              fetchAndApplyShippingFee(defaultAddr.city || '', defaultAddr.province || '');
+
               // Display the address
               document.getElementById('displayName').textContent = defaultAddr.full_name || 'User';
               
@@ -1036,7 +1061,7 @@
           };
         });
 
-        const shippingFee = 100.00;
+        const shippingFee = computedShippingFee;
         const total = subtotal + shippingFee;
 
         // Get payment method
