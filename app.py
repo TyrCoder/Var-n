@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from decimal import Decimal
 from urllib.parse import quote_plus
+import psycopg2.extras
 from utils.otp_service import OTPService
 from models import db, User, Category, Seller, Product, ProductImage, ProductVariant, Inventory, Address, Order, OrderItem, Rider, Shipment, Review, OTP, SellerNotification
 
@@ -118,7 +119,7 @@ def get_current_buyer_approval_status() -> str:
         return 'approved'
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('SELECT buyer_approval_status FROM users WHERE id = %s', (user_id,))
         row = cursor.fetchone() or {}
         cursor.close()
@@ -206,7 +207,7 @@ def lookup_postal_code(psgc_city_code: str, psgc_barangay_code: str = '') -> str
         return ''
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         if barangay_code:
             cursor.execute(
                 "SELECT postal_code FROM psgc_postal_codes WHERE psgc_barangay_code = %s LIMIT 1",
@@ -421,13 +422,8 @@ with app.app_context():
         db.create_all()
         print("[DB INIT] ✓ Database tables initialized successfully")
     except Exception as err:
-        print(f"[DB INIT ERROR] Failed to connect to Supabase: {err}")
-        print("[DB INIT] Make sure these environment variables are set on Render:")
-        print(f"  - DB_HOST: {DB_HOST}")
-        print(f"  - DB_USER: {DB_USER}")
-        print(f"  - DB_PASSWORD: (should be set)")
-        print(f"  - DB_NAME: {DB_NAME}")
-        print(f"  - DB_PORT: {DB_PORT}")
+        print(f"[DB INIT ERROR] Failed to connect: {err}")
+        print("[DB INIT] Make sure DATABASE_URL is set on Render (or DB_HOST/DB_USER/DB_PASSWORD/DB_NAME/DB_PORT)")
 
 
 def get_db():
@@ -907,7 +903,7 @@ def admin_create_tables():
         return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         messages = []
 
 
@@ -1027,7 +1023,7 @@ def index():
 
     if conn:
         try:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
             cursor.execute('''
                 SELECT
@@ -1104,7 +1100,7 @@ def product_page(product_id):
 
     if conn:
         try:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
             cursor.execute('''
@@ -1212,7 +1208,7 @@ def brand_store_page(store_slug):
         return redirect(url_for(destination))
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -1316,7 +1312,7 @@ def messaging_page():
     store_slug = request.args.get('store_slug')
     conversations = []
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         if not ensure_store_messages_table(cursor):
             cursor.close()
             conn.close()
@@ -1458,7 +1454,7 @@ def _get_user_access_row(user_id: int):
     if not conn:
         return None
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT id, email, role,
                    COALESCE(account_status, 'active') AS account_status,
@@ -1494,7 +1490,7 @@ def _maybe_auto_unrestrict(user_id: int, access_row: dict):
             if not conn:
                 return access_row
             try:
-                cur = conn.cursor(dictionary=True)
+                cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                 cur.execute('''
                     UPDATE users
                     SET account_status = 'active',
@@ -1817,7 +1813,7 @@ def seller_sales_report():
         return redirect(url_for('seller_dashboard'))
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
         cursor.execute('SELECT id, store_name, commission_rate FROM sellers WHERE user_id = %s', (user_id,))
@@ -1916,7 +1912,7 @@ def api_seller_sales_report():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
         cursor.execute('SELECT id, store_name, commission_rate FROM sellers WHERE user_id = %s', (user_id,))
@@ -2015,7 +2011,7 @@ def admin_commission_report():
         return redirect(url_for('dashboard'))
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         ensure_admin_commission_tables(cursor)
         ensure_admin_commission_ledger_tables(cursor)
         reconciled = backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
@@ -2160,7 +2156,7 @@ def api_admin_commission_report():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         ensure_admin_commission_tables(cursor)
         ensure_admin_commission_ledger_tables(cursor)
         reconciled = backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
@@ -2293,7 +2289,7 @@ def admin_record_commission_withdrawal():
         return redirect(url_for('admin_commission_report', start_date=start_date, end_date=end_date))
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         ensure_admin_commission_tables(cursor)
         ensure_admin_commission_ledger_tables(cursor)
         backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
@@ -2391,7 +2387,7 @@ def api_admin_record_commission_withdrawal():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         ensure_admin_commission_tables(cursor)
         ensure_admin_commission_ledger_tables(cursor)
         backfill_admin_commission_ledger(cursor, start_date=start_date, end_date=end_date)
@@ -2494,7 +2490,7 @@ def admin_account_access():
         return redirect(url_for('dashboard'))
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Apply status change (legacy/non-JS fallback).
         if request.method == 'POST':
@@ -2685,7 +2681,7 @@ def admin_account_access_action():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('''
             SELECT id, email, role,
@@ -2934,7 +2930,7 @@ def brand_store_messages(store_slug):
     if not conn:
         return _chat_error('Database connection failed', 500)
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     if not ensure_store_messages_table(cursor):
         cursor.close()
         conn.close()
@@ -2981,7 +2977,7 @@ def get_product_detail(product_id):
         return jsonify({'success': False, 'error': 'Database error'})
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -3048,7 +3044,7 @@ def get_product_variants(product_id):
         return jsonify({'success': False, 'error': 'Database error'})
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('''
             SELECT id, size, color, stock_quantity
@@ -3092,7 +3088,7 @@ def get_product_reviews(product_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -3152,7 +3148,7 @@ def submit_review():
             return jsonify({'success': False, 'error': 'Invalid rating'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -3239,7 +3235,7 @@ def check_can_review(product_id):
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -3305,7 +3301,7 @@ def submit_rider_rating():
 
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Verify order belongs to buyer and is delivered
         cursor.execute('''
@@ -3385,7 +3381,7 @@ def check_rider_rating(order_id):
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get order with rider info
         cursor.execute('''
@@ -3442,7 +3438,7 @@ def rider_rating_stats():
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         rider, error = fetch_rider_with_guard(cursor, user_id)
         if error:
@@ -3516,7 +3512,7 @@ def get_rider_reviews(rider_id):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get rider info
         cursor.execute('''
@@ -3611,7 +3607,7 @@ def validate_cart():
         if not cart_items:
             return jsonify({'success': False, 'error': 'Cart is empty'}), 400
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         validated_items = []
 
 
@@ -3694,7 +3690,7 @@ def place_order():
         if not conn:
             return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         data = request.json
         user_id = session.get('user_id')
 
@@ -4014,7 +4010,7 @@ def order_details(order_id):
         return redirect('/indexLoggedIn.html#myOrders')
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Ensure approval_status column exists (for databases that missed the migration)
         try:
@@ -4146,7 +4142,7 @@ def order_confirmation(order_number):
         return redirect(url_for('buyer_dashboard') + '?error=db_connection_failed')
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -4229,7 +4225,7 @@ def login():
             return render_template('auth/login.html')
 
         try:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
             user = cursor.fetchone()
 
@@ -4371,7 +4367,7 @@ def signup():
             return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
         try:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
@@ -4408,8 +4404,8 @@ def signup():
             if not otp_code:
 
                 try:
-                    cursor_check = conn.cursor(dictionary=True)
-                    cursor_check.execute("SHOW TABLES LIKE 'otp_verifications'")
+                    cursor_check = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                    cursor_check.execute("SELECT to_regclass('public.otp_verifications')")
                     table_exists = cursor_check.fetchone()
                     cursor_check.close()
 
@@ -4553,7 +4549,7 @@ def signup_rider():
             return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
         try:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
             cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
@@ -4661,8 +4657,8 @@ def signup_rider():
             if not otp_code:
 
                 try:
-                    cursor_check = conn.cursor(dictionary=True)
-                    cursor_check.execute("SHOW TABLES LIKE 'otp_verifications'")
+                    cursor_check = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                    cursor_check.execute("SELECT to_regclass('public.otp_verifications')")
                     table_exists = cursor_check.fetchone()
                     cursor_check.close()
 
@@ -4769,7 +4765,7 @@ def signup_seller():
             return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
         try:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
             cursor.execute('SELECT id, email, role, phone FROM users WHERE email = %s', (email,))
@@ -4835,8 +4831,8 @@ def signup_seller():
             if not otp_code:
 
                 try:
-                    cursor_check = conn.cursor(dictionary=True)
-                    cursor_check.execute("SHOW TABLES LIKE 'otp_verifications'")
+                    cursor_check = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                    cursor_check.execute("SELECT to_regclass('public.otp_verifications')")
                     table_exists = cursor_check.fetchone()
                     cursor_check.close()
 
@@ -4886,7 +4882,7 @@ def dashboard():
         return redirect(url_for('login'))
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute("SELECT COUNT(*) as count FROM products WHERE approval_status = 'pending'")
@@ -4964,7 +4960,7 @@ def admin_pending_products():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
 
@@ -5025,7 +5021,7 @@ def admin_product_details(product_id):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -5094,7 +5090,7 @@ def admin_approve_product(product_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get product and seller info
         cursor.execute('''
@@ -5145,7 +5141,7 @@ def admin_reject_product(product_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get product and seller info before deletion
         cursor.execute('''
@@ -5204,7 +5200,7 @@ def admin_pending_sellers():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -5234,7 +5230,7 @@ def admin_approve_seller(seller_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute("UPDATE sellers SET status = 'approved' WHERE id = %s", (seller_id,))
@@ -5258,7 +5254,7 @@ def admin_reject_seller(seller_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT user_id FROM sellers WHERE id = %s', (seller_id,))
@@ -5290,7 +5286,7 @@ def admin_pending_riders():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -5321,7 +5317,7 @@ def admin_rider_details(rider_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT r.*, u.first_name, u.last_name, u.email, u.phone
             FROM riders r
@@ -5446,7 +5442,7 @@ def admin_pending_buyers():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT id, first_name, last_name, email, phone, created_at
             FROM users
@@ -5477,7 +5473,7 @@ def admin_approve_buyer(buyer_user_id):
 
     email_sent = False
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT id, first_name, last_name, email
             FROM users
@@ -5517,7 +5513,7 @@ def admin_reject_buyer(buyer_user_id):
 
     email_sent = False
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT id, first_name, last_name, email
             FROM users
@@ -5556,7 +5552,7 @@ def admin_approve_rider(rider_id):
 
     email_sent = False
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('''
             SELECT r.id, r.user_id, r.vehicle_type, r.service_area, r.status,
@@ -5608,7 +5604,7 @@ def admin_reject_rider(rider_id):
 
     email_sent = False
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('''
             SELECT r.id, r.user_id, r.vehicle_type, r.service_area,
@@ -5652,7 +5648,7 @@ def admin_pending_edits():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -5690,7 +5686,7 @@ def admin_product_edit_details(product_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -5734,7 +5730,7 @@ def admin_approve_edit(edit_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -5799,7 +5795,7 @@ def admin_reject_edit(edit_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
         admin_notes = request.form.get('notes', '')
 
@@ -5858,7 +5854,7 @@ def admin_pending_recoveries():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -5898,7 +5894,7 @@ def admin_approve_recovery(request_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -5948,7 +5944,7 @@ def admin_reject_recovery(request_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
         admin_notes = request.form.get('notes', '')
 
@@ -6000,7 +5996,7 @@ def admin_journal_entries():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT id, title, description, image_url, is_active, created_at, updated_at
             FROM journal_entries
@@ -6026,7 +6022,7 @@ def admin_create_journal_entry():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
@@ -6082,7 +6078,7 @@ def admin_get_journal_entry(entry_id):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('SELECT * FROM journal_entries WHERE id = %s', (entry_id,))
         entry = cursor.fetchone()
         cursor.close()
@@ -6105,7 +6101,7 @@ def admin_update_journal_entry(entry_id):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
@@ -6166,7 +6162,7 @@ def admin_delete_journal_entry(entry_id):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('DELETE FROM journal_entries WHERE id = %s', (entry_id,))
         conn.commit()
         cursor.close()
@@ -6185,7 +6181,7 @@ def api_journal_entries():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT id, title, description, image_url, created_at
             FROM journal_entries
@@ -6210,7 +6206,7 @@ def admin_all_products():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT p.id, p.name, p.price, s.store_name,
                    COALESCE(SUM(pv.stock_quantity), 0) as stock,
@@ -6239,7 +6235,7 @@ def admin_all_customers():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at,
                    COUNT(o.id) as order_count
@@ -6267,7 +6263,7 @@ def admin_all_transactions():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT o.id, o.order_number, o.total_amount as amount, o.order_status as status,
                    o.created_at, u.first_name, u.last_name,
@@ -6294,7 +6290,7 @@ def admin_statistics():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT SUM(total_amount) as total_revenue FROM orders WHERE order_status = "delivered"')
@@ -6339,7 +6335,7 @@ def admin_active_sellers():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT s.id, s.store_name, s.user_id, u.first_name, u.last_name, u.email, u.phone, s.created_at,
                    COUNT(p.id) as product_count
@@ -6367,7 +6363,7 @@ def admin_active_riders():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT r.id, u.first_name, u.last_name, u.email, u.phone, r.vehicle_type,
                    r.license_number, r.service_area, r.status, r.is_available, r.rating, r.created_at
@@ -6394,7 +6390,7 @@ def admin_customer_growth_by_region():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -6441,7 +6437,7 @@ def admin_settings():
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         if request.method == 'GET':
 
@@ -6527,7 +6523,7 @@ def seller_dashboard():
 
     cursor = None
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
         cursor.execute('''
@@ -6670,7 +6666,7 @@ def rider_dashboard():
         return redirect(url_for('login'))
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -6776,7 +6772,7 @@ def seller_products():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -6850,7 +6846,7 @@ def seller_inventory():
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get seller ID
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -6904,7 +6900,7 @@ def seller_reviews():
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -6949,7 +6945,7 @@ def approve_review(review_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('UPDATE reviews SET is_approved = TRUE WHERE id = %s', (review_id,))
         conn.commit()
@@ -6968,7 +6964,7 @@ def reject_review(review_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('DELETE FROM reviews WHERE id = %s', (review_id,))
         conn.commit()
@@ -6996,7 +6992,7 @@ def seller_restock():
             return jsonify({'success': False, 'error': 'Quantity must be greater than 0'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Verify product belongs to seller
         cursor.execute('''
@@ -7070,7 +7066,7 @@ def get_variant_details(variant_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -7111,7 +7107,7 @@ def seller_promotions():
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -7156,7 +7152,7 @@ def create_seller_notification(seller_id, order_id, notification_type, title, me
             print(f"[NOTIFICATION] Failed to create notification: DB connection failed")
             return False
         
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         
         # Determine action URL based on notification type
         action_url = f'/seller-dashboard?tab=orders&order_id={order_id}'
@@ -7186,7 +7182,7 @@ def record_order_status_change(order_id, seller_id, old_status, new_status, chan
             print(f"[STATUS HISTORY] Failed to record status change: DB connection failed")
             return False
         
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         
         cursor.execute('''
             INSERT INTO order_status_history (
@@ -7209,7 +7205,7 @@ def fetch_cart_items_for_user(conn, user_id, cart_ids=None):
     if not conn or not user_id:
         return []
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     query = '''
         SELECT
@@ -7251,7 +7247,7 @@ def fetch_cart_items_for_user(conn, user_id, cart_ids=None):
     unique_product_ids = list(dict.fromkeys(product_ids)) if product_ids else []
     image_map = {}
     if unique_product_ids:
-        image_cursor = conn.cursor(dictionary=True)
+        image_cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         placeholders = ','.join(['%s'] * len(unique_product_ids))
         image_cursor.execute(f'''
             SELECT product_id,
@@ -7310,7 +7306,7 @@ def adjust_inventory_for_order(conn, order_id, action):
     if not conn or not order_id:
         return False, 'Invalid inventory adjustment request.'
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute('''
         SELECT product_id, variant_id, quantity
         FROM order_items
@@ -7492,7 +7488,7 @@ def create_promotion():
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -7625,7 +7621,7 @@ def delete_promotion(promo_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('UPDATE promotions SET is_active = FALSE WHERE id = %s', (promo_id,))
         conn.commit()
@@ -7644,7 +7640,7 @@ def admin_pending_promotions():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -7694,7 +7690,7 @@ def admin_approve_promotion(promo_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -7842,7 +7838,7 @@ def admin_reject_promotion(promo_id):
         reason = data.get('reason', 'No reason provided')
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -7911,7 +7907,7 @@ def seller_sales_analytics():
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -7986,7 +7982,7 @@ def seller_performance():
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -8071,7 +8067,7 @@ def seller_brand_settings():
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -8154,7 +8150,7 @@ def seller_account_settings():
             print("[DEBUG] Database connection failed")
             return jsonify({'success': False, 'error': 'Database connection error'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         query = '''
@@ -8295,7 +8291,7 @@ def seller_add_product():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -8586,7 +8582,7 @@ def seller_update_stock():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -8640,7 +8636,7 @@ def seller_archive_product():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -8696,7 +8692,7 @@ def seller_archived_products():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -8734,7 +8730,7 @@ def seller_rejected_products():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -8774,7 +8770,7 @@ def seller_request_recovery():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -8832,7 +8828,7 @@ def seller_get_product(product_id):
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -8889,7 +8885,7 @@ def seller_edit_product():
         return jsonify({'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -9086,7 +9082,7 @@ def get_buyer_name():
             return jsonify({'error': 'Not logged in'}), 401
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         user_id = session.get('user_id')
         cursor.execute('SELECT first_name, last_name, email, phone FROM users WHERE id = %s', (user_id,))
@@ -9115,7 +9111,7 @@ def api_user_profile_navbar():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
         cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
@@ -9152,7 +9148,7 @@ def check_db_schema():
         if not conn:
             return jsonify({'success': False, 'error': 'DB connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute("SHOW COLUMNS FROM coupons LIKE 'product_id'")
         result = cursor.fetchone()
 
@@ -9192,7 +9188,7 @@ def api_products():
                 'error': 'Database connection failed'
             }), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         limit = request.args.get('limit', 50, type=int)
@@ -9408,7 +9404,7 @@ def api_categories():
     """Get all active categories organized hierarchically (parent with children)"""
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get all parent categories (where parent_id IS NULL)
         cursor.execute("""
@@ -9471,7 +9467,7 @@ def api_category_detail(category_id):
     """Get specific category details"""
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         
         cursor.execute("""
             SELECT id, name, slug, category_type, parent_id, is_active
@@ -9504,7 +9500,7 @@ def api_seller_products(seller_id):
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -9543,7 +9539,7 @@ def api_user_orders():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -9581,7 +9577,7 @@ def api_my_orders():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -9722,7 +9718,7 @@ def api_cancel_my_order(order_id):
     if not conn:
         return jsonify({'success': False, 'error': 'Database error'}), 500
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     user_id = session.get('user_id')
     instant_cancel_statuses = {'pending'}
     approval_required_statuses = {'confirmed'}
@@ -9869,7 +9865,7 @@ def api_order_tracking(order_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
         user_role = session.get('role')
 
@@ -10020,7 +10016,7 @@ def api_complete_order():
             return jsonify({'success': False, 'error': 'Order ID required'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -10070,7 +10066,7 @@ def api_return_order():
             return jsonify({'success': False, 'error': 'Order ID required'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -10112,7 +10108,7 @@ def api_search_order():
             return jsonify({'success': False, 'error': 'Order number and email required'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -10150,7 +10146,7 @@ def api_order_details(order_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -10290,7 +10286,7 @@ def account_details():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
         cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
@@ -10386,7 +10382,7 @@ def upload_profile_picture():
 
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SHOW COLUMNS FROM users LIKE "profile_image"')
@@ -10442,7 +10438,7 @@ def send_email_change_otp():
 
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
         cursor.execute('SELECT id FROM users WHERE email = %s AND id != %s', (new_email, user_id))
         existing_user = cursor.fetchone()
@@ -10525,7 +10521,7 @@ def verify_email_change():
             session.modified = True
 
 
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
             cursor.execute('SHOW COLUMNS FROM users LIKE "email_verified"')
             has_column = cursor.fetchone()
@@ -10578,7 +10574,7 @@ def update_account():
 
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('SELECT email FROM users WHERE id = %s', (user_id,))
         current_user = cursor.fetchone()
         current_email = current_user['email'] if current_user else None
@@ -10663,7 +10659,7 @@ def verify_password():
 
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('SELECT password FROM users WHERE id = %s', (user_id,))
         user = cursor.fetchone()
         cursor.close()
@@ -10774,7 +10770,7 @@ def verify_phone_otp():
                 session.modified = True
 
 
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
             cursor.execute('SHOW COLUMNS FROM users LIKE "phone_verified"')
             has_column = cursor.fetchone()
@@ -10808,7 +10804,7 @@ def admin_recent_orders():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         query = '''
@@ -10847,7 +10843,7 @@ def admin_best_product():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         query = '''
@@ -10894,7 +10890,7 @@ def seller_orders():
 
         user_id = session['user_id']
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -11005,7 +11001,7 @@ def seller_order_details(order_id):
 
         user_id = session['user_id']
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
         seller = cursor.fetchone()
@@ -11150,7 +11146,7 @@ def update_order_status():
             return jsonify({'success': False, 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -11376,7 +11372,7 @@ def seller_approve_rider():
             return jsonify({'success': False, 'error': 'Missing order_id'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -11458,7 +11454,7 @@ def rider_request_pickup(order_id):
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM riders WHERE user_id = %s', (rider_user_id,))
@@ -11533,7 +11529,7 @@ def seller_approve_rider_pickup(order_id):
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (seller_user_id,))
@@ -11607,7 +11603,7 @@ def seller_reject_rider_pickup(order_id):
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (seller_user_id,))
@@ -11674,7 +11670,7 @@ def get_order_status(order_id):
         return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -11760,7 +11756,7 @@ def get_user_orders_detailed():
         return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -11941,7 +11937,7 @@ def verify_otp():
                 conn = get_db()
                 if conn:
                     try:
-                        cursor = conn.cursor(dictionary=True)
+                        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                         role = pending_signup.get('role') or 'buyer'
                         buyer_approval_status = 'pending' if role == 'buyer' else 'approved'
                         cursor.execute(
@@ -12002,7 +11998,7 @@ def verify_otp():
                 conn = get_db()
                 if conn:
                     try:
-                        cursor = conn.cursor(dictionary=True)
+                        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
                         
                         # Double-check email doesn't already exist (in case of concurrent requests)
                         cursor.execute('SELECT id FROM users WHERE email = %s', (pending_rider_signup['email'],))
@@ -12142,7 +12138,7 @@ def verify_otp():
                 conn = get_db()
                 if conn:
                     try:
-                        cursor = conn.cursor(dictionary=True)
+                        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
                         is_existing_user = pending_seller_signup.get('is_existing_user', False)
@@ -12316,7 +12312,7 @@ def api_add_to_cart():
 
         print(f"[CART ADD] User {user_id}, Product {product_id}, Qty {quantity}, Variant {variant_id}")
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('''
             SELECT id, quantity FROM cart
@@ -12428,7 +12424,7 @@ def api_cart_selection():
             conn.close()
             return jsonify({'success': False, 'error': 'Please select at least one available item.'}), 400
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         placeholders = ','.join(['%s'] * len(normalized_ids))
         cursor.execute(f'''SELECT id FROM cart WHERE user_id = %s AND id IN ({placeholders})''',
                        tuple([user_id] + normalized_ids))
@@ -12512,7 +12508,7 @@ def api_update_cart():
                 quantity = stock_limit
                 adjusted = True
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('UPDATE cart SET quantity = %s WHERE id = %s AND user_id = %s', (quantity, cart_id, user_id))
 
@@ -12543,7 +12539,7 @@ def api_remove_from_cart():
         user_id = session.get('user_id')
         cart_id = data.get('cart_id')
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('DELETE FROM cart WHERE id = %s AND user_id = %s', (cart_id, user_id))
         conn.commit()
         cursor.close()
@@ -12569,7 +12565,7 @@ def api_clear_cart():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('DELETE FROM cart WHERE user_id = %s', (user_id,))
         conn.commit()
         cursor.close()
@@ -12595,7 +12591,7 @@ def api_get_addresses():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('''
             SELECT * FROM addresses
@@ -12633,7 +12629,7 @@ def api_add_address():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         if data.get('is_default'):
@@ -12686,7 +12682,7 @@ def api_delete_address(address_id):
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('DELETE FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
@@ -12718,7 +12714,7 @@ def api_rider_store_locations():
 
     cursor = None
     try:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('''
             SELECT id, store_name, address, city, province, postal_code, status, rating, total_sales, description
             FROM sellers
@@ -12778,7 +12774,7 @@ def api_rider_available_orders():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         rider, error = fetch_rider_with_guard(cursor, user_id)
         if error:
@@ -12924,7 +12920,7 @@ def api_rider_active_deliveries():
 
     try:
         rider_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         rider_record, error = fetch_rider_with_guard(cursor, rider_id)
@@ -13198,7 +13194,7 @@ def api_rider_document_status():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
         rider_row = cursor.fetchone()
         if not rider_row:
@@ -13265,7 +13261,7 @@ def api_rider_upload_document():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
         rider_row = cursor.fetchone()
         if not rider_row:
@@ -13321,7 +13317,7 @@ def api_rider_delivery_history():
 
     try:
         rider_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         rider_record, error = fetch_rider_with_guard(cursor, rider_id)
         if error:
@@ -13384,7 +13380,7 @@ def api_rider_shipment_details(shipment_id):
 
     try:
         rider_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         rider_record, error = fetch_rider_with_guard(cursor, rider_id)
         if error:
@@ -13439,7 +13435,7 @@ def api_rider_earnings():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
@@ -13519,7 +13515,7 @@ def api_rider_ratings():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
@@ -13591,7 +13587,7 @@ def api_rider_update_profile():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         first_name = data.get('first_name', '').strip()
@@ -13686,7 +13682,7 @@ def api_rider_change_password():
             conn.close()
             return jsonify({'success': False, 'error': 'Both passwords are required'}), 400
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT password FROM users WHERE id = %s', (user_id,))
@@ -13745,7 +13741,7 @@ def api_rider_accept_order(order_id):
 
     try:
         rider_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -13789,7 +13785,7 @@ def api_rider_update_status(order_id):
 
     try:
         rider_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('''
             UPDATE orders
@@ -13832,7 +13828,7 @@ def api_rider_accept_order_by_shipment():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
@@ -13916,7 +13912,7 @@ def api_rider_update_delivery_status():
 
     try:
         user_id = session.get('user_id')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM riders WHERE user_id = %s', (user_id,))
@@ -14048,7 +14044,7 @@ def forgot_password():
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
         try:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cursor.execute('SELECT id, first_name FROM users WHERE email = %s', (email,))
             user = cursor.fetchone()
 
@@ -14192,7 +14188,7 @@ def reset_password():
         if not conn:
             return jsonify({'success': False, 'message': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         cursor.execute('UPDATE users SET password = %s WHERE id = %s AND email = %s',
                       (new_password, user_id, email))
@@ -14227,7 +14223,7 @@ def initiate_password_change():
             return jsonify({'success': False, 'message': 'Invalid OTP method'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
 
@@ -14325,7 +14321,7 @@ def confirm_password_change():
 
 
         otp_method = session['password_change'].get('otp_method')
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cursor.execute('SELECT email, phone FROM users WHERE id = %s', (session.get('user_id'),))
         user = cursor.fetchone()
 
@@ -14368,7 +14364,7 @@ def get_shipping_addresses():
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
         cursor.execute('''SELECT id, full_name, phone, street_address, barangay,
@@ -14396,7 +14392,7 @@ def get_address(address_id):
 
     try:
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_id = session.get('user_id')
 
         cursor.execute('''SELECT id, full_name, phone, street_address, barangay,
@@ -14446,7 +14442,7 @@ def save_shipping_address():
         is_default = data.get('is_default', False)
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         if is_default:
@@ -14488,7 +14484,7 @@ def update_shipping_address(address_id):
                 return jsonify({'success': False, 'message': f'{field} is required'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
@@ -14539,7 +14535,7 @@ def delete_shipping_address(address_id):
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT is_default FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
@@ -14579,7 +14575,7 @@ def set_default_address(address_id):
     try:
         user_id = session.get('user_id')
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
@@ -14624,7 +14620,7 @@ def seller_confirm_order():
     if not conn:
         return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     try:
         conn.start_transaction()
@@ -14804,7 +14800,7 @@ def seller_release_to_rider():
             return jsonify({'success': False, 'error': 'Missing order_id or rider_id'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -14907,7 +14903,7 @@ def api_get_available_riders():
             return jsonify({'success': False, 'error': 'Missing order_id parameter'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -15024,7 +15020,7 @@ def seller_approve_rider_for_delivery():
             return jsonify({'success': False, 'error': 'Missing order_id or rider_id'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -15090,7 +15086,7 @@ def get_rider_details(rider_id):
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -15138,7 +15134,7 @@ def get_order_rider_info(order_id):
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -15184,7 +15180,7 @@ def approve_rider_delivery():
         if not conn:
             return jsonify({'success': False, 'error': 'Database connection failed'}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
         cursor.execute('''
@@ -15231,7 +15227,7 @@ def get_seller_notifications():
 
         user_id = session['user_id']
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get seller_id
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -15302,7 +15298,7 @@ def mark_notification_read(notification_id):
 
         user_id = session['user_id']
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Verify seller owns this notification
         cursor.execute('''
@@ -15350,7 +15346,7 @@ def mark_all_notifications_read():
 
         user_id = session['user_id']
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get seller_id from user_id
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -15399,7 +15395,7 @@ def get_orders_by_status(status):
             return jsonify({'success': False, 'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'}), 400
 
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get seller_id
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
@@ -15480,7 +15476,7 @@ def release_order_to_rider(order_id):
 
         user_id = session['user_id']
         conn = get_db()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
         # Get seller_id
         cursor.execute('SELECT id FROM sellers WHERE user_id = %s', (user_id,))
