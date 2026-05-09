@@ -3,7 +3,8 @@ from functools import wraps
 from datetime import datetime, date
 import os
 import json
-import mysql.connector
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import time
 import secrets
 import shutil
@@ -187,7 +188,7 @@ def lookup_postal_code(psgc_city_code: str, psgc_barangay_code: str = '') -> str
                 return ''
 
         return ''
-    except mysql.connector.Error as err:
+    except (psycopg2.Error, Exception) as err:
         # Most common cause: mapping table not created yet.
         return ''
     finally:
@@ -368,22 +369,21 @@ UTC_ZONE = timezone.utc
 PH_TIMEZONE = timezone(timedelta(hours=8))
 
 def get_db(dictionary=False):
-    """Return a fresh MySQL connection (optionally with dict cursor)."""
+    """Return a fresh PostgreSQL connection (optionally with dict cursor)."""
     ensure_db_initialized()
     try:
-        conn = mysql.connector.connect(
+        conn = psycopg2.connect(
             host=DB_CONFIG['host'],
             user=DB_CONFIG['user'],
             password=DB_CONFIG['password'],
             database=DB_CONFIG['database'],
-            port=DB_CONFIG['port'],
-            # Avoid mysql-connector C-extension crashes on some Windows setups.
-            use_pure=True,
+            port=DB_CONFIG['port']
         )
         if dictionary:
-            return conn, conn.cursor(dictionary=True)
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+            return conn, cursor
         return conn
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         print(f"[DB ERROR] Connection failed: {err}")
         return None
 
@@ -448,7 +448,7 @@ def ensure_store_messages_table(cursor):
     try:
         cursor.execute(STORE_MESSAGES_TABLE_SQL)
         return True
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         print(f"[DB ERROR] Failed to ensure store_messages table: {err}")
         return False
 
@@ -848,15 +848,13 @@ def get_delivery_region(city, province):
 
 def init_db():
     try:
-        conn = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password'],
-            use_pure=True,
-        )
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
-        cursor.execute(f"USE {DB_CONFIG['database']}")
+        # For PostgreSQL/Supabase, database already exists
+        conn = get_db()
+        if not conn:
+            print("[DB INIT] Could not connect to database")
+            return
+        
+        cursor = conn.cursor()
 
         cursor.execute('''CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1601,18 +1599,16 @@ def ensure_db_initialized():
     global _db_initialized
     if not _db_initialized:
         try:
-
-            conn = mysql.connector.connect(
+            # For PostgreSQL, we connect to the database directly
+            # The database already exists on Supabase
+            conn = psycopg2.connect(
                 host=DB_CONFIG['host'],
                 user=DB_CONFIG['user'],
-                password=DB_CONFIG['password']
-                ,
-                # Avoid mysql-connector C-extension crashes on some Windows setups.
-                use_pure=True
+                password=DB_CONFIG['password'],
+                database=DB_CONFIG['database'],
+                port=DB_CONFIG['port']
             )
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-            conn.commit()
+            cursor = conn.cursor()
             cursor.close()
             conn.close()
             print(f"[DB] Database '{DB_CONFIG['database']}' verified")
@@ -2135,7 +2131,7 @@ def messaging_page():
                 })
 
         active_slug = None
-        if store_slug and any(c['store_slug'] == store_slug for c in conversations):
+        if store_slug and any(c['store_sl ug'] == store_slug for c in conversations):
             active_slug = store_slug
         elif conversations:
             active_slug = conversations[0]['store_slug']
@@ -13512,7 +13508,7 @@ def api_rider_store_locations():
             stores.append(store_entry)
 
         return jsonify({'success': True, 'stores': stores})
-    except mysql.connector.Error as db_err:
+    except psycopg2.Error as db_err:
         print(f"[ERROR] Fetching store locations failed: {db_err}")
         return jsonify({'success': False, 'error': 'Failed to load store locations'}), 500
     except Exception as exc:
@@ -13815,7 +13811,7 @@ def ensure_rider_documents_table(cursor):
             ALTER TABLE rider_documents
             MODIFY COLUMN document_type ENUM('government_id','vehicle_registration','orcr','car_photo') NOT NULL
         """)
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         print(f"[DB WARNING] Unable to update rider_documents.document_type enum: {err}")
 
 
@@ -13860,11 +13856,11 @@ def ensure_rider_psgc_address_columns(cursor):
     # Best-effort indexes; ignore if they already exist
     try:
         cursor.execute("ALTER TABLE riders ADD INDEX idx_rider_address_city_code (address_city_code)")
-    except mysql.connector.Error:
+    except psycopg2.Error:
         pass
     try:
         cursor.execute("ALTER TABLE riders ADD INDEX idx_rider_default_city_code (default_service_area_city_code)")
-    except mysql.connector.Error:
+    except psycopg2.Error:
         pass
 
 
