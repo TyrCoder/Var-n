@@ -3,8 +3,6 @@ from functools import wraps
 from datetime import datetime, date
 import os
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
 import time
 import secrets
 import shutil
@@ -14,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from decimal import Decimal
 from utils.otp_service import OTPService
+from models import db, User, Category, Seller, Product, ProductImage, ProductVariant, Inventory, Address, Order, OrderItem, Rider, Shipment, Review, OTP, SellerNotification
 
 
 load_dotenv()
@@ -26,6 +25,23 @@ app.secret_key = os.getenv('SECRET_KEY', 'varon-dev-secret')
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'false').strip().lower() == 'true'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# SQLAlchemy Configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}?sslmode=require"
+app.config['SQLALCHEMY_ECHO'] = os.getenv('SQLALCHEMY_ECHO', 'false').lower() == 'true'
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'pool_recycle': 3600,
+    'pool_pre_ping': True,
+    'max_overflow': 20,
+    'connect_args': {
+        'connect_timeout': 10,
+        'options': '-c statement_timeout=30000'  # 30 second timeout
+    }
+}
+
+# Initialize SQLAlchemy
+db.init_app(app)
 
 
 # --- PSGC (Philippine Standard Geographic Code) helpers ---
@@ -357,84 +373,21 @@ def api_postal_code():
     except Exception as err:
         return jsonify({'success': False, 'message': str(err)}), 500
 
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', ''),
-    'database': os.getenv('DB_NAME', 'varon'),
-    'port': int(os.getenv('DB_PORT', '5432') or 5432)
-}
-
-# Log database configuration (without password)
-print(f"[DB CONFIG] Host: {DB_CONFIG['host']}")
-print(f"[DB CONFIG] User: {DB_CONFIG['user']}")
-print(f"[DB CONFIG] Database: {DB_CONFIG['database']}")
-print(f"[DB CONFIG] Port: {DB_CONFIG['port']}")
-
 UTC_ZONE = timezone.utc
 PH_TIMEZONE = timezone(timedelta(hours=8))
 
-def get_db(dictionary=False):
-    """Return a fresh PostgreSQL connection (optionally with dict cursor)."""
-    ensure_db_initialized()
+# Log database configuration
+print(f"[DB CONFIG] Using PostgreSQL on Supabase")
+print(f"[DB CONFIG] Database URI: postgresql://***@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'postgres')}")
+
+# Initialize database tables (SQLAlchemy will manage schema)
+with app.app_context():
     try:
-        # Use connection string format for better control over connection parameters
-        # Added sslmode=require to force secure connection and potentially bypass IPv6 issues
-        conn_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}?sslmode=require"
-        
-        conn = psycopg2.connect(conn_string)
-        if dictionary:
-            cursor = conn.cursor(cursor_factory=RealDictCursor)
-            return conn, cursor
-        return conn
-    except psycopg2.OperationalError as err:
-        print(f"[DB ERROR] Could not connect to {DB_CONFIG['host']}:{DB_CONFIG['port']} - {err}")
-        return None
-    except psycopg2.Error as err:
-        print(f"[DB ERROR] Connection failed: {err}")
-        return None
+        db.create_all()
+        print("[DB INIT] Database tables initialized successfully")
     except Exception as err:
-        print(f"[DB ERROR] Unexpected error: {err}")
-        return None
-
-def ensure_table_engine(cursor, table_name, engine='InnoDB'):
-    """Ensure a table uses the expected storage engine so FKs succeed."""
-    try:
-        cursor.execute(
-            """
-            SELECT ENGINE FROM information_schema.TABLES
-            WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
-            """,
-            (DB_CONFIG['database'], table_name)
-        )
-        info = cursor.fetchone()
-        current_engine = (info or {}).get('ENGINE') if info else None
-        if current_engine and current_engine.lower() != engine.lower():
-            cursor.execute(f"ALTER TABLE {table_name} ENGINE={engine}")
-            print(f"[DB] Converted {table_name} to {engine} for FK compatibility")
-    except Exception as err:
-        print(f"[DB WARNING] Could not verify engine for {table_name}: {err}")
-
-STORE_MESSAGES_TABLE_SQL = '''
-    CREATE TABLE IF NOT EXISTS store_messages (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        seller_id INT NOT NULL,
-        buyer_id INT NOT NULL,
-        sender_id INT NOT NULL,
-        sender_role ENUM('buyer', 'seller', 'admin') NOT NULL DEFAULT 'buyer',
-        message TEXT NOT NULL,
-        is_read BOOLEAN DEFAULT FALSE,
-        read_at TIMESTAMP NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE CASCADE,
-        FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-        INDEX idx_seller_buyer (seller_id, buyer_id, created_at),
-        INDEX idx_sender (sender_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-'''
-
-MAX_BRAND_CHAT_LENGTH = 2000
+        print(f"[DB INIT WARNING] Could not initialize tables: {err}")
+        print("[DB INIT] Tables may already exist on Supabase - this is expected")
 
 
 def convert_decimals_to_float(value):
@@ -452,15 +405,6 @@ def verify_user_password(hashed_password, password):
     if not hashed_password or not password:
         return False
     return hashed_password == password
-
-
-def ensure_store_messages_table(cursor):
-    try:
-        cursor.execute(STORE_MESSAGES_TABLE_SQL)
-        return True
-    except psycopg2.Error as err:
-        print(f"[DB ERROR] Failed to ensure store_messages table: {err}")
-        return False
 
 
 def _coerce_datetime(value):
@@ -513,6 +457,9 @@ def ph_time_filter(value, fmt='%B %d, %Y at %I:%M %p'):
 
 
 app.jinja_env.filters['ph_time'] = ph_time_filter
+
+
+MAX_BRAND_CHAT_LENGTH = 2000
 
 
 CITY_COORDINATE_HINTS = {
@@ -856,65 +803,14 @@ def get_delivery_region(city, province):
 
     return 'Unknown'
 
-def init_db():
-    try:
-        # For PostgreSQL/Supabase, database already exists
-        conn = get_db()
-        if not conn:
-            print("[DB INIT] Could not connect to database")
-            return
-        
-        cursor = conn.cursor()
-        
-        # Database tables already exist on Supabase - skip table creation
-        # This wrapper prevents MySQL syntax errors when running on PostgreSQL
-        try:
-            cursor.execute("SELECT 1")  # Just test the connection
-            cursor.fetchone()
-            print("[DB INIT] Database connection verified!")
-        except Exception as table_err:
-            print(f"[DB INIT WARNING] Could not initialize tables (expected on PostgreSQL): {table_err}")
-            # For PostgreSQL, tables should already exist on Supabase
-        
-        cursor.close()
-        conn.close()
-        print("[DB INIT] Database initialization complete")
-    except Exception as err:
-        print(f"[DB INIT ERROR] {err}")
-
-
-_db_initialized = False
-
-def ensure_db_initialized():
-    """Lazy initialize database on first request"""
-    global _db_initialized
-    if not _db_initialized:
-        try:
-            # For PostgreSQL, we connect to the database directly
-            # The database already exists on Supabase
-            conn_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}?sslmode=require"
-            conn = psycopg2.connect(conn_string)
-            cursor = conn.cursor()
-            cursor.close()
-            conn.close()
-            print(f"[DB] Database '{DB_CONFIG['database']}' verified")
-
-            try:
-                init_db()
-            except Exception as init_err:
-                print(f"[DB INIT WARNING] init_db execution failed: {init_err}")
-
-            _db_initialized = True
-        except Exception as e:
-            print(f"[DB INIT WARNING] Database initialization failed: {e}")
 
 @app.before_request
 def before_request():
-    """Initialize database before first request"""
-    ensure_db_initialized()
+    """Handle pre-request checks"""
     blocked = enforce_account_access_if_needed()
     if blocked is not None:
         return blocked
+
 
 
 @app.route('/restricted', methods=['GET'])
