@@ -35,8 +35,14 @@ DB_HOST = os.getenv('DB_HOST', 'localhost')
 DB_PORT = os.getenv('DB_PORT', '5432')
 DB_NAME = os.getenv('DB_NAME', 'postgres')
 
-# URL encode password to handle special characters
-encoded_password = quote_plus(DB_PASSWORD) if DB_PASSWORD else ''
+# URL encode password to handle special characters (@ symbol must become %40)
+# This is critical because @ is the delimiter between credentials and host
+if DB_PASSWORD:
+    # Replace @ with %40 in the password
+    safe_password = DB_PASSWORD.replace('@', '%40')
+    encoded_password = quote_plus(safe_password)
+else:
+    encoded_password = ''
 
 # Build connection URI with proper SSL settings for Supabase
 if DB_HOST and DB_HOST != 'localhost':
