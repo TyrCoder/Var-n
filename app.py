@@ -3778,20 +3778,20 @@ def place_order():
             shipping_address_id = cursor.lastrowid
             billing_address_id = shipping_address_id
 
-            cursor.execute('SELECT COUNT(*) as count FROM addresses WHERE user_id = %s AND is_default = TRUE', (user_id,))
+            cursor.execute('SELECT COUNT(*) as count FROM addresses WHERE user_id = %s AND is_default = 1', (user_id,))
             result = cursor.fetchone()
             has_default = result and result['count'] > 0
             is_default = not has_default
 
             if is_default:
-                cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+                cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
 
             cursor.execute('UPDATE addresses SET is_default = %s WHERE id = %s', (is_default, shipping_address_id))
         else:
             # If not saving address, use the default address on file
             cursor.execute('''
                 SELECT id FROM addresses 
-                WHERE user_id = %s AND is_default = TRUE 
+                WHERE user_id = %s AND is_default = 1 
                 LIMIT 1
             ''', (user_id,))
             default_addr = cursor.fetchone()
@@ -6185,7 +6185,7 @@ def api_journal_entries():
         cursor.execute('''
             SELECT id, title, description, image_url, created_at
             FROM journal_entries
-            WHERE is_active = TRUE
+            WHERE is_active = 1
             ORDER BY created_at DESC
             LIMIT 6
         ''')
@@ -6619,7 +6619,7 @@ def seller_dashboard():
         if max_weekly_sales == 0:
             max_weekly_sales = 1
 
-        cursor.execute('SELECT id, name, slug FROM categories WHERE is_active = TRUE ORDER BY name')
+        cursor.execute('SELECT id, name, slug FROM categories WHERE is_active = 1 ORDER BY name')
         categories = cursor.fetchall()
 
         cursor.close()
@@ -6947,7 +6947,7 @@ def approve_review(review_id):
         conn = get_db()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        cursor.execute('UPDATE reviews SET is_approved = TRUE WHERE id = %s', (review_id,))
+        cursor.execute('UPDATE reviews SET is_approved = 1 WHERE id = %s', (review_id,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -7623,7 +7623,7 @@ def delete_promotion(promo_id):
         conn = get_db()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        cursor.execute('UPDATE promotions SET is_active = FALSE WHERE id = %s', (promo_id,))
+        cursor.execute('UPDATE promotions SET is_active = 0 WHERE id = %s', (promo_id,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -7664,7 +7664,7 @@ def admin_pending_promotions():
             JOIN products pr ON p.product_id = pr.id
             JOIN sellers s ON pr.seller_id = s.id
             JOIN users u ON s.user_id = u.id
-            WHERE p.is_approved = FALSE
+            WHERE p.is_approved = 0
             ORDER BY p.created_at ASC
         ''')
 
@@ -7713,7 +7713,7 @@ def admin_approve_promotion(promo_id):
 
 
         cursor.execute('''
-            UPDATE promotions SET is_approved = TRUE, updated_at = NOW()
+            UPDATE promotions SET is_approved = 1, updated_at = NOW()
             WHERE id = %s
         ''', (promo_id,))
 
@@ -8321,7 +8321,7 @@ def seller_add_product():
             return jsonify({'error': 'Category is required'}), 400
 
 
-        cursor.execute('SELECT id, slug, name FROM categories WHERE id = %s AND is_active = TRUE', (category_id,))
+        cursor.execute('SELECT id, slug, name FROM categories WHERE id = %s AND is_active = 1', (category_id,))
         category = cursor.fetchone()
         if not category:
             return jsonify({'error': 'Invalid category selected'}), 400
@@ -8859,7 +8859,7 @@ def seller_get_product(product_id):
         ''', (product_id,))
         variants = cursor.fetchall()
 
-        cursor.execute('SELECT id, name FROM categories WHERE is_active = TRUE ORDER BY name')
+        cursor.execute('SELECT id, name FROM categories WHERE is_active = 1 ORDER BY name')
         categories = cursor.fetchall()
 
         cursor.close()
@@ -9218,7 +9218,7 @@ def api_products():
                 cursor.execute(f"""
                     SELECT id
                     FROM categories
-                    WHERE parent_id IN ({parent_placeholders}) AND is_active = TRUE
+                    WHERE parent_id IN ({parent_placeholders}) AND is_active = 1
                 """, tuple(parent_ids))
                 child_rows = cursor.fetchall()
                 for child in child_rows:
@@ -9305,8 +9305,8 @@ def api_products():
                         code
                     FROM promotions
                     WHERE product_id = %s
-                    AND is_active = TRUE
-                    AND is_approved = TRUE
+                    AND is_active = 1
+                    AND is_approved = 1
                     AND start_date <= NOW()
                     AND end_date >= NOW()
                     LIMIT 1
@@ -9410,7 +9410,7 @@ def api_categories():
         cursor.execute("""
             SELECT id, name, slug, category_type, is_active, parent_id
             FROM categories
-            WHERE is_active = TRUE AND parent_id IS NULL
+            WHERE is_active = 1 AND parent_id IS NULL
             ORDER BY id ASC
         """)
         parent_categories = cursor.fetchall()
@@ -9422,7 +9422,7 @@ def api_categories():
             cursor.execute("""
                 SELECT id, name, slug, category_type, parent_id
                 FROM categories
-                WHERE is_active = TRUE AND parent_id = %s
+                WHERE is_active = 1 AND parent_id = %s
                 ORDER BY id ASC
             """, (parent['id'],))
             children = cursor.fetchall()
@@ -10531,7 +10531,7 @@ def verify_email_change():
 
 
             user_id = session.get('user_id')
-            cursor.execute('UPDATE users SET email = %s, email_verified = TRUE WHERE id = %s', (new_email, user_id))
+            cursor.execute('UPDATE users SET email = %s, email_verified = 1 WHERE id = %s', (new_email, user_id))
             conn.commit()
             cursor.close()
             conn.close()
@@ -10618,9 +10618,9 @@ def update_account():
 
 
         if has_email_verified and email != current_email:
-            update_fields.append('email_verified = FALSE')
+            update_fields.append('email_verified = 0')
         if has_phone_verified and phone != current_phone:
-            update_fields.append('phone_verified = FALSE')
+            update_fields.append('phone_verified = 0')
 
 
         update_query = f"UPDATE users SET {', '.join(update_fields)} WHERE id = %s"
@@ -10780,7 +10780,7 @@ def verify_phone_otp():
 
 
             user_id = session.get('user_id')
-            cursor.execute('UPDATE users SET phone = %s, phone_verified = TRUE WHERE id = %s', (phone, user_id))
+            cursor.execute('UPDATE users SET phone = %s, phone_verified = 1 WHERE id = %s', (phone, user_id))
             conn.commit()
             cursor.close()
             conn.close()
@@ -11248,7 +11248,7 @@ def update_order_status():
 
                     cursor.execute('''
                         UPDATE shipments
-                        SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
+                        SET seller_confirmed = 1, seller_confirmed_at = NOW()
                         WHERE id = %s
                     ''', (shipment['id'],))
                     conn.commit()
@@ -11292,7 +11292,7 @@ def update_order_status():
                         SELECT id FROM riders
                         WHERE (service_area LIKE %s OR service_area LIKE %s OR service_area LIKE %s)
                         AND status = 'active'
-                        AND is_available = TRUE
+                        AND is_available = 1
                         LIMIT 1
                     ''', (f'%{address["province"]}%', f'%{address["city"]}%', f'%{address["postal_code"]}%'))
 
@@ -11301,7 +11301,7 @@ def update_order_status():
 
                         cursor.execute('''
                             UPDATE shipments
-                            SET rider_id = %s, seller_confirmed = TRUE, seller_confirmed_at = NOW(), status = 'picked_up'
+                            SET rider_id = %s, seller_confirmed = 1, seller_confirmed_at = NOW(), status = 'picked_up'
                             WHERE id = %s
                         ''', (rider['id'], shipment_id))
                         print(f"[✅] Shipment {shipment_id} assigned to rider {rider['id']} with status picked_up")
@@ -11309,7 +11309,7 @@ def update_order_status():
 
                     cursor.execute('''
                         UPDATE shipments
-                        SET seller_confirmed = TRUE, seller_confirmed_at = NOW(), status = 'picked_up'
+                        SET seller_confirmed = 1, seller_confirmed_at = NOW(), status = 'picked_up'
                         WHERE id = %s
                     ''', (shipment_id,))
 
@@ -11325,7 +11325,7 @@ def update_order_status():
 
             cursor.execute('''
                 UPDATE shipments
-                SET status = 'delivered', seller_confirmed = TRUE, seller_confirmed_at = NOW(), updated_at = NOW()
+                SET status = 'delivered', seller_confirmed = 1, seller_confirmed_at = NOW(), updated_at = NOW()
                 WHERE order_id = %s
             ''', (order_id,))
 
@@ -11422,7 +11422,7 @@ def seller_approve_rider():
 
         cursor.execute('''
             UPDATE shipments
-            SET status = 'approved', seller_confirmed = TRUE
+            SET status = 'approved', seller_confirmed = 1
             WHERE id = %s
         ''', (shipment['id'],))
 
@@ -11564,7 +11564,7 @@ def seller_approve_rider_pickup(order_id):
 
         cursor.execute('''
             UPDATE shipments
-            SET status = 'in_transit', seller_confirmed = TRUE, seller_confirmed_at = NOW()
+            SET status = 'in_transit', seller_confirmed = 1, seller_confirmed_at = NOW()
             WHERE id = %s
         ''', (order_data['shipment_id'],))
 
@@ -12633,7 +12633,7 @@ def api_add_address():
 
 
         if data.get('is_default'):
-            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+            cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
 
         cursor.execute('''
             INSERT INTO addresses (
@@ -14446,7 +14446,7 @@ def save_shipping_address():
 
 
         if is_default:
-            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+            cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
 
         cursor.execute('''INSERT INTO addresses
                          (user_id, full_name, phone, street_address, barangay, city,
@@ -14505,7 +14505,7 @@ def update_shipping_address(address_id):
 
 
         if is_default:
-            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+            cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
 
         cursor.execute('''UPDATE addresses SET
                          full_name = %s, phone = %s, street_address = %s, barangay = %s,
@@ -14551,7 +14551,7 @@ def delete_shipping_address(address_id):
 
 
         if address[0]:
-            cursor.execute('''UPDATE addresses SET is_default = TRUE
+            cursor.execute('''UPDATE addresses SET is_default = 1
                              WHERE user_id = %s ORDER BY created_at DESC LIMIT 1''', (user_id,))
 
         conn.commit()
@@ -14585,10 +14585,10 @@ def set_default_address(address_id):
             return jsonify({'success': False, 'message': 'Address not found'}), 404
 
 
-        cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
+        cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
 
 
-        cursor.execute('UPDATE addresses SET is_default = TRUE WHERE id = %s', (address_id,))
+        cursor.execute('UPDATE addresses SET is_default = 1 WHERE id = %s', (address_id,))
 
         conn.commit()
         cursor.close()
@@ -14702,7 +14702,7 @@ def seller_confirm_order():
                 SELECT id, user_id FROM riders
                 WHERE (service_area LIKE %s OR service_area LIKE %s OR service_area LIKE %s)
                 AND status = 'active'
-                AND is_available = TRUE
+                AND is_available = 1
                 LIMIT 1
             ''', (f'%{address["province"]}%', f'%{address["city"]}%', f'%{address["postal_code"]}%'))
 
@@ -14711,7 +14711,7 @@ def seller_confirm_order():
             if rider:
                 cursor.execute('''
                     UPDATE shipments
-                    SET rider_id = %s, seller_confirmed = TRUE, seller_confirmed_at = NOW()
+                    SET rider_id = %s, seller_confirmed = 1, seller_confirmed_at = NOW()
                     WHERE id = %s
                 ''', (rider['id'], shipment_id))
                 rider_assigned = True
@@ -14719,14 +14719,14 @@ def seller_confirm_order():
             else:
                 cursor.execute('''
                     UPDATE shipments
-                    SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
+                    SET seller_confirmed = 1, seller_confirmed_at = NOW()
                     WHERE id = %s
                 ''', (shipment_id,))
                 response_message = 'Order confirmed! Waiting for a rider to accept in your area.'
         else:
             cursor.execute('''
                 UPDATE shipments
-                SET seller_confirmed = TRUE, seller_confirmed_at = NOW()
+                SET seller_confirmed = 1, seller_confirmed_at = NOW()
                 WHERE id = %s
             ''', (shipment_id,))
 
@@ -14854,7 +14854,7 @@ def seller_release_to_rider():
         cursor.execute('''
             UPDATE shipments
             SET rider_id = %s,
-                seller_confirmed = TRUE,
+                seller_confirmed = 1,
                 seller_confirmed_at = NOW(),
                 status = 'assigned_to_rider',
                 updated_at = NOW()
@@ -14953,7 +14953,7 @@ def api_get_available_riders():
             FROM riders r
             JOIN users u ON r.user_id = u.id
             LEFT JOIN shipments s ON r.id = s.rider_id AND s.status = 'delivered'
-            WHERE r.is_available = TRUE
+            WHERE r.is_available = 1
               AND r.status IN ('active', 'approved')
               AND (r.sub_region = %s OR r.sub_region = 'All areas')
             GROUP BY r.id
@@ -15053,7 +15053,7 @@ def seller_approve_rider_for_delivery():
 
         cursor.execute('''
             UPDATE orders
-            SET seller_confirmed_rider = TRUE, updated_at = NOW()
+            SET seller_confirmed_rider = 1, updated_at = NOW()
             WHERE id = %s
         ''', (order_id,))
 
@@ -15197,7 +15197,7 @@ def approve_rider_delivery():
 
         cursor.execute('''
             UPDATE orders
-            SET buyer_approved_rider = TRUE, updated_at = NOW()
+            SET buyer_approved_rider = 1, updated_at = NOW()
             WHERE id = %s
         ''', (order_id,))
 
@@ -15254,7 +15254,7 @@ def get_seller_notifications():
         params = [seller_id]
 
         if unread_only:
-            query += ' AND is_read = FALSE'
+            query += ' AND is_read = 0'
 
         query += ' ORDER BY created_at DESC LIMIT %s'
         params.append(limit)
@@ -15269,7 +15269,7 @@ def get_seller_notifications():
 
         # Get unread count
         cursor.execute(
-            'SELECT COUNT(*) as count FROM seller_notifications WHERE seller_id = %s AND is_read = FALSE',
+            'SELECT COUNT(*) as count FROM seller_notifications WHERE seller_id = %s AND is_read = 0',
             (seller_id,)
         )
         unread_count = cursor.fetchone()['count']
@@ -15317,7 +15317,7 @@ def mark_notification_read(notification_id):
         # Mark as read
         cursor.execute('''
             UPDATE seller_notifications
-            SET is_read = TRUE, read_at = NOW()
+            SET is_read = 1, read_at = NOW()
             WHERE id = %s
         ''', (notification_id,))
 
@@ -15360,8 +15360,8 @@ def mark_all_notifications_read():
         # Mark all notifications as read
         cursor.execute('''
             UPDATE seller_notifications
-            SET is_read = TRUE, read_at = NOW()
-            WHERE seller_id = %s AND is_read = FALSE
+            SET is_read = 1, read_at = NOW()
+            WHERE seller_id = %s AND is_read = 0
         ''', (seller['id'],))
 
         updated_count = cursor.rowcount
