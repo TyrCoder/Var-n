@@ -11,6 +11,7 @@ import requests
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 from decimal import Decimal
+from urllib.parse import quote_plus
 from utils.otp_service import OTPService
 from models import db, User, Category, Seller, Product, ProductImage, ProductVariant, Inventory, Address, Order, OrderItem, Rider, Shipment, Review, OTP, SellerNotification
 
@@ -26,19 +27,45 @@ app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'false'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# SQLAlchemy Configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}?sslmode=require"
+# SQLAlchemy Configuration for Supabase PostgreSQL
+# Properly encode password to handle special characters like @
+DB_USER = os.getenv('DB_USER', 'postgres')
+DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = os.getenv('DB_PORT', '5432')
+DB_NAME = os.getenv('DB_NAME', 'postgres')
+
+# URL encode password to handle special characters
+encoded_password = quote_plus(DB_PASSWORD) if DB_PASSWORD else ''
+
+# Build connection URI with proper SSL settings for Supabase
+if DB_HOST and DB_HOST != 'localhost':
+    # Remote connection (Supabase) - use SSL
+    DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+else:
+    # Local connection - no SSL
+    DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
 app.config['SQLALCHEMY_ECHO'] = os.getenv('SQLALCHEMY_ECHO', 'false').lower() == 'true'
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 10,
-    'pool_recycle': 3600,
-    'pool_pre_ping': True,
-    'max_overflow': 20,
+    'pool_size': 5,
+    'pool_recycle': 1800,  # Recycle connections every 30 minutes
+    'pool_pre_ping': True,  # Test connections before using them
+    'max_overflow': 10,
     'connect_args': {
         'connect_timeout': 10,
-        'options': '-c statement_timeout=30000'  # 30 second timeout
+        'application_name': 'var-n-ecommerce'
     }
 }
+
+# Log database configuration (without password)
+print(f"[DB CONFIG] Using PostgreSQL connection")
+print(f"[DB CONFIG] Host: {DB_HOST}")
+print(f"[DB CONFIG] User: {DB_USER}")
+print(f"[DB CONFIG] Database: {DB_NAME}")
+print(f"[DB CONFIG] Port: {DB_PORT}")
+print(f"[DB CONFIG] Connection string format: postgresql://***@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
 
 # Initialize SQLAlchemy
 db.init_app(app)
@@ -383,24 +410,33 @@ print(f"[DB CONFIG] Database URI: postgresql://***@{os.getenv('DB_HOST', 'localh
 # Initialize database tables (SQLAlchemy will manage schema)
 with app.app_context():
     try:
+        # Test connection first
+        with db.engine.connect() as conn:
+            conn.execute(db.text("SELECT 1"))
+        print("[DB INIT] ✓ Supabase connection successful!")
+        
+        # Create tables
         db.create_all()
-        print("[DB INIT] Database tables initialized successfully")
+        print("[DB INIT] ✓ Database tables initialized successfully")
     except Exception as err:
-        print(f"[DB INIT WARNING] Could not initialize tables: {err}")
-        print("[DB INIT] Tables may already exist on Supabase - this is expected")
+        print(f"[DB INIT ERROR] Failed to connect to Supabase: {err}")
+        print("[DB INIT] Make sure these environment variables are set on Render:")
+        print(f"  - DB_HOST: {DB_HOST}")
+        print(f"  - DB_USER: {DB_USER}")
+        print(f"  - DB_PASSWORD: (should be set)")
+        print(f"  - DB_NAME: {DB_NAME}")
+        print(f"  - DB_PORT: {DB_PORT}")
 
 
 def get_db():
     """
-    Compatibility function: Returns raw psycopg2 connection from SQLAlchemy pool.
+    Returns a psycopg2 connection from SQLAlchemy's connection pool.
     This allows existing raw SQL code to work while we migrate to ORM.
     """
     try:
-        # Use SQLAlchemy's connection pool instead of creating raw connections
-        with db.engine.connect() as connection:
-            # We need to return a real psycopg2 connection, not SQLAlchemy's proxy
-            # So we extract the underlying psycopg2 connection
-            return connection.connection
+        # Get connection from SQLAlchemy's pool
+        connection = db.engine.raw_connection()
+        return connection
     except Exception as err:
         print(f"[DB ERROR] Failed to get database connection: {err}")
         return None
