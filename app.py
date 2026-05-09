@@ -32,7 +32,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 DB_USER = os.getenv('DB_USER', 'postgres')
 DB_PASSWORD = os.getenv('DB_PASSWORD', '')
 DB_HOST = os.getenv('DB_HOST', 'localhost')
-DB_PORT = os.getenv('DB_PORT', '5432')
+DB_PORT = os.getenv('DB_PORT', '6543')  # Use connection pooler (pgBouncer) port for better IPv6 handling
 DB_NAME = os.getenv('DB_NAME', 'postgres')
 
 # URL encode password to handle special characters (@ symbol must become %40)
@@ -46,7 +46,8 @@ else:
 
 # Build connection URI with proper SSL settings for Supabase
 if DB_HOST and DB_HOST != 'localhost':
-    # Remote connection (Supabase) - use SSL
+    # Remote connection (Supabase) - use pgBouncer pooler on port 6543 to avoid IPv6 issues
+    # pgBouncer is more stable for cross-region connections like Render to Supabase
     DATABASE_URI = f"postgresql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
 else:
     # Local connection - no SSL
@@ -55,22 +56,22 @@ else:
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
 app.config['SQLALCHEMY_ECHO'] = os.getenv('SQLALCHEMY_ECHO', 'false').lower() == 'true'
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_size': 5,
-    'pool_recycle': 1800,  # Recycle connections every 30 minutes
+    'pool_size': 3,  # Smaller pool for pgBouncer
+    'pool_recycle': 600,  # Recycle connections every 10 minutes (pgBouncer timeout)
     'pool_pre_ping': True,  # Test connections before using them
-    'max_overflow': 10,
+    'max_overflow': 5,
     'connect_args': {
-        'connect_timeout': 10,
+        'connect_timeout': 15,  # Longer timeout for cross-region connections
         'application_name': 'var-n-ecommerce'
     }
 }
 
 # Log database configuration (without password)
-print(f"[DB CONFIG] Using PostgreSQL connection")
+print(f"[DB CONFIG] Using PostgreSQL connection pooler (pgBouncer)")
 print(f"[DB CONFIG] Host: {DB_HOST}")
 print(f"[DB CONFIG] User: {DB_USER}")
 print(f"[DB CONFIG] Database: {DB_NAME}")
-print(f"[DB CONFIG] Port: {DB_PORT}")
+print(f"[DB CONFIG] Port: {DB_PORT} (connection pooler)")
 print(f"[DB CONFIG] Connection string format: postgresql://***@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require")
 
 # Initialize SQLAlchemy
@@ -438,14 +439,24 @@ def get_db():
     """
     Returns a psycopg2 connection from SQLAlchemy's connection pool.
     This allows existing raw SQL code to work while we migrate to ORM.
+    Uses connection pooling to handle network issues better.
     """
-    try:
-        # Get connection from SQLAlchemy's pool
-        connection = db.engine.raw_connection()
-        return connection
-    except Exception as err:
-        print(f"[DB ERROR] Failed to get database connection: {err}")
-        return None
+    max_retries = 3
+    retry_delay = 0.5
+    
+    for attempt in range(max_retries):
+        try:
+            # Get connection from SQLAlchemy's pool
+            connection = db.engine.raw_connection()
+            return connection
+        except Exception as err:
+            if attempt < max_retries - 1:
+                print(f"[DB ERROR] Connection attempt {attempt + 1} failed: {err}. Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                print(f"[DB ERROR] Failed to get database connection after {max_retries} attempts: {err}")
+                return None
 
 
 def convert_decimals_to_float(value):
