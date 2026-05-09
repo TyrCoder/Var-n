@@ -378,13 +378,11 @@ def get_db(dictionary=False):
     """Return a fresh PostgreSQL connection (optionally with dict cursor)."""
     ensure_db_initialized()
     try:
-        conn = psycopg2.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password'],
-            database=DB_CONFIG['database'],
-            port=DB_CONFIG['port']
-        )
+        # Use connection string format for better control over connection parameters
+        # Added sslmode=require to force secure connection and potentially bypass IPv6 issues
+        conn_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}?sslmode=require"
+        
+        conn = psycopg2.connect(conn_string)
         if dictionary:
             cursor = conn.cursor(cursor_factory=RealDictCursor)
             return conn, cursor
@@ -894,13 +892,8 @@ def ensure_db_initialized():
         try:
             # For PostgreSQL, we connect to the database directly
             # The database already exists on Supabase
-            conn = psycopg2.connect(
-                host=DB_CONFIG['host'],
-                user=DB_CONFIG['user'],
-                password=DB_CONFIG['password'],
-                database=DB_CONFIG['database'],
-                port=DB_CONFIG['port']
-            )
+            conn_string = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}?sslmode=require"
+            conn = psycopg2.connect(conn_string)
             cursor = conn.cursor()
             cursor.close()
             conn.close()
