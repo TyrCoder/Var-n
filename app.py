@@ -1030,7 +1030,7 @@ def index():
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
-                LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+                LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved::int = 1
                 LEFT JOIN order_items oi ON p.id = oi.product_id
                 LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
                 WHERE p.is_active::int = 1
@@ -1113,7 +1113,7 @@ def product_page(product_id):
                 LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
                 LEFT JOIN sellers s ON p.seller_id = s.id
                 LEFT JOIN users u ON s.user_id = u.id
-                LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+                LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved::int = 1
                 LEFT JOIN order_items oi ON p.id = oi.product_id
                 LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
                 WHERE p.id = %s AND p.is_active::int = 1
@@ -1231,7 +1231,7 @@ def brand_store_page(store_slug):
                 MAX(p.created_at) as created_at
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
-            LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+            LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved::int = 1
             LEFT JOIN order_items oi ON p.id = oi.product_id
             LEFT JOIN orders o ON o.id = oi.order_id AND o.order_status IN ('delivered', 'completed')
             WHERE p.seller_id = %s
@@ -3082,7 +3082,7 @@ def get_product_reviews(product_id):
                    u.first_name, u.last_name
             FROM reviews r
             JOIN users u ON r.user_id = u.id
-            WHERE r.product_id = %s AND r.is_approved = 1
+            WHERE r.product_id = %s AND r.is_approved::int = 1
             ORDER BY r.created_at DESC
         ''', (product_id,))
 
@@ -3184,7 +3184,7 @@ def submit_review():
         cursor.execute('''
             SELECT AVG(rating) as avg_rating, COUNT(*) as count
             FROM reviews
-            WHERE product_id = %s AND is_approved = 1
+            WHERE product_id = %s AND is_approved::int = 1
         ''', (product_id,))
 
         stats = cursor.fetchone()
@@ -3763,20 +3763,20 @@ def place_order():
             shipping_address_id = cursor.lastrowid
             billing_address_id = shipping_address_id
 
-            cursor.execute('SELECT COUNT(*) as count FROM addresses WHERE user_id = %s AND is_default = 1', (user_id,))
+            cursor.execute('SELECT COUNT(*) as count FROM addresses WHERE user_id = %s AND is_default::int = 1', (user_id,))
             result = cursor.fetchone()
             has_default = result and result['count'] > 0
             is_default = not has_default
 
             if is_default:
-                cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
+                cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
 
             cursor.execute('UPDATE addresses SET is_default = %s WHERE id = %s', (is_default, shipping_address_id))
         else:
             # If not saving address, use the default address on file
             cursor.execute('''
                 SELECT id FROM addresses 
-                WHERE user_id = %s AND is_default = 1 
+                WHERE user_id = %s AND is_default::int = 1 
                 LIMIT 1
             ''', (user_id,))
             default_addr = cursor.fetchone()
@@ -4003,9 +4003,7 @@ def order_details(order_id):
             if not cursor.fetchone():
                 cursor.execute('''
                     ALTER TABLE products
-                    ADD COLUMN approval_status ENUM('approved', 'pending', 'rejected')
-                    DEFAULT 'pending'
-                    AFTER is_active
+                    ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending'
                 ''')
                 conn.commit()
                 print('[DB MIGRATION] Added approval_status column to products table (seller_products)')
@@ -6381,7 +6379,7 @@ def admin_customer_growth_by_region():
         cursor.execute('''
             SELECT a.province as region, COUNT(DISTINCT u.id) as count
             FROM users u
-            LEFT JOIN addresses a ON u.id = a.user_id AND a.is_default = 1
+            LEFT JOIN addresses a ON u.id = a.user_id AND a.is_default::int = 1
             WHERE u.role = 'buyer'
             GROUP BY a.province
             HAVING a.province IS NOT NULL
@@ -6394,7 +6392,7 @@ def admin_customer_growth_by_region():
             cursor.execute('''
                 SELECT a.city as region, COUNT(DISTINCT u.id) as count
                 FROM users u
-                LEFT JOIN addresses a ON u.id = a.user_id AND a.is_default = 1
+                LEFT JOIN addresses a ON u.id = a.user_id AND a.is_default::int = 1
                 WHERE u.role = 'buyer'
                 GROUP BY a.city
                 HAVING a.city IS NOT NULL
@@ -6932,7 +6930,7 @@ def approve_review(review_id):
         conn = get_db()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-        cursor.execute('UPDATE reviews SET is_approved = 1 WHERE id = %s', (review_id,))
+        cursor.execute('UPDATE reviews SET is_approved = TRUE WHERE id = %s', (review_id,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -7303,7 +7301,7 @@ def adjust_inventory_for_order(conn, order_id, action):
     if not items:
         return True, None
 
-    adjust_cursor = conn.cursor()
+    adjust_cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     failure_message = None
 
     for item in items:
@@ -7649,7 +7647,7 @@ def admin_pending_promotions():
             JOIN products pr ON p.product_id = pr.id
             JOIN sellers s ON pr.seller_id = s.id
             JOIN users u ON s.user_id = u.id
-            WHERE p.is_approved = 0
+            WHERE p.is_approved::int = 0
             ORDER BY p.created_at ASC
         ''')
 
@@ -7698,7 +7696,7 @@ def admin_approve_promotion(promo_id):
 
 
         cursor.execute('''
-            UPDATE promotions SET is_approved = 1, updated_at = NOW()
+            UPDATE promotions SET is_approved = TRUE, updated_at = NOW()
             WHERE id = %s
         ''', (promo_id,))
 
@@ -9223,7 +9221,7 @@ def api_products():
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary::int = 1
             LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved = 1
+            LEFT JOIN reviews r ON p.id = r.product_id AND r.is_approved::int = 1
             LEFT JOIN order_items oi ON p.id = oi.product_id
             LEFT JOIN orders o ON oi.order_id = o.id AND o.order_status IN ('delivered', 'completed')
             WHERE p.is_active::int = 1
@@ -9287,7 +9285,7 @@ def api_products():
                     FROM promotions
                     WHERE product_id = %s
                     AND is_active::int = 1
-                    AND is_approved = 1
+                    AND is_approved::int = 1
                     AND start_date <= NOW()
                     AND end_date >= NOW()
                     LIMIT 1
@@ -11273,7 +11271,7 @@ def update_order_status():
                         SELECT id FROM riders
                         WHERE (service_area LIKE %s OR service_area LIKE %s OR service_area LIKE %s)
                         AND status = 'active'
-                        AND is_available = 1
+                        AND is_available::int = 1
                         LIMIT 1
                     ''', (f'%{address["province"]}%', f'%{address["city"]}%', f'%{address["postal_code"]}%'))
 
@@ -12053,7 +12051,7 @@ def verify_otp():
                             cursor.execute('''
                                 INSERT INTO rider_service_areas (rider_id, city_code, city_name, is_default)
                                 VALUES (%s, %s, %s, 1)
-                                ON DUPLICATE KEY UPDATE city_name = VALUES(city_name), is_default = 1
+                                ON CONFLICT (rider_id, city_code) DO UPDATE SET city_name = EXCLUDED.city_name, is_default::int = 1
                             ''', (
                                 rider_id,
                                 psgc_city_code,
@@ -12087,7 +12085,7 @@ def verify_otp():
                                 cursor.execute('''
                                     INSERT INTO rider_documents (rider_id, document_type, file_url, verified, uploaded_at, updated_at)
                                     VALUES (%s, %s, %s, 0, NOW(), NOW())
-                                    ON DUPLICATE KEY UPDATE file_url = VALUES(file_url), verified = 0, updated_at = NOW()
+                                    ON CONFLICT (rider_id, document_type) DO UPDATE SET file_url = EXCLUDED.file_url, verified = 0, updated_at = NOW()
                                 ''', (rider_id, doc_type, file_url))
 
                             cleanup_pending_rider_upload(upload_token)
@@ -12614,7 +12612,7 @@ def api_add_address():
 
 
         if data.get('is_default'):
-            cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
+            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
 
         cursor.execute('''
             INSERT INTO addresses (
@@ -13250,7 +13248,7 @@ def api_rider_upload_document():
         cursor.execute('''
             INSERT INTO rider_documents (rider_id, document_type, file_url, verified, uploaded_at, updated_at)
             VALUES (%s, %s, %s, 0, NOW(), NOW())
-            ON DUPLICATE KEY UPDATE file_url = VALUES(file_url), verified = 0, updated_at = NOW()
+            ON CONFLICT (rider_id, document_type) DO UPDATE SET file_url = EXCLUDED.file_url, verified = 0, updated_at = NOW()
         ''', (rider_row['id'], document_type, file_url))
         conn.commit()
 
@@ -14407,7 +14405,7 @@ def save_shipping_address():
 
 
         if is_default:
-            cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
+            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
 
         cursor.execute('''INSERT INTO addresses
                          (user_id, full_name, phone, street_address, barangay, city,
@@ -14466,7 +14464,7 @@ def update_shipping_address(address_id):
 
 
         if is_default:
-            cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
+            cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
 
         cursor.execute('''UPDATE addresses SET
                          full_name = %s, phone = %s, street_address = %s, barangay = %s,
@@ -14511,8 +14509,8 @@ def delete_shipping_address(address_id):
         cursor.execute('DELETE FROM addresses WHERE id = %s AND user_id = %s', (address_id, user_id))
 
 
-        if address[0]:
-            cursor.execute('''UPDATE addresses SET is_default = 1
+        if address['is_default']:
+            cursor.execute('''UPDATE addresses SET is_default = TRUE
                              WHERE user_id = %s ORDER BY created_at DESC LIMIT 1''', (user_id,))
 
         conn.commit()
@@ -14546,10 +14544,10 @@ def set_default_address(address_id):
             return jsonify({'success': False, 'message': 'Address not found'}), 404
 
 
-        cursor.execute('UPDATE addresses SET is_default = 0 WHERE user_id = %s', (user_id,))
+        cursor.execute('UPDATE addresses SET is_default = FALSE WHERE user_id = %s', (user_id,))
 
 
-        cursor.execute('UPDATE addresses SET is_default = 1 WHERE id = %s', (address_id,))
+        cursor.execute('UPDATE addresses SET is_default = TRUE WHERE id = %s', (address_id,))
 
         conn.commit()
         cursor.close()
@@ -14663,7 +14661,7 @@ def seller_confirm_order():
                 SELECT id, user_id FROM riders
                 WHERE (service_area LIKE %s OR service_area LIKE %s OR service_area LIKE %s)
                 AND status = 'active'
-                AND is_available = 1
+                AND is_available::int = 1
                 LIMIT 1
             ''', (f'%{address["province"]}%', f'%{address["city"]}%', f'%{address["postal_code"]}%'))
 
@@ -14914,7 +14912,7 @@ def api_get_available_riders():
             FROM riders r
             JOIN users u ON r.user_id = u.id
             LEFT JOIN shipments s ON r.id = s.rider_id AND s.status = 'delivered'
-            WHERE r.is_available = 1
+            WHERE r.is_available::int = 1
               AND r.status IN ('active', 'approved')
               AND (r.sub_region = %s OR r.sub_region = 'All areas')
             GROUP BY r.id
@@ -15215,7 +15213,7 @@ def get_seller_notifications():
         params = [seller_id]
 
         if unread_only:
-            query += ' AND is_read = 0'
+            query += ' AND is_read::int = 0'
 
         query += ' ORDER BY created_at DESC LIMIT %s'
         params.append(limit)
@@ -15230,7 +15228,7 @@ def get_seller_notifications():
 
         # Get unread count
         cursor.execute(
-            'SELECT COUNT(*) as count FROM seller_notifications WHERE seller_id = %s AND is_read = 0',
+            'SELECT COUNT(*) as count FROM seller_notifications WHERE seller_id = %s AND is_read::int = 0',
             (seller_id,)
         )
         unread_count = cursor.fetchone()['count']
@@ -15278,7 +15276,7 @@ def mark_notification_read(notification_id):
         # Mark as read
         cursor.execute('''
             UPDATE seller_notifications
-            SET is_read = 1, read_at = NOW()
+            SET is_read = TRUE, read_at = NOW()
             WHERE id = %s
         ''', (notification_id,))
 
@@ -15321,8 +15319,8 @@ def mark_all_notifications_read():
         # Mark all notifications as read
         cursor.execute('''
             UPDATE seller_notifications
-            SET is_read = 1, read_at = NOW()
-            WHERE seller_id = %s AND is_read = 0
+            SET is_read = TRUE, read_at = NOW()
+            WHERE seller_id = %s AND is_read::int = 0
         ''', (seller['id'],))
 
         updated_count = cursor.rowcount
