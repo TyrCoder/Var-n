@@ -5300,20 +5300,25 @@ def admin_approve_product(product_id):
 
         # Approve product
         cursor.execute('UPDATE products SET is_active = TRUE, approval_status = %s WHERE id = %s', ('approved', product_id,))
-
-        # Create notification for seller
-        cursor.execute('''
-            INSERT INTO seller_notifications (
-                seller_id, product_id, notification_type, title, message, priority
-            ) VALUES (%s, %s, 'product_approved', %s, %s, 'high')
-        ''', (
-            product['seller_id'],
-            product_id,
-            '✅ Product Approved',
-            f'Your product "{product["name"]}" has been approved and is now live on the store!'
-        ))
-
         conn.commit()
+
+        # Create notification for seller (non-fatal)
+        try:
+            cursor.execute('''
+                INSERT INTO seller_notifications (
+                    seller_id, product_id, notification_type, title, message, priority
+                ) VALUES (%s, %s, 'product_approved', %s, %s, 'high')
+            ''', (
+                product['seller_id'],
+                product_id,
+                '✅ Product Approved',
+                f'Your product "{product["name"]}" has been approved and is now live on the store!'
+            ))
+            conn.commit()
+        except Exception as notif_err:
+            print(f"[WARN] admin_approve_product: notification insert failed (non-fatal): {notif_err}")
+            conn.rollback()
+
         cursor.close()
         conn.close()
 
@@ -5353,28 +5358,33 @@ def admin_reject_product(product_id):
         if not rejection_reason:
             rejection_reason = 'No reason provided'
 
-        # Create notification for seller BEFORE updating product
-        cursor.execute('''
-            INSERT INTO seller_notifications (
-                seller_id, product_id, notification_type, title, message, priority
-            ) VALUES (%s, %s, 'product_rejected', %s, %s, 'high')
-        ''', (
-            product['seller_id'],
-            product_id,
-            '❌ Product Rejected',
-            f'Your product "{product["name"]}" was rejected. Reason: {rejection_reason}'
-        ))
-
-        # Reject the product instead of deleting it
+        # Reject the product
         cursor.execute('UPDATE products SET approval_status = %s WHERE id = %s', ('rejected', product_id))
-
         conn.commit()
+
+        # Create notification for seller (non-fatal)
+        try:
+            cursor.execute('''
+                INSERT INTO seller_notifications (
+                    seller_id, product_id, notification_type, title, message, priority
+                ) VALUES (%s, %s, 'product_rejected', %s, %s, 'high')
+            ''', (
+                product['seller_id'],
+                product_id,
+                '❌ Product Rejected',
+                f'Your product "{product["name"]}" was rejected. Reason: {rejection_reason}'
+            ))
+            conn.commit()
+        except Exception as notif_err:
+            print(f"[WARN] admin_reject_product: notification insert failed (non-fatal): {notif_err}")
+            conn.rollback()
+
         cursor.close()
         conn.close()
 
         return jsonify({
             'success': True,
-            'message': 'Product rejected and removed',
+            'message': 'Product rejected',
             'rejection_reason': rejection_reason
         }), 200
 
