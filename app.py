@@ -422,6 +422,39 @@ with app.app_context():
         # Create tables
         db.create_all()
         print("[DB INIT] ✓ Database tables initialized successfully")
+
+        # Ensure seller_notifications table exists and has all required columns
+        try:
+            with db.engine.connect() as _mc:
+                _mc.execute(db.text("""
+                    CREATE TABLE IF NOT EXISTS seller_notifications (
+                        id SERIAL PRIMARY KEY,
+                        seller_id INTEGER NOT NULL,
+                        product_id INTEGER,
+                        order_id INTEGER,
+                        notification_type VARCHAR(50) NOT NULL,
+                        title VARCHAR(200),
+                        message TEXT NOT NULL,
+                        priority VARCHAR(20) DEFAULT 'normal',
+                        action_url VARCHAR(500),
+                        is_read BOOLEAN DEFAULT FALSE,
+                        read_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                _mc.execute(db.text("""
+                    ALTER TABLE seller_notifications
+                        ADD COLUMN IF NOT EXISTS title VARCHAR(200),
+                        ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'normal',
+                        ADD COLUMN IF NOT EXISTS action_url VARCHAR(500),
+                        ADD COLUMN IF NOT EXISTS order_id INTEGER,
+                        ADD COLUMN IF NOT EXISTS product_id INTEGER
+                """))
+                _mc.commit()
+            print("[DB MIGRATION] ✓ seller_notifications table and columns ensured")
+        except Exception as _me:
+            print(f"[DB MIGRATION] seller_notifications migration skipped: {_me}")
+
     except Exception as err:
         print(f"[DB INIT ERROR] Failed to connect: {err}")
         print("[DB INIT] Make sure DATABASE_URL is set on Render (or DB_HOST/DB_USER/DB_PASSWORD/DB_NAME/DB_PORT)")
