@@ -5298,11 +5298,17 @@ def admin_approve_product(product_id):
         if not product:
             return jsonify({'error': 'Product not found'}), 404
 
-        # Approve product
-        cursor.execute('UPDATE products SET is_active = TRUE, approval_status = %s WHERE id = %s', ('approved', product_id,))
-        conn.commit()
+        print(f"[INFO] admin_approve_product: approving product id={product_id} name='{product['name']}'")
 
-        # Create notification for seller (non-fatal)
+        # Approve product — commit immediately so approval is never blocked by notification failures
+        cursor.execute(
+            'UPDATE products SET is_active = %s, approval_status = %s WHERE id = %s',
+            (True, 'approved', product_id)
+        )
+        conn.commit()
+        print(f"[INFO] admin_approve_product: product {product_id} approved OK")
+
+        # Send notification to seller — failure here must NOT roll back the approval
         try:
             cursor.execute('''
                 INSERT INTO seller_notifications (
@@ -5311,13 +5317,16 @@ def admin_approve_product(product_id):
             ''', (
                 product['seller_id'],
                 product_id,
-                '✅ Product Approved',
+                'Product Approved',
                 f'Your product "{product["name"]}" has been approved and is now live on the store!'
             ))
             conn.commit()
         except Exception as notif_err:
-            print(f"[WARN] admin_approve_product: notification insert failed (non-fatal): {notif_err}")
-            conn.rollback()
+            print(f"[WARN] admin_approve_product: notification skipped: {notif_err}")
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
         cursor.close()
         conn.close()
@@ -5327,8 +5336,11 @@ def admin_approve_product(product_id):
     except Exception as err:
         print(f"[ERROR] admin_approve_product: {err}")
         if conn:
-            conn.rollback()
-        return jsonify({'error': str(err)}), 500
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return jsonify({'error': 'Failed to approve product', 'details': str(err)}), 500
 
 @app.route('/admin/reject-product/<int:product_id>', methods=['POST'])
 def admin_reject_product(product_id):
@@ -8683,10 +8695,12 @@ def seller_add_product():
         cursor.execute('''
             INSERT INTO products (seller_id, category_id, name, slug, description, brand,
                                 price, is_active, approval_status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 0, 'pending')
+            VALUES (%s, %s, %s, %s, %s, %s, %s, FALSE, 'pending')
+            RETURNING id
         ''', (seller['id'], category_id, name, slug, description, brand, price))
 
-        product_id = cursor.lastrowid
+        product_id = cursor.fetchone()['id']
+        print(f"[INFO] seller_add_product: new product id={product_id}")
 
 
         if uploaded_images:
@@ -8755,7 +8769,7 @@ def seller_add_product():
                 grooming_desc = ''.join(grooming_desc_parts)
                 cursor.execute('''
                     UPDATE products
-                    SET description = CONCAT(description, %s)
+                    SET description = description || %s
                     WHERE id = %s
                 ''', (grooming_desc, product_id))
             total_stock = grooming_stock

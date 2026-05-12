@@ -1419,32 +1419,35 @@
         })
         .then(response => {
           console.log('Approve response status:', response.status);
-          console.log('Approve response URL:', response.url);
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Read the JSON error body so we can show the real server message
+            return response.json().then(errData => {
+              const msg = errData.details || errData.error || `Server error ${response.status}`;
+              throw new Error(msg);
+            }).catch(parseErr => {
+              // If the body isn't JSON, fall back to the status code
+              throw new Error(`Server error ${response.status}`);
+            });
           }
           return response.json();
         })
         .then(data => {
-          console.log('Approve response data:', data);
           if (data.success) {
             showToast('Product approved successfully!', 'success');
             const detailsModal = document.getElementById('product-details-modal');
             if (detailsModal && detailsModal.style.display !== 'none') {
               closeProductDetailsModal();
             }
-            // Remove the approved product from the DOM
             const productRow = document.getElementById(`product-${numericId}`);
-            if (productRow) {
-              productRow.remove();
-            }
+            if (productRow) productRow.remove();
+            loadPendingProducts();
           } else {
             showToast('Error: ' + (data.error || 'Unknown error'), 'error');
           }
         })
         .catch(error => {
           console.error('Approve error:', error);
-          showToast('Error approving product: ' + error.message, 'error');
+          showToast('Approval failed: ' + error.message, 'error');
         });
       }
 
